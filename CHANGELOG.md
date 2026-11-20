@@ -7,10 +7,20 @@ All notable changes to MochiDock are documented here. The format follows [Keep a
 ### Added
 
 - GitHub Actions: every push and pull request is built and tested, and a version tag builds the installer and drafts the release on GitHub.
+- **Apps card**: Windows notifications from the apps you choose (LINE, Telegram, Slack, Teams...) in Settings > Notifications > Other apps, with the app's own icon, a recent list and **Open**. Mutes, quiet hours, snooze, the gaming queue and the missed-while-away summary apply as for Discord. When Windows denies notification access, the settings page now says so.
+- **Rain soon**: a short capsule notice when rain, snow or a thunderstorm is expected within the hour (Open-Meteo 15-minute forecast); tap it to open Weather. Settings > Location & Prayer > Rain soon.
+- **Mochi's day**: new faces for being up late (a crescent moon), your birthday (a party hat; set it in Settings > Appearance & Dock), a calendar meeting (a headset with a microphone) and all of today's tasks done (a green tick, with a cheer when you tick off the last one). Hovering over Mochi gets a quick happy glance.
 
 ### Changed
 
+- **Settings export** writes your settings and tasks to one file for another PC and leaves out the shared WhatsApp server's webhook token and this PC's own values (monitor, positions, ports, startup, power and device choices). Import keeps this PC's values, adds or updates tasks and keeps the others, and still accepts an older settings.json.
+- The Stats per-core load is a grid like Task Manager's: many threads wrap into rows (32 threads as 2 x 16) instead of hair-thin bars.
 - The email card shows **Mark Read** only when it really marks the email read: in Outlook, or on the server for a mail account with "Mark as read on the server" turned on. For Mailspring and read-only accounts it used to only remove the email from MochiDock, which **Dismiss** already does.
+
+### Fixed
+
+- The Weather card's hourly forecast was labelled in GMT (Open-Meteo's default) instead of your local time; the three-day forecast now follows the city's own days.
+- Locking the PC did not reset the missed Discord count, so an old count could reappear in the next summary.
 
 ## [0.1.1-beta]
 

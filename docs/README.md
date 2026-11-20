@@ -51,10 +51,11 @@ pwsh -NoProfile -STA -File tools/verify/verify-typography.ps1
 | `verify-prayer-capsule.ps1` | Prayer reminder capsule widths, gaps and state handling |
 | `verify-games-readout.ps1` | Gaming readout contrast, layout and view-model getters |
 | `verify-email-theme.ps1` | Email card controls across theme switches |
+| `verify-apps-card.ps1` | Apps card (other apps' notifications) in both themes at four scales, with and without app logos |
 | `verify-header-animation.ps1` | Header selection pill animation and the former NaN crash |
 | `verify-theme-contrast.ps1`, `verify-color-icons.ps1` | Palette contrast and colored icon resources |
 | `verify-theme-redraw.ps1` | Code-drawn views repaint after a theme switch (visible now, hidden when shown) |
-| `verify-core-bars.ps1` | Stats per-core bars: equal whole-pixel widths under interface zooms from 100 to 200 % |
+| `verify-core-bars.ps1` | Stats per-core grid: every thread a cell, equal whole-pixel cells for 8, 32 and 64 threads under interface zooms from 100 to 200 % |
 | `verify-interface-scale.ps1`, `verify-text-hint.ps1` | Interface zoom and text box hint alignment |
 | `verify-mascot.ps1` | Renders every Mochi mood (output in `MochiDock/obj/mascot`) |
 | `verify-device-battery.ps1`, `tools/gowa-relay/test-gowa-relay.ps1` | Wireless battery read probe; GOWA relay fan-out on loopback |
@@ -77,6 +78,9 @@ Captures and reports are written under `MochiDock/obj/`. Capturing the README sc
 | Email (Outlook Classic, Mailspring) | Partial | Outlook scan needs a human check; Mailspring is read only (Mark Read is hidden for its mail) |
 | Email (IMAP, app password) | Not runtime-verified | Logic and reconnect covered by fake-session tests; never run against a real server |
 | Discord toasts | Not runtime-verified | Listener unproven for unpackaged installs |
+| Apps card (other apps' toasts) | Not runtime-verified | Filter unit-tested and card rendered; shares the Discord listener, so the same access caveat applies |
+| Rain soon notice | Not runtime-verified | Policy unit-tested; the Open-Meteo 15-minute fields were checked against the live API |
+| Mochi day faces (meeting, birthday, all tasks done, up late) and hover glance | Not runtime-verified | Rules unit-tested; faces rendered by `verify-mascot.ps1` |
 | Stats (CPU, GPU, memory, drives, network, processes) | Partial | CPU temperature is an estimate (real value needs PawnIO); some fallbacks remain |
 | Battery page and wireless device batteries | Not runtime-verified | One mouse verified on hardware; Logitech HID++ untested |
 | Gaming readout, profiles, summaries, ping | Not runtime-verified | Needs admin for ETW FPS; PUBG API and League local API untested in real games |

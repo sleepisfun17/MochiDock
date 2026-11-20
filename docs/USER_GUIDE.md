@@ -15,12 +15,13 @@ A new install shows three tabs: **Media**, **Stats** and **Weather**. Everything
 | Tab | What it does | Needs |
 | --- | --- | --- |
 | Media | Controls for whatever is playing, a seekable timeline and synced lyrics. | Any Windows media player. Lyrics come from LRCLIB. |
-| Stats | CPU, GPU, memory, drives, network and top processes; a Battery page; the games readout. On a desktop the Power chip shows the PC's total power and its recent history. | Works with any GPU. NVIDIA adds temperature, memory, clock and power; on AMD and Intel those show `-` unless a sensor provides them. CPU temperature is an estimate (marked `~`) unless the optional PawnIO driver is installed. |
-| Weather | Current conditions, hourly and three-day forecast. | A city (Settings > Location & Prayer). |
+| Stats | CPU, GPU, memory, drives, network and top processes (the per-thread load as a grid, wrapping into rows on CPUs with many threads); a Battery page; the games readout. On a desktop the Power chip shows the PC's total power and its recent history. | Works with any GPU. NVIDIA adds temperature, memory, clock and power; on AMD and Intel those show `-` unless a sensor provides them. CPU temperature is an estimate (marked `~`) unless the optional PawnIO driver is installed. |
+| Weather | Current conditions, hourly and three-day forecast; a "Rain in about 20 min" capsule notice when rain, snow or a thunderstorm is due within the hour (Settings > Location & Prayer > Rain soon). | A city (Settings > Location & Prayer). |
 | Prayer | Prayer times, countdown, qibla bearing and reminders. | A city and a calculation method. |
 | WhatsApp | Recent messages, quick replies and reactions. Appears when WhatsApp is enabled. | A linked phone. |
 | Email | New-mail notifications with sender, subject and a short preview; verification codes can be copied. **Mark Read** appears for Outlook mail and for accounts with "Mark as read on the server"; Mailspring mail and read-only accounts are only dismissed. | A Gmail, Yahoo, iCloud or other IMAP account (app password), or Outlook Classic or Mailspring installed. |
 | Discord | Discord toast notifications. | Experimental for unpackaged installs. |
+| Apps | Notifications from other apps you choose (LINE, Telegram, Slack, Teams...), with the app's icon and an **Open** button. Appears when one arrives. | Settings > Notifications > Other apps: pick an app that recently notified you, or type its name. Windows must allow notification access. |
 | Today | Month calendar, the day's agenda and your tasks with reminders. | A Google Calendar iCal link for events ([how to get it](#connecting-google-calendar)). |
 | Pomodoro | Focus timer. | Nothing. |
 | File shelf | A temporary shelf for files, and phone drop over your Wi-Fi. | Phone and PC on the same network. |
@@ -46,7 +47,7 @@ A new install shows three tabs: **Media**, **Stats** and **Weather**. Everything
 | Hardware & power | Alerts, the optional PawnIO driver (real CPU temperature; shows whether it is installed and how to get it), wireless device batteries, power estimate. |
 | Music & lyrics | Lyrics, pronunciation and timing offset. |
 | AI usage | Which providers are tracked, and low-usage alerts. |
-| Data & diagnostics | Export, import, reload, open files and logs, integration status. |
+| Data & diagnostics | Export, import, reload, open files and logs, integration status. Export saves your settings and tasks for another PC; passwords, keys and this PC's own values (monitor, positions, ports, startup) stay behind, and import keeps the other PC's own values. Enter mail passwords and the WhatsApp server login again after an import. |
 
 ## Setting up WhatsApp
 
@@ -126,8 +127,12 @@ Mochi changes face with what is going on. With **Expressive Mochi** off (Setting
 | Money | The FX Rates card is open: coin eyes, sadder when the rate fell. |
 | Sunny, Rainy, Snowy, Cloudy | The Weather card is open: the current sky (a clear night is cloudy). |
 | Studying | A Pomodoro focus session is running (coffee during its break). |
+| In a meeting | A timed event from your calendar is happening now: a headset with a microphone. |
+| Birthday | Your birthday (Settings > Appearance & Dock > Your birthday): a party hat and confetti all day. |
+| All tasks done | Every task due today is ticked off (a cheer for the last one, then a green tick). |
+| Up late | Between 23:00 and 05:00: heavy eyes under a crescent moon. |
 
-Warnings (hot GPU, overdue task, low battery, overload), notifications, games and sleep always win over the card faces.
+Warnings (hot GPU, overdue task, low battery, overload), notifications, games and sleep always win over the card faces. The day faces (meeting, birthday, all tasks done, up late) show while Mochi is only resting, so music, the card faces and the weather come first. Hover over Mochi for a quick happy glance; click him to pet him.
 
 **Resting while you work.** Typing counts as being there. When you are busy at the PC but have not touched the dock for a minute and a half, Mochi rests instead of falling asleep: every 2 minutes he moves on through his idle thoughts, a coffee, a bored sigh and a short doze. He only really sleeps once nobody has used the keyboard or mouse for 10 minutes, and he looks up as soon as you come to the dock.
 

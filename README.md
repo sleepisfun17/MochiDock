@@ -29,7 +29,7 @@ A new install starts small: the **Media**, **Stats** and **Weather** tabs, plus 
 | **Stats** | CPU, GPU, memory, drives, network, top processes and a Battery page. | On | Tabs |
 | **Weather** | Current weather, hourly and three-day forecast, and the temperature in the capsule. | On | Tabs; city in Location & Prayer |
 | **Gaming mode** | In games the dock moves to the bottom, becomes click-through and shows FPS, GPU and CPU, with a session summary afterwards. Ctrl+Alt+R switches between screen resolution presets. | On | Gaming & Display |
-| **Notifications** | WhatsApp, Email and Discord messages appear as a small capsule first and expand on hover. | Email and Discord on, WhatsApp off | WhatsApp, Email, Notifications |
+| **Notifications** | WhatsApp, Email and Discord messages appear as a small capsule first and expand on hover. Notifications from other apps you choose (LINE, Telegram, Slack...) get their own Apps card. | Email and Discord on, WhatsApp off, other apps none | WhatsApp, Email, Notifications |
 | **WhatsApp** | Recent messages, quick replies and reactions through a local or shared GOWA engine. Starts nothing until you enable it. | Off | WhatsApp |
 | **Email** | New-mail notices from Gmail or other IMAP accounts (app password), Outlook Classic and Mailspring; verification codes can be copied. | Ready, add an account | Email |
 | **Prayer times** | Location-aware schedule, qibla bearing, reminders and a Tone or Silent chime. | Off | Tabs, or Location & Prayer |
