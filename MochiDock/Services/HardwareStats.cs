@@ -17,7 +17,17 @@ public class CoreUsageItem
     public double Usage { get; set; }
     public string CoreKind { get; set; } = "Any"; // "Performance", "Efficiency", "Any"
     public string ColorHex => CoreKind == "Performance" ? "#5E5CE6" : (CoreKind == "Efficiency" ? "#64D2FF" : "#0A84FF");
-    public System.Windows.Media.Brush CoreBrush => new System.Windows.Media.SolidColorBrush((System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(ColorHex));
+    public System.Windows.Media.Brush CoreBrush => CoreKind == "Performance" ? PerformanceBrush : (CoreKind == "Efficiency" ? EfficiencyBrush : AnyBrush);
+
+    // One frozen brush per core kind, shared by every item and every redraw (the colours never change).
+    private static readonly System.Windows.Media.Brush PerformanceBrush = FrozenBrush("#5E5CE6"), EfficiencyBrush = FrozenBrush("#64D2FF"), AnyBrush = FrozenBrush("#0A84FF");
+
+    private static System.Windows.Media.Brush FrozenBrush(string hex)
+    {
+        var brush = new System.Windows.Media.SolidColorBrush((System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(hex));
+        brush.Freeze();
+        return brush;
+    }
     public double HeightValue => Math.Max(2, Math.Min(46, (Usage / 100.0) * 46.0));
 }
 

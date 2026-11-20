@@ -11,8 +11,9 @@ using Point = System.Windows.Point;
 namespace MochiDock.Controls;
 
 /// <summary>
-/// The Stats CPU page's per-core bars, drawn in whole device pixels (<see cref="CoreBarLayout"/>): every bar the same width with the
-/// same gap, a track behind each and the load in the core's colour, rounded only as much as a thin bar allows.
+/// The Stats CPU page's per-core load, drawn as a Task-Manager-like grid in whole device pixels (<see cref="CoreBarLayout.Grid"/>):
+/// many threads wrap into rows (32 as 2 x 16) instead of hair-thin bars, every cell the same size with the same gap, a track behind
+/// each and the load rising from the cell's bottom in the core's colour, rounded only as much as a small cell allows.
 /// </summary>
 public sealed class CoreBars : FrameworkElement
 {
@@ -27,10 +28,10 @@ public sealed class CoreBars : FrameworkElement
 
     public Brush TrackBrush { get => (Brush)GetValue(TrackBrushProperty); set => SetValue(TrackBrushProperty, value); }
 
-    /// <summary>The preferred gap between bars in DIPs (whole device pixels after scaling).</summary>
+    /// <summary>The preferred gap between cells in DIPs (whole device pixels after scaling).</summary>
     public double Gap { get; set; } = 3;
 
-    // The device scale the bars were last drawn for; a change (interface size, another monitor's DPI, the first layout under a
+    // The device scale the cells were last drawn for; a change (interface size, another monitor's DPI, the first layout under a
     // zoom) redraws them so they stay whole pixels.
     private (double X, double Y) _drawnScale;
 
@@ -74,17 +75,22 @@ public sealed class CoreBars : FrameworkElement
         var cores = Items?.OfType<CoreUsageItem>().ToList();
         if (cores is not { Count: > 0 } || ActualWidth <= 0 || ActualHeight <= 0) return;
         var (sx, sy) = _drawnScale = DeviceScale();
-        var (bar, gap, left) = CoreBarLayout.Compute(ActualWidth * sx, cores.Count, Gap * sx);
-        if (bar <= 0) return;
-        double barWidth = bar / sx, height = Math.Round(ActualHeight * sy) / sy, radius = Math.Min(1.5, barWidth / 2);
+        var grid = CoreBarLayout.Grid(ActualWidth * sx, ActualHeight * sy, cores.Count, Gap * Math.Min(sx, sy));
+        if (grid.CellWidth <= 0 || grid.CellHeight <= 0) return;
+        double cellWidth = grid.CellWidth / sx, cellHeight = grid.CellHeight / sy;
+        double radius = Math.Min(1.5, Math.Min(cellWidth, cellHeight) / 2);
         for (int i = 0; i < cores.Count; i++)
         {
-            double x = (left + i * (bar + gap)) / sx;
-            double fill = Math.Round(Math.Clamp(cores[i].HeightValue / 46.0, 0, 1) * height * sy) / sy;
-            // Guidelines snap both edges to device pixels, so at fractional scales (125 %) no bar picks up an anti-aliased extra pixel.
-            dc.PushGuidelineSet(new GuidelineSet(new[] { x, x + barWidth }, new[] { 0, height - fill, height }));
-            dc.DrawRoundedRectangle(TrackBrush, null, new Rect(x, 0, barWidth, height), radius, radius);
-            if (fill > 0) dc.DrawRoundedRectangle(cores[i].CoreBrush, null, new Rect(x, height - fill, barWidth, fill), radius, radius);
+            int row = i / grid.Columns, column = i % grid.Columns;
+            double x = (grid.Left + column * (grid.CellWidth + grid.Gap)) / sx;
+            double top = (grid.Top + row * (grid.CellHeight + grid.Gap)) / sy, bottom = top + cellHeight;
+            // The load rises from the cell's bottom in whole device pixels, at least one so an idle thread still shows its colour.
+            int fillPixels = Math.Clamp((int)Math.Round(Math.Clamp(cores[i].Usage, 0, 100) / 100 * grid.CellHeight), 1, grid.CellHeight);
+            double fill = fillPixels / sy, fillRadius = Math.Min(radius, fill / 2);
+            // Guidelines snap every edge to device pixels, so at fractional scales (125 %) no cell picks up an anti-aliased extra pixel.
+            dc.PushGuidelineSet(new GuidelineSet(new[] { x, x + cellWidth }, new[] { top, bottom - fill, bottom }));
+            dc.DrawRoundedRectangle(TrackBrush, null, new Rect(x, top, cellWidth, cellHeight), radius, radius);
+            dc.DrawRoundedRectangle(cores[i].CoreBrush, null, new Rect(x, bottom - fill, cellWidth, fill), fillRadius, fillRadius);
             dc.Pop();
         }
     }
