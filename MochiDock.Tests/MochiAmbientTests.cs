@@ -2,16 +2,45 @@ using MochiDock.Core;
 
 public class MochiAmbientTests
 {
+    static MascotMood? Rest(double dockMinutes, double inputMinutes, bool media = false, bool gaming = false, bool locked = false, bool screenOn = true) =>
+        MascotTriggers.RestingFace(TimeSpan.FromMinutes(dockMinutes), TimeSpan.FromMinutes(inputMinutes), media, gaming, locked, screenOn);
+
+    [Fact]
+    public void WorkingElsewhereRotatesRestingFacesInsteadOfSleeping()
+    {
+        // Typing (input idle about 0) while the dock is untouched: thoughts, coffee, a sigh, a doze, then round again.
+        Assert.Null(Rest(1, 0));                                   // the dock was touched a minute ago
+        Assert.Null(Rest(2, 0));                                   // first step: the idle thoughts
+        Assert.Equal(MascotMood.Coffee, Rest(4, 0));
+        Assert.Equal(MascotMood.Bored, Rest(6, 0));
+        Assert.Equal(MascotMood.Sleeping, Rest(8, 0));             // a short doze
+        Assert.Null(Rest(10, 0));                                  // back to the thoughts
+        Assert.Equal(MascotMood.Coffee, Rest(12, 0));
+    }
+
+    [Fact]
+    public void NobodyAtThePcForTenMinutesSleeps()
+    {
+        Assert.Equal(MascotMood.Sleeping, Rest(30, 10));
+        Assert.NotEqual(MascotMood.Sleeping, Rest(4, 9.9));
+        Assert.Equal(MascotMood.Sleeping, Rest(0.5, 10));          // even if the pointer passed the dock earlier
+    }
+
     [Theory]
-    [InlineData(20, false, false, false, true, true)]     // 20 minutes idle, nothing going on
-    [InlineData(19, false, false, false, true, false)]    // not long enough yet
-    [InlineData(60, true, false, false, true, false)]     // music is playing
-    [InlineData(60, false, true, false, true, false)]     // a game is running
-    [InlineData(60, false, false, true, true, false)]     // locked (he sleeps then)
-    [InlineData(60, false, false, false, false, false)]   // the screen is off
-    [InlineData(0, false, false, false, true, false)]     // zero is "the system could not say", never idle
-    public void LonelyNeedsALongAbsenceAndNothingGoingOn(int minutes, bool media, bool gaming, bool locked, bool screenOn, bool expected) =>
-        Assert.Equal(expected, MascotTriggers.Lonely(TimeSpan.FromMinutes(minutes), media, gaming, locked, screenOn));
+    [InlineData(true, false, false, true)]     // music has its own face
+    [InlineData(false, true, false, true)]     // a game has its own faces
+    [InlineData(false, false, true, true)]     // the lock sets the sleep
+    [InlineData(false, false, false, false)]   // so does a dark screen
+    public void OtherStatesKeepTheirOwnFaces(bool media, bool gaming, bool locked, bool screenOn) =>
+        Assert.Null(Rest(30, 30, media, gaming, locked, screenOn));
+
+    [Fact]
+    public void ACardFaceBeatsTheCoffee() =>
+        Assert.Equal(MascotMood.Electric, MascotMoodPolicy.Choose(new(MascotMood.Coffee, true, false, false, false, false, MascotWeather.Cold, false, false, MascotMood.Electric)));
+
+    [Fact]
+    public void TheColdDoesNotTakeTheCoffeeAway() =>
+        Assert.Equal(MascotMood.Coffee, MascotMoodPolicy.Choose(new(MascotMood.Coffee, true, false, false, false, false, MascotWeather.Cold)));
 
     [Fact]
     public void WakingUpAfterFourHoursAway()

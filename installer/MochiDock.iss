@@ -50,7 +50,7 @@ Name: "desktopicon"; Description: "Create a &Desktop shortcut"; Flags: unchecked
 Name: "startup"; Description: "Start {#MyAppName} at &logon (elevated scheduled task for the installing user)"; Flags: unchecked
 ; PawnIO is a separate proprietary (freeware) kernel driver. It is never bundled: this task asks winget to install the official package
 ; (winget checks its hash). Ticking it means the user accepts PawnIO's own licence (https://pawnio.eu).
-Name: "pawnio"; Description: "Install the &PawnIO driver for a real CPU temperature (third-party kernel driver, installed with winget under its own licence; optional)"; Flags: unchecked
+Name: "pawnio"; Description: "Install the &PawnIO driver for a real CPU temperature (third-party kernel driver, installed with winget under its own licence; optional)"; Flags: unchecked; Check: not PawnIoInstalled
 #if Defined(HaveFfmpeg) || Defined(HaveYtDlp)
 Name: "tools"; Description: "Install Downloads tools (ffmpeg / yt-dlp) into the Tools folder"
 #endif
@@ -110,12 +110,22 @@ begin
 end;
 
 { Installs the official PawnIO package with winget. Never fails the setup: on any problem the user is told where to get it. }
+// PawnIO registers an uninstall entry and a kernel service; either means it is already installed, so the setup neither offers
+// the task nor runs winget again (winget then answers "already installed", which used to look like a failure).
+function PawnIoInstalled: Boolean;
+begin
+  Result := RegKeyExists(HKLM64, 'SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\PawnIO') or
+            RegKeyExists(HKLM64, 'SYSTEM\CurrentControlSet\Services\PawnIO');
+end;
+
 procedure InstallPawnIo;
 var
   Cmd: String;
   Code: Integer;
   Done: Boolean;
 begin
+  if PawnIoInstalled then
+    Exit;
   Cmd := ExpandConstant('{sys}\cmd.exe');
   Done := False;
   WizardForm.StatusLabel.Caption := 'Installing the PawnIO driver...';
@@ -123,9 +133,11 @@ begin
   begin
     if Exec(Cmd, '/c winget install --id namazso.PawnIO --exact --source winget --silent --accept-package-agreements --accept-source-agreements',
       '', SW_HIDE, ewWaitUntilTerminated, Code) then
-      { 0 = installed, 3010 = installed, restart needed. }
+      { 0 = installed, 3010 = installed, restart needed; any other code still counts when PawnIO is now registered. }
       Done := (Code = 0) or (Code = 3010);
   end;
+  if not Done then
+    Done := PawnIoInstalled;
   if (not Done) and (not WizardSilent) then
     MsgBox('PawnIO could not be installed automatically (winget is missing or reported an error).' + #13#10#13#10 +
            'MochiDock works without it; the CPU temperature is then an estimate. To install it later, download it from https://pawnio.eu.',

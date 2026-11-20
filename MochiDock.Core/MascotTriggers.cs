@@ -35,18 +35,10 @@ public static class MascotTriggers
     public static double MeasuredLoad(AlertReading? reading, DateTimeOffset now) =>
         reading is { Measured: true } r && double.IsFinite(r.Value) && r.CapturedAt <= now && now - r.CapturedAt <= TimeSpan.FromSeconds(5) ? r.Value : double.NaN;
 
-    /// <summary>No keyboard or mouse input for this long (with nothing playing) makes Mochi lonely.</summary>
-    public static readonly TimeSpan LonelyAfter = TimeSpan.FromMinutes(20);
 
     /// <summary>Away from the PC for at least this long, he wakes up yawning when the user comes back.</summary>
     public static readonly TimeSpan WakingAfterAway = TimeSpan.FromHours(4);
 
-    /// <summary>
-    /// Lonely: the user has been away from the keyboard and mouse for a long time while the screen is on and nothing is going on
-    /// (no media, no game, not locked). The idle time must be a real reading: zero means the system could not say.
-    /// </summary>
-    public static bool Lonely(TimeSpan idle, bool mediaPlaying, bool gaming, bool locked, bool displayAwake) =>
-        idle >= LonelyAfter && !mediaPlaying && !gaming && !locked && displayAwake;
 
     /// <summary>Back after a long absence: a few yawning seconds.</summary>
     public static bool WakingUp(TimeSpan away) => away >= WakingAfterAway;
@@ -110,6 +102,33 @@ public static class MascotTriggers
         "Cloudy" or "Fog" => MascotMood.Cloudy,
         _ => null,
     };
+
+    /// <summary>The dock counts as untouched once the pointer has not been on it for this long.</summary>
+    public static readonly TimeSpan DockQuietAfter = TimeSpan.FromSeconds(90);
+
+    /// <summary>Nobody at the PC: no keyboard or mouse input for this long, and Mochi really sleeps.</summary>
+    public static readonly TimeSpan AwayAfter = TimeSpan.FromMinutes(10);
+
+    /// <summary>While you work elsewhere, Mochi changes his resting face this often.</summary>
+    public static readonly TimeSpan RestingStep = TimeSpan.FromMinutes(2);
+
+    // The resting rotation: the idle thoughts (null: leave the Idle/Waiting blink alone), a coffee, a bored sigh, a short doze.
+    private static readonly MascotMood?[] RestingCycle = { null, MascotMood.Coffee, MascotMood.Bored, MascotMood.Sleeping };
+
+    /// <summary>
+    /// Mochi's resting face, or null to leave his face alone. Sleeping once the PC has had no keyboard or mouse input for
+    /// <see cref="AwayAfter"/> (nobody is there). While someone is working but has not touched the dock for <see cref="DockQuietAfter"/>
+    /// (typing, coding), he rotates every <see cref="RestingStep"/> through the idle thoughts, a coffee, a bored sigh and a short doze,
+    /// instead of falling asleep. Nothing while music plays, a game runs, the PC is locked or the screen is off (those have their own faces).
+    /// </summary>
+    public static MascotMood? RestingFace(TimeSpan dockUntouched, TimeSpan inputIdle, bool mediaPlaying, bool gaming, bool locked, bool displayAwake)
+    {
+        if (gaming || locked || !displayAwake || mediaPlaying) return null;
+        if (inputIdle >= AwayAfter) return MascotMood.Sleeping;
+        if (dockUntouched < DockQuietAfter) return null;
+        long step = (dockUntouched - DockQuietAfter).Ticks / RestingStep.Ticks;
+        return RestingCycle[step % RestingCycle.Length];
+    }
 
     /// <summary>True when an open task with a due time is overdue by 10 to 90 minutes and nobody acknowledged it.</summary>
     public static bool UnacknowledgedOverdue(IEnumerable<ReminderTask> tasks, DateTime now, ISet<string> acknowledged) =>

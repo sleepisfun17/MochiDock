@@ -28,7 +28,7 @@ A new install shows three tabs: **Media**, **Stats** and **Weather**. Everything
 | AI usage | Remaining usage for Claude, Codex, Antigravity, Cursor, Gemini and GitHub Copilot. | You signed in to those tools. |
 | Script | A teleprompter-style script reader (Alt+Shift+S). | Nothing. |
 | Downloads | A media downloader. | `yt-dlp` and `ffmpeg` (the installer can include them; ffmpeg is found in `Tools\`, `%LocalAppData%\MochiDock\Tools` or PATH). |
-| FX rates | USD/JPY, USD/IDR and JPY/IDR with a trajectory chart. Indicative prices only. | Internet. |
+| FX rates | USD/JPY, USD/IDR and JPY/IDR with a trajectory chart (7 days and 1 month in hourly steps, 1 year in daily steps). Indicative prices only. | Internet. |
 
 ## Advanced Settings sections
 
@@ -110,9 +110,9 @@ Mochi changes face with what is going on. With **Expressive Mochi** off (Setting
 | Idle, thinking | Nothing special; alternates with the idle thoughts. |
 | Music (headset) | Something is playing. |
 | Alert, Excited | A notification or a new message. |
-| Sleeping | The PC is locked, the screen is off, or the dock was left alone. |
+| Sleeping | The PC is locked, the screen is off, or nobody has used the keyboard or mouse for 10 minutes; also a short doze while resting (below). |
 | Waking | Back after four hours away, or MochiDock started in the morning. |
-| Bored | Nobody touched the PC for 20 minutes. |
+| Coffee, Bored | Resting while you work elsewhere (below). |
 | Happy, Cheering | A task was ticked off; a Pomodoro finished. |
 | Surprised | A download finished or a file arrived from the phone. |
 | Praying | Prayer time (prayer times on). |
@@ -128,6 +128,8 @@ Mochi changes face with what is going on. With **Expressive Mochi** off (Setting
 | Studying | A Pomodoro focus session is running (coffee during its break). |
 
 Warnings (hot GPU, overdue task, low battery, overload), notifications, games and sleep always win over the card faces.
+
+**Resting while you work.** Typing counts as being there. When you are busy at the PC but have not touched the dock for a minute and a half, Mochi rests instead of falling asleep: every 2 minutes he moves on through his idle thoughts, a coffee, a bored sigh and a short doze. He only really sleeps once nobody has used the keyboard or mouse for 10 minutes, and he looks up as soon as you come to the dock.
 
 When his face changes, Mochi spins round three times in about 0.6 seconds inside a little anime whirlwind (glowing brush strokes, gold on Default and green on Matcha) and comes round wearing the new face; he turns as a rounded body, not a flat card. He does not turn for the small blink between thoughts while idle, or for swaps between the gaming faces during a game, and not at all when Windows animations are off.
 

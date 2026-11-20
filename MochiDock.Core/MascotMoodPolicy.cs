@@ -17,6 +17,8 @@ public enum MascotMood
     // Activity faces: what the user is looking at or doing. Electric on the Stats Battery page, Money/MoneyDown on FX (rate up or flat /
     // down), Sunny/Rainy/Snowy/Cloudy on Weather (the current sky), Studying while a Pomodoro focus session runs.
     Electric, Money, MoneyDown, Sunny, Rainy, Snowy, Cloudy, Studying,
+    // Resting while you work elsewhere: awake, sipping a coffee (part of the resting rotation with the idle thoughts, Bored and a doze).
+    Coffee,
 }
 
 /// <summary>What the weather says about Mochi's comfort.</summary>
@@ -59,7 +61,7 @@ public static class MascotMoodPolicy
         if (i.GpuHot) return MascotMood.Hot;
         if (i.Overloaded) return MascotMood.Dizzy;
         if (i.BatteryLow) return MascotMood.Drained;
-        if (i.Activity is { } activity && i.Base is MascotMood.Idle or MascotMood.Waiting or MascotMood.Bored or MascotMood.Music) return activity;   // a happy moment (task done) still shows
+        if (i.Activity is { } activity && i.Base is MascotMood.Idle or MascotMood.Waiting or MascotMood.Bored or MascotMood.Coffee or MascotMood.Music) return activity;   // a happy moment (task done) still shows
         if (i.Base == MascotMood.Music) return MascotMood.Music;
         if (i.Base is MascotMood.Idle or MascotMood.Waiting or MascotMood.Bored)
         {

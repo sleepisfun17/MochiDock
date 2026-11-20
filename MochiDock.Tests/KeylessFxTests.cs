@@ -127,6 +127,28 @@ public class KeylessFxTests
         Assert.Equal(12, qYear.Bars.Length); // 1Y keeps all 12 bars
     }
 
+    sealed class RecordingHandler : HttpMessageHandler
+    {
+        public readonly List<string> Urls = new();
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            Urls.Add(request.RequestUri!.ToString());
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("""{"chart":{"result":[{"meta":{"symbol":"USDJPY=X","regularMarketPrice":150,"regularMarketTime":1000},"timestamp":[900],"indicators":{"quote":[{"close":[149]}]}}]}}""") });
+        }
+    }
+
+    [Theory]
+    [InlineData("7D", "interval=1h&range=7d")]
+    [InlineData("1M", "interval=1h&range=1mo")]   // hourly detail for the month, not about 22 daily points
+    [InlineData("1Y", "interval=1d&range=1y")]
+    public async Task EachSpanAsksForItsDetail(string span, string expected)
+    {
+        var handler = new RecordingHandler();
+        var provider = new KeylessFxProvider(new HttpClient(handler), () => DateTimeOffset.FromUnixTimeSeconds(2000));
+        await provider.Yahoo("USD/JPY", span, CancellationToken.None);
+        Assert.Contains(expected, Assert.Single(handler.Urls));
+    }
+
     [Fact]
     public async Task SelectSpanUpdatesActiveSpan()
     {

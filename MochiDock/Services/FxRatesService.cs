@@ -341,7 +341,7 @@ public sealed class FxRatesService : IDisposable
             if (manual) cache.LastManual = now;
             var span = SelectedSpan;
             var chartKey = SelectedPair + ":" + span;
-            var ttl = span switch { "1Y" => TimeSpan.FromHours(6), "1M" => TimeSpan.FromHours(2), _ => TimeSpan.FromMinutes(15) };
+            var ttl = span switch { "1Y" => TimeSpan.FromHours(6), "1M" => TimeSpan.FromMinutes(30), _ => TimeSpan.FromMinutes(15) };
             var chartDue = !cache.Markets.TryGetValue(chartKey, out var chart) || now - chart.FetchedAt >= ttl;
             bool latestDue = manual || now >= cache.NextCheck;
             if (!latestDue && !chartDue) return;
@@ -358,7 +358,7 @@ public sealed class FxRatesService : IDisposable
                         if (!Current()) return;
                         if (!cache.Markets.TryGetValue(pair, out var prior) || quote.SourceAt >= prior.SourceAt) cache.Markets[pair] = quote;
                         cache.Markets[pair + ":" + span] = quote;
-                        if (span == "7D") cache.Markets[pair + ":1h"] = quote;
+                        if (span is "7D" or "1M") cache.Markets[pair + ":1h"] = quote;   // both are hourly: the 24-hour change reads this
                     }
                     catch (OperationCanceledException) when (token.IsCancellationRequested) { throw; }
                     catch { failed = true; }
@@ -382,8 +382,7 @@ public sealed class FxRatesService : IDisposable
                     var quote = await keyless!.Yahoo(pair, span, timeout.Token);
                     if (!Current()) return;
                     cache.Markets[pair + ":" + span] = quote;
-                    if (span == "7D") cache.Markets[pair + ":1h"] = quote;
-                    else if (span == "1M") cache.Markets[pair + ":1d"] = quote;
+                    if (span is "7D" or "1M") cache.Markets[pair + ":1h"] = quote;
                 }
                 catch (OperationCanceledException) when (token.IsCancellationRequested) { throw; }
                 catch { failed = true; }

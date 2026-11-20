@@ -42,6 +42,10 @@ First public release.
 - Keyboard focus rings were cut off in Settings and did not fit checkboxes, toggles and radio buttons.
 - After a theme switch, the AI usage, Prayer, FX, Today and Battery views kept the previous theme's colours until their data refreshed; they now redraw right away.
 - The AI usage card is only as tall as its list of tools.
+- Mochi no longer falls asleep while you type: only the pointer on the dock used to count as activity. He now rests (idle thoughts, a coffee, a bored sigh, a short doze) while you work elsewhere, and sleeps after 10 minutes without keyboard or mouse input.
+- The Stats per-core bars are all the same width at every display scale and interface size.
+- The FX one-month chart uses hourly prices like the seven-day chart (it showed about 22 daily points) and refreshes every 30 minutes.
+- Running the setup again no longer tries to install PawnIO when it is already installed (the option is hidden then).
 - Settings safety: running the developer tests could overwrite the settings file with defaults. The tests now use a scratch folder, WhatsApp setup never saves settings on its own, and MochiDock keeps a daily copy of the last three days' settings (`settings.backup-yyyyMMdd.json`).
 
 ### Known limitations

@@ -58,7 +58,7 @@ public sealed class KeylessFxProvider(HttpClient http, Func<DateTimeOffset>? clo
         };
         var (interval, range) = normSpan switch
         {
-            "1M" => ("1d", "1mo"),
+            "1M" => ("1h", "1mo"),   // hourly, like 7D: about 500 points instead of about 22 daily ones
             "1Y" => ("1d", "1y"),
             "1D" => ("1d", "1mo"),
             _ => ("1h", "7d")

@@ -77,7 +77,7 @@ The compact capsule in both themes, here showing the current song:
 ![Compact capsule, Default theme](docs/images/live/capsule-media-default.png)
 ![Compact capsule, Matcha theme](docs/images/live/capsule-media-matcha.png)
 
-Mochi's moods, in both themes:
+Mochi's faces, in both themes ([what makes each one appear](docs/USER_GUIDE.md#mochis-faces)):
 
 ![Mochi's moods on the Default dark theme](docs/images/mochi-moods-default.png)
 

@@ -362,21 +362,8 @@
                 </Grid>
 
                 <Border Background="{DynamicResource IslandSubCardBackgroundBrush}" CornerRadius="10" Height="55" BorderBrush="{DynamicResource IslandSubCardBorderBrush}" BorderThickness="1" Padding="4,4">
-                    <ItemsControl ItemsSource="{Binding HardwareStats.CoreUsages}">
-                        <ItemsControl.ItemsPanel>
-                            <ItemsPanelTemplate>
-                                <UniformGrid Rows="1" />
-                            </ItemsPanelTemplate>
-                        </ItemsControl.ItemsPanel>
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                                <Grid VerticalAlignment="Bottom" HorizontalAlignment="Stretch" Margin="1.5,0">
-                                    <Border Height="46" Background="{DynamicResource IslandTrackBrush}" CornerRadius="2" VerticalAlignment="Bottom" HorizontalAlignment="Stretch" />
-                                    <Border Height="{Binding HeightValue}" Background="{Binding CoreBrush}" CornerRadius="2" VerticalAlignment="Bottom" HorizontalAlignment="Stretch" />
-                                </Grid>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
+                    <!-- Per-core bars drawn in whole device pixels so every bar has the same width (CoreBars / CoreBarLayout) -->
+                    <controls:CoreBars Items="{Binding HardwareStats.CoreUsages}" Height="46" VerticalAlignment="Bottom" />
                 </Border>
             </StackPanel>
 

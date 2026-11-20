@@ -339,9 +339,8 @@ public partial class MascotControl : System.Windows.Controls.UserControl
 
     {
 
-        // If mouse has not moved for 5 minutes and mood is Idle, Mochi takes a nap
-
-        if (Mood == MascotMood.Idle && (DateTime.Now - _lastMouseMoveTime).TotalMinutes >= 5)
+        // Nobody at the PC (no keyboard or mouse input for 10 minutes) and nothing else going on: Mochi takes a nap. Typing counts.
+        if (Mood == MascotMood.Idle && MochiDock.Services.UserIdleService.IdleTime() >= MascotTriggers.AwayAfter)
 
         {
 
@@ -658,7 +657,7 @@ public partial class MascotControl : System.Windows.Controls.UserControl
         mood is MascotMood.Angry or MascotMood.Hot or MascotMood.Freezing or MascotMood.Dizzy or MascotMood.Drained or MascotMood.Victory or MascotMood.Defeat or MascotMood.Worried or MascotMood.BreakTime
             or MascotMood.Excited or MascotMood.Surprised or MascotMood.Cheering or MascotMood.Praying or MascotMood.Waking or MascotMood.Bored
             or MascotMood.Electric or MascotMood.Money or MascotMood.MoneyDown or MascotMood.Sunny or MascotMood.Rainy or MascotMood.Snowy
-            or MascotMood.Cloudy or MascotMood.Studying;
+            or MascotMood.Cloudy or MascotMood.Studying or MascotMood.Coffee;
 
     // The gaming faces keep still: the eyes do not follow the pointer and do not blink.
     private static bool IsStill(MascotMood mood) => mood is MascotMood.Focused or MascotMood.Worried or MascotMood.BreakTime or MascotMood.Waking or MascotMood.Bored or MascotMood.Studying;
@@ -1310,6 +1309,17 @@ public partial class MascotControl : System.Windows.Controls.UserControl
                 {
                     CoffeeSteam.BeginAnimation(OpacityProperty, Loop(1, 0.2, 700));
                     BodyBounceTransform.BeginAnimation(TranslateTransform.YProperty, Loop(0, -1.2, 1400, easing: new SineEase { EasingMode = EasingMode.EaseInOut }));
+                }
+                break;
+
+            case MascotMood.Coffee:
+                // Resting while you work: awake, a cup of coffee with steam rising, a gentle sway. No headset, no tint.
+                UseEyes(pill: true, flat: false, droop: false, spiral: false);
+                CoffeeGroup.Visibility = Visibility.Visible;
+                if (animate)
+                {
+                    CoffeeSteam.BeginAnimation(OpacityProperty, Loop(1, 0.2, 900));
+                    BodyBounceTransform.BeginAnimation(TranslateTransform.YProperty, Loop(0, -0.8, 1800, easing: new SineEase { EasingMode = EasingMode.EaseInOut }));
                 }
                 break;
 

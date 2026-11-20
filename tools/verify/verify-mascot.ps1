@@ -43,11 +43,12 @@ $expected=@{
  Rainy=@('UmbrellaGroup','RainGroup');
  Snowy=@('ScarfGroup','SnowGroup');
  Cloudy=@('CloudGroup');
- Studying=@('LeftDetermEye','RightDetermEye','TimerBadge')
+ Studying=@('LeftDetermEye','RightDetermEye','TimerBadge');
+ Coffee=@('CoffeeGroup')
 }
-$pillEyes=@{Angry=$false;Hot=$false;Freezing=$true;Dizzy=$false;Drained=$false;Focused=$false;Victory=$false;Defeat=$false;Worried=$true;BreakTime=$false;Excited=$true;Surprised=$true;Cheering=$false;Praying=$false;Bored=$true;Waking=$false;Electric=$false;Money=$false;MoneyDown=$false;Sunny=$false;Rainy=$true;Snowy=$true;Cloudy=$true;Studying=$false}
+$pillEyes=@{Angry=$false;Hot=$false;Freezing=$true;Dizzy=$false;Drained=$false;Focused=$false;Victory=$false;Defeat=$false;Worried=$true;BreakTime=$false;Excited=$true;Surprised=$true;Cheering=$false;Praying=$false;Bored=$true;Waking=$false;Electric=$false;Money=$false;MoneyDown=$false;Sunny=$false;Rainy=$true;Snowy=$true;Cloudy=$true;Studying=$false;Coffee=$true}
 $sweat=@{Hot=$true}
-$order=@('Idle','Angry','Hot','Freezing','Dizzy','Drained','Music','Hot','Idle','Dizzy','Alert','Drained','Sleeping','Angry','Happy','Freezing','Focused','Waiting','Angry','Bored','Victory','Defeat','Angry','Victory','Idle','Defeat','Focused','Worried','BreakTime','Worried','Angry','BreakTime','Focused','Music','Worried','Music','Excited','Surprised','Cheering','Praying','Angry','Surprised','Idle','Praying','Idle','Bored','Waking','Bored','Angry','Waking','Idle','Electric','Money','Electric','MoneyDown','Sunny','Rainy','Snowy','Cloudy','Studying','Electric','Idle','Rainy','Dizzy','Sunny','Music','Studying','Focused','Money','Idle')
+$order=@('Idle','Angry','Hot','Freezing','Dizzy','Drained','Music','Hot','Idle','Dizzy','Alert','Drained','Sleeping','Angry','Happy','Freezing','Focused','Waiting','Angry','Bored','Victory','Defeat','Angry','Victory','Idle','Defeat','Focused','Worried','BreakTime','Worried','Angry','BreakTime','Focused','Music','Worried','Music','Excited','Surprised','Cheering','Praying','Angry','Surprised','Idle','Praying','Idle','Bored','Waking','Bored','Angry','Waking','Idle','Electric','Money','Electric','MoneyDown','Sunny','Rainy','Snowy','Cloudy','Studying','Electric','Idle','Rainy','Dizzy','Sunny','Music','Studying','Focused','Money','Idle','Coffee','Bored','Coffee','Sleeping','Coffee','Electric','Coffee','Idle')
 
 function Visible($mascot,$name){$e=$mascot.FindName($name);if($null -eq $e){throw "Layer $name not found"};return $e.Visibility -eq [Windows.Visibility]::Visible}
 function New-Host($mascot,$scale,$background){
@@ -252,7 +253,7 @@ function Ink-Metrics($mood){
 }
 # Where the eyes' vertical centre must lie (DIPs): the pill, flat, droopy and spiral eyes are centred on 12.5; the happy and sleepy
 # arcs sit a little lower by design.
-$band=@{Idle=@(11.9,13.1);Music=@(12.6,14.6);Alert=@(11.9,13.1);Sleeping=@(12.4,14.2);Focused=@(12.0,13.4);Happy=@(12.6,14.6);Angry=@(11.9,13.1);Hot=@(11.9,13.1);Freezing=@(11.9,13.1);Dizzy=@(11.9,13.1);Drained=@(11.9,13.1);Victory=@(12.6,14.6);Defeat=@(11.9,13.1);Worried=@(11.9,13.1);BreakTime=@(12.4,14.2);Excited=@(11.9,13.1);Surprised=@(11.9,13.1);Cheering=@(12.6,14.6);Praying=@(12.4,14.2);Bored=@(13.5,14.8);Waking=@(12.4,14.2);Electric=@(11.9,13.1);Sunny=@(11.9,13.3);Rainy=@(11.9,13.1);Snowy=@(11.9,13.1);Cloudy=@(11.9,13.1);Studying=@(12.0,13.4)}
+$band=@{Idle=@(11.9,13.1);Music=@(12.6,14.6);Alert=@(11.9,13.1);Sleeping=@(12.4,14.2);Focused=@(12.0,13.4);Happy=@(12.6,14.6);Angry=@(11.9,13.1);Hot=@(11.9,13.1);Freezing=@(11.9,13.1);Dizzy=@(11.9,13.1);Drained=@(11.9,13.1);Victory=@(12.6,14.6);Defeat=@(11.9,13.1);Worried=@(11.9,13.1);BreakTime=@(12.4,14.2);Excited=@(11.9,13.1);Surprised=@(11.9,13.1);Cheering=@(12.6,14.6);Praying=@(12.4,14.2);Bored=@(13.5,14.8);Waking=@(12.4,14.2);Electric=@(11.9,13.1);Sunny=@(11.9,13.3);Rainy=@(11.9,13.1);Snowy=@(11.9,13.1);Cloudy=@(11.9,13.1);Studying=@(12.0,13.4);Coffee=@(11.9,13.1)}
 foreach($mood in $band.Keys){
  $ink=Ink-Metrics $mood
  if($ink.L[2] -lt 20 -or $ink.R[2] -lt 20){throw "No eye ink found in mood $mood (left $($ink.L[2]) pixels, right $($ink.R[2]))"}
@@ -299,7 +300,7 @@ foreach($style in @(@('black',[Windows.Media.Brushes]::Black),@('cream',[Windows
 function Body-Top($m){$c=$m.FindName('BodyGradStopTop').Color;return ('#{0:X2}{1:X2}{2:X2}' -f $c.R,$c.G,$c.B)}
 $mascotClass=$assembly.GetType('MochiDock.Controls.MascotControl')
 $matcha=[Activator]::CreateInstance($mascotClass);$matcha.ApplyTheme($true)
-foreach($name in 'Idle','Waiting','Music','Alert','Sleeping','Happy','Money','Snowy','Cloudy','Studying'){
+foreach($name in 'Idle','Waiting','Music','Alert','Sleeping','Happy','Money','Snowy','Cloudy','Studying','Coffee'){
  $matcha.Mood=[Enum]::Parse($moodType,'Angry');$matcha.Mood=[Enum]::Parse($moodType,$name)
  if((Body-Top $matcha) -ne '#85B957'){throw "Matcha: $name should return to the green body but is $(Body-Top $matcha)"}
  $checks++
@@ -325,6 +326,29 @@ $sheet=$parts[1];$sheet.Measure([Windows.Size]::new(8000,400));$sheet.Arrange([W
 $bitmap=[Windows.Media.Imaging.RenderTargetBitmap]::new([int]($sheet.ActualWidth*2),[int]($sheet.ActualHeight*2),192,192,[Windows.Media.PixelFormats]::Pbgra32);$bitmap.Render($sheet)
 $encoder=[Windows.Media.Imaging.PngBitmapEncoder]::new();$encoder.Frames.Add([Windows.Media.Imaging.BitmapFrame]::Create($bitmap))
 $stream=[IO.File]::Create((Join-Path $output 'moods-matcha.png'));$encoder.Save($stream);$stream.Dispose()
+
+# ---- README mood sheets: every face with its name, 8 per row, the same list on both themes, plus one frame of the face-change spin.
+$sheetFaces=[ordered]@{Idle='Idle';Waiting='Thinking';Music='Music';Alert='Notice';Excited='New message';Sleeping='Sleeping';Waking='Waking up';Bored='Bored';
+ Coffee='Coffee';Happy='Happy';Cheering='Cheering';Surprised='Surprised';Praying='Prayer time';Focused='Gaming';Worried='Game going badly';BreakTime='Break reminder';
+ Victory='Victory';Defeat='Defeat';Hot='Hot';Freezing='Freezing';Angry='Overdue task';Dizzy='Dizzy';Drained='Low battery';Electric='Electric';
+ Money='Money';MoneyDown='Money (rate down)';Sunny='Sunny';Rainy='Rainy';Snowy='Snowy';Cloudy='Cloudy';Studying='Studying';Turning='Changing face'}
+foreach($sheet in @(@('default',$false,'#000000','#F2F2F5'),@('matcha',$true,'#EFE9D8','#283322'))){
+ $grid=[Windows.Controls.Primitives.UniformGrid]::new();$grid.Columns=8;$grid.Background=[Windows.Media.BrushConverter]::new().ConvertFromString($sheet[2])
+ foreach($key in $sheetFaces.Keys){
+  $cell=[Windows.Controls.StackPanel]::new();$cell.Margin=[Windows.Thickness]::new(6,30,6,14)
+  $m=[Activator]::CreateInstance($mascotClass);$m.Width=96;$m.Height=83;if($sheet[1]){$m.ApplyTheme($true)}
+  $m.Mood=[Enum]::Parse($moodType,$(if($key -eq 'Turning'){'Idle'}else{$key}));if($key -eq 'Turning'){Show-Turn $m 400}
+  $label=[Windows.Controls.TextBlock]::new();$label.Text=$sheetFaces[$key];$label.FontFamily=[Windows.Media.FontFamily]::new('Segoe UI Semibold');$label.FontSize=12.5
+  $label.Foreground=[Windows.Media.BrushConverter]::new().ConvertFromString($sheet[3]);$label.HorizontalAlignment='Center';$label.Margin=[Windows.Thickness]::new(0,10,0,0)
+  [void]$cell.Children.Add($m);[void]$cell.Children.Add($label);[void]$grid.Children.Add($cell)
+ }
+ $parts=New-Host $grid 1 $grid.Background;$host2=$parts[1];$host2.Measure([Windows.Size]::new(1200,2000));$host2.Arrange([Windows.Rect]::new(0,0,$host2.DesiredSize.Width,$host2.DesiredSize.Height));$host2.UpdateLayout()
+ $bitmap=[Windows.Media.Imaging.RenderTargetBitmap]::new([int]($host2.ActualWidth*2),[int]($host2.ActualHeight*2),192,192,[Windows.Media.PixelFormats]::Pbgra32);$bitmap.Render($host2)
+ $encoder=[Windows.Media.Imaging.PngBitmapEncoder]::new();$encoder.Frames.Add([Windows.Media.Imaging.BitmapFrame]::Create($bitmap))
+ $stream=[IO.File]::Create((Join-Path $output "moods-grid-$($sheet[0]).png"));$encoder.Save($stream);$stream.Dispose();$parts[0].Dispose()
+}
+$checks++
+
 # ---- Winking closes one eye only, and the Music face sways sideways while it bounces.
 $wink=[Activator]::CreateInstance($mascotType)
 $wink.PerformWink()

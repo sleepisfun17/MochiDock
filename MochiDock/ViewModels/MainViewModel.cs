@@ -64,9 +64,9 @@ public partial class MainViewModel : INotifyPropertyChanged
     public void ReportUserActivity()
     {
         _lastActivityTime = DateTime.Now;
-        if (MascotMood == MascotMood.Sleeping)
+        if (_baseMood is MascotMood.Sleeping or MascotMood.Coffee or MascotMood.Bored && !_isWorkstationLocked && _displayAwake)
         {
-            MascotMood = MascotMood.Idle;
+            MascotMood = MascotMood.Idle;   // you came to the dock: Mochi looks up
         }
     }
     private enum TypewriterState { Typing, Pausing, Deleting }
@@ -613,21 +613,8 @@ public partial class MainViewModel : INotifyPropertyChanged
         // _idleTypewriterTimer.Start(); -- Self-talking typewriter engine disabled to keep clean resting clock
 
         _inactivitySleepTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(2) };
-        _inactivitySleepTimer.Tick += (s, e) =>
-        {
-            if (!HasActiveMedia && !IsStatsShownInCapsule && !IsNotificationInMainPill && !IsPomodoroInMainPill)
-            {
-                var idleSeconds = (DateTime.Now - _lastActivityTime).TotalSeconds;
-                if (idleSeconds >= 90) // After 1.5 minutes of inactivity near dock
-                {
-                    if (MascotMood != MascotMood.Sleeping)
-                    {
-                        MascotMood = MascotMood.Sleeping;
-                        CurrentIdleThought = "sleeping peacefully...";
-                    }
-                }
-            }
-        };
+        // Resting and sleeping follow real keyboard and mouse idle time, not only the pointer on the dock (UpdateRestingFace).
+        _inactivitySleepTimer.Tick += (s, e) => UpdateRestingFace(_wasGaming);
         _inactivitySleepTimer.Start();
 
         _pomodoroService.Tick += () =>
@@ -771,7 +758,7 @@ public partial class MainViewModel : INotifyPropertyChanged
             ExpireGamingPassThrough();
             UpdateGameProfile(isGaming, gamingStateChanged);
             UpdateLolStats(isGaming);
-            UpdateLonelyMood(isGaming);
+            UpdateRestingFace(isGaming);
             _wasGaming = isGaming;
 
             if (MochiDock.Core.LocalFeaturePolicy.SampleHardware(_isWorkstationLocked,_displayAwake,statsVisible,IsStatsShownInCapsule,isGaming && _settings.IsHardwareGamingMode,EnableHardwareAlerts))

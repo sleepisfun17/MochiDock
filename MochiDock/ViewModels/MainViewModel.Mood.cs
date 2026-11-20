@@ -112,17 +112,38 @@ public partial class MainViewModel
         _happyTimer.Start();
     }
 
-    // Lonely: nobody has touched the keyboard or mouse for a long while and nothing is going on. Checked every few seconds.
-    private DateTime _lastLonelyCheckUtc;
+    // Resting: while you work elsewhere (typing counts, not only the pointer on the dock) Mochi rotates through his idle thoughts, a
+    // coffee, a bored sigh and a short doze; he only really sleeps when nobody has touched the keyboard or mouse for 10 minutes
+    // (MascotTriggers.RestingFace). Checked every few seconds.
+    private DateTime _lastRestingCheckUtc;
 
-    private void UpdateLonelyMood(bool isGaming)
+    private void UpdateRestingFace(bool isGaming)
     {
         var now = DateTime.UtcNow;
-        if (now - _lastLonelyCheckUtc < TimeSpan.FromSeconds(5)) return;
-        _lastLonelyCheckUtc = now;
-        bool lonely = _settings.ExpressiveMochi && MascotTriggers.Lonely(UserIdleService.IdleTime(), CurrentMedia.IsPlaying, isGaming, _isWorkstationLocked, _displayAwake);
-        if (lonely && _baseMood is MascotMood.Idle or MascotMood.Waiting) MascotMood = MascotMood.Bored;
-        else if (!lonely && _baseMood == MascotMood.Bored) MascotMood = _wasGaming ? MascotMood.Focused : (CurrentMedia.IsPlaying ? MascotMood.Music : MascotMood.Idle);
+        if (now - _lastRestingCheckUtc < TimeSpan.FromSeconds(5)) return;
+        _lastRestingCheckUtc = now;
+        if (_isWorkstationLocked || !_displayAwake) return;   // the lock and a dark screen set their own sleep
+        if (_baseMood is not (MascotMood.Idle or MascotMood.Waiting or MascotMood.Coffee or MascotMood.Bored or MascotMood.Sleeping)) return;
+        if (IsNotificationInMainPill || IsPomodoroInMainPill || IsStatsShownInCapsule) return;
+        var inputIdle = UserIdleService.IdleTime();
+        var face = MascotTriggers.RestingFace(DateTime.Now - _lastActivityTime, inputIdle, CurrentMedia.IsPlaying, isGaming, _isWorkstationLocked, _displayAwake);
+        // With "Expressive Mochi" off he still sleeps when nobody is there, but keeps the plain face while you work.
+        if (!_settings.ExpressiveMochi && face != MascotMood.Sleeping) face = null;
+        if (face is { } rest)
+        {
+            if (_baseMood == rest) return;
+            MascotMood = rest;
+            CurrentIdleThought = rest switch
+            {
+                MascotMood.Coffee => "sipping a coffee...",
+                MascotMood.Bored => "*sigh*...",
+                _ => "sleeping peacefully...",
+            };
+        }
+        else if (_baseMood is MascotMood.Coffee or MascotMood.Bored or MascotMood.Sleeping)
+        {
+            MascotMood = MascotMood.Idle;   // back to the idle thoughts
+        }
     }
 
     private DispatcherTimer? _momentTimer;
