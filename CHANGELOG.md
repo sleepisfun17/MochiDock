@@ -14,7 +14,8 @@ All notable changes to MochiDock are documented here. The format follows [Keep a
 ### Changed
 
 - **Settings export** writes your settings and tasks to one file for another PC and leaves out the shared WhatsApp server's webhook token and this PC's own values (monitor, positions, ports, startup, power and device choices). Import keeps this PC's values, adds or updates tasks and keeps the others, and still accepts an older settings.json.
-- The Stats per-core load is a grid like Task Manager's: many threads wrap into rows (32 threads as 2 x 16) instead of hair-thin bars.
+- The Stats per-core load is a grid like Task Manager's: many threads wrap into rows (32 threads as 2 x 16) instead of hair-thin bars. On a hybrid CPU the P-core threads and the E-cores always get rows of their own, the header says how many of each ("PER CORE · 8P + 16E"; the tooltip has the thread counts) and the grid takes the page's spare height.
+- The Stats pages (CPU, GPU, Memory, Drives, Network) use their full height: each column ends at the bottom of the card instead of leaving an empty band. The process lists show the top 10 instead of 8, and Memory's details add Total, Committed and Cached.
 - The email card shows **Mark Read** only when it really marks the email read: in Outlook, or on the server for a mail account with "Mark as read on the server" turned on. For Mailspring and read-only accounts it used to only remove the email from MochiDock, which **Dismiss** already does.
 
 ### Fixed

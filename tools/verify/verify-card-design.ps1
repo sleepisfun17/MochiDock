@@ -110,10 +110,13 @@ $stats.CpuUsage=37;$stats.CpuTemp=56;$stats.GpuUsage=4;$stats.RamUsagePercent=63
 $stats.SystemCpuPercent=17;$stats.UserCpuPercent=20;$stats.IdleCpuPercent=63;$stats.CpuSpeedGhz=2.36;$stats.CpuBaseGhz=3.6
 $stats.FormattedDiskSpeed="941.9 MB/s";$stats.DiskReadBytesPerSec=987654321;$stats.NetDownloadBytesPerSec=987654321
 foreach($property in @("CpuChipSparkPoints","GpuChipSparkPoints","DiskChipSparkPoints","NetChipSparkPoints","FpsChipSparkPoints")){$stats.$property=[Windows.Media.PointCollection]::Parse("0.75,3.25 20,1.25 40,2.25 60,0.75 79.25,2.25")}
-foreach($name in @("MochiDock","Desktop Window Manager","Task Manager","Windows Explorer","HWiNFO 64 (x64)","System","Host Process for Windows Tasks","Codex")){
+foreach($name in @("MochiDock","Desktop Window Manager","Task Manager","Windows Explorer","HWiNFO 64 (x64)","System","Host Process for Windows Tasks","Codex","Claude","TRCC")){
  $item=[Activator]::CreateInstance($assembly.GetType("MochiDock.Services.ProcessMetricItem"));$item.Name=$name;$item.DisplayName=$name;$item.ValueText="2.3%";$stats.TopProcesses.Add($item)
 }
 
+# An i9-like CPU: 16 P-core threads and 16 E-cores, so the per-core grid and its caption are drawn as on a hybrid CPU.
+$stats.IsHybridCpu=$true;$stats.CoreSummaryText="8 P-cores (16 threads) · 16 E-cores";$stats.CoreHeaderText="PER CORE · 8P + 16E"
+for($i=0;$i -lt 32;$i++){$core=[Activator]::CreateInstance($assembly.GetType("MochiDock.Services.CoreUsageItem"));$core.CoreIndex=$i+1;$core.Usage=($i*37)%101;$core.CoreKind=$(if($i -lt 16){"Performance"}else{"Efficiency"});$stats.CoreUsages.Add($core)}
 $message=[pscustomobject]@{Sender="Alex · 日本語";SenderName="Alex";Message="A readable message with a, numbers 100%, 日本語 and emoji 😀 👍🏽 🇯🇵 👨‍👩‍👧 ❤️.";FormattedTime="13:44";Subject="Design review and a long subject";BodyPreview="Please review the updated card typography. 日本語テキスト";FolderName="Inbox";ClientSource="Outlook"}
 $task=[pscustomobject]@{Title="Review the calendar layout";IsCompleted=$false;CountdownText="in 30 min";HasDueTime=$true}
 $media=[Activator]::CreateInstance($assembly.GetType("MochiDock.Models.MediaInfo"));$media.Title="A song title";$media.Artist="Artist 日本語";$media.Duration=[TimeSpan]::FromSeconds(151);$media.CanSeek=$true;$media.Position=[TimeSpan]::FromSeconds(74)
@@ -129,7 +132,7 @@ $data=[pscustomobject]@{
  CurrentMedia=$media;HasLyrics=$false;LyricsStatusText="Loading lyrics";PlainLyrics="";PomodoroTimeDisplay="25:00";PomodoroStateText="Ready";PomodoroModeLabel="Focus";PomodoroPlayPauseIcon="▶";PomodoroPlayPauseLabel="Start";HardwareStats=$stats
  WeatherCityDisplay="Tokyo";WeatherDisplayText="18°C";WeatherConditionText="Partly cloudy";WeatherInfo=[pscustomobject]@{HourlyList=@();DailyList=@()};ActiveSystemModule="CPU";IsCpuModuleActive=$true;IsGpuModuleActive=$false;IsMemoryModuleActive=$false;IsDrivesModuleActive=$false;IsNetworkModuleActive=$false;IsGamesModuleActive=$false;IsBatteryModuleActive=$false
 }
-$heights=@{Media=170;WhatsApp=340;Discord=230;Email=230;Settings=400;Hardware=345;Summary=350;Weather=275;Pomodoro=170;Prayer=270;FileShelf=410;Clipboard=250;Today=360;FxRates=360;BatteryModule=345;AiUsage=360;Script=300;Downloads=260}
+$heights=@{Media=170;WhatsApp=340;Discord=230;Apps=230;Email=230;Settings=400;Hardware=345;Summary=350;Weather=275;Pomodoro=170;Prayer=270;FileShelf=410;Clipboard=250;Today=360;FxRates=360;BatteryModule=345;AiUsage=360;Script=300;Downloads=260}
 $glyphEvidence=[Collections.Generic.List[object]]::new()
 function Add-Visuals($visual,$list){
  if($null -eq $visual){return}
@@ -145,6 +148,8 @@ function Read-Glyphs($drawing,$card){
  }elseif($drawing -is [Windows.Media.DrawingGroup]){foreach($child in $drawing.Children){Read-Glyphs $child $card}}
 }
 $events='PreviewMouseDown|PreviewMouseUp|LostKeyboardFocus|LostFocus|Click|Checked|Unchecked|SelectionChanged|TextChanged|ValueChanged|PreviewMouseWheel|MouseLeftButtonDown|MouseRightButtonUp|MouseRightButtonDown|MouseLeftButtonUp|MouseDown|MouseUp|MouseMove|MouseEnter|MouseLeave|PreviewMouseLeftButtonDown|PreviewMouseLeftButtonUp|PreviewMouseMove|PreviewKeyDown|KeyDown|LostMouseCapture|DragStarted|DragCompleted|DragDelta|Loaded|Unloaded|SizeChanged|DataContextChanged|IsVisibleChanged|Drop|DragOver|CycleCompleted'
+# The navigation icons (the Apps card uses the bell); x:Shared only works in compiled dictionaries.
+$application.Resources.MergedDictionaries.Add([Windows.Markup.XamlReader]::Parse(((Get-Content (Join-Path $repo 'MochiDock/Views/NavigationIconResources.xaml') -Raw) -replace ' x:Shared="False"','')))
 foreach($file in Get-ChildItem (Join-Path $repo "MochiDock/Views/Cards") -Filter '*View.xaml'){
  $name=$file.BaseName -replace 'CardView$','' -replace 'View$',''
  [xml]$xml=Get-Content $file.FullName -Raw
@@ -249,6 +254,19 @@ foreach($file in Get-ChildItem (Join-Path $repo "MochiDock/Views/Cards") -Filter
    Read-Glyphs ([Windows.Media.VisualTreeHelper]::GetDrawing($visual)) $name
   }
   if($name -eq "Hardware"){
+   # The CPU page's three columns end at the page's bottom edge (FillLastPanel), and all ten processes fit above it.
+   $page=@($view.FindName("HardwareModuleStrip").Parent.Children | Where-Object {$_ -isnot [Windows.Controls.Border] -and $_.GetType().Name -eq "TabTransitionHost"})[0]
+   $cpu=@($page.Children | Where-Object {$_.Tag -eq "CPU"})[0]
+   $columns=@($cpu.Children | Where-Object {$_.GetType().Name -eq "FillLastPanel"})
+   if($columns.Count -ne 3){throw "The CPU page should have three filling columns, found $($columns.Count)"}
+   foreach($column in $columns){
+    $lastChild=@($column.Children | Where-Object {$_.Visibility -ne [Windows.Visibility]::Collapsed})[-1]
+    $bottom=$lastChild.TransformToAncestor($cpu).Transform([Windows.Point]::new(0,$lastChild.ActualHeight)).Y
+    if([Math]::Abs($bottom-$cpu.ActualHeight) -gt 1){throw "A CPU column ends at $bottom, not at the page bottom $($cpu.ActualHeight), $theme, $scale"}
+   }
+   $rows=@($visuals | Where-Object {$_ -is [Windows.Controls.ContentPresenter] -and $_.Content -and $_.Content.GetType().Name -eq "ProcessMetricItem" -and $_.IsVisible})
+   foreach($row in $rows){$rowBottom=$row.TransformToAncestor($cpu).Transform([Windows.Point]::new(0,$row.ActualHeight)).Y;if($rowBottom -gt $cpu.ActualHeight+0.5){throw "Process row $($row.Content.Name) is cut off at $rowBottom, $theme, $scale"}}
+   if($rows.Count -lt 10){throw "Expected ten process rows on the CPU page, found $($rows.Count)"}
    $strip=$view.FindName("HardwareModuleStrip")
    $chips=@($strip.Children | Where-Object {$_ -is [Windows.Controls.Border] -and [Windows.Controls.Grid]::GetColumn($_) -lt 12}) # column 12 is the optional Battery chip
    if($chips.Count -ne 6){throw "Expected six hardware chips"}

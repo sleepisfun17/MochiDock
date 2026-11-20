@@ -72,16 +72,20 @@ public sealed class CoreBars : FrameworkElement
 
     protected override void OnRender(DrawingContext dc)
     {
-        var cores = Items?.OfType<CoreUsageItem>().ToList();
-        if (cores is not { Count: > 0 } || ActualWidth <= 0 || ActualHeight <= 0) return;
+        var all = Items?.OfType<CoreUsageItem>().ToList();
+        if (all is not { Count: > 0 } || ActualWidth <= 0 || ActualHeight <= 0) return;
+        // P-core threads first, then E-cores, then any others, each kind starting its own row (Windows' order kept within a kind).
+        var groups = new[] { "Performance", "Efficiency" }.Select(kind => all.Where(c => c.CoreKind == kind).ToList())
+            .Append(all.Where(c => c.CoreKind is not ("Performance" or "Efficiency")).ToList()).Where(g => g.Count > 0).ToList();
+        var cores = groups.SelectMany(g => g).ToList();
         var (sx, sy) = _drawnScale = DeviceScale();
-        var grid = CoreBarLayout.Grid(ActualWidth * sx, ActualHeight * sy, cores.Count, Gap * Math.Min(sx, sy));
+        var grid = CoreBarLayout.GroupedGrid(ActualWidth * sx, ActualHeight * sy, groups.Select(g => g.Count).ToList(), Gap * Math.Min(sx, sy));
         if (grid.CellWidth <= 0 || grid.CellHeight <= 0) return;
         double cellWidth = grid.CellWidth / sx, cellHeight = grid.CellHeight / sy;
         double radius = Math.Min(1.5, Math.Min(cellWidth, cellHeight) / 2);
         for (int i = 0; i < cores.Count; i++)
         {
-            int row = i / grid.Columns, column = i % grid.Columns;
+            var (row, column) = grid.Cells[i];
             double x = (grid.Left + column * (grid.CellWidth + grid.Gap)) / sx;
             double top = (grid.Top + row * (grid.CellHeight + grid.Gap)) / sy, bottom = top + cellHeight;
             // The load rises from the cell's bottom in whole device pixels, at least one so an idle thread still shows its colour.

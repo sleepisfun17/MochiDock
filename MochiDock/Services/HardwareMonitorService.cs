@@ -316,7 +316,23 @@ public class HardwareMonitorService
     private bool _isNicOnline = true;
     private bool _lastGamingState;
     private int _nonGamingConsecutiveChecks;
+    [StructLayout(LayoutKind.Sequential)]
+    private struct PERFORMANCE_INFORMATION
+    {
+        public uint cb;
+        public nuint CommitTotal, CommitLimit, CommitPeak, PhysicalTotal, PhysicalAvailable, SystemCache, KernelTotal, KernelPaged, KernelNonpaged, PageSize;
+        public uint HandleCount, ProcessCount, ThreadCount;
+    }
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    private static extern bool K32GetPerformanceInfo(ref PERFORMANCE_INFORMATION info, uint size);
+
+    /// <summary>Rows in each top-process list (CPU, memory, disk): ten 21-DIP rows fill a Stats page column.</summary>
+    public const int TopProcessCount = 10;
+
     private readonly Dictionary<int, string> _coreKindMap = new();
+    // "8 P-cores (16 threads) · 16 E-cores", from the CPU Sets' physical core index and efficiency class (CoreTopology.Summary).
+    private string _coreSummary = "", _coreHeader = "PER CORE / THREADS";
     private bool _isHybridCpuDetected;
     private SYSTEM_PROCESSOR_PERFORMANCE_INFORMATION[]? _prevCoreTimes;
     
@@ -625,6 +641,7 @@ private float _lastGpuUsage;
                     if (GetSystemCpuSetInformation(buf, need, out need, IntPtr.Zero, 0))
                     {
                         var classes = new Dictionary<int, byte>();
+                        var topology = new List<(int CoreIndex, int EfficiencyClass)>();
                         int off = 0;
                         while (off + 20 <= need)
                         {
@@ -635,12 +652,16 @@ private float _lastGpuUsage;
                             if (type == 0) // CpuSetInformation
                             {
                                 byte logicalIndex = Marshal.ReadByte(buf, off + 14);
+                                byte coreIndex = Marshal.ReadByte(buf, off + 15);
                                 byte efficiencyClass = Marshal.ReadByte(buf, off + 18);
                                 classes[logicalIndex] = efficiencyClass;
+                                topology.Add((Marshal.ReadInt16(buf, off + 12) * 256 + coreIndex, efficiencyClass));   // group and core: unique per physical core
                             }
                             off += (int)size;
                         }
 
+                        _coreSummary = MochiDock.Core.CoreTopology.Summary(topology);
+                        _coreHeader = MochiDock.Core.CoreTopology.Header(topology);
                         if (classes.Count > 0)
                         {
                             byte minClass = classes.Values.Min();
@@ -1040,6 +1061,21 @@ private float _lastGpuUsage;
             stats.RamUsagePercent = 40;
             stats.UsedRamGb = 6.4f;
         }
+
+        // Committed memory (RAM plus page file in use, and its limit) and the file cache, from Windows' performance counters
+        // (one cheap call per poll). Unavailable values stay null and show "-".
+        try
+        {
+            var perf = new PERFORMANCE_INFORMATION { cb = (uint)Marshal.SizeOf<PERFORMANCE_INFORMATION>() };
+            if (K32GetPerformanceInfo(ref perf, perf.cb))
+            {
+                double page = (double)perf.PageSize, gb = 1024.0 * 1024 * 1024;
+                stats.CommittedRamGb = (float)Math.Round(perf.CommitTotal * page / gb, 1);
+                stats.CommitLimitGb = (float)Math.Round(perf.CommitLimit * page / gb, 1);
+                stats.CachedRamGb = (float)Math.Round(perf.SystemCache * page / gb, 1);
+            }
+        }
+        catch (Exception ex) { AppLog.Warn("Hardware", ex); }
 
         // 3. GPU & VRAM Stats
         bool vramPopulated = false;
@@ -1453,6 +1489,8 @@ private float _lastGpuUsage;
         // Per-core load from NtQuerySystemInformation, with hybrid (P/E) core detection.
         int coreCount = Environment.ProcessorCount;
         stats.IsHybridCpu = _isHybridCpuDetected;
+        stats.CoreSummaryText = _coreSummary.Length > 0 ? _coreSummary : $"{Environment.ProcessorCount} threads";
+        stats.CoreHeaderText = _coreHeader;
         int size = Marshal.SizeOf(typeof(SYSTEM_PROCESSOR_PERFORMANCE_INFORMATION)) * coreCount;
         IntPtr pBuf = Marshal.AllocHGlobal(size);
         try
@@ -1584,7 +1622,7 @@ private float _lastGpuUsage;
 
                 _cachedTopProcesses = procMetaList
                     .OrderByDescending(p => p.Cpu)
-                    .Take(8)
+                    .Take(TopProcessCount)
                     .Select(p => new ProcessMetricItem
                     {
                         Name = p.Name,
@@ -1597,7 +1635,7 @@ private float _lastGpuUsage;
 
                 _cachedTopMemoryProcesses = procMetaList
                     .OrderByDescending(p => p.Memory)
-                    .Take(8)
+                    .Take(TopProcessCount)
                     .Select(p => new ProcessMetricItem
                     {
                         Name = p.Name,
@@ -1610,7 +1648,7 @@ private float _lastGpuUsage;
 
                 _cachedTopDiskProcesses = procMetaList
                     .OrderByDescending(p => p.IoRate)
-                    .Take(8)
+                    .Take(TopProcessCount)
                     .Select(p => new ProcessMetricItem
                     {
                         Name = p.Name,

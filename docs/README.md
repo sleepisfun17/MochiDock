@@ -55,7 +55,7 @@ pwsh -NoProfile -STA -File tools/verify/verify-typography.ps1
 | `verify-header-animation.ps1` | Header selection pill animation and the former NaN crash |
 | `verify-theme-contrast.ps1`, `verify-color-icons.ps1` | Palette contrast and colored icon resources |
 | `verify-theme-redraw.ps1` | Code-drawn views repaint after a theme switch (visible now, hidden when shown) |
-| `verify-core-bars.ps1` | Stats per-core grid: every thread a cell, equal whole-pixel cells for 8, 32 and 64 threads under interface zooms from 100 to 200 % |
+| `verify-core-bars.ps1` | Stats per-core grid: every thread a cell, equal whole-pixel cells for 8, 32, 64 and a 6P+8E CPU (P and E in rows of their own) under interface zooms from 100 to 200 % |
 | `verify-interface-scale.ps1`, `verify-text-hint.ps1` | Interface zoom and text box hint alignment |
 | `verify-mascot.ps1` | Renders every Mochi mood (output in `MochiDock/obj/mascot`) |
 | `verify-device-battery.ps1`, `tools/gowa-relay/test-gowa-relay.ps1` | Wireless battery read probe; GOWA relay fan-out on loopback |

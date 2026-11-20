@@ -85,6 +85,13 @@ public class HardwareStats
     public string IdleCpuPercentText => FormatCpuPercent(IdleCpuPercent);
     static string FormatCpuPercent(double? value) => value?.ToString("0", System.Globalization.CultureInfo.InvariantCulture) is { } text ? text + "%" : "—";
     public bool IsHybridCpu { get; set; }
+    /// <summary>"8 P-cores (16 threads) · 16 E-cores" on a hybrid CPU, "16 cores · 32 threads" otherwise.</summary>
+    public string CoreSummaryText { get; set; } = "";
+    /// <summary>"PER CORE · 8P + 16E" on a hybrid CPU, "PER CORE / THREADS" otherwise (the full counts are in the tooltip).</summary>
+    public string CoreHeaderText { get; set; } = "PER CORE / THREADS";
+    public string CoreGridTooltip => IsHybridCpu
+        ? $"{CoreSummaryText}\nTop rows: P-core threads (purple). Bottom rows: E-cores (light blue).\nEach cell fills with that thread's load."
+        : $"{CoreSummaryText}\nEach cell fills with that thread's load.";
     public float EfficiencyCoresPercent { get; set; }
     public float PerformanceCoresPercent { get; set; }
     public string SystemUptimeText
@@ -109,6 +116,13 @@ public class HardwareStats
     public string RamPressureText => RamUsagePercent >= 90 ? "Critical" : (RamUsagePercent >= 75 ? "Warning" : "Normal");
     public string RamPressureTooltip => $"Memory pressure: {RamPressureText}\n• Normal: < 75% load\n• Warning: 75% – 89% load\n• Critical: >= 90% load (risk of disk paging)";
     public string RamAvailableGbText => $"{FreeRamGb:0.0} GB";
+    // Committed memory and the file cache from GetPerformanceInfo; null when Windows did not report them.
+    public float? CommittedRamGb { get; set; }
+    public float? CommitLimitGb { get; set; }
+    public float? CachedRamGb { get; set; }
+    public string RamTotalText => TotalRamGb > 0 ? $"{TotalRamGb:0.0} GB" : "-";
+    public string RamCommittedText => CommittedRamGb is { } c && CommitLimitGb is { } l ? $"{c:0.0} / {l:0} GB" : "-";
+    public string RamCachedText => CachedRamGb is { } c ? $"{c:0.0} GB" : "-";
 
     // GPU & VRAM
     public float GpuUsage { get; set; }
