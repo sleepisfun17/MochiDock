@@ -68,6 +68,7 @@ public partial class AppearanceSectionView : UserControl
             ClockEvenRadio.IsChecked = even;
             ClockEdgesRadio.IsChecked = !even;
             ExpressiveCheck.IsChecked = settings.ExpressiveMochi;
+            LoadBirthday(settings.BirthdayMonthDay);
             // Labels carry today's date as the example, so rebuild them each time the page is shown.
             var chosenDate = DateDisplay.Parse(settings.DateFormat);
             DateFormatCombo.Items.Clear();
@@ -136,6 +137,40 @@ public partial class AppearanceSectionView : UserControl
     {
         if (!IsLoaded || _loading) return;
         ViewModel?.SetCapsuleScrollSpeed(ScrollSpeedSlider.Value);
+    }
+
+    // Month and day pickers; "None" in either clears the birthday. The month list is built once.
+    private void LoadBirthday(string? monthDay)
+    {
+        if (BirthdayMonthCombo.Items.Count == 0)
+        {
+            BirthdayMonthCombo.Items.Add(new ComboBoxItem { Content = "None", Tag = 0 });
+            for (int m = 1; m <= 12; m++)
+                BirthdayMonthCombo.Items.Add(new ComboBoxItem { Content = System.Globalization.CultureInfo.InvariantCulture.DateTimeFormat.GetMonthName(m), Tag = m });
+            BirthdayDayCombo.Items.Add(new ComboBoxItem { Content = "-", Tag = 0 });
+            for (int d = 1; d <= 31; d++) BirthdayDayCombo.Items.Add(new ComboBoxItem { Content = d.ToString(System.Globalization.CultureInfo.InvariantCulture), Tag = d });
+        }
+        var parsed = MochiDock.Core.MascotTriggers.ParseMonthDay(monthDay);
+        BirthdayMonthCombo.SelectedIndex = parsed?.Month ?? 0;
+        BirthdayDayCombo.SelectedIndex = parsed?.Day ?? 0;
+    }
+
+    private void Birthday_Changed(object sender, SelectionChangedEventArgs e)
+    {
+        if (!IsLoaded || _loading) return;
+        int month = (BirthdayMonthCombo.SelectedItem as ComboBoxItem)?.Tag is int m ? m : 0;
+        int day = (BirthdayDayCombo.SelectedItem as ComboBoxItem)?.Tag is int d ? d : 0;
+        if (month == 0 || day == 0)
+        {
+            BirthdayRow.Validation = month == 0 && day == 0 ? "" : "Choose both a month and a day.";
+            if (month == 0 && day == 0) ViewModel?.UpdateSettings(x => x.BirthdayMonthDay = "");
+            return;
+        }
+        string value = $"{month:00}-{day:00}";
+        if (MochiDock.Core.MascotTriggers.ParseMonthDay(value) == null) { BirthdayRow.Validation = "That day does not exist in this month."; return; }
+        BirthdayRow.Validation = "";
+        ViewModel?.UpdateSettings(x => x.BirthdayMonthDay = value);
+        ViewModel?.RefreshDayFace();
     }
 
     private void Expressive_Changed(object sender, RoutedEventArgs e)

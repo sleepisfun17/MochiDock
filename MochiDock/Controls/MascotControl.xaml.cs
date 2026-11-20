@@ -657,10 +657,11 @@ public partial class MascotControl : System.Windows.Controls.UserControl
         mood is MascotMood.Angry or MascotMood.Hot or MascotMood.Freezing or MascotMood.Dizzy or MascotMood.Drained or MascotMood.Victory or MascotMood.Defeat or MascotMood.Worried or MascotMood.BreakTime
             or MascotMood.Excited or MascotMood.Surprised or MascotMood.Cheering or MascotMood.Praying or MascotMood.Waking or MascotMood.Bored
             or MascotMood.Electric or MascotMood.Money or MascotMood.MoneyDown or MascotMood.Sunny or MascotMood.Rainy or MascotMood.Snowy
-            or MascotMood.Cloudy or MascotMood.Studying or MascotMood.Coffee;
+            or MascotMood.Cloudy or MascotMood.Studying or MascotMood.Coffee
+            or MascotMood.Yawning or MascotMood.Birthday or MascotMood.Meeting or MascotMood.Proud;
 
     // The gaming faces keep still: the eyes do not follow the pointer and do not blink.
-    private static bool IsStill(MascotMood mood) => mood is MascotMood.Focused or MascotMood.Worried or MascotMood.BreakTime or MascotMood.Waking or MascotMood.Bored or MascotMood.Studying;
+    private static bool IsStill(MascotMood mood) => mood is MascotMood.Focused or MascotMood.Worried or MascotMood.BreakTime or MascotMood.Waking or MascotMood.Bored or MascotMood.Studying or MascotMood.Meeting;
 
     // The render harness sets the override (by reflection) to test the turn on a PC or session with Windows animations off.
     private static bool? _animationsOverride = null;   // only the harness assigns it (by reflection)
@@ -999,7 +1000,10 @@ public partial class MascotControl : System.Windows.Controls.UserControl
             LeftDetermEye, RightDetermEye, LeftFlatEye, RightFlatEye, LeftDroopEye, RightDroopEye, LeftSpiralEye, RightSpiralEye,
             SteamLeft, SteamRight, HeatLines, IcicleGroup, StarsGroup, BatteryGroup,
             StarEyes, CoinEyes, Sunglasses, BoltOrbit, CoinFloat, UmbrellaGroup, RainGroup, ScarfGroup, SnowGroup, CloudGroup, SunGroup, TimerBadge,
+            MoonGroup, PartyHat, CheckBadge, MicBoom,
         }) element.Visibility = Visibility.Collapsed;
+        MoonStar.BeginAnimation(OpacityProperty, null);
+        MoonStar.Opacity = 1;
 
         BoltOrbitRotate.BeginAnimation(RotateTransform.AngleProperty, null);
         BoltOrbitRotate.Angle = 0;
@@ -1407,6 +1411,50 @@ public partial class MascotControl : System.Windows.Controls.UserControl
                 if (animate) TimerHandRotate.BeginAnimation(RotateTransform.AngleProperty, Loop(0, 360, 60000, reverse: false));
                 break;
 
+            case MascotMood.Yawning:
+                // Up late: heavy, half-closed eyes under a crescent moon whose little star twinkles; a slow, sleepy sway.
+                UseEyes(pill: false, flat: false, droop: true, spiral: false);
+                MoonGroup.Visibility = Visibility.Visible;
+                if (animate)
+                {
+                    MoonStar.BeginAnimation(OpacityProperty, Loop(1, 0.25, 1100));
+                    BodyBounceTransform.BeginAnimation(TranslateTransform.YProperty, Loop(0, 1, 2600, easing: new SineEase { EasingMode = EasingMode.EaseInOut }));
+                }
+                break;
+
+            case MascotMood.Birthday:
+                // The user's birthday: happy eyes, a party hat and confetti falling all day.
+                UseEyes(pill: false, flat: false, droop: false, spiral: false);
+                LeftHappyEye.Visibility = RightHappyEye.Visibility = Visibility.Visible;
+                PartyHat.Visibility = ConfettiGroup.Visibility = Visibility.Visible;
+                if (animate)
+                {
+                    ConfettiT.BeginAnimation(TranslateTransform.YProperty, Loop(0, 4, 1200, reverse: false));
+                    ConfettiGroup.BeginAnimation(OpacityProperty, Loop(1, 0.2, 1200, reverse: false));
+                    BodyBounceTransform.BeginAnimation(TranslateTransform.YProperty, Loop(0, -1.2, 700, easing: new SineEase { EasingMode = EasingMode.EaseOut }));
+                }
+                break;
+
+            case MascotMood.Meeting:
+                // In a calendar meeting: a calm face and a grey headset with a microphone. Still, so it does not distract.
+                UseEyes(pill: true, flat: false, droop: false, spiral: false);
+                SetHeadset("#5B6B8C", "#3F4C66");
+                HeadphonesLayer.Visibility = MicBoom.Visibility = Visibility.Visible;
+                break;
+
+            case MascotMood.Proud:
+                // Every task due today is done: happy eyes, a green tick and twinkling sparkles.
+                UseEyes(pill: false, flat: false, droop: false, spiral: false);
+                LeftHappyEye.Visibility = RightHappyEye.Visibility = Visibility.Visible;
+                CheckBadge.Visibility = SparkleGroup.Visibility = Visibility.Visible;
+                if (animate)
+                {
+                    SparkleA.BeginAnimation(OpacityProperty, Loop(1, 0.25, 700));
+                    SparkleB.BeginAnimation(OpacityProperty, Loop(0.25, 1, 700));
+                    SparkleC.BeginAnimation(OpacityProperty, Loop(1, 0.25, 900));
+                }
+                break;
+
             case MascotMood.Drained:
                 SetTint(new[] { "#E4E4E8", "#C9C9CF", "#A0A0A8", "#40FF7896" }, new[] { "#9CB08C", "#82976F", "#58694B", "#40FF7896" });
                 UseEyes(pill: false, flat: false, droop: true, spiral: false);
@@ -1435,6 +1483,31 @@ public partial class MascotControl : System.Windows.Controls.UserControl
     }
 
 
+
+    // Hovering over Mochi: a short happy glance and a tiny hop, at most every 20 seconds, only on the plain idle faces (a petting
+    // click, a sleeping or a busy face keeps its own reaction) and only with animations on.
+    private static readonly TimeSpan GlanceEvery = TimeSpan.FromSeconds(20);
+    private DateTime _lastGlance;
+    private System.Windows.Threading.DispatcherTimer? _glanceTimer;
+
+    private void Mascot_MouseEnter(object sender, System.Windows.Input.MouseEventArgs e)
+    {
+        var now = DateTime.UtcNow;
+        if (!AnimationsEnabled || _spinning || now - _lastGlance < GlanceEvery || Mood is not (MascotMood.Idle or MascotMood.Waiting)) return;
+        _lastGlance = now;
+        LeftPillEye.Visibility = RightPillEye.Visibility = Visibility.Collapsed;
+        LeftHappyEye.Visibility = RightHappyEye.Visibility = Visibility.Visible;
+        BodyBounceTransform.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(0, -1.6, TimeSpan.FromMilliseconds(160)) { AutoReverse = true, EasingFunction = new SineEase { EasingMode = EasingMode.EaseOut } });
+        var glancing = Mood;
+        _glanceTimer?.Stop();
+        _glanceTimer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(1200) };
+        _glanceTimer.Tick += (_, _) =>
+        {
+            _glanceTimer?.Stop();
+            if (!_spinning && Mood == glancing) ApplyMood(Mood);   // back to the face he had; a face change meanwhile already redrew him
+        };
+        _glanceTimer.Start();
+    }
 
     public void PetMochi()
 

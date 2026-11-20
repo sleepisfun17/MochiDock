@@ -28,7 +28,8 @@ public partial class MainViewModel
     public void ApplyReminderSettings()
     {
         bool on = _settings.EnableAgendaReminders;
-        CalendarFeed?.SetBackground(on);
+        // The calendar also refreshes in the background for Mochi's meeting face; with no calendar link it does nothing.
+        CalendarFeed?.SetBackground(true);
         UpdateOverdueMood();
         if (!on)
         {

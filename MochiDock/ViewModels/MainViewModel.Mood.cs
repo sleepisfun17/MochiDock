@@ -31,6 +31,35 @@ public partial class MainViewModel
         RefreshMascotMood();
     }
 
+    // The day face (MascotTriggers.DayFace): a meeting, the birthday, all of today's tasks done, up late. Checked every 30 seconds.
+    private MascotMood? _mascotDay;
+    private DateTime _dayFaceCheckedAt;
+    private DateTime _birthdayGreetedOn;
+
+    private bool TodaysTasksDone() =>
+        MascotTriggers.AllTasksDone(_tasksService.Tasks.Select(t => (t.DueTime, t.IsCompleted)), DateTime.Now);
+
+    /// <summary>Re-checks the day face now (after the birthday setting changed).</summary>
+    public void RefreshDayFace() => UpdateDayFace(force: true);
+
+    private void UpdateDayFace(bool force = false)
+    {
+        var now = DateTime.Now;
+        if (!force && now - _dayFaceCheckedAt < TimeSpan.FromSeconds(30)) return;
+        _dayFaceCheckedAt = now;
+        bool inMeeting = CalendarFeed?.Events is { } events && AgendaLogic.Focus(events, now)?.Kind == AgendaFocusKind.Now;
+        string birthday = _settings?.BirthdayMonthDay ?? "";
+        var face = MascotTriggers.DayFace(now, birthday, TodaysTasksDone(), inMeeting);
+        if (face == MascotMood.Birthday && _birthdayGreetedOn != now.Date)
+        {
+            _birthdayGreetedOn = now.Date;
+            CurrentIdleThought = "Happy birthday! 🎂";
+        }
+        if (face == _mascotDay) return;
+        _mascotDay = face;
+        RefreshMascotMood();
+    }
+
     // Clicking Mochi many times in a short time makes him dizzy (see PettingTracker): one count for every Mochi in the app.
     private readonly PettingTracker _petting = new();
     private DispatcherTimer? _pettedTimer;

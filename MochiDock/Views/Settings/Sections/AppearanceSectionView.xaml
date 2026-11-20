@@ -56,5 +56,11 @@
         <s:SettingRow Label="Expressive Mochi" Description="Mochi shows more faces: angry for an overdue task you ignored, hot or freezing with the weather and a hot GPU, dizzy when the CPU or RAM is maxed out, drained on a low battery. Turn off to keep the simple faces.">
             <CheckBox x:Name="ExpressiveCheck" Style="{StaticResource ModernDarkCheckBox}" Checked="Expressive_Changed" Unchecked="Expressive_Changed"/>
         </s:SettingRow>
+        <s:SettingRow x:Name="BirthdayRow" Label="Your birthday" Description="Mochi wears a party hat all day on your birthday. Only the month and day are kept, on this PC.">
+            <StackPanel Orientation="Horizontal">
+                <ComboBox x:Name="BirthdayMonthCombo" Style="{StaticResource ModernDarkComboBox}" Width="120" SelectionChanged="Birthday_Changed" AutomationProperties.Name="Birthday month"/>
+                <ComboBox x:Name="BirthdayDayCombo" Style="{StaticResource ModernDarkComboBox}" Width="70" Margin="8,0,0,0" SelectionChanged="Birthday_Changed" AutomationProperties.Name="Birthday day"/>
+            </StackPanel>
+        </s:SettingRow>
     </StackPanel>
 </UserControl>

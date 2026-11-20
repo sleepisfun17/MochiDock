@@ -7,7 +7,8 @@
              Cursor="Hand"
              UseLayoutRounding="True"
              SnapsToDevicePixels="True"
-             MouseLeftButtonDown="Mascot_MouseLeftButtonDown">
+             MouseLeftButtonDown="Mascot_MouseLeftButtonDown"
+             MouseEnter="Mascot_MouseEnter">
 
     <Viewbox Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center">
     <Grid Width="30" Height="26" ClipToBounds="False" UseLayoutRounding="True" SnapsToDevicePixels="True">
@@ -327,6 +328,25 @@
                     <Path Data="M 24.5,-4.3 L 24.5,-6.2" Stroke="#FFFFFF" StrokeThickness="0.6" StrokeStartLineCap="Round" StrokeEndLineCap="Round">
                         <Path.RenderTransform><RotateTransform x:Name="TimerHandRotate" CenterX="24.5" CenterY="-4.3" Angle="0" /></Path.RenderTransform>
                     </Path>
+                </Canvas>
+                <!-- The day faces: a crescent moon with a twinkling star (Yawning, late at night), a party hat (Birthday), a green tick
+                     badge (Proud: all of today's tasks done) and the headset's microphone boom (Meeting) -->
+                <Canvas x:Name="MoonGroup" Visibility="Collapsed">
+                    <Path Data="M 25.6,-10.2 A 3.6,3.6 0 1 0 28.8,-4.2 A 2.8,2.8 0 1 1 25.6,-10.2 Z" Fill="#FFE28A" Stroke="#C9A227" StrokeThickness="0.45" StrokeLineJoin="Round" />
+                    <Path x:Name="MoonStar" Data="M 20.6,-9.4 L 21.1,-8.3 L 22.2,-7.8 L 21.1,-7.3 L 20.6,-6.2 L 20.1,-7.3 L 19,-7.8 L 20.1,-8.3 Z" Fill="#FFF3B0" Stroke="#C9A227" StrokeThickness="0.3" StrokeLineJoin="Round" />
+                </Canvas>
+                <Canvas x:Name="PartyHat" Visibility="Collapsed">
+                    <Polygon Points="10.8,0.9 15.4,-9.4 20,0.9" Fill="#FF7AA8" Stroke="#C24C7A" StrokeThickness="0.5" StrokeLineJoin="Round" />
+                    <Path Data="M 12.6,-3.2 L 18.2,-3.2 M 14,-6.4 L 16.8,-6.4" Stroke="#FFFFFF" StrokeThickness="0.9" StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
+                    <Ellipse Canvas.Left="14.1" Canvas.Top="-11.6" Width="2.6" Height="2.6" Fill="#FFD23F" Stroke="#D9A21C" StrokeThickness="0.4" />
+                </Canvas>
+                <Canvas x:Name="CheckBadge" Visibility="Collapsed">
+                    <Ellipse Canvas.Left="21.6" Canvas.Top="-7.4" Width="6" Height="6" Fill="#34C759" Stroke="#1F8A3B" StrokeThickness="0.5" />
+                    <Path Data="M 23,-4.5 L 24.2,-3.2 L 26.4,-5.8" Stroke="#FFFFFF" StrokeThickness="0.9" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" />
+                </Canvas>
+                <Canvas x:Name="MicBoom" Visibility="Collapsed">
+                    <Path Data="M 2.6,16.2 Q 3.4,21.4 8.4,21.2" Stroke="#3A3F4A" StrokeThickness="1" StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
+                    <Ellipse Canvas.Left="7.8" Canvas.Top="20" Width="2.6" Height="2.4" Fill="#3A3F4A" />
                 </Canvas>
             </Canvas>
             <!-- Vector Headphones Layer (OUTSIDE the clipped body so the band is never clipped), drawn in the body's 30 x 26 space:

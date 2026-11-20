@@ -545,6 +545,7 @@ public partial class MainViewModel : INotifyPropertyChanged
             OnPropertyChanged(nameof(CurrentDateText));
             OnPropertyChanged(nameof(HeaderDateTimeText));
             UpdateActivityFace();   // Pomodoro state, FX change and the weather can change without navigation
+            UpdateDayFace();        // throttled to every 30 seconds
             if (!_isExpanded && !HasActiveMedia && !IsStatsShownInCapsule && !IsNotificationInMainPill && !IsPomodoroInMainPill)
             {
                 OnPropertyChanged(nameof(CompactCapsuleText));
@@ -1809,7 +1810,7 @@ public partial class MainViewModel : INotifyPropertyChanged
     public void RefreshMascotMood()
     {
         var mood = MochiDock.Core.MascotMoodPolicy.Choose(new MochiDock.Core.MascotInputs(
-            _baseMood, _settings?.ExpressiveMochi ?? true, _mascotOverdue, _mascotGpuHot, _mascotOverloaded, _mascotBatteryLow, _mascotWeather, _mascotPetted, _isWorkstationLocked || !_displayAwake, _mascotActivity));
+            _baseMood, _settings?.ExpressiveMochi ?? true, _mascotOverdue, _mascotGpuHot, _mascotOverloaded, _mascotBatteryLow, _mascotWeather, _mascotPetted, _isWorkstationLocked || !_displayAwake, _mascotActivity, _mascotDay));
         if (_mascotMood == mood) return;
         _mascotMood = mood;
         OnPropertyChanged(nameof(MascotMood));
@@ -2653,7 +2654,12 @@ public partial class MainViewModel : INotifyPropertyChanged
     {
         _tasksService.ToggleTaskCompleted(task);
         UpdateOverdueMood();
-        if (task.IsCompleted) ShowHappyMoment();
+        if (task.IsCompleted)
+        {
+            // The last task due today gets a cheer instead of the usual happy moment; the Proud face follows.
+            if (TodaysTasksDone()) ShowMoment(MascotMood.Cheering, TimeSpan.FromSeconds(5)); else ShowHappyMoment();
+        }
+        UpdateDayFace(force: true);
     }
     public void DeleteTask(TodoTaskItem task) => _tasksService.DeleteTask(task);
 

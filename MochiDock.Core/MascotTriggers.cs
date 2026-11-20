@@ -103,6 +103,55 @@ public static class MascotTriggers
         _ => null,
     };
 
+    /// <summary>Late night for the yawning face: from 23:00 until 05:00.</summary>
+    public static bool IsLateNight(DateTime now) => now.Hour is >= 23 or < 5;
+
+    /// <summary>
+    /// The face for the day, or null: Meeting during a timed calendar event, Birthday on the user's birthday (<paramref name="birthdayMonthDay"/>
+    /// "MM-dd"), Proud once every task due today is done, Yawning late at night. That order wins.
+    /// </summary>
+    public static MascotMood? DayFace(DateTime now, string? birthdayMonthDay, bool allTasksDone, bool inMeeting)
+    {
+        if (inMeeting) return MascotMood.Meeting;
+        if (IsBirthday(now, birthdayMonthDay)) return MascotMood.Birthday;
+        if (allTasksDone) return MascotMood.Proud;
+        if (IsLateNight(now)) return MascotMood.Yawning;
+        return null;
+    }
+
+    /// <summary>Whether today is the birthday "MM-dd" (29 February is kept on 28 February in other years). An empty or unreadable value is never.</summary>
+    public static bool IsBirthday(DateTime now, string? monthDay)
+    {
+        if (ParseMonthDay(monthDay) is not { } md) return false;
+        int day = md.Month == 2 && md.Day == 29 && !DateTime.IsLeapYear(now.Year) ? 28 : md.Day;
+        return now.Month == md.Month && now.Day == day;
+    }
+
+    /// <summary>"MM-dd" as a month and day, or null when empty or not a real date (29 February is allowed).</summary>
+    public static (int Month, int Day)? ParseMonthDay(string? monthDay)
+    {
+        var parts = (monthDay ?? "").Trim().Split('-');
+        if (parts.Length != 2 || !int.TryParse(parts[0], out int month) || !int.TryParse(parts[1], out int day)) return null;
+        if (month is < 1 or > 12 || day < 1 || day > DateTime.DaysInMonth(2024, month)) return null;
+        return (month, day);
+    }
+
+    /// <summary>
+    /// True when at least one task is due today, every task due today is done, and no earlier task is still open (overdue).
+    /// Tasks without a due time are not counted: a someday list never blocks the face.
+    /// </summary>
+    public static bool AllTasksDone(IEnumerable<(DateTime? Due, bool Done)> tasks, DateTime now)
+    {
+        bool any = false;
+        foreach (var (due, done) in tasks)
+        {
+            if (due is not { } d) continue;
+            if (d.Date == now.Date) { if (!done) return false; any = true; }
+            else if (d.Date < now.Date && !done) return false;
+        }
+        return any;
+    }
+
     /// <summary>The dock counts as untouched once the pointer has not been on it for this long.</summary>
     public static readonly TimeSpan DockQuietAfter = TimeSpan.FromSeconds(90);
 
