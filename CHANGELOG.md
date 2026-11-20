@@ -46,6 +46,7 @@ First public release.
 - The Stats per-core bars are all the same width at every display scale and interface size.
 - The FX one-month chart uses hourly prices like the seven-day chart (it showed about 22 daily points) and refreshes every 30 minutes.
 - Running the setup again no longer tries to install PawnIO when it is already installed (the option is hidden then).
+- Over Remote Desktop, MochiDock thought the screen was off (Windows reports the PC's physical monitors as off) and paused FX updates, hardware readings and Mochi's faces for the whole session. A remote session now counts as an awake display.
 - Settings safety: running the developer tests could overwrite the settings file with defaults. The tests now use a scratch folder, WhatsApp setup never saves settings on its own, and MochiDock keeps a daily copy of the last three days' settings (`settings.backup-yyyyMMdd.json`).
 
 ### Known limitations

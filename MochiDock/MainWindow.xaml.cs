@@ -255,7 +255,7 @@ public partial class MainWindow : Window
         };
 
         Loaded += MainWindow_Loaded;
-        Loaded += (_,_)=>{if(_powerNotifications!=null)return;_powerNotifications=new(new WindowInteropHelper(this).Handle);_powerNotifications.DisplayChanged+=_viewModel.SetDisplayAwake;_powerNotifications.PowerChanged+=OnSystemPowerChanged;_viewModel.PowerNoticeRequested+=ShowPowerNotice;_viewModel.OnPowerState(MochiDock.Services.BatteryStatus.Read());_policyTimer.Tick+=PolicyTick;_policyTimer.Start();};
+        Loaded += (_,_)=>{if(_powerNotifications!=null)return;_powerNotifications=new(new WindowInteropHelper(this).Handle);_powerNotifications.DisplayChanged+=OnConsoleDisplayChanged;_powerNotifications.PowerChanged+=OnSystemPowerChanged;_viewModel.PowerNoticeRequested+=ShowPowerNotice;_viewModel.OnPowerState(MochiDock.Services.BatteryStatus.Read());_policyTimer.Tick+=PolicyTick;_policyTimer.Start();};
         Closed += (_,_)=>{_batteryWidget?.Dispose();_batteryWidget=null;_powerNoticeTimer?.Stop();_viewModel.PowerNoticeRequested-=ShowPowerNotice;HeaderPillOverlay.Cancel();_viewModel.StopPresentationTimers();_windowClosed=true;_expansionTransition.Invalidate();_hoverExpandTimer.Stop();_mouseLeaveTimer.Stop();_takeoverTimeoutTimer.Stop();_volumeOverlayTimer?.Stop();_volumeWatcherTimer?.Stop();_topmostWatchdogTimer?.Stop();if(_hwndSource!=null){try{var h=new WindowInteropHelper(this);if(h.Handle!=IntPtr.Zero){UnregisterHotKey(h.Handle,HOTKEY_ID_RESOLUTION);UnregisterHotKey(h.Handle,HOTKEY_ID_SCRIPT);UnregisterWindowSizeShortcuts(h.Handle);}_hwndSource.RemoveHook(HwndMessageHook);}catch (System.Exception logEx) { MochiDock.Services.AppLog.Warn("Window", logEx); }}_resolutionNoticeTimer?.Stop();_viewModel.IsDockInteractionActive=null;_viewModel.StopHardwareCapture();_policyTimer.Stop();_policyTimer.Tick-=PolicyTick;if(_powerNotifications!=null){_powerNotifications.DisplayChanged-=_viewModel.SetDisplayAwake;_powerNotifications.Dispose();}};
 
         Closing += MainWindow_Closing;
@@ -312,10 +312,35 @@ public partial class MainWindow : Window
         catch (System.Exception logEx) { MochiDock.Services.AppLog.Warn("Window", logEx); }
     }
 
+    // The console display state from Windows (physical monitors) and the display state last handed to the view model. In a Remote
+    // Desktop session the physical monitors are usually off while the user works on the remote screen: LocalFeaturePolicy.DisplayAwake
+    // then counts the display as on. Re-evaluated when a remote session connects or disconnects.
+    private bool _consoleDisplayOn = true;
+    private bool? _appliedDisplayAwake;
+
+    [System.Runtime.InteropServices.DllImport("user32.dll")] private static extern int GetSystemMetrics(int index);
+    private static bool IsRemoteSession() => GetSystemMetrics(0x1000) != 0;   // SM_REMOTESESSION
+
+    private void OnConsoleDisplayChanged(bool on)
+    {
+        _consoleDisplayOn = on;
+        ApplyDisplayAwake();
+    }
+
+    private void ApplyDisplayAwake()
+    {
+        bool awake = MochiDock.Core.LocalFeaturePolicy.DisplayAwake(_consoleDisplayOn, IsRemoteSession());
+        if (_appliedDisplayAwake == awake) return;   // the view model resets sampling baselines, so only on a real change
+        _appliedDisplayAwake = awake;
+        _viewModel.SetDisplayAwake(awake);
+    }
+
     private void SystemEvents_SessionSwitch(object sender, SessionSwitchEventArgs e)
     {
         Dispatcher.Invoke(() =>
         {
+            if (e.Reason is SessionSwitchReason.RemoteConnect or SessionSwitchReason.RemoteDisconnect or SessionSwitchReason.ConsoleConnect or SessionSwitchReason.ConsoleDisconnect)
+                ApplyDisplayAwake();
             if (e.Reason == SessionSwitchReason.SessionLock)
             {
                 CardTransitions.Settle();
