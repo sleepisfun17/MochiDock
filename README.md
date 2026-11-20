@@ -61,8 +61,8 @@ Two themes, `Default` (dark) and `Matcha` (warm oat and green), are in Appearanc
 
 <table>
   <tr>
-    <td><img src="docs/images/live/today-matcha.png" alt="Today card, Matcha theme"></td>
     <td><img src="docs/images/live/today-default.png" alt="Today card, Default theme"></td>
+    <td><img src="docs/images/live/today-matcha.png" alt="Today card, Matcha theme"></td>
   </tr>
   <tr>
     <td colspan="2"><img src="docs/images/live/pomodoro-matcha.png" alt="Pomodoro card, Matcha theme"></td>
