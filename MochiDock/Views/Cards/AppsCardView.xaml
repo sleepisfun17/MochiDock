@@ -1,0 +1,75 @@
+<UserControl xmlns:controls="clr-namespace:MochiDock.Controls" x:Class="MochiDock.Views.Cards.AppsCardView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             FontFamily="{DynamicResource IslandUiFont}"
+             UseLayoutRounding="True"
+             SnapsToDevicePixels="True">
+    <!-- Notifications from the apps chosen in Settings > Notifications > Other apps (LINE, Telegram, Slack...). -->
+    <Grid VerticalAlignment="Stretch">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" MinHeight="75" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <Grid Grid.Row="0" Margin="0,0,0,6">
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                <Border Width="22" Height="22" CornerRadius="6" Background="{DynamicResource IslandChipBackgroundBrush}" Margin="0,0,8,0" VerticalAlignment="Center">
+                    <Grid>
+                        <Image Source="{Binding CurrentApp.Icon}" Width="18" Height="18" RenderOptions.BitmapScalingMode="HighQuality"
+                               Visibility="{Binding CurrentApp.HasIcon, Converter={StaticResource BoolToVisibility}}" />
+                        <ContentControl Content="{StaticResource NavBell}" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                        Visibility="{Binding CurrentApp.HasIcon, Converter={StaticResource InverseBoolToVisibility}}" />
+                    </Grid>
+                </Border>
+                <TextBlock Text="{Binding CurrentApp.AppName}" Foreground="{DynamicResource IslandMutedInkBrush}" FontSize="11" FontWeight="{DynamicResource IslandSmallLabelWeight}" VerticalAlignment="Center" Margin="0,0,6,0" />
+                <TextBlock Text="{Binding CurrentApp.Title}" ToolTip="{Binding CurrentApp.Title}" Foreground="{DynamicResource IslandInkBrush}" FontSize="13" FontWeight="{DynamicResource IslandSmallLabelWeight}" VerticalAlignment="Center" MaxWidth="250" TextTrimming="CharacterEllipsis" />
+                <TextBlock Text="{Binding CurrentApp.FormattedTime, StringFormat=' · {0}'}" Foreground="{DynamicResource IslandMutedInkBrush}" FontSize="11" VerticalAlignment="Center" Margin="4,0,0,0" />
+            </StackPanel>
+            <Border HorizontalAlignment="Right" VerticalAlignment="Center" Background="{DynamicResource IslandChipBackgroundBrush}" BorderBrush="{DynamicResource IslandChipBorderBrush}" BorderThickness="1" CornerRadius="10" Padding="8,3">
+                <TextBlock Text="{Binding RecentAppMessages.Count, StringFormat='{}{0} notifications'}" Foreground="{DynamicResource IslandSecondaryInkBrush}" FontSize="11" FontWeight="{DynamicResource IslandSmallLabelWeight}" />
+            </Border>
+        </Grid>
+
+        <Border Grid.Row="1" Background="{DynamicResource IslandSubCardBackgroundBrush}" CornerRadius="10" Padding="6" Margin="0,0,0,8" BorderBrush="{DynamicResource IslandSubCardBorderBrush}" BorderThickness="1">
+            <ScrollViewer Style="{StaticResource ModernCardScrollViewer}" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                          PreviewMouseWheel="MessageScrollViewer_PreviewMouseWheel">
+                <ItemsControl ItemsSource="{Binding RecentAppMessages}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border Background="{DynamicResource IslandSurfaceBrush}" CornerRadius="6" BorderBrush="{DynamicResource IslandBorderBrush}" BorderThickness="1"
+                                    Margin="0,0,0,4" Padding="8,6" Cursor="Hand" MouseLeftButtonDown="HistoryItem_Click">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <Image Source="{Binding Icon}" Width="16" Height="16" VerticalAlignment="Top" Margin="0,1,8,0" RenderOptions.BitmapScalingMode="HighQuality"
+                                           Visibility="{Binding HasIcon, Converter={StaticResource BoolToVisibility}}" />
+                                    <StackPanel Grid.Column="1">
+                                        <StackPanel Orientation="Horizontal" Margin="0,0,0,2">
+                                            <TextBlock Text="{Binding Title}" Foreground="{DynamicResource IslandAccentBrush}" FontSize="11" FontWeight="{DynamicResource IslandSmallLabelWeight}" Margin="0,0,6,0" MaxWidth="320" TextTrimming="CharacterEllipsis" />
+                                            <TextBlock Text="{Binding AppName}" Foreground="{DynamicResource IslandMutedInkBrush}" FontSize="11" VerticalAlignment="Center" Margin="0,0,6,0" />
+                                            <TextBlock Text="{Binding FormattedTime}" Foreground="{DynamicResource IslandMutedInkBrush}" FontSize="11" VerticalAlignment="Center" />
+                                        </StackPanel>
+                                        <TextBlock controls:Emoji.Text="{Binding Message}" Foreground="{DynamicResource IslandInkBrush}" FontSize="12" LineHeight="16" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                    <Button Grid.Column="2" VerticalAlignment="Top" Margin="6,0,0,0" Click="DismissItem_Click"
+                                            Background="Transparent" BorderThickness="0" Cursor="Hand" ToolTip="Dismiss notification">
+                                        <TextBlock Text="✕" Foreground="{DynamicResource IslandMutedInkBrush}" FontSize="11" FontWeight="{DynamicResource IslandSmallLabelWeight}" />
+                                    </Button>
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+        </Border>
+
+        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Left">
+            <Button Style="{StaticResource IslandPrimaryButtonStyle}" Content="{Binding OpenAppButtonText}" Click="OpenApp_Click" Margin="0" />
+            <Button Style="{StaticResource ActionButton}" Content="Dismiss All" Click="Dismiss_Click" Margin="8,0,0,0" />
+        </StackPanel>
+    </Grid>
+</UserControl>

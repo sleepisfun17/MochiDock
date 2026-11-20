@@ -15,6 +15,7 @@ public enum IslandCardType
     Email,
     WhatsApp,
     Discord,
+    Apps,
     Settings,
     Hardware,
     Summary,
@@ -386,6 +387,7 @@ public partial class MainViewModel : INotifyPropertyChanged
         bool cityChanged = !string.Equals(_currentWeatherCity, targetCity, StringComparison.OrdinalIgnoreCase);
 
         _settings = settings;
+        SyncWatchedApps();
         ImapMail?.Configure(_settings.ImapAccounts);
         _aiUsageService.HiddenProviders = _settings.HiddenAiProviders ??= new();
         _aiUsageService.AlertsEnabled = _settings.EnableAiUsageAlerts;
@@ -692,6 +694,9 @@ public partial class MainViewModel : INotifyPropertyChanged
             OnPropertyChanged(nameof(IntegrationStatus));
         });
         _discordService.MessageReceived += OnDiscordMessageReceived;
+        _discordService.AppMessageReceived += OnAppMessageReceived;
+        _discordService.RecentAppsChanged += () => App.Current.Dispatcher.BeginInvoke(() => OnPropertyChanged(nameof(UnwatchedRecentApps)));
+        _discordService.SetWatchedApps(WatchedApps);
         InitGameSessions();
         InitPlaytime();
         // Started in the morning: a few sleepy seconds, once the startup work is done.
@@ -742,7 +747,7 @@ public partial class MainViewModel : INotifyPropertyChanged
                 }
                 else
                 {
-                    if (_queuedGamingWhatsAppCount > 0 || _queuedGamingEmailCount > 0 || _queuedGamingDiscordCount > 0 || HasFreshGameSession())
+                    if (_queuedGamingWhatsAppCount > 0 || _queuedGamingEmailCount > 0 || _queuedGamingDiscordCount > 0 || _queuedGamingAppsCount > 0 || HasFreshGameSession())
                     {
                         ShowGamingSummary();
                     }
@@ -854,7 +859,7 @@ public partial class MainViewModel : INotifyPropertyChanged
 
     private bool ValidCardAvailable(string name) => name switch
     {
-        "WhatsApp" => HasActiveWhatsApp, "Email" => HasActiveEmail, "Discord" => HasActiveDiscord,
+        "WhatsApp" => HasActiveWhatsApp, "Email" => HasActiveEmail, "Discord" => HasActiveDiscord, "Apps" => HasActiveApps,
         "Hardware" => ShowStatsTab, "Weather" => ShowWeatherTab, "Pomodoro" => ShowPomodoroTab,
         "Prayer" => EnablePrayerTimes, "FileShelf" => ShowFileShelfTab,
         "Clipboard" => ShowClipboardTab, "Today" => ShowTodayTab, "FxRates" => ShowFxRatesTab,
@@ -889,6 +894,7 @@ public partial class MainViewModel : INotifyPropertyChanged
             case IslandCardType.Media: OnPropertyChanged(nameof(IsMediaActive)); break;
             case IslandCardType.WhatsApp: OnPropertyChanged(nameof(IsWhatsAppActive)); break;
             case IslandCardType.Discord: OnPropertyChanged(nameof(IsDiscordActive)); break;
+            case IslandCardType.Apps: OnPropertyChanged(nameof(IsAppsActive)); break;
             case IslandCardType.Email: OnPropertyChanged(nameof(IsEmailActive)); break;
             case IslandCardType.Settings: OnPropertyChanged(nameof(IsSettingsActive)); break;
             case IslandCardType.Hardware: OnPropertyChanged(nameof(IsHardwareActive)); break;
@@ -1578,6 +1584,7 @@ public partial class MainViewModel : INotifyPropertyChanged
         OnPropertyChanged(nameof(CompactLineSeconds));
         OnPropertyChanged(nameof(HasActiveWhatsApp));
         OnPropertyChanged(nameof(HasActiveDiscord));
+        OnPropertyChanged(nameof(HasActiveApps));
         OnPropertyChanged(nameof(HasActiveEmail));
         OnPropertyChanged(nameof(HasActiveMedia));
         OnPropertyChanged(nameof(NotificationCount));
@@ -1628,6 +1635,7 @@ public partial class MainViewModel : INotifyPropertyChanged
                 {
                     IslandCardType.WhatsApp => "WhatsApp",
                     IslandCardType.Discord => "Discord",
+                    IslandCardType.Apps => "Apps",
                     IslandCardType.Email => "Email",
                     _ => ""
                 };
@@ -1685,6 +1693,7 @@ public partial class MainViewModel : INotifyPropertyChanged
                 {
                     IslandCardType.WhatsApp => PrefixEachLine(CapsuleWhatsAppSender(), _currentWhatsApp?.Message),
                     IslandCardType.Discord => PrefixEachLine(_currentDiscord?.Sender, _currentDiscord?.Message),
+                    IslandCardType.Apps => PrefixEachLine(_currentApp?.Title, _currentApp?.Message),
                     IslandCardType.Email => $"{_currentEmail?.Sender}: {(_currentEmail?.Subject ?? "").Replace("\r", " ").Replace("\n", " ")}",
                     _ => ""
                 };
@@ -1731,6 +1740,7 @@ public partial class MainViewModel : INotifyPropertyChanged
     {
         IslandCardType.WhatsApp => "WhatsApp",
         IslandCardType.Discord => "Discord",
+        IslandCardType.Apps => "Apps",
         IslandCardType.Email => "Email",
         _ => ""
     };
@@ -1739,6 +1749,7 @@ public partial class MainViewModel : INotifyPropertyChanged
     {
         IslandCardType.WhatsApp => "💬",
         IslandCardType.Discord => "🎮",
+        IslandCardType.Apps => "🔔",
         IslandCardType.Email => "✉️",
         _ => ""
     };
@@ -1747,6 +1758,7 @@ public partial class MainViewModel : INotifyPropertyChanged
     {
         IslandCardType.WhatsApp => "#25D366",
         IslandCardType.Discord => "#5865F2",
+        IslandCardType.Apps => "#8E8E98",
         IslandCardType.Email => "#0A84FF",
         _ => "#8E8E98"
     };
@@ -1759,6 +1771,7 @@ public partial class MainViewModel : INotifyPropertyChanged
     {
         IslandCardType.WhatsApp => "WHATSAPP",
         IslandCardType.Discord => "DISCORD",
+        IslandCardType.Apps => string.IsNullOrWhiteSpace(_currentApp?.AppName) ? "APPS" : _currentApp.AppName.ToUpperInvariant(),
         IslandCardType.Email => string.IsNullOrEmpty(_currentEmail?.ClientSource) ? "EMAIL" : _currentEmail.ClientSource.ToUpperInvariant(),
         IslandCardType.Settings => "SETTINGS",
         IslandCardType.Hardware => "HARDWARE",
@@ -1771,6 +1784,7 @@ public partial class MainViewModel : INotifyPropertyChanged
     {
         IslandCardType.WhatsApp => "#25D366",
         IslandCardType.Discord => "#5865F2",
+        IslandCardType.Apps => "#8E8E98",
         IslandCardType.Email => "#0A84FF",
         IslandCardType.Settings => "#9E9EA8",
         IslandCardType.Hardware => "#FF9F0A",
@@ -2025,6 +2039,7 @@ public partial class MainViewModel : INotifyPropertyChanged
         if (now < _snoozedUntil) return false;
         if (app == "Email" && _settings.MuteEmail) return false;
         if (app == "Discord" && _settings.MuteDiscord) return false;
+        if (app == "Apps" && _settings.MuteApps) return false;
         if (app == "WhatsApp" && _settings.MuteWhatsApp) return false;
 
         if (_settings.QuietHoursEnabled &&
@@ -2790,6 +2805,7 @@ public partial class MainViewModel : INotifyPropertyChanged
         if (ActiveCardType != IslandCardType.Email &&
             ActiveCardType != IslandCardType.WhatsApp &&
             ActiveCardType != IslandCardType.Discord &&
+            ActiveCardType != IslandCardType.Apps &&
             ActiveCardType != IslandCardType.Summary)
         {
             _cardBeforeNotificationTakeover = ActiveCardType;
@@ -2853,6 +2869,10 @@ public partial class MainViewModel : INotifyPropertyChanged
         {
             ShowDiscord(false);
         }
+        else if (targetType == IslandCardType.Apps)
+        {
+            ShowApps(false);
+        }
         else if (targetType == IslandCardType.Email)
         {
             ShowEmail(false);
@@ -2868,6 +2888,7 @@ public partial class MainViewModel : INotifyPropertyChanged
         var targetType = CurrentRotationItem ?? PrimaryCompanionItem;
         if (targetType == IslandCardType.WhatsApp) ShowWhatsApp(false);
         else if (targetType == IslandCardType.Discord) ShowDiscord(false);
+        else if (targetType == IslandCardType.Apps) ShowApps(false);
         else if (targetType == IslandCardType.Email) ShowEmail(false);
         else if (HasActiveMedia) ShowMedia(false);
     }
@@ -2955,6 +2976,7 @@ public partial class MainViewModel : INotifyPropertyChanged
         {
             if (HasActiveWhatsApp) ActiveCardType = IslandCardType.WhatsApp;
             else if (HasActiveDiscord) ActiveCardType = IslandCardType.Discord;
+            else if (HasActiveApps) ActiveCardType = IslandCardType.Apps;
             else
             {
                 ActiveCardType = ResolveNotificationDismissFallback();
@@ -3009,6 +3031,7 @@ public partial class MainViewModel : INotifyPropertyChanged
         {
             if (HasActiveWhatsApp) ActiveCardType = IslandCardType.WhatsApp;
             else if (HasActiveEmail) ActiveCardType = IslandCardType.Email;
+            else if (HasActiveApps) ActiveCardType = IslandCardType.Apps;
             else
             {
                 ActiveCardType = ResolveNotificationDismissFallback();
@@ -3099,6 +3122,7 @@ public partial class MainViewModel : INotifyPropertyChanged
         {
             if (HasActiveDiscord) ActiveCardType = IslandCardType.Discord;
             else if (HasActiveEmail) ActiveCardType = IslandCardType.Email;
+            else if (HasActiveApps) ActiveCardType = IslandCardType.Apps;
             else
             {
                 ActiveCardType = ResolveNotificationDismissFallback();
@@ -3210,6 +3234,8 @@ public partial class MainViewModel : INotifyPropertyChanged
             details.Add($"{_queuedGamingWhatsAppCount} WhatsApp message{(_queuedGamingWhatsAppCount > 1 ? "s" : "")}");
         if (_queuedGamingDiscordCount > 0)
             details.Add($"{_queuedGamingDiscordCount} Discord message{(_queuedGamingDiscordCount > 1 ? "s" : "")}");
+        if (_queuedGamingAppsCount > 0)
+            details.Add(AppsCount(_queuedGamingAppsCount));
         if (_queuedGamingEmailCount > 0)
             details.Add($"{_queuedGamingEmailCount} email{(_queuedGamingEmailCount > 1 ? "s" : "")}");
 
@@ -3242,6 +3268,7 @@ public partial class MainViewModel : INotifyPropertyChanged
         _queuedGamingWhatsAppCount = 0;
         _queuedGamingEmailCount = 0;
         _queuedGamingDiscordCount = 0;
+        _queuedGamingAppsCount = 0;
         _queuedGamingPreviews.Clear();
 
         SoundService.PlayNotificationSound();
@@ -3264,6 +3291,8 @@ public partial class MainViewModel : INotifyPropertyChanged
         _lockTimestamp = DateTime.Now;
         _lockedWhatsAppCount = 0;
         _lockedEmailCount = 0;
+        _lockedDiscordCount = 0;
+        _lockedAppsCount = 0;
         _lockedPreviews.Clear();
 
         MascotMood = MascotMood.Sleeping;
@@ -3287,7 +3316,7 @@ public partial class MainViewModel : INotifyPropertyChanged
         bool isMorningTime = currentHour >= 5 && currentHour < 12;
         bool wasAwayLongEnough = awayDuration.TotalMinutes >= 30;
 
-        if (wasAwayLongEnough || isMorningTime || _lockedWhatsAppCount > 0 || _lockedDiscordCount > 0 || _lockedEmailCount > 0)
+        if (wasAwayLongEnough || isMorningTime || _lockedWhatsAppCount > 0 || _lockedDiscordCount > 0 || _lockedAppsCount > 0 || _lockedEmailCount > 0)
         {
             if (isMorningTime)
             {
@@ -3313,7 +3342,7 @@ public partial class MainViewModel : INotifyPropertyChanged
             SummaryWhatsAppCount = _lockedWhatsAppCount;
             SummaryEmailCount = _lockedEmailCount;
 
-            if (_lockedWhatsAppCount == 0 && _lockedDiscordCount == 0 && _lockedEmailCount == 0)
+            if (_lockedWhatsAppCount == 0 && _lockedDiscordCount == 0 && _lockedAppsCount == 0 && _lockedEmailCount == 0)
             {
                 SummaryDetails = "All caught up! No missed messages. Have a wonderful day!";
             }
@@ -3324,6 +3353,8 @@ public partial class MainViewModel : INotifyPropertyChanged
                     details.Add($"{_lockedWhatsAppCount} WhatsApp message{(_lockedWhatsAppCount > 1 ? "s" : "")}");
                 if (_lockedDiscordCount > 0)
                     details.Add($"{_lockedDiscordCount} Discord message{(_lockedDiscordCount > 1 ? "s" : "")}");
+                if (_lockedAppsCount > 0)
+                    details.Add(AppsCount(_lockedAppsCount));
                 if (_lockedEmailCount > 0)
                     details.Add($"{_lockedEmailCount} unread email{(_lockedEmailCount > 1 ? "s" : "")}");
                 SummaryDetails = string.Join(" · ", details);
@@ -3333,6 +3364,7 @@ public partial class MainViewModel : INotifyPropertyChanged
             _lockedWhatsAppCount = 0;
             _lockedEmailCount = 0;
             _lockedDiscordCount = 0;
+            _lockedAppsCount = 0;
             _lockedPreviews.Clear();
 
             ActiveCardType = IslandCardType.Summary;
@@ -3350,6 +3382,8 @@ public partial class MainViewModel : INotifyPropertyChanged
                 ActiveCardType = IslandCardType.WhatsApp;
             else if (HasActiveDiscord)
                 ActiveCardType = IslandCardType.Discord;
+            else if (HasActiveApps)
+                ActiveCardType = IslandCardType.Apps;
             else if (HasActiveEmail)
                 ActiveCardType = IslandCardType.Email;
             else

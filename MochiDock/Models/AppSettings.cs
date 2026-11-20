@@ -138,6 +138,10 @@ public class AppSettings
     // Notification controls
     public bool MuteEmail { get; set; }
     public bool MuteDiscord { get; set; }
+    /// <summary>Mutes the Apps card (notifications from <see cref="WatchedApps"/>).</summary>
+    public bool MuteApps { get; set; }
+    /// <summary>Apps whose Windows notifications are shown on the Apps card. Empty (the default) turns the card off.</summary>
+    public List<MochiDock.Core.WatchedApp> WatchedApps { get; set; } = new();
     public bool MuteWhatsApp { get; set; }
     public bool AutoExpandNotificationsOnArrival { get; set; } = false; // Minimal capsule notice by default (expand on hover)
     public bool QuietHoursEnabled { get; set; }

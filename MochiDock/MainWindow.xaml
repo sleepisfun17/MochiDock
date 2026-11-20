@@ -588,6 +588,32 @@
 
                                 </Image>
 
+                                <!-- Apps card: the watched app's own logo -->
+
+                                <Image Width="15" Height="15" Margin="0,0,6,0" VerticalAlignment="Center" Source="{Binding CurrentApp.Icon}" RenderOptions.BitmapScalingMode="HighQuality">
+
+                                    <Image.Style>
+
+                                        <Style TargetType="Image">
+
+                                            <Setter Property="Visibility" Value="Collapsed" />
+
+                                            <Style.Triggers>
+
+                                                <DataTrigger Binding="{Binding CompactCapsuleIconType}" Value="Apps">
+
+                                                    <Setter Property="Visibility" Value="Visible" />
+
+                                                </DataTrigger>
+
+                                            </Style.Triggers>
+
+                                        </Style>
+
+                                    </Image.Style>
+
+                                </Image>
+
                                 <!-- Official Discord Vector Icon: Discord Single Notification -->
 
                                 <Path Width="15" Height="12" Margin="0,0,6,0" VerticalAlignment="Center"
@@ -1094,6 +1120,32 @@
 
                     </Image>
 
+                    <!-- Apps card: the watched app's own logo -->
+
+                    <Image Width="18" Height="18" HorizontalAlignment="Center" VerticalAlignment="Center" Source="{Binding CurrentApp.Icon}" RenderOptions.BitmapScalingMode="HighQuality">
+
+                        <Image.Style>
+
+                            <Style TargetType="Image">
+
+                                <Setter Property="Visibility" Value="Collapsed" />
+
+                                <Style.Triggers>
+
+                                    <DataTrigger Binding="{Binding CompanionBubbleType}" Value="Apps">
+
+                                        <Setter Property="Visibility" Value="Visible" />
+
+                                    </DataTrigger>
+
+                                </Style.Triggers>
+
+                            </Style>
+
+                        </Image.Style>
+
+                    </Image>
+
                     <!-- Discord Official Emblem -->
 
                     <Path Width="20" Height="16" Stretch="Uniform" Fill="{DynamicResource IslandDiscordBrush}"
@@ -1272,6 +1324,16 @@
                                     </StackPanel>
                                 </Button>
 
+<Button Style="{StaticResource ActivityTabButton}"
+                                        Tag="{Binding IsAppsActive, Converter={StaticResource BoolToActiveTag}}"
+                                        Visibility="{Binding HasActiveApps, Converter={StaticResource BoolToVisibility}}"
+                                        Click="TabApps_Click"
+                                        ToolTip="App notifications">
+                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center"><ContentControl Content="{StaticResource NavBell}" VerticalAlignment="Center"/><TextBlock Text="Apps" Style="{StaticResource TabLabelBaseStyle}"
+                                                   controls:TabLabelMotion.Active="{Binding IsAppsActive}" />
+                                    </StackPanel>
+                                </Button>
+
 <Button Style="{StaticResource ActivityTabButton}" Tag="{Binding IsHardwareActive, Converter={StaticResource BoolToActiveTag}}" Click="TabHardware_Click" ToolTip="System Performance" Visibility="{Binding ShowStatsTab, Converter={StaticResource BoolToVisibility}}">
                                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center"><ContentControl Content="{StaticResource NavGauge}" VerticalAlignment="Center"/><TextBlock Text="Stats" Style="{StaticResource TabLabelBaseStyle}"
                                                    controls:TabLabelMotion.Active="{Binding IsHardwareActive}" />
@@ -1394,7 +1456,7 @@
 
                 <!-- Main Dynamic Content: MODULAR CARDS -->
 
-                <controls:TabTransitionHost Grid.Row="1" SelectedKey="{Binding ActiveCardType}" x:Name="CardTransitions" Order="Media,WhatsApp,Email,Discord,Hardware,Weather,Pomodoro,Prayer,FileShelf,Clipboard,Today,AiUsage,Script,Downloads,FxRates,Settings">
+                <controls:TabTransitionHost Grid.Row="1" SelectedKey="{Binding ActiveCardType}" x:Name="CardTransitions" Order="Media,WhatsApp,Email,Discord,Apps,Hardware,Weather,Pomodoro,Prayer,FileShelf,Clipboard,Today,AiUsage,Script,Downloads,FxRates,Settings">
 
                     <!-- Pomodoro Card Component -->
 
@@ -1418,6 +1480,10 @@
                     <!-- B2. Discord Card Component -->
 
                     <cards:DiscordCardView Tag="Discord" Visibility="Collapsed" />
+
+                    <!-- B3. Apps Card: notifications from the watched apps -->
+
+                    <cards:AppsCardView Tag="Apps" Visibility="Collapsed" />
 
                     <!-- C. Email Card Component (Mailspring Gmail & Outlook) -->
 

@@ -5,17 +5,43 @@ using System.Threading;
 using System.Threading.Tasks;
 using Windows.UI.Notifications;
 using Windows.UI.Notifications.Management;
+using System.IO;
+using System.Linq;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
+using MochiDock.Core;
 using MochiDock.Models;
 
 namespace MochiDock.Services;
 
+/// <summary>
+/// Reads Windows toast notifications (UserNotificationListener). Discord's go to the Discord card; those of the apps the user
+/// watches (Settings > Notifications > Other apps) go to the Apps card. Every app seen is remembered for the settings picker.
+/// </summary>
 public class DiscordNotificationService
 {
     private UserNotificationListener? _listener;
     private readonly HashSet<uint> _seenIds = new();
     private CancellationTokenSource? _cts;
+    private readonly object _gate = new();
+    private IReadOnlyList<WatchedApp> _watched = Array.Empty<WatchedApp>();
+    private List<WatchedApp> _recentApps = new();
 
     public event Action<DiscordNotification>? MessageReceived;
+    public event Action<AppNotification>? AppMessageReceived;
+    /// <summary>Raised (on the polling thread) when an app not seen before sends a notification.</summary>
+    public event Action? RecentAppsChanged;
+
+    /// <summary>Null until the listener starts; false when Windows denied notification access.</summary>
+    public bool? AccessAllowed { get; private set; }
+
+    /// <summary>Apps whose notifications were seen since MochiDock started, newest first (Discord excluded).</summary>
+    public IReadOnlyList<WatchedApp> RecentApps { get { lock (_gate) return _recentApps.ToList(); } }
+
+    public void SetWatchedApps(IEnumerable<WatchedApp>? apps)
+    {
+        lock (_gate) _watched = (apps ?? Array.Empty<WatchedApp>()).ToList();
+    }
 
     public async Task StartAsync()
     {
@@ -25,9 +51,10 @@ public class DiscordNotificationService
             if (_listener == null) return;
 
             var status = await _listener.RequestAccessAsync();
-            if (status != UserNotificationListenerAccessStatus.Allowed)
+            AccessAllowed = status == UserNotificationListenerAccessStatus.Allowed;
+            if (AccessAllowed != true)
             {
-                Debug.WriteLine("UserNotificationListener access for Discord not allowed.");
+                AppLog.Warn("Notifications", $"Windows notification access was not allowed ({status}); Discord and other apps cannot be shown.");
                 return;
             }
 
@@ -61,6 +88,8 @@ public class DiscordNotificationService
                 if (_listener != null)
                 {
                     var notifs = await _listener.GetNotificationsAsync(NotificationKinds.Toast);
+                    // Forget ids no longer in the action centre, so the set does not grow for the whole session.
+                    _seenIds.IntersectWith(notifs.Select(x => x.Id));
                     foreach (var n in notifs)
                     {
                         if (_seenIds.Contains(n.Id)) continue;
@@ -69,8 +98,11 @@ public class DiscordNotificationService
                         string appName = n.AppInfo?.DisplayInfo?.DisplayName ?? "";
                         string aumid = n.AppInfo?.AppUserModelId ?? "";
 
-                        if (appName.Contains("Discord", StringComparison.OrdinalIgnoreCase) ||
-                            aumid.Contains("Discord", StringComparison.OrdinalIgnoreCase))
+                        if (!AppNotificationFilter.IsDiscord(appName, aumid))
+                        {
+                            await HandleOtherAppAsync(n, appName, aumid).ConfigureAwait(false);
+                            continue;
+                        }
                         {
                             var toastBinding = n.Notification?.Visual?.GetBinding(KnownNotificationBindings.ToastGeneric);
                             if (toastBinding != null)
@@ -102,7 +134,7 @@ public class DiscordNotificationService
                     }
                 }
             }
-            catch { }
+            catch (Exception ex) { AppLog.Warn("Notifications", ex); }
 
             try
             {
@@ -113,6 +145,66 @@ public class DiscordNotificationService
                 break;
             }
         }
+    }
+
+    private async Task HandleOtherAppAsync(UserNotification n, string appName, string aumid)
+    {
+        if (appName.Length == 0 && aumid.Length == 0) return;
+        WatchedApp? match;
+        bool newApp;
+        lock (_gate)
+        {
+            var seen = new WatchedApp(appName, aumid);
+            newApp = !_recentApps.Any(r => AppNotificationFilter.Same(r, seen));
+            _recentApps = AppNotificationFilter.Remember(_recentApps, seen);
+            match = AppNotificationFilter.Match(appName, aumid, _watched);
+        }
+        if (newApp) RecentAppsChanged?.Invoke();
+        if (match == null) return;
+
+        var binding = n.Notification?.Visual?.GetBinding(KnownNotificationBindings.ToastGeneric);
+        string name = appName.Length > 0 ? appName : match.Name;
+        var (title, message) = AppNotificationFilter.Split(binding?.GetTextElements().Select(t => t.Text), name);
+        AppMessageReceived?.Invoke(new AppNotification
+        {
+            AppName = name,
+            Aumid = aumid,
+            Title = title,
+            Message = message,
+            Icon = await LoadLogoAsync(n).ConfigureAwait(false),
+            Timestamp = DateTime.Now
+        });
+    }
+
+    private static async Task<ImageSource?> LoadLogoAsync(UserNotification n)
+    {
+        try
+        {
+            var reference = n.AppInfo?.DisplayInfo?.GetLogo(new Windows.Foundation.Size(64, 64));
+            if (reference == null) return null;
+            using var stream = await reference.OpenReadAsync();
+            using var managed = stream.AsStreamForRead();
+            var memory = new MemoryStream();
+            await managed.CopyToAsync(memory).ConfigureAwait(false);
+            memory.Position = 0;
+            var image = new BitmapImage();
+            image.BeginInit();
+            image.CacheOption = BitmapCacheOption.OnLoad;
+            image.DecodePixelWidth = 64;
+            image.StreamSource = memory;
+            image.EndInit();
+            image.Freeze();
+            return image;
+        }
+        catch (Exception ex) { AppLog.Warn("Notifications", ex); return null; }
+    }
+
+    /// <summary>Brings up a watched app through its Start-menu entry (AUMID).</summary>
+    public static void OpenApp(string aumid)
+    {
+        if (string.IsNullOrWhiteSpace(aumid)) return;
+        try { Process.Start(new ProcessStartInfo("explorer.exe", @"shell:AppsFolder\" + aumid) { UseShellExecute = true }); }
+        catch (Exception ex) { AppLog.Warn("Notifications", ex); }
     }
 
     public void OpenDiscord()

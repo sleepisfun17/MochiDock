@@ -901,6 +901,7 @@ public partial class MainWindow : Window
     {
         IslandCardType.WhatsApp => (_viewModel.RecentWhatsAppMessages.Count > 1 ? (620, 340) : (620, 295)),
         IslandCardType.Discord => (620, 230),
+        IslandCardType.Apps => (620, 230),
         IslandCardType.Settings => (620, 400),
         IslandCardType.Hardware => (620, 345),
         IslandCardType.Today => (620, 360),
@@ -976,6 +977,7 @@ public partial class MainWindow : Window
                  e.PropertyName == nameof(MainViewModel.CurrentEmail) ||
                  e.PropertyName == nameof(MainViewModel.CurrentWhatsApp) ||
                  e.PropertyName == nameof(MainViewModel.CurrentDiscord) ||
+                 e.PropertyName == nameof(MainViewModel.CurrentApp) ||
                  e.PropertyName == nameof(MainViewModel.CompactCapsuleText) ||
                  e.PropertyName == nameof(MainViewModel.IsCompactTextVisible) ||
                  e.PropertyName == nameof(MainViewModel.IsStatsPinnedToCapsule) ||
@@ -1848,6 +1850,7 @@ public partial class MainWindow : Window
     private void TabMedia_Click(object sender, RoutedEventArgs e) { _viewModel.ClearTransientCompanionView(); _viewModel.ShowMedia(); }
     private void TabWhatsApp_Click(object sender, RoutedEventArgs e) { _viewModel.ClearTransientCompanionView(); _viewModel.ShowWhatsApp(); }
     private void TabDiscord_Click(object sender, RoutedEventArgs e) { _viewModel.ClearTransientCompanionView(); _viewModel.ShowDiscord(); }
+    private void TabApps_Click(object sender, RoutedEventArgs e) { _viewModel.ClearTransientCompanionView(); _viewModel.ShowApps(); }
     private void TabEmail_Click(object sender, RoutedEventArgs e) { _viewModel.ClearTransientCompanionView(); _viewModel.ShowEmail(); }
     private void TabHardware_Click(object sender, RoutedEventArgs e) { _viewModel.ClearTransientCompanionView(); _viewModel.ShowHardware(); }
     private void TabWeather_Click(object sender, RoutedEventArgs e) { _viewModel.ClearTransientCompanionView(); _viewModel.ShowWeather(); }

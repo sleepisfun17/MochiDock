@@ -58,6 +58,11 @@ public partial class NotificationsSectionView : UserControl
         {
             MuteEmailCheck.IsChecked = settings.MuteEmail;
             MuteDiscordCheck.IsChecked = settings.MuteDiscord;
+            MuteAppsCheck.IsChecked = settings.MuteApps;
+            WatchedAppsList.ItemsSource = vm.WatchedApps.ToList();
+            RecentAppsCombo.ItemsSource = vm.UnwatchedRecentApps;
+            if (RecentAppsCombo.SelectedIndex < 0 && RecentAppsCombo.Items.Count > 0) RecentAppsCombo.SelectedIndex = 0;
+            NotificationAccessText.Visibility = vm.NotificationAccessAllowed == false ? Visibility.Visible : Visibility.Collapsed;
             MuteWhatsAppCheck.IsChecked = settings.MuteWhatsApp;
             QuietHoursCheck.IsChecked = settings.QuietHoursEnabled;
             SetText(QuietStartBox, settings.QuietHoursStart ?? "");
@@ -82,13 +87,14 @@ public partial class NotificationsSectionView : UserControl
     private void Option_Changed(object sender, RoutedEventArgs e)
     {
         if (!IsLoaded || _loading) return;
-        bool muteEmail = MuteEmailCheck.IsChecked == true, muteDiscord = MuteDiscordCheck.IsChecked == true, muteWhatsApp = MuteWhatsAppCheck.IsChecked == true;
+        bool muteEmail = MuteEmailCheck.IsChecked == true, muteDiscord = MuteDiscordCheck.IsChecked == true, muteApps = MuteAppsCheck.IsChecked == true, muteWhatsApp = MuteWhatsAppCheck.IsChecked == true;
         bool quiet = QuietHoursCheck.IsChecked == true, autoExpand = MinimalNoticeCheck.IsChecked != true;
         bool dnd = GamingDndCheck.IsChecked == true, greeting = OvernightGreetingCheck.IsChecked == true;
         ViewModel?.UpdateSettings(x =>
         {
             x.MuteEmail = muteEmail;
             x.MuteDiscord = muteDiscord;
+            x.MuteApps = muteApps;
             x.MuteWhatsApp = muteWhatsApp;
             x.QuietHoursEnabled = quiet;
             x.AutoExpandNotificationsOnArrival = autoExpand;
@@ -156,6 +162,42 @@ public partial class NotificationsSectionView : UserControl
         if (e.Key != System.Windows.Input.Key.Enter) return;
         AllowDiscord_Click(sender, e);
         e.Handled = true;
+    }
+
+    private void AddRecentApp_Click(object sender, RoutedEventArgs e)
+    {
+        if (RecentAppsCombo.SelectedItem is not WatchedApp app)
+        {
+            AppsAddRow.Validation = "No other app has sent a notification since MochiDock started. Type its name instead.";
+            return;
+        }
+        AppsAddRow.Validation = "";
+        ViewModel?.WatchApp(app);
+        LoadFromSettings();
+    }
+
+    private void AddAppByName_Click(object sender, RoutedEventArgs e)
+    {
+        string name = AppNameBox.Text.Trim();
+        if (name.Length == 0) { AppsAddRow.Validation = "Type the app's name as Windows shows it on its notifications."; return; }
+        if (AppNotificationFilter.IsDiscord(name, "")) { AppsAddRow.Validation = "Discord already has its own card."; return; }
+        AppsAddRow.Validation = "";
+        ViewModel?.WatchApp(new WatchedApp(name, ""));
+        AppNameBox.Text = "";
+        LoadFromSettings();
+    }
+
+    private void AppName_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+    {
+        if (e.Key != System.Windows.Input.Key.Enter) return;
+        AddAppByName_Click(sender, e);
+        e.Handled = true;
+    }
+
+    private void RemoveApp_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement { Tag: WatchedApp app }) ViewModel?.UnwatchApp(app);
+        LoadFromSettings();
     }
 
     private void RemoveAllow_Click(object sender, RoutedEventArgs e)

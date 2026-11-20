@@ -87,6 +87,35 @@
                 <ComboBoxItem Content="Nothing" Tag="Off"/>
             </ComboBox>
         </s:SettingRow>
+        <TextBlock Style="{StaticResource SettingsGroupHeader}" Text="Other apps" Margin="0,18,0,2"/>
+        <s:SettingRow x:Name="AppsAddRow" Label="Show notifications from" Description="Apps such as LINE, Telegram, Slack or Teams whose Windows notifications appear on the Apps card. Apps that notified you since MochiDock started are listed; you can also type the name Windows shows for the app. Discord has its own card.">
+            <StackPanel>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,0,0,6">
+                    <ComboBox x:Name="RecentAppsCombo" Style="{StaticResource ModernDarkComboBox}" Width="200" DisplayMemberPath="Name" AutomationProperties.Name="Recent apps"/>
+                    <Button Style="{StaticResource ActionButton}" Content="Add" Click="AddRecentApp_Click" Margin="8,0,0,0"/>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                    <TextBox x:Name="AppNameBox" Style="{StaticResource ModernDarkTextBox}" Width="200" KeyDown="AppName_KeyDown" AutomationProperties.Name="App name" controls:TextBoxHint.Text="App name"/>
+                    <Button Style="{StaticResource ActionButton}" Content="Add by name" Click="AddAppByName_Click" Margin="8,0,0,0"/>
+                </StackPanel>
+                <TextBlock x:Name="NotificationAccessText" Style="{StaticResource CardCaptionText}" HorizontalAlignment="Right" TextWrapping="Wrap" MaxWidth="320" Margin="0,6,0,0"
+                           Text="Windows has not allowed MochiDock to read notifications. Allow it in Windows Settings > Privacy &amp; security > Notifications, then restart MochiDock." Visibility="Collapsed"/>
+            </StackPanel>
+        </s:SettingRow>
+        <ItemsControl x:Name="WatchedAppsList" Margin="0,2,0,0">
+            <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                    <Grid Margin="0,0,0,4">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="{Binding Name}" Style="{StaticResource CardBodyText}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" ToolTip="{Binding Aumid}"/>
+                        <Button Grid.Column="1" Style="{StaticResource ActionButton}" Content="Remove" Tag="{Binding}" Click="RemoveApp_Click" Margin="8,0,0,0" Padding="8,3"/>
+                    </Grid>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
         <TextBlock Style="{StaticResource SettingsGroupHeader}" Text="Sounds" Margin="0,18,0,2"/>
         <s:SettingRow Label="Notification sounds" Description="Play a sound with notifications.">
             <CheckBox IsChecked="{Binding EnableSounds, Mode=TwoWay}" Style="{StaticResource ModernDarkCheckBox}"/>
@@ -97,6 +126,9 @@
         </s:SettingRow>
         <s:SettingRow Label="Mute Discord" Description="No pop-ups for Discord notifications.">
             <CheckBox x:Name="MuteDiscordCheck" Style="{StaticResource ModernDarkCheckBox}" Checked="Option_Changed" Unchecked="Option_Changed"/>
+        </s:SettingRow>
+        <s:SettingRow Label="Mute other apps" Description="No pop-ups for the apps listed under Other apps.">
+            <CheckBox x:Name="MuteAppsCheck" Style="{StaticResource ModernDarkCheckBox}" Checked="Option_Changed" Unchecked="Option_Changed"/>
         </s:SettingRow>
         <s:SettingRow Label="Mute WhatsApp" Description="No pop-ups for WhatsApp messages.">
             <CheckBox x:Name="MuteWhatsAppCheck" Style="{StaticResource ModernDarkCheckBox}" Checked="Option_Changed" Unchecked="Option_Changed"/>
