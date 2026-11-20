@@ -1,0 +1,110 @@
+<UserControl x:Class="MochiDock.Views.Cards.DownloadsCardView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    FontFamily="{DynamicResource IslandUiFont}">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <Grid Grid.Row="0" Margin="0,0,0,8">
+            <StackPanel>
+                <TextBlock Text="Media Downloader" Style="{StaticResource CardHeadingText}"/>
+                <TextBlock Text="Save YouTube, TikTok, X, Twitch videos &amp; audio directly to File Shelf" Style="{StaticResource CardCaptionText}" Foreground="{DynamicResource IslandMutedInkBrush}" TextTrimming="CharacterEllipsis" ToolTip="Save YouTube, TikTok, X, Twitch videos &amp; audio directly to File Shelf"/>
+            </StackPanel>
+        </Grid>
+
+        <!-- Input row: URL box, Paste button, Format Selector, Download Button -->
+        <Border Grid.Row="1" Background="{DynamicResource IslandSubCardBackgroundBrush}" BorderBrush="{DynamicResource IslandSubCardBorderBrush}" BorderThickness="1" CornerRadius="10" Padding="10,8" Margin="0,0,0,8">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <!-- URL bar & paste -->
+                <Grid Grid.Row="0" Margin="0,0,0,6">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <TextBox x:Name="UrlTextBox"
+                             MinHeight="34"
+                             Padding="8,6"
+                             FontSize="12"
+                             Background="{DynamicResource IslandSurfaceBrush}"
+                             Foreground="{DynamicResource IslandInkBrush}"
+                             BorderBrush="{DynamicResource IslandSubCardBorderBrush}"
+                             BorderThickness="1"
+                             CaretBrush="{DynamicResource IslandInkBrush}"
+                             VerticalAlignment="Center"/>
+
+                    <Button Grid.Column="1" Style="{DynamicResource IslandChipButtonStyle}" Margin="6,0,0,0" Click="PasteUrl_Click" ToolTip="Paste from clipboard">
+                        <TextBlock Text="Paste"/>
+                    </Button>
+                </Grid>
+
+                <!-- Format toggle & Start button -->
+                <Grid Grid.Row="1">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                        <RadioButton x:Name="FormatVideoRadio" Content="Video (MP4)" IsChecked="True" Checked="Format_Changed" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                        <RadioButton x:Name="FormatAudioRadio" Content="Audio (MP3)" Checked="Format_Changed" VerticalAlignment="Center"/>
+                    </StackPanel>
+
+                    <Button x:Name="DownloadButton" Grid.Column="2" Style="{DynamicResource IslandPrimaryButtonStyle}" Padding="14,6" Click="StartDownload_Click">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <!-- The implicit TextBlock style forces IslandInkBrush, so take the button's own foreground explicitly. -->
+                            <Image Source="{StaticResource IconDownload}" Stretch="Uniform" RenderOptions.BitmapScalingMode="HighQuality" Width="12" Height="12" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                            <TextBlock Text="Download" FontSize="12" FontWeight="{DynamicResource IslandHeadingWeight}"/>
+                        </StackPanel>
+                    </Button>
+                </Grid>
+            </Grid>
+        </Border>
+
+        <!-- Status & Progress Container -->
+        <Border Grid.Row="2" Background="{DynamicResource IslandSubCardBackgroundBrush}" BorderBrush="{DynamicResource IslandSubCardBorderBrush}" BorderThickness="1" CornerRadius="10" Padding="10,8">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <Grid Grid.Row="0" Margin="0,0,0,6">
+                    <TextBlock x:Name="StatusTitleText" Text="Ready for download" FontSize="13" FontWeight="{DynamicResource IslandSmallLabelWeight}" Foreground="{DynamicResource IslandInkBrush}"/>
+                    <TextBlock x:Name="StatusPercentText" Text="" FontSize="11" Foreground="{DynamicResource IslandPositiveBrush}" HorizontalAlignment="Right"/>
+                </Grid>
+
+                <ProgressBar x:Name="DownloadProgressBar" Grid.Row="1" Height="6" Minimum="0" Maximum="100" Value="0" Margin="0,0,0,6" Background="{DynamicResource IslandSurfaceBrush}" Foreground="{DynamicResource IslandPositiveBrush}" BorderThickness="0"/>
+
+                <ScrollViewer Grid.Row="2" Style="{DynamicResource ModernCardScrollViewer}" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                    <TextBlock x:Name="StatusLogText" Text="Enter a video or audio link and click Download. Completed files are placed in PairedDrop/File Shelf." FontSize="11" Foreground="{DynamicResource IslandMutedInkBrush}" TextWrapping="Wrap"/>
+                </ScrollViewer>
+
+                <!-- Follow-up actions: shown after a download finishes or fails -->
+                <StackPanel x:Name="ResultActions" Grid.Row="3" Orientation="Horizontal" Margin="0,6,0,0" Visibility="Collapsed">
+                    <Button x:Name="OpenFolderButton" Content="Show file" Click="OpenFolder_Click" Style="{StaticResource IslandSecondaryButtonStyle}" Padding="10,3" Margin="0" ToolTip="Open the folder with the downloaded file" Visibility="Collapsed"/>
+                    <Button x:Name="RetryButton" Content="Retry" Click="Retry_Click" Style="{StaticResource IslandSecondaryButtonStyle}" Padding="10,3" Margin="8,0,0,0" ToolTip="Run the same download again" Visibility="Collapsed"/>
+                    <Button x:Name="CopyErrorButton" Content="Copy error" Click="CopyError_Click" Style="{StaticResource IslandSecondaryButtonStyle}" Padding="10,3" ToolTip="Copy the error text to the clipboard" Visibility="Collapsed" Margin="8,0,0,0"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- Footer -->
+        <TextBlock Grid.Row="3" Text="Powered by yt-dlp &amp; ffmpeg. Destination: %LocalAppData%\MochiDock\PairedDrop" FontSize="11" Foreground="{DynamicResource IslandMutedInkBrush}" TextTrimming="CharacterEllipsis" Margin="0,6,0,0"/>
+    </Grid>
+</UserControl>
+

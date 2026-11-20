@@ -1,0 +1,141 @@
+<UserControl x:Class="MochiDock.Views.Settings.Sections.WhatsAppSectionView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:s="clr-namespace:MochiDock.Views.Settings">
+    <StackPanel>
+        <s:SettingRow Label="Enable WhatsApp" Description="Off by default. Turning it on starts the WhatsApp engine; then open the dashboard and link your phone. While off, nothing runs and no port is opened.">
+            <CheckBox x:Name="EnableWhatsAppCheck" Style="{StaticResource ModernDarkCheckBox}" Checked="EnableWhatsApp_Changed" Unchecked="EnableWhatsApp_Changed"/>
+        </s:SettingRow>
+        <StackPanel x:Name="WhatsAppBody">
+        <TextBlock Style="{StaticResource SettingsGroupHeader}" Text="Link your phone" Margin="0,0,0,2"/>
+        <s:SettingRow Label="Connection" Description="Open the pairing dashboard to link a device, or test and reconnect WhatsApp.">
+            <StackPanel Orientation="Horizontal">
+                <Button Style="{StaticResource ActionButton}" Content="Open QR dashboard" Click="OpenQr_Click" Margin="0"/>
+                <Button Style="{StaticResource ActionButton}" Content="↻ Reconnect" Click="Reconnect_Click" Margin="8,0,0,0"/>
+            </StackPanel>
+        </s:SettingRow>
+        <TextBlock x:Name="LinkStatusText" Style="{StaticResource SettingsRowDescription}" TextWrapping="Wrap" Margin="0,0,0,4"/>
+        <TextBlock x:Name="LinkStepsText" Style="{StaticResource CardCaptionText}" TextWrapping="Wrap" Margin="0,0,0,10"
+                   Text="To link: 1) click Open QR dashboard. 2) On your phone open WhatsApp > Linked devices > Link a device. 3) Scan the QR code shown in the dashboard."/>
+        <TextBlock Style="{StaticResource SettingsGroupHeader}" Text="Server" Margin="0,18,0,2"/>
+        <s:SettingRow Label="Engine" Description="Run GOWA on this PC, or use a shared GOWA server (for example over Tailscale).">
+            <StackPanel Orientation="Horizontal">
+                <RadioButton x:Name="LocalModeRadio" Style="{StaticResource ModernDarkRadioButton}" Content="Local PC" GroupName="GowaSectionMode" Checked="LocalModeRadio_Checked" Margin="0,0,14,0"/>
+                <RadioButton x:Name="RemoteModeRadio" Style="{StaticResource ModernDarkRadioButton}" Content="Remote server" GroupName="GowaSectionMode" Checked="RemoteModeRadio_Checked"/>
+            </StackPanel>
+        </s:SettingRow>
+        <s:SettingRow x:Name="LocalPortRow" Label="Local port" Description="Port the local GOWA engine listens on (1024–65535, default 3099).">
+            <TextBox x:Name="LocalPortBox" Style="{StaticResource ModernDarkTextBox}" Width="100" LostFocus="GowaField_LostFocus" KeyDown="GowaField_KeyDown"/>
+        </s:SettingRow>
+        <s:SettingRow x:Name="RemoteUrlRow" Label="Server address" Description="Address of the PC that runs the shared GOWA server, e.g. http://100.64.0.1:3099.">
+            <TextBox x:Name="RemoteUrlBox" Style="{StaticResource ModernDarkTextBox}" Width="260" LostFocus="GowaField_LostFocus" KeyDown="GowaField_KeyDown"/>
+        </s:SettingRow>
+        <s:SettingRow x:Name="RemoteUserRow" Label="Server user" Description="The user from the server's --basic-auth=user:password. Stored encrypted for this Windows user, never in settings.json.">
+            <TextBox x:Name="RemoteUserBox" Style="{StaticResource ModernDarkTextBox}" Width="260" LostFocus="GowaField_LostFocus" KeyDown="GowaField_KeyDown"/>
+        </s:SettingRow>
+        <s:SettingRow x:Name="RemotePasswordRow" Label="Server password" Description="Stored encrypted for this Windows user.">
+            <PasswordBox x:Name="RemotePasswordBox" Style="{StaticResource ModernDarkPasswordBox}" PasswordChar="•" Width="260" LostFocus="GowaField_LostFocus"/>
+        </s:SettingRow>
+        <TextBlock x:Name="RemoteWarningText" Style="{StaticResource CardCaptionText}" Foreground="{DynamicResource IslandWarningBrush}" TextWrapping="Wrap" Margin="0,8,0,0" Visibility="Collapsed"/>
+        <s:SettingRow x:Name="WebhookPortRow" Label="Event port" Description="Port this PC listens on for GOWA events (1024–65535, default 47823). Changing it restarts GOWA.">
+            <TextBox x:Name="WebhookPortBox" Style="{StaticResource ModernDarkTextBox}" Width="100" LostFocus="GowaField_LostFocus" KeyDown="GowaField_KeyDown"/>
+        </s:SettingRow>
+        <s:SettingRow x:Name="ReadSyncRow" Label="Read-sync address" Description="Give this address to the GOWA server (--webhook) so messages you read elsewhere clear here. It contains a secret; do not share it.">
+            <StackPanel Orientation="Horizontal">
+                <TextBox x:Name="ReadSyncUrlBox" Style="{StaticResource ModernDarkTextBox}" Width="260" IsReadOnly="True"/>
+                <Button Style="{StaticResource ActionButton}" Content="Copy" Click="CopyReadSync_Click" Margin="8,0,0,0"/>
+                <Button Style="{StaticResource ActionButton}" Content="New secret" Click="RegenerateToken_Click" Margin="8,0,0,0"/>
+            </StackPanel>
+        </s:SettingRow>
+        <TextBlock x:Name="ReadSyncStatusText" Style="{StaticResource SettingsRowDescription}" TextWrapping="Wrap" Margin="0,0,0,6"/>
+        <TextBlock Style="{StaticResource SettingsGroupHeader}" Text="Chats" Margin="0,18,0,2"/>
+        <s:SettingRow Label="Ignore archived chats" Description="Do not notify for chats you archived in WhatsApp.">
+            <CheckBox x:Name="IgnoreArchivedCheck" Style="{StaticResource ModernDarkCheckBox}" Checked="Option_Changed" Unchecked="Option_Changed"/>
+        </s:SettingRow>
+        <s:SettingRow Label="Mute all groups" Description="Do not notify for any WhatsApp group.">
+            <CheckBox x:Name="MuteGroupsCheck" Style="{StaticResource ModernDarkCheckBox}" Checked="Option_Changed" Unchecked="Option_Changed"/>
+        </s:SettingRow>
+        <s:SettingRow Label="Choose chats" Description="WhatsApp does not tell MochiDock which chats you muted in the app. Load your chats here and tick the ones to silence, once. With &quot;only notify for listed&quot; on below, a ticked chat notifies instead.">
+            <Button x:Name="PickerButton" Style="{StaticResource ActionButton}" Content="Choose chats…" Click="OpenPicker_Click" Margin="0"/>
+        </s:SettingRow>
+        <Border x:Name="PickerPanel" Visibility="Collapsed" Margin="0,4,0,8" Padding="10" CornerRadius="8" Background="{DynamicResource IslandControlBackgroundBrush}" BorderBrush="{DynamicResource IslandControlBorderBrush}" BorderThickness="1">
+            <StackPanel>
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                    <TextBox x:Name="PickerSearch" Style="{StaticResource ModernDarkTextBox}" Width="200" TextChanged="PickerSearch_Changed" Margin="0,0,12,0" ToolTip="Search by name or number"/>
+                    <RadioButton x:Name="PickAll" Style="{StaticResource ModernDarkRadioButton}" Content="All" GroupName="PickerKind" IsChecked="True" Checked="PickerKind_Changed" Margin="0,0,12,0" VerticalAlignment="Center"/>
+                    <RadioButton x:Name="PickGroups" Style="{StaticResource ModernDarkRadioButton}" Content="Groups" GroupName="PickerKind" Checked="PickerKind_Changed" Margin="0,0,12,0" VerticalAlignment="Center"/>
+                    <RadioButton x:Name="PickPeople" Style="{StaticResource ModernDarkRadioButton}" Content="People" GroupName="PickerKind" Checked="PickerKind_Changed" VerticalAlignment="Center"/>
+                </StackPanel>
+                <TextBlock x:Name="PickerStatus" Style="{StaticResource CardCaptionText}" TextWrapping="Wrap" Margin="0,0,0,6"/>
+                <ScrollViewer MaxHeight="280" VerticalScrollBarVisibility="Auto">
+                    <ItemsControl x:Name="PickerList">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid Margin="0,0,0,6">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <CheckBox Style="{StaticResource ModernDarkCheckBox}" IsChecked="{Binding Listed, Mode=TwoWay}" Tag="{Binding}" Click="PickerChat_Click" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding Title}" Style="{StaticResource CardCaptionText}" TextTrimming="CharacterEllipsis" ToolTip="{Binding Chat.Jid}"/>
+                                        <TextBlock Text="{Binding Detail}" Style="{StaticResource CardCaptionText}" Opacity="0.7" TextTrimming="CharacterEllipsis"/>
+                                    </StackPanel>
+                                    <TextBlock Grid.Column="2" Text="{Binding Action}" Style="{StaticResource CardCaptionText}" Opacity="0.7" VerticalAlignment="Center" Margin="8,0,0,0"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+                <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                    <Button Style="{StaticResource ActionButton}" Content="Tick all shown" Click="PickerTickAll_Click" Margin="0"/>
+                    <Button Style="{StaticResource ActionButton}" Content="Clear all shown" Click="PickerClearAll_Click" Margin="8,0,0,0"/>
+                    <Button Style="{StaticResource ActionButton}" Content="Reload" Click="PickerReload_Click" Margin="8,0,0,0"/>
+                    <Button Style="{StaticResource ActionButton}" Content="Close" Click="PickerClose_Click" Margin="8,0,0,0"/>
+                </StackPanel>
+            </StackPanel>
+        </Border>
+        <s:SettingRow Label="Muted chats" Description="Chats you muted from a notification or the picker. Remove one to hear from it again.">
+            <ItemsControl x:Name="MutedList" MinWidth="260">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Grid Margin="0,0,0,4">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="{Binding Display}" Style="{StaticResource CardCaptionText}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" MaxWidth="260" Margin="0,0,8,0" ToolTip="{Binding Key}"/>
+                            <Button Grid.Column="1" Style="{StaticResource ActionButton}" Content="Remove" Tag="{Binding Key}" Click="UnmuteChat_Click" Margin="0" Padding="8,3"/>
+                        </Grid>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </s:SettingRow>
+        <TextBlock x:Name="NoMutedText" Style="{StaticResource CardCaptionText}" Text="No muted chats." Margin="0,6,0,0"/>
+        <s:SettingRow Label="Only notify for listed groups" Description="Turn this on to hear only from the groups on the notify list (tick them in &quot;Choose chats&quot; or use &quot;Always notify&quot; on a group's notification). Direct chats are not affected.">
+            <CheckBox x:Name="OnlyListedCheck" Style="{StaticResource ModernDarkCheckBox}" Checked="Option_Changed" Unchecked="Option_Changed"/>
+        </s:SettingRow>
+        <s:SettingRow Label="Only notify for listed people" Description="The same for direct chats: only the people on the notify list below can notify. Tick them in &quot;Choose chats&quot; or use &quot;Always notify&quot;.">
+            <CheckBox x:Name="OnlyPeopleCheck" Style="{StaticResource ModernDarkCheckBox}" Checked="Option_Changed" Unchecked="Option_Changed"/>
+        </s:SettingRow>
+        <s:SettingRow x:Name="AllowedRow" Label="Chats that notify" Description="Remove a chat to silence it again.">
+            <ItemsControl x:Name="AllowedList" MinWidth="260">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Grid Margin="0,0,0,4">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="{Binding Display}" Style="{StaticResource CardCaptionText}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" MaxWidth="260" Margin="0,0,8,0" ToolTip="{Binding Key}"/>
+                            <Button Grid.Column="1" Style="{StaticResource ActionButton}" Content="Remove" Tag="{Binding Key}" Click="RemoveAllowed_Click" Margin="0" Padding="8,3"/>
+                        </Grid>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </s:SettingRow>
+        <TextBlock x:Name="AllowedWarning" Style="{StaticResource CardCaptionText}" Foreground="{DynamicResource IslandWarningBrush}" TextWrapping="Wrap" Text="Nothing is listed, so nothing of that kind will notify." Margin="0,6,0,0" Visibility="Collapsed"/>
+        </StackPanel>
+    </StackPanel>
+</UserControl>

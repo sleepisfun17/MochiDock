@@ -1,0 +1,67 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
+    <!-- WPF owns startup; its manifest configures DPI. WinForms is used only for platform helpers/tray. -->
+    <NoWarn>$(NoWarn);WFAC010</NoWarn>
+    <SupportedOSPlatformVersion>10.0.19041.0</SupportedOSPlatformVersion>
+    <ApplicationIcon>icon.ico</ApplicationIcon>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <AssemblyName>MochiDock</AssemblyName>
+    <!-- Single source of the app version: the installer (installer/MochiDock.iss MyAppVersion) must match; a test checks it. -->
+    <Version>0.1.0-beta</Version>
+    <Product>Mochi Dock</Product>
+    <Title>Mochi Dock</Title>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="LibreHardwareMonitorLib" Version="0.9.6" />
+    <PackageReference Include="MailKit" Version="5.0.0" />
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="8.0.8" />
+    <PackageReference Include="Microsoft.Diagnostics.Tracing.TraceEvent" Version="4.0.0" />
+    <PackageReference Include="System.Management" Version="10.0.14" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="icon.ico">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Resource Include="Assets\Icons\*.png" />
+    <Resource Include="Assets\Fonts\*.ttf" />
+    <EmbeddedResource Include="Assets\ja_readings.tsv.gz" />
+    <EmbeddedResource Include="Assets\zh_pinyin.tsv.gz" />
+    <EmbeddedResource Include="Assets\emoji.pak" />
+    <Content Include="Assets\Icons\*.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="..\GOWA\windows-amd64.exe" Link="GOWA\windows-amd64.exe" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="..\GOWA\readme.md" Link="GOWA\readme.md" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="Scripts\install-startup.ps1" Link="install-startup.ps1" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="Scripts\uninstall-startup.ps1" Link="uninstall-startup.ps1" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+  <ItemGroup><ProjectReference Include="..\MochiDock.Core\MochiDock.Core.csproj" /></ItemGroup>
+<ItemGroup><Content Include="..\THIRD-PARTY-NOTICES.txt" Link="THIRD-PARTY-NOTICES.txt" CopyToOutputDirectory="PreserveNewest" /><Content Include="Assets\Fonts\OFL.Quicksand.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" /></ItemGroup><ItemGroup><RuntimeHostConfigurationOption Include="Switch.System.Windows.DoNotScaleForDpiChanges" Value="false" /></ItemGroup>  <ItemGroup>
+    <!-- Non-elevated helper that reads classic Outlook for the elevated app; built first, then copied beside the app. -->
+    <ProjectReference Include="../MochiDock.OutlookHelper/MochiDock.OutlookHelper.csproj" ReferenceOutputAssembly="false" />
+  </ItemGroup>
+  <PropertyGroup>
+    <OutlookHelperBin>$(MSBuildProjectDirectory)/../MochiDock.OutlookHelper/bin/$(Configuration)/net8.0-windows/</OutlookHelperBin>
+  </PropertyGroup>
+  <Target Name="CopyOutlookHelperToOutput" AfterTargets="Build">
+    <ItemGroup>
+      <OutlookHelperFile Include="$(OutlookHelperBin)**/*" Exclude="$(OutlookHelperBin)**/*.pdb" />
+    </ItemGroup>
+    <Copy SourceFiles="@(OutlookHelperFile)" DestinationFiles="@(OutlookHelperFile->'$(OutDir)OutlookHelper/%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+  </Target>
+  <!-- Self-contained installer builds publish the helper separately (scripts\publish.ps1 -Installer) so its runtime is included. -->
+  <Target Name="AddOutlookHelperToPublish" AfterTargets="ComputeResolvedFilesToPublishList" Condition="'$(SelfContained)' != 'true'">
+    <ItemGroup>
+      <OutlookHelperPublishFile Include="$(OutlookHelperBin)**/*" Exclude="$(OutlookHelperBin)**/*.pdb" />
+      <ResolvedFileToPublish Include="@(OutlookHelperPublishFile)" RelativePath="OutlookHelper/%(RecursiveDir)%(Filename)%(Extension)" CopyToPublishDirectory="PreserveNewest" />
+    </ItemGroup>
+  </Target>
+</Project>

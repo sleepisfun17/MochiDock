@@ -1,0 +1,91 @@
+<UserControl x:Class="MochiDock.Views.Cards.ScriptCardView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    FontFamily="{DynamicResource IslandUiFont}">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Top controls row -->
+        <Grid Grid.Row="0" Margin="0,0,0,8">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Play / Pause & WPM -->
+            <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                <Button x:Name="PlayPauseButton" Style="{DynamicResource IslandPrimaryButtonStyle}" MinWidth="32" Height="28" Padding="0" Click="PlayPause_Click" ToolTip="Start / Pause teleprompter scrolling">
+                    <TextBlock x:Name="PlayPauseIcon" Text="▶" FontSize="11" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"/>
+                </Button>
+                <Button Style="{DynamicResource IslandSecondaryButtonStyle}" Width="28" Height="28" Padding="0" Margin="8,0,0,0" Click="ResetScroll_Click" ToolTip="Reset scroll to top">
+                    <TextBlock Text="⏮" FontSize="11" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                </Button>
+            </StackPanel>
+
+            <!-- WPM Stepper: the slider takes the leftover width so the right-hand stats never collide with it -->
+            <Grid Grid.Column="1" Margin="10,0,10,0" VerticalAlignment="Center">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*" MinWidth="48"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock Grid.Column="0" Text="Speed: " FontSize="11" Foreground="{DynamicResource IslandMutedInkBrush}" VerticalAlignment="Center"/>
+                <Slider Grid.Column="1" x:Name="WpmSlider" Minimum="60" Maximum="300" Value="150" VerticalAlignment="Center" ValueChanged="WpmSlider_ValueChanged"/>
+                <TextBlock Grid.Column="2" x:Name="WpmText" Text="150 WPM" FontSize="11" FontWeight="{DynamicResource IslandHeadingWeight}" Foreground="{DynamicResource IslandInkBrush}" VerticalAlignment="Center" Margin="6,0,0,0"/>
+            </Grid>
+
+            <!-- Reading Stats -->
+            <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                <Border Background="{DynamicResource IslandChipBackgroundBrush}" BorderBrush="{DynamicResource IslandChipBorderBrush}" BorderThickness="1" CornerRadius="10" Padding="8,3" Margin="0,0,8,0">
+                    <TextBlock x:Name="ReadingEstimateText" Text="0m 00s (0 words)" FontSize="11" Foreground="{DynamicResource IslandInkBrush}"/>
+                </Border>
+                <CheckBox x:Name="ExcludeCaptureCheck" Margin="0" Content="Hide from capture" ToolTip="Hide the dock from screen sharing and recording (OBS, Teams, Zoom). Same switch as Settings, General, Exclude from screen capture." VerticalAlignment="Center" Checked="ExcludeCaptureCheck_Changed" Unchecked="ExcludeCaptureCheck_Changed"/>
+            </StackPanel>
+        </Grid>
+
+        <!-- Main Prompter Text Area with Drag & Drop -->
+        <Border Grid.Row="1" Background="{DynamicResource IslandSubCardBackgroundBrush}" BorderBrush="{DynamicResource IslandSubCardBorderBrush}" BorderThickness="1" CornerRadius="10" Padding="10,8" AllowDrop="True" Drop="ScriptArea_Drop" DragOver="ScriptArea_DragOver">
+            <Grid>
+                <ScrollViewer x:Name="PrompterScrollViewer" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                    <TextBox x:Name="ScriptTextBox"
+                             TextWrapping="Wrap"
+                             AcceptsReturn="True"
+                             AcceptsTab="True"
+                             FontSize="14"
+                             FontWeight="{DynamicResource IslandBodyWeight}"
+                             Background="Transparent"
+                             Foreground="{DynamicResource IslandInkBrush}"
+                             BorderThickness="0"
+                             CaretBrush="{DynamicResource IslandInkBrush}"
+                             TextChanged="ScriptTextBox_TextChanged"/>
+                </ScrollViewer>
+                <TextBlock Text="Paste or drop a script to start" Foreground="{DynamicResource IslandMutedInkBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" IsHitTestVisible="False">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock" BasedOn="{StaticResource CardCaptionText}">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding Text, ElementName=ScriptTextBox}" Value="">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
+            </Grid>
+        </Border>
+
+        <!-- Bottom bar info / hotkey hint -->
+        <Grid Grid.Row="2" Margin="0,6,0,0">
+            <TextBlock Text="Tip: Drag &amp; drop a .txt/.md file here. Hotkey: Alt+Shift+S toggles teleprompter mode." FontSize="11" Foreground="{DynamicResource IslandMutedInkBrush}" TextTrimming="CharacterEllipsis" Margin="0,0,70,0"/>
+            <Button Style="{DynamicResource IslandSecondaryButtonStyle}" HorizontalAlignment="Right" Padding="6,2" Click="ClearText_Click">
+                <TextBlock Text="Clear"/>
+            </Button>
+        </Grid>
+    </Grid>
+</UserControl>
+

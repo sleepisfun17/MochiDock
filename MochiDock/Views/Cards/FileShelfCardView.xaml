@@ -1,0 +1,109 @@
+<UserControl x:Class="MochiDock.Views.Cards.FileShelfCardView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             mc:Ignorable="d" 
+             FontFamily="{DynamicResource IslandUiFont}"
+             AllowDrop="True"
+             Drop="FileShelf_Drop"
+             DragOver="FileShelf_DragOver">
+    <Grid VerticalAlignment="Stretch">
+        <Grid.RowDefinitions>
+            <!-- Row 0: Top Bar with Phone Drop Link & Clear -->
+            <RowDefinition Height="Auto" />
+            <!-- Row 1: File items list -->
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <!-- Top Bar -->
+        <Grid Grid.Row="0" Margin="0,0,0,6">
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                <Image Source="{StaticResource IconFolder}" Stretch="Uniform" RenderOptions.BitmapScalingMode="HighQuality" Width="14" Height="14" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                <TextBlock Text="File Shelf &amp; Phone Drop" Style="{StaticResource CardSectionLabel}" VerticalAlignment="Center" />
+                <TextBlock Text=" (Drag files here)" Style="{StaticResource CardCaptionText}" Foreground="{DynamicResource IslandMutedInkBrush}" Margin="4,0,0,0" VerticalAlignment="Center" />
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button Style="{StaticResource IslandSecondaryButtonStyle}" Content="Start Phone Drop" IsEnabled="{Binding CanStartPhoneDrop}" Click="TogglePhoneDrop_Click" Margin="0" ToolTip="Upload files from your phone" />
+                <Button Style="{StaticResource IslandSecondaryButtonStyle}" Content="Clear" Click="ClearShelf_Click"  Margin="8,0,0,0"/>
+            </StackPanel>
+        </Grid>
+
+        <Border Grid.Row="1" Background="{DynamicResource IslandSubCardBackgroundBrush}" BorderBrush="{DynamicResource IslandSubCardBorderBrush}" BorderThickness="1" CornerRadius="10" Padding="10,8" Margin="0,0,0,6">
+            <StackPanel>
+                <DockPanel>
+                    <Button DockPanel.Dock="Right" Style="{StaticResource ActionButton}" Content="Stop" Click="StopPhoneDrop_Click" IsEnabled="{Binding CanStopPhoneDrop}" Margin="8,0,0,0" />
+                    <Button DockPanel.Dock="Right" Style="{StaticResource ActionButton}" Content="Copy Link" Click="CopyPhoneLink_Click" IsEnabled="{Binding IsPhoneDropRunning}" Margin="8,0,0,0" />
+                    <ComboBox ItemsSource="{Binding PhoneDropAddresses}" SelectedItem="{Binding PhoneDropAddress}" MinWidth="145">
+                        <ComboBox.Style><Style TargetType="ComboBox" BasedOn="{StaticResource ModernDarkComboBox}"><Setter Property="IsEnabled" Value="True"/><Style.Triggers><DataTrigger Binding="{Binding IsPhoneDropRunning}" Value="True"><Setter Property="IsEnabled" Value="False"/></DataTrigger></Style.Triggers></Style></ComboBox.Style>
+                    </ComboBox>
+                </DockPanel>
+                <TextBlock Text="{Binding PhoneDropStatus}" Foreground="{DynamicResource IslandInkBrush}" FontSize="11" TextWrapping="Wrap" Margin="0,5,0,0"/>
+                <TextBlock Text="{Binding PhoneDropState}" Style="{StaticResource CardSectionLabel}"/>
+                <TextBlock Text="Same Wi-Fi only. Copy the session link to your phone; approve each request here." Foreground="{DynamicResource IslandSecondaryInkBrush}" FontSize="11" TextWrapping="Wrap"/>
+            </StackPanel>
+        </Border>
+        <Border Grid.Row="2" Background="{DynamicResource IslandSubCardBackgroundBrush}" Padding="8" Margin="0,0,0,6">
+            <Border.Style><Style TargetType="Border"><Setter Property="Visibility" Value="Collapsed"/><Style.Triggers><DataTrigger Binding="{Binding HasDropProposal}" Value="True"><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers></Style></Border.Style>
+            <StackPanel>
+                <TextBlock Text="Allow these files? Request expires in 60 seconds." Foreground="{DynamicResource IslandWarningBrush}" FontSize="11"/>
+                <ScrollViewer MaxHeight="72"><TextBlock Text="{Binding DropProposalText}" Foreground="{DynamicResource IslandInkBrush}" TextWrapping="Wrap" FontSize="11"/></ScrollViewer>
+                <StackPanel Orientation="Horizontal"><Button Style="{StaticResource ActionButton}" Content="Approve" Click="ApproveDrop_Click" Margin="0,5,0,0"/><Button Style="{StaticResource ActionButton}" Content="Reject" Click="RejectDrop_Click" Margin="8,5,0,0"/></StackPanel>
+            </StackPanel>
+        </Border>
+        <!-- Scrollable Files Strip -->
+        <ScrollViewer Grid.Row="3" Style="{StaticResource ModernCardScrollViewer}" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+            <ItemsControl ItemsSource="{Binding ShelfFiles}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Border Background="{DynamicResource IslandSurfaceBrush}" BorderBrush="{DynamicResource IslandBorderBrush}" BorderThickness="1" CornerRadius="6" Padding="8,6" Margin="0,0,0,4" MouseMove="ShelfItem_MouseMove" Cursor="Hand" ToolTip="Drag out into other apps or email">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+
+                                <!-- Ext badge -->
+                                <Border Grid.Column="0" Width="32" Height="32" CornerRadius="6" Background="{DynamicResource IslandControlBackgroundBrush}" Margin="0,0,8,0" VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding ExtensionBadge}" Foreground="{DynamicResource IslandAccentBrush}" FontSize="11" FontWeight="{DynamicResource IslandSmallLabelWeight}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                </Border>
+
+                                <!-- File Name & Size -->
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding FileName}" ToolTip="{Binding FileName}" Foreground="{DynamicResource IslandInkBrush}" FontSize="12" FontWeight="{DynamicResource IslandSmallLabelWeight}" TextTrimming="CharacterEllipsis" HorizontalAlignment="Left" />
+                                    <TextBlock Text="{Binding FormattedSize}" Foreground="{DynamicResource IslandSecondaryInkBrush}" FontSize="11" Margin="0,2,0,0" />
+                                </StackPanel>
+
+                                <!-- Reveal in Explorer -->
+                                <Button Grid.Column="2" Style="{StaticResource IslandSecondaryButtonStyle}" Content="Open" Click="OpenFile_Click" Margin="4,0" VerticalAlignment="Center" />
+
+                                <!-- Remove -->
+                                <Button Grid.Column="3" Style="{StaticResource IslandIconButton}" Content="✕" Click="RemoveFile_Click" ToolTip="Remove from shelf" VerticalAlignment="Center" />
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </ScrollViewer>
+
+        <!-- Empty state: drop zone -->
+        <Border Grid.Row="3" BorderBrush="{DynamicResource IslandSubCardBorderBrush}" BorderThickness="1" CornerRadius="10" MinHeight="72" IsHitTestVisible="False">
+            <Border.Style>
+                <Style TargetType="Border">
+                    <Setter Property="Visibility" Value="Collapsed"/>
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding ShelfFiles.Count}" Value="0">
+                            <Setter Property="Visibility" Value="Visible"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Border.Style>
+            <TextBlock Text="Drop files here" Style="{StaticResource CardCaptionText}" Foreground="{DynamicResource IslandMutedInkBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+        </Border>
+    </Grid>
+</UserControl>
+

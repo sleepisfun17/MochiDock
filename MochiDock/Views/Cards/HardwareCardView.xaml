@@ -1,0 +1,1260 @@
+<UserControl x:Class="MochiDock.Views.Cards.HardwareCardView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:controls="clr-namespace:MochiDock.Controls"
+             mc:Ignorable="d"
+             FontFamily="{DynamicResource IslandUiFont}"
+             UseLayoutRounding="True"
+             SnapsToDevicePixels="True">
+
+    <UserControl.Resources>
+<DataTemplate x:Key="HardwareProcessRow"><Grid Height="22" ToolTip="{Binding Description}"><Grid.ColumnDefinitions><ColumnDefinition Width="16"/><ColumnDefinition Width="7"/><ColumnDefinition Width="*"/><ColumnDefinition Width="8"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><Image Width="16" Height="16" Source="{Binding Icon}" VerticalAlignment="Center"/><TextBlock Style="{StaticResource HardwareBody}" Grid.Column="2" Text="{Binding DisplayName}" VerticalAlignment="Center" Foreground="{DynamicResource IslandInkBrush}" TextTrimming="CharacterEllipsis"/><TextBlock Style="{StaticResource HardwareBody}" Grid.Column="4" Text="{Binding ValueText}" VerticalAlignment="Center" Foreground="{DynamicResource IslandSecondaryInkBrush}" Typography.NumeralAlignment="Tabular"/></Grid></DataTemplate>
+        <!-- Chip Button Style -->
+        <Style x:Key="ModuleChipStyle" TargetType="Border"><Setter Property="Height" Value="40"/>
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="Padding" Value="7,0" />
+            <Setter Property="Background" Value="{DynamicResource IslandChipBackgroundBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource IslandChipBorderBrush}" />
+            <Setter Property="BorderThickness" Value="1.2" />
+            <Setter Property="Cursor" Value="Hand" />
+        </Style>
+
+    </UserControl.Resources>
+
+    <Grid VerticalAlignment="Stretch"><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+        <!-- 1. TOP ROW: Six 40-DIP module chips with 6-DIP gaps and optional Battery selector. -->
+        <Grid x:Name="HardwareModuleStrip" Grid.Row="0" Margin="0,0,0,10">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="6" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="6" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="6" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="6" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="6" />
+                <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="6"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+
+            <!-- Battery chip: same anatomy as the other chips (label, value, level line); bolt while charging. -->
+            <Border Grid.Column="12" MinWidth="68" MouseLeftButtonDown="ModuleChip_Press" MouseLeftButtonUp="BatteryChip_Click">
+                <Border.Style>
+                    <Style TargetType="Border" BasedOn="{StaticResource ModuleChipStyle}">
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsBatteryModuleActive}" Value="True">
+                                <Setter Property="Background" Value="{DynamicResource IslandChipActiveBrush}" />
+                                <Setter Property="BorderBrush" Value="{DynamicResource IslandSelectionBorderBrush}" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Border.Style>
+                <Grid>
+                    <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="4"/></Grid.RowDefinitions>
+                    <TextBlock Grid.Row="0" Style="{StaticResource HardwareChipLabel}" Text="{Binding BatteryChipLabel}" Foreground="{DynamicResource IslandMutedInkBrush}" TextTrimming="CharacterEllipsis" />
+                    <StackPanel Grid.Row="1" Orientation="Horizontal">
+                        <TextBlock FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="12" Text="&#xE945;" Foreground="{DynamicResource IslandGreenBrush}" VerticalAlignment="Center" Margin="0,0,2,0" Visibility="{Binding BatteryChipCharging, Converter={StaticResource BoolToVisibility}}" />
+                        <TextBlock Foreground="{DynamicResource IslandInkBrush}" Typography.NumeralAlignment="Tabular">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock" BasedOn="{StaticResource HardwareChipValue}">
+                                    <Setter Property="Text" Value="{Binding BatteryChipText}" />
+                                    <Style.Triggers>
+                                        <!-- Desktop: the latest total power, sampled continuously like the other chips. -->
+                                        <DataTrigger Binding="{Binding ShowPowerChip}" Value="True">
+                                            <Setter Property="Text" Value="{Binding PowerChipText}" />
+                                            <Setter Property="ToolTip" Value="{Binding LatestPower.Detail}" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                    </StackPanel>
+                    <Viewbox Grid.Row="2" Height="4" Stretch="Fill" ClipToBounds="True" Visibility="{Binding ShowPowerChip, Converter={StaticResource BoolToVisibility}}"><Canvas Width="80" Height="4"><Polyline Points="{Binding PowerChipSparkPoints}" Stroke="{DynamicResource IslandAccentBrush}" StrokeThickness="1.5" Opacity="0.8" /></Canvas></Viewbox>
+                    <ProgressBar Grid.Row="2" Height="2" Minimum="0" Maximum="100" Value="{Binding BatteryChipPercent, Mode=OneWay}" Background="Transparent" BorderThickness="0" VerticalAlignment="Center" Visibility="{Binding ShowPowerChip, Converter={StaticResource InverseBoolToVisibility}}">
+                        <ProgressBar.Style>
+                            <Style TargetType="ProgressBar">
+                                <Setter Property="Foreground" Value="{DynamicResource IslandAccentBrush}" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding BatteryChipLow}" Value="True"><Setter Property="Foreground" Value="{DynamicResource IslandRedBrush}" /></DataTrigger>
+                                    <DataTrigger Binding="{Binding BatteryChipCharging}" Value="True"><Setter Property="Foreground" Value="{DynamicResource IslandGreenBrush}" /></DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </ProgressBar.Style>
+                    </ProgressBar>
+                </Grid>
+            </Border><!-- 1. CPU Chip -->
+            <Border Grid.Column="0" MouseLeftButtonDown="ModuleChip_Press" MouseLeftButtonUp="CpuChip_Click">
+                <Border.Style>
+                    <Style TargetType="Border" BasedOn="{StaticResource ModuleChipStyle}">
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsCpuModuleActive}" Value="True">
+                                <Setter Property="Background" Value="{DynamicResource IslandChipActiveBrush}" />
+                                <Setter Property="BorderBrush" Value="{DynamicResource IslandSelectionBorderBrush}" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Border.Style>
+                <Grid>
+                    <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="4"/></Grid.RowDefinitions>
+                    <TextBlock Grid.Row="0" Style="{StaticResource HardwareChipLabel}" Text="CPU" Foreground="{DynamicResource IslandMutedInkBrush}" TextTrimming="CharacterEllipsis" ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}" />
+                    <TextBlock Grid.Row="1" Style="{StaticResource HardwareChipValue}" Text="{Binding HardwareStats.CpuUsage, StringFormat={}{0:0}%}" Foreground="{DynamicResource IslandInkBrush}" Typography.NumeralAlignment="Tabular" TextTrimming="CharacterEllipsis" ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}" />
+                    <Viewbox Grid.Row="2" Height="4" Stretch="Fill" ClipToBounds="True"><Canvas Width="80" Height="4"><Polyline Points="{Binding HardwareStats.CpuChipSparkPoints}" Stroke="{DynamicResource IslandGreenBrush}" StrokeThickness="1.5" Opacity="0.8" /></Canvas></Viewbox>
+                </Grid>
+            </Border>
+
+            <!-- 2. GPU Chip -->
+            <Border Grid.Column="2" MouseLeftButtonDown="ModuleChip_Press" MouseLeftButtonUp="GpuChip_Click">
+                <Border.Style>
+                    <Style TargetType="Border" BasedOn="{StaticResource ModuleChipStyle}">
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsGpuModuleActive}" Value="True">
+                                <Setter Property="Background" Value="{DynamicResource IslandChipActiveBrush}" />
+                                <Setter Property="BorderBrush" Value="{DynamicResource IslandSelectionBorderBrush}" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Border.Style>
+                <Grid>
+                    <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="4"/></Grid.RowDefinitions>
+                    <TextBlock Grid.Row="0" Style="{StaticResource HardwareChipLabel}" Text="GPU" Foreground="{DynamicResource IslandMutedInkBrush}" TextTrimming="CharacterEllipsis" ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}" />
+                    <TextBlock Grid.Row="1" Style="{StaticResource HardwareChipValue}" Text="{Binding HardwareStats.GpuUsage, StringFormat={}{0:0}%}" Foreground="{DynamicResource IslandInkBrush}" Typography.NumeralAlignment="Tabular" TextTrimming="CharacterEllipsis" ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}" />
+                    <Viewbox Grid.Row="2" Height="4" Stretch="Fill" ClipToBounds="True"><Canvas Width="80" Height="4"><Polyline Points="{Binding HardwareStats.GpuChipSparkPoints}" Stroke="{DynamicResource IslandBlueBrush}" StrokeThickness="1.5" Opacity="0.8" /></Canvas></Viewbox>
+                </Grid>
+            </Border>
+
+            <!-- 3. Memory Chip -->
+            <Border Grid.Column="4" MouseLeftButtonDown="ModuleChip_Press" MouseLeftButtonUp="MemoryChip_Click">
+                <Border.Style>
+                    <Style TargetType="Border" BasedOn="{StaticResource ModuleChipStyle}">
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsMemoryModuleActive}" Value="True">
+                                <Setter Property="Background" Value="{DynamicResource IslandChipActiveBrush}" />
+                                <Setter Property="BorderBrush" Value="{DynamicResource IslandSelectionBorderBrush}" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Border.Style>
+                <Grid>
+                    <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="4"/></Grid.RowDefinitions>
+                    <TextBlock Grid.Row="0" Style="{StaticResource HardwareChipLabel}" Text="Memory" Foreground="{DynamicResource IslandMutedInkBrush}" TextTrimming="CharacterEllipsis" ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}" />
+                    <TextBlock Grid.Row="1" Style="{StaticResource HardwareChipValue}" Text="{Binding HardwareStats.RamUsagePercent, StringFormat={}{0:0}%}" Foreground="{DynamicResource IslandInkBrush}" Typography.NumeralAlignment="Tabular" TextTrimming="CharacterEllipsis" ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}" />
+                    <ProgressBar Grid.Row="2" Height="2" Minimum="0" Maximum="100" Value="{Binding HardwareStats.RamUsagePercent}" Background="Transparent" Foreground="{DynamicResource IslandPurpleBrush}" BorderThickness="0" VerticalAlignment="Center" />
+                </Grid>
+            </Border>
+
+            <!-- 4. Drives Chip -->
+            <Border Grid.Column="6" MouseLeftButtonDown="ModuleChip_Press" MouseLeftButtonUp="DrivesChip_Click">
+                <Border.Style>
+                    <Style TargetType="Border" BasedOn="{StaticResource ModuleChipStyle}">
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsDrivesModuleActive}" Value="True">
+                                <Setter Property="Background" Value="{DynamicResource IslandChipActiveBrush}" />
+                                <Setter Property="BorderBrush" Value="{DynamicResource IslandSelectionBorderBrush}" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Border.Style>
+                <Grid>
+                    <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="4"/></Grid.RowDefinitions>
+                    <TextBlock Grid.Row="0" Style="{StaticResource HardwareChipLabel}" Text="Drives" Foreground="{DynamicResource IslandMutedInkBrush}" TextTrimming="CharacterEllipsis" ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}" />
+                    <TextBlock Grid.Row="1" Style="{StaticResource HardwareChipValue}" Text="{Binding HardwareStats.FormattedDiskSpeed}" Foreground="{DynamicResource IslandInkBrush}" Typography.NumeralAlignment="Tabular" TextTrimming="CharacterEllipsis" ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}" />
+                    <Viewbox Grid.Row="2" Height="4" Stretch="Fill" ClipToBounds="True"><Canvas Width="80" Height="4"><Polyline Points="{Binding HardwareStats.DiskChipSparkPoints}" Stroke="{DynamicResource IslandOrangeBrush}" StrokeThickness="1.5" Opacity="0.8" /></Canvas></Viewbox>
+                </Grid>
+            </Border>
+
+            <!-- 5. Network Chip -->
+            <Border Grid.Column="8" MouseLeftButtonDown="ModuleChip_Press" MouseLeftButtonUp="NetworkChip_Click">
+                <Border.Style>
+                    <Style TargetType="Border" BasedOn="{StaticResource ModuleChipStyle}">
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsNetworkModuleActive}" Value="True">
+                                <Setter Property="Background" Value="{DynamicResource IslandChipActiveBrush}" />
+                                <Setter Property="BorderBrush" Value="{DynamicResource IslandSelectionBorderBrush}" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Border.Style>
+                <Grid>
+                    <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="4"/></Grid.RowDefinitions>
+                    <TextBlock Grid.Row="0" Style="{StaticResource HardwareChipLabel}" Text="Network" Foreground="{DynamicResource IslandMutedInkBrush}" TextTrimming="CharacterEllipsis" ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}" />
+                    <TextBlock Grid.Row="1" Style="{StaticResource HardwareChipValue}" Text="{Binding HardwareStats.FormattedDownloadSpeed}" Foreground="{DynamicResource IslandInkBrush}" Typography.NumeralAlignment="Tabular" TextTrimming="CharacterEllipsis" ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}" />
+                    <Viewbox Grid.Row="2" Height="4" Stretch="Fill" ClipToBounds="True"><Canvas Width="80" Height="4"><Polyline Points="{Binding HardwareStats.NetChipSparkPoints}" Stroke="{DynamicResource IslandGreenBrush}" StrokeThickness="1.5" Opacity="0.8" /></Canvas></Viewbox>
+                </Grid>
+            </Border>
+
+            <!-- 6. Games Chip -->
+            <Border Grid.Column="10" MouseLeftButtonDown="ModuleChip_Press" MouseLeftButtonUp="GamesChip_Click">
+                <Border.Style>
+                    <Style TargetType="Border" BasedOn="{StaticResource ModuleChipStyle}">
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsGamesModuleActive}" Value="True">
+                                <Setter Property="Background" Value="{DynamicResource IslandChipActiveBrush}" />
+                                <Setter Property="BorderBrush" Value="{DynamicResource IslandSelectionBorderBrush}" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Border.Style>
+                <Grid>
+                    <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="4"/></Grid.RowDefinitions>
+                    <TextBlock Grid.Row="0" Style="{StaticResource HardwareChipLabel}" Text="Games" Foreground="{DynamicResource IslandMutedInkBrush}" TextTrimming="CharacterEllipsis" ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}" />
+                    <TextBlock Grid.Row="1" Style="{StaticResource HardwareChipValue}" Text="{Binding HardwareStats.GameStatusText}" Foreground="{DynamicResource IslandStatusBrush}" Typography.NumeralAlignment="Tabular" TextTrimming="CharacterEllipsis" ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}" />
+                    <Viewbox Grid.Row="2" Height="4" Stretch="Fill" ClipToBounds="True"><Canvas Width="80" Height="4"><Polyline Points="{Binding HardwareStats.FpsChipSparkPoints}" Stroke="{DynamicResource IslandStatusBrush}" StrokeThickness="1.5" Opacity="0.8" /></Canvas></Viewbox>
+                </Grid>
+            </Border>
+        </Grid>
+
+        <!-- 2. MAIN 3-COLUMN DASHBOARD (182px | * | 172px, 14px gap) -->
+                        <!-- VIEW 1: CPU DASHBOARD (Active when IsCpuModuleActive = True) -->
+        <controls:TabTransitionHost Grid.Row="1" SelectedKey="{Binding ActiveSystemModule}"><Grid Tag="CPU" Visibility="Collapsed">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="182" />
+                <ColumnDefinition Width="16" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="16" />
+                <ColumnDefinition Width="172" />
+            </Grid.ColumnDefinitions>
+
+            <!-- COL 0: Left Gauges & DETAILS -->
+            <StackPanel Grid.Column="0">
+                <Grid Margin="0,0,0,10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel Grid.Column="0" HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <Grid Width="42" Height="40">
+                            <controls:CircularProgressRing Width="40" Height="40" Progress="{Binding HardwareStats.CpuTemp}" StrokeThickness="3.2" TrackBrush="{DynamicResource IslandGaugeTrackBrush}" ProgressBrush="{DynamicResource IslandOrangeBrush}" />
+                            <TextBlock Style="{StaticResource HardwareGaugeValue}" Text="{Binding HardwareStats.CpuTempText}" ToolTip="{Binding HardwareStats.CpuTempTooltip}" Foreground="{DynamicResource IslandInkBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" Typography.NumeralAlignment="Tabular" />
+                        </Grid>
+                        <TextBlock Style="{StaticResource HardwareGaugeCaption}" Text="Temp" Foreground="{DynamicResource IslandMutedInkBrush}" HorizontalAlignment="Center" Margin="0,2,0,0" />
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="4,0">
+                        <Grid Width="54" Height="54">
+                            <controls:CircularProgressRing Width="52" Height="52" Progress="{Binding HardwareStats.CpuUsage}" StrokeThickness="4.5" TrackBrush="{DynamicResource IslandGaugeTrackBrush}" ProgressBrush="{DynamicResource IslandRedBrush}" />
+                            <TextBlock Style="{StaticResource HardwareGaugeValue}" Text="{Binding HardwareStats.CpuUsage, StringFormat={}{0:0}%}" Foreground="{DynamicResource IslandInkBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" Typography.NumeralAlignment="Tabular" />
+                        </Grid>
+                        <TextBlock Style="{StaticResource HardwareGaugeCaption}" Text="CPU" Foreground="{DynamicResource IslandMutedInkBrush}" HorizontalAlignment="Center" Margin="0,2,0,0" />
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="2" HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <Grid Width="42" Height="40">
+                            <controls:CircularProgressRing Width="40" Height="40" Progress="{Binding HardwareStats.CpuSpeedGhzPercent}" StrokeThickness="3.2" TrackBrush="{DynamicResource IslandGaugeTrackBrush}" ProgressBrush="{DynamicResource IslandBlueBrush}" />
+                            <TextBlock Style="{StaticResource HardwareGaugeValue}" Text="{Binding HardwareStats.CpuSpeedGhzText}" ToolTip="{Binding HardwareStats.CpuClockStatus}" Foreground="{DynamicResource IslandInkBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" Typography.NumeralAlignment="Tabular" />
+                        </Grid>
+                        <TextBlock Style="{StaticResource HardwareGaugeCaption}" Text="GHz" Foreground="{DynamicResource IslandMutedInkBrush}" HorizontalAlignment="Center" Margin="0,2,0,0" />
+                    </StackPanel>
+                </Grid>
+
+                <Border Background="{DynamicResource IslandSubCardBackgroundBrush}" CornerRadius="10" Padding="10,8" BorderBrush="{DynamicResource IslandSubCardBorderBrush}" BorderThickness="1">
+                    <StackPanel>
+                        <Grid Margin="0,0,0,6">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Rectangle Grid.Column="0" Height="1" Fill="{DynamicResource IslandSubCardBorderBrush}" VerticalAlignment="Center" Margin="0,0,6,0" />
+                            <TextBlock Style="{StaticResource HardwareSection}" Grid.Column="1" Text="DETAILS" Foreground="{DynamicResource IslandMutedInkBrush}" />
+                            <Rectangle Grid.Column="2" Height="1" Fill="{DynamicResource IslandSubCardBorderBrush}" VerticalAlignment="Center" Margin="6,0,0,0" />
+                        </Grid>
+
+                        <Grid Margin="0,2">
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                                <Ellipse Width="6" Height="6" Fill="{DynamicResource IslandRedBrush}" Margin="0,0,6,0" VerticalAlignment="Center" />
+                                <TextBlock Style="{StaticResource HardwareBody}" Text="System" Foreground="{DynamicResource IslandSecondaryInkBrush}" />
+                            </StackPanel>
+                            <TextBlock Style="{StaticResource HardwareBody}" HorizontalAlignment="Right" Text="{Binding HardwareStats.SystemCpuPercentText}" ToolTip="Sampled Windows kernel CPU time, excluding idle. — means unavailable or warming up." Foreground="{DynamicResource IslandInkBrush}" Typography.NumeralAlignment="Tabular" />
+                        </Grid>
+
+                        <Grid Margin="0,2">
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                                <Ellipse Width="6" Height="6" Fill="{DynamicResource IslandBlueBrush}" Margin="0,0,6,0" VerticalAlignment="Center" />
+                                <TextBlock Style="{StaticResource HardwareBody}" Text="User" Foreground="{DynamicResource IslandSecondaryInkBrush}" />
+                            </StackPanel>
+                            <TextBlock Style="{StaticResource HardwareBody}" HorizontalAlignment="Right" Text="{Binding HardwareStats.UserCpuPercentText}" ToolTip="Sampled Windows user-mode CPU time. — means unavailable or warming up." Foreground="{DynamicResource IslandInkBrush}" Typography.NumeralAlignment="Tabular" />
+                        </Grid>
+
+                        <Grid Margin="0,2">
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                                <Ellipse Width="6" Height="6" Fill="{DynamicResource IslandMutedInkBrush}" Margin="0,0,6,0" VerticalAlignment="Center" />
+                                <TextBlock Style="{StaticResource HardwareBody}" Text="Idle" Foreground="{DynamicResource IslandSecondaryInkBrush}" />
+                            </StackPanel>
+                            <TextBlock Style="{StaticResource HardwareBody}" HorizontalAlignment="Right" Text="{Binding HardwareStats.IdleCpuPercentText}" ToolTip="Idle time from the same sampling interval as System and User. — means unavailable or warming up." Foreground="{DynamicResource IslandInkBrush}" Typography.NumeralAlignment="Tabular" />
+                        </Grid>
+
+                        <!-- Hybrid Cores Display (when detected) -->
+                        <Grid Margin="0,2" Visibility="{Binding HardwareStats.IsHybridCpu, Converter={StaticResource BoolToVisibility}}">
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                                <Ellipse Width="6" Height="6" Fill="#64D2FF" Margin="0,0,6,0" VerticalAlignment="Center" />
+                                <TextBlock Style="{StaticResource HardwareBody}" Text="Efficiency cores" Foreground="{DynamicResource IslandSecondaryInkBrush}" />
+                            </StackPanel>
+                            <TextBlock Style="{StaticResource HardwareBody}" HorizontalAlignment="Right" Text="{Binding HardwareStats.EfficiencyCoresPercent, StringFormat={}{0:0}%}" Foreground="{DynamicResource IslandInkBrush}" Typography.NumeralAlignment="Tabular" />
+                        </Grid>
+
+                        <Grid Margin="0,2" Visibility="{Binding HardwareStats.IsHybridCpu, Converter={StaticResource BoolToVisibility}}">
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                                <Ellipse Width="6" Height="6" Fill="#5E5CE6" Margin="0,0,6,0" VerticalAlignment="Center" />
+                                <TextBlock Style="{StaticResource HardwareBody}" Text="Performance cores" Foreground="{DynamicResource IslandSecondaryInkBrush}" />
+                            </StackPanel>
+                            <TextBlock Style="{StaticResource HardwareBody}" HorizontalAlignment="Right" Text="{Binding HardwareStats.PerformanceCoresPercent, StringFormat={}{0:0}%}" Foreground="{DynamicResource IslandInkBrush}" Typography.NumeralAlignment="Tabular" />
+                        </Grid>
+
+                        <!-- Standard Threads & Uptime Display (when not hybrid) -->
+                        <Grid Margin="0,2" Visibility="{Binding HardwareStats.IsHybridCpu, Converter={StaticResource InverseBoolToVisibility}}">
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                                <Ellipse Width="6" Height="6" Fill="{DynamicResource IslandGreenBrush}" Margin="0,0,6,0" VerticalAlignment="Center" />
+                                <TextBlock Style="{StaticResource HardwareBody}" Text="Threads" Foreground="{DynamicResource IslandSecondaryInkBrush}" />
+                            </StackPanel>
+                            <TextBlock Style="{StaticResource HardwareBody}" HorizontalAlignment="Right" Text="{Binding HardwareStats.LogicalCores}" Foreground="{DynamicResource IslandInkBrush}" Typography.NumeralAlignment="Tabular" />
+                        </Grid>
+
+                        <Grid Margin="0,2" Visibility="{Binding HardwareStats.IsHybridCpu, Converter={StaticResource InverseBoolToVisibility}}">
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                                <Ellipse Width="6" Height="6" Fill="{DynamicResource IslandOrangeBrush}" Margin="0,0,6,0" VerticalAlignment="Center" />
+                                <TextBlock Style="{StaticResource HardwareBody}" Text="Uptime" Foreground="{DynamicResource IslandSecondaryInkBrush}" />
+                            </StackPanel>
+                            <TextBlock Style="{StaticResource HardwareBody}" HorizontalAlignment="Right" Text="{Binding HardwareStats.SystemUptimeText}" Foreground="{DynamicResource IslandInkBrush}" Typography.NumeralAlignment="Tabular" />
+                        </Grid>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+
+            <!-- COL 1: Center Usage History & Core Bars -->
+            <StackPanel Grid.Column="2">
+                <Grid Margin="0,0,0,4">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Rectangle Grid.Column="0" Height="1" Fill="{DynamicResource IslandSubCardBorderBrush}" VerticalAlignment="Center" Margin="0,0,6,0" />
+                    <TextBlock Style="{StaticResource HardwareSection}" Grid.Column="1" Text="USAGE HISTORY" Foreground="{DynamicResource IslandMutedInkBrush}" />
+                    <Rectangle Grid.Column="2" Height="1" Fill="{DynamicResource IslandSubCardBorderBrush}" VerticalAlignment="Center" Margin="6,0,0,0" />
+                </Grid>
+
+                <Border Background="{DynamicResource IslandSubCardBackgroundBrush}" CornerRadius="10" Height="100" Margin="0,0,0,8" BorderBrush="{DynamicResource IslandSubCardBorderBrush}" BorderThickness="1" ClipToBounds="True">
+                    <Grid>
+                        <!-- 3-Bar Reference Grid (25%, 50%, 75%) -->
+                        <Rectangle Height="1" Fill="{DynamicResource IslandChartGridBrush}" VerticalAlignment="Top" Margin="4,25,4,0" />
+                        <Rectangle Height="1" Fill="{DynamicResource IslandChartGridStrongBrush}" VerticalAlignment="Top" Margin="4,50,4,0" />
+                        <Rectangle Height="1" Fill="{DynamicResource IslandChartGridBrush}" VerticalAlignment="Top" Margin="4,75,4,0" />
+
+                        <Polygon Points="{Binding HardwareStats.CpuHistoryFillPoints}" Fill="{DynamicResource IslandGreenBrush}" Opacity="0.08" />
+                        <Polyline Points="{Binding HardwareStats.CpuHistoryPoints}" Stroke="{DynamicResource IslandGreenBrush}" StrokeThickness="1.8" StrokeLineJoin="Round" />
+                    </Grid>
+                </Border>
+
+                <Grid Margin="0,0,0,4">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Rectangle Grid.Column="0" Height="1" Fill="{DynamicResource IslandSubCardBorderBrush}" VerticalAlignment="Center" Margin="0,0,6,0" />
+                    <TextBlock Style="{StaticResource HardwareSection}" Grid.Column="1" Text="PER CORE / THREADS" Foreground="{DynamicResource IslandMutedInkBrush}" />
+                    <Rectangle Grid.Column="2" Height="1" Fill="{DynamicResource IslandSubCardBorderBrush}" VerticalAlignment="Center" Margin="6,0,0,0" />
+                </Grid>
+
+                <Border Background="{DynamicResource IslandSubCardBackgroundBrush}" CornerRadius="10" Height="55" BorderBrush="{DynamicResource IslandSubCardBorderBrush}" BorderThickness="1" Padding="4,4">
+                    <ItemsControl ItemsSource="{Binding HardwareStats.CoreUsages}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <UniformGrid Rows="1" />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid VerticalAlignment="Bottom" HorizontalAlignment="Stretch" Margin="1.5,0">
+                                    <Border Height="46" Background="{DynamicResource IslandTrackBrush}" CornerRadius="2" VerticalAlignment="Bottom" HorizontalAlignment="Stretch" />
+                                    <Border Height="{Binding HeightValue}" Background="{Binding CoreBrush}" CornerRadius="2" VerticalAlignment="Bottom" HorizontalAlignment="Stretch" />
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </Border>
+            </StackPanel>
+
+            <!-- COL 2: Top CPU Processes -->
+            <StackPanel Grid.Column="4">
+                <Grid Margin="0,0,0,6">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Rectangle Grid.Column="0" Height="1" Fill="{DynamicResource IslandSubCardBorderBrush}" VerticalAlignment="Center" Margin="0,0,6,0" />
+                    <TextBlock Style="{StaticResource HardwareSection}" Grid.Column="1" Text="TOP PROCESSES" Foreground="{DynamicResource IslandMutedInkBrush}" />
+                    <Rectangle Grid.Column="2" Height="1" Fill="{DynamicResource IslandSubCardBorderBrush}" VerticalAlignment="Center" Margin="6,0,0,0" />
+                </Grid>
+
+                <ItemsControl ItemsSource="{Binding HardwareStats.TopProcesses}" ItemTemplate="{StaticResource HardwareProcessRow}"/>
+            </StackPanel>
+        </Grid>
+
+        <!-- VIEW 2: GPU DASHBOARD (Active when IsGpuModuleActive = True) -->
+        <Grid Tag="GPU" Visibility="Collapsed">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="182" />
+                <ColumnDefinition Width="16" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="16" />
+                <ColumnDefinition Width="172" />
+            </Grid.ColumnDefinitions>
+
+            <!-- COL 0: Left Gauges & GPU Details -->
+            <StackPanel Grid.Column="0">
+                <Grid Margin="0,0,0,10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel Grid.Column="0" HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <Grid Width="42" Height="40">
+                            <controls:CircularProgressRing Width="40" Height="40" Progress="{Binding HardwareStats.GpuTemp}" StrokeThickness="3.2" TrackBrush="{DynamicResource IslandGaugeTrackBrush}" ProgressBrush="{DynamicResource IslandOrangeBrush}" />
+                            <TextBlock Style="{StaticResource HardwareGaugeValue}" Text="{Binding HardwareStats.GpuTempText}" ToolTip="{Binding HardwareStats.GpuTempTooltip}" Foreground="{DynamicResource IslandInkBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" Typography.NumeralAlignment="Tabular" />
+                        </Grid>
+                        <TextBlock Style="{StaticResource HardwareGaugeCaption}" Text="Temp" Foreground="{DynamicResource IslandMutedInkBrush}" HorizontalAlignment="Center" Margin="0,2,0,0" />
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="4,0">
+                        <Grid Width="54" Height="54">
+                            <controls:CircularProgressRing Width="52" Height="52" Progress="{Binding HardwareStats.GpuUsage}" StrokeThickness="4.5" TrackBrush="{DynamicResource IslandGaugeTrackBrush}" ProgressBrush="{DynamicResource IslandBlueBrush}" />
+                            <TextBlock Style="{StaticResource HardwareGaugeValue}" Text="{Binding HardwareStats.GpuUsage, StringFormat={}{0:0}%}" Foreground="{DynamicResource IslandInkBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" Typography.NumeralAlignment="Tabular" />
+                        </Grid>
+                        <TextBlock Style="{StaticResource HardwareGaugeCaption}" Text="GPU" Foreground="{DynamicResource IslandMutedInkBrush}" HorizontalAlignment="Center" Margin="0,2,0,0" />
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="2" HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <Grid Width="42" Height="40">
+                            <controls:CircularProgressRing Width="40" Height="40" Progress="{Binding HardwareStats.VramUsagePercent}" StrokeThickness="3.2" TrackBrush="{DynamicResource IslandGaugeTrackBrush}" ProgressBrush="{DynamicResource IslandPurpleBrush}" />
+                            <TextBlock Style="{StaticResource HardwareGaugeValue}" Text="{Binding HardwareStats.VramUsagePercent, StringFormat={}{0:0}%}" Foreground="{DynamicResource IslandInkBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" Typography.NumeralAlignment="Tabular" />
+                        </Grid>
+                        <TextBlock Style="{StaticResource HardwareGaugeCaption}" Text="VRAM" Foreground="{DynamicResource IslandMutedInkBrush}" HorizontalAlignment="Center" Margin="0,2,0,0" />
+                    </StackPanel>
+                </Grid>
+
+                <Border Background="{DynamicResource IslandSubCardBackgroundBrush}" CornerRadius="10" Padding="10,8" BorderBrush="{DynamicResource IslandSubCardBorderBrush}" BorderThickness="1">
+                    <StackPanel>
+                        <Grid Margin="0,0,0,6">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Rectangle Grid.Column="0" Height="1" Fill="{DynamicResource IslandSubCardBorderBrush}" VerticalAlignment="Center" Margin="0,0,6,0" />
+                            <TextBlock Style="{StaticResource HardwareSection}" Grid.Column="1" Text="ENGINES" Foreground="{DynamicResource IslandMutedInkBrush}" />
+                            <Rectangle Grid.Column="2" Height="1" Fill="{DynamicResource IslandSubCardBorderBrush}" VerticalAlignment="Center" Margin="6,0,0,0" />
+                        </Grid>
+
+                        <Grid Margin="0,2">
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                                <Ellipse Width="6" Height="6" Fill="{DynamicResource IslandBlueBrush}" Margin="0,0,6,0" VerticalAlignment="Center" />
+                                <TextBlock Style="{StaticResource HardwareBody}" Text="3D" Foreground="{DynamicResource IslandSecondaryInkBrush}" />
+                            </StackPanel>
+                            <TextBlock Style="{StaticResource HardwareBody}" HorizontalAlignment="Right" Text="{Binding HardwareStats.GpuEngine3DPercent, StringFormat={}{0:0}%}" Foreground="{DynamicResource IslandInkBrush}" Typography.NumeralAlignment="Tabular" />
+                        </Grid>
+
+                        <Grid Margin="0,2">
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                                <Ellipse Width="6" Height="6" Fill="{DynamicResource IslandOrangeBrush}" Margin="0,0,6,0" VerticalAlignment="Center" />
+                                <TextBlock Style="{StaticResource HardwareBody}" Text="Copy" Foreground="{DynamicResource IslandSecondaryInkBrush}" />
+                            </StackPanel>
+                            <TextBlock Style="{StaticResource HardwareBody}" HorizontalAlignment="Right" Text="{Binding HardwareStats.GpuEngineCopyPercent, StringFormat={}{0:0}%}" Foreground="{DynamicResource IslandInkBrush}" Typography.NumeralAlignment="Tabular" />
+                        </Grid>
+
+                        <Grid Margin="0,2">
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                                <Ellipse Width="6" Height="6" Fill="{DynamicResource IslandGreenBrush}" Margin="0,0,6,0" VerticalAlignment="Center" />
+                                <TextBlock Style="{StaticResource HardwareBody}" Text="Video decode" Foreground="{DynamicResource IslandSecondaryInkBrush}" />
+                            </StackPanel>
+                            <TextBlock Style="{StaticResource HardwareBody}" HorizontalAlignment="Right" Text="{Binding HardwareStats.GpuEngineDecodePercent, StringFormat={}{0:0}%}" Foreground="{DynamicResource IslandInkBrush}" Typography.NumeralAlignment="Tabular" />
+                        </Grid>
+
+                        <Grid Margin="0,2">
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                                <Ellipse Width="6" Height="6" Fill="{DynamicResource IslandPurpleBrush}" Margin="0,0,6,0" VerticalAlignment="Center" />
+                                <TextBlock Style="{StaticResource HardwareBody}" Text="Video encode" Foreground="{DynamicResource IslandSecondaryInkBrush}" />
+                            </StackPanel>
+                            <TextBlock Style="{StaticResource HardwareBody}" HorizontalAlignment="Right" Text="{Binding HardwareStats.GpuEngineEncodePercent, StringFormat={}{0:0}%}" Foreground="{DynamicResource IslandInkBrush}" Typography.NumeralAlignment="Tabular" />
+                        </Grid>
+
+                        <Grid Margin="0,4,0,0">
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                                <Ellipse Width="6" Height="6" Fill="{DynamicResource IslandPurpleBrush}" Margin="0,0,6,0" VerticalAlignment="Center" />
+                                <TextBlock Style="{StaticResource HardwareBody}" Text="VRAM" Foreground="{DynamicResource IslandSecondaryInkBrush}" />
+                            </StackPanel>
+                            <TextBlock Style="{StaticResource HardwareBody}" HorizontalAlignment="Right" Text="{Binding HardwareStats.VramDetailedSummaryText}" Foreground="{DynamicResource IslandInkBrush}" Typography.NumeralAlignment="Tabular" />
+                        </Grid>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+
+            <!-- COL 1: Center GPU History & ENGINES Bars -->
+            <StackPanel Grid.Column="2">
+                <Grid Margin="0,0,0,4">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Rectangle Grid.Column="0" Height="1" Fill="{DynamicResource IslandSubCardBorderBrush}" VerticalAlignment="Center" Margin="0,0,6,0" />
+                    <TextBlock Style="{StaticResource HardwareSection}" Grid.Column="1" Text="USAGE HISTORY" Foreground="{DynamicResource IslandMutedInkBrush}" />
+                    <Rectangle Grid.Column="2" Height="1" Fill="{DynamicResource IslandSubCardBorderBrush}" VerticalAlignment="Center" Margin="6,0,0,0" />
+                </Grid>
+
+                <Border Background="{DynamicResource IslandSubCardBackgroundBrush}" CornerRadius="10" Height="100" Margin="0,0,0,10" BorderBrush="{DynamicResource IslandSubCardBorderBrush}" BorderThickness="1" ClipToBounds="True">
+                    <Grid>
+                        <!-- 3-Bar Reference Grid (25%, 50%, 75%) -->
+                        <Rectangle Height="1" Fill="{DynamicResource IslandChartGridBrush}" VerticalAlignment="Top" Margin="4,25,4,0" />
+                        <Rectangle Height="1" Fill="{DynamicResource IslandChartGridStrongBrush}" VerticalAlignment="Top" Margin="4,50,4,0" />
+                        <Rectangle Height="1" Fill="{DynamicResource IslandChartGridBrush}" VerticalAlignment="Top" Margin="4,75,4,0" />
+
+                        <Polygon Points="{Binding HardwareStats.GpuHistoryFillPoints}" Fill="{DynamicResource IslandBlueBrush}" Opacity="0.09" />
+                        <Polyline Points="{Binding HardwareStats.GpuHistoryPoints}" Stroke="{DynamicResource IslandBlueBrush}" StrokeThickness="1.8" StrokeLineJoin="Round" />
+                    </Grid>
+                </Border>
+
+                <Grid Margin="0,0,0,4">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Rectangle Grid.Column="0" Height="1" Fill="{DynamicResource IslandSubCardBorderBrush}" VerticalAlignment="Center" Margin="0,0,6,0" />
+                    <TextBlock Style="{StaticResource HardwareSection}" Grid.Column="1" Text="ENGINES" Foreground="{DynamicResource IslandMutedInkBrush}" />
+                    <Rectangle Grid.Column="2" Height="1" Fill="{DynamicResource IslandSubCardBorderBrush}" VerticalAlignment="Center" Margin="6,0,0,0" />
+                </Grid>
+
+                <Border Background="{DynamicResource IslandSubCardBackgroundBrush}" CornerRadius="10" Height="55" BorderBrush="{DynamicResource IslandSubCardBorderBrush}" BorderThickness="1" Padding="8,4">
+                    <UniformGrid Columns="4">
+                        <!-- 3D Engine -->
+                        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Bottom">
+                            <Grid Width="16" Height="22">
+                                <Border Background="{DynamicResource IslandGaugeTrackBrush}" CornerRadius="2.5" />
+                                <Border Background="{DynamicResource IslandBlueBrush}" CornerRadius="2.5" VerticalAlignment="Bottom" Height="8" />
+                            </Grid>
+                            <TextBlock Style="{StaticResource HardwareGaugeCaption}" Text="3D" Foreground="{DynamicResource IslandSecondaryInkBrush}" HorizontalAlignment="Center" Margin="0,2,0,0" />
+                        </StackPanel>
+                        <!-- Copy Engine -->
+                        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Bottom">
+                            <Grid Width="16" Height="22">
+                                <Border Background="{DynamicResource IslandGaugeTrackBrush}" CornerRadius="2.5" />
+                                <Border Background="{DynamicResource IslandOrangeBrush}" CornerRadius="2.5" VerticalAlignment="Bottom" Height="2" />
+                            </Grid>
+                            <TextBlock Style="{StaticResource HardwareGaugeCaption}" Text="Copy" Foreground="{DynamicResource IslandSecondaryInkBrush}" HorizontalAlignment="Center" Margin="0,2,0,0" />
+                        </StackPanel>
+                        <!-- Decode Engine -->
+                        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Bottom">
+                            <Grid Width="16" Height="22">
+                                <Border Background="{DynamicResource IslandGaugeTrackBrush}" CornerRadius="2.5" />
+                                <Border Background="{DynamicResource IslandGreenBrush}" CornerRadius="2.5" VerticalAlignment="Bottom" Height="2" />
+                            </Grid>
+                            <TextBlock Style="{StaticResource HardwareGaugeCaption}" Text="Decode" Foreground="{DynamicResource IslandSecondaryInkBrush}" HorizontalAlignment="Center" Margin="0,2,0,0" />
+                        </StackPanel>
+                        <!-- Encode Engine -->
+                        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Bottom">
+                            <Grid Width="16" Height="22">
+                                <Border Background="{DynamicResource IslandGaugeTrackBrush}" CornerRadius="2.5" />
+                                <Border Background="{DynamicResource IslandPurpleBrush}" CornerRadius="2.5" VerticalAlignment="Bottom" Height="2" />
+                            </Grid>
+                            <TextBlock Style="{StaticResource HardwareGaugeCaption}" Text="Encode" Foreground="{DynamicResource IslandSecondaryInkBrush}" HorizontalAlignment="Center" Margin="0,2,0,0" />
+                        </StackPanel>
+                    </UniformGrid>
+                </Border>
+            </StackPanel>
+
+            <!-- COL 2: GPU adapter info -->
+            <StackPanel Grid.Column="4">
+                <Grid Margin="0,0,0,6">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Rectangle Grid.Column="0" Height="1" Fill="{DynamicResource IslandSubCardBorderBrush}" VerticalAlignment="Center" Margin="0,0,6,0" />
+                    <TextBlock Style="{StaticResource HardwareSection}" Grid.Column="1" Text="ADAPTER" Foreground="{DynamicResource IslandMutedInkBrush}" />
+                    <Rectangle Grid.Column="2" Height="1" Fill="{DynamicResource IslandSubCardBorderBrush}" VerticalAlignment="Center" Margin="6,0,0,0" />
+                </Grid>
+
+                <Border Background="{DynamicResource IslandSubCardBackgroundBrush}" CornerRadius="10" Padding="10,8" BorderBrush="{DynamicResource IslandSubCardBorderBrush}" BorderThickness="1" Height="178">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource HardwareBody}" Text="{Binding HardwareStats.GpuName}" Foreground="{DynamicResource IslandInkBrush}" TextWrapping="Wrap" Margin="0,0,0,6" MaxHeight="32" TextTrimming="CharacterEllipsis" />
+                        <Grid Margin="0,2">
+                            <TextBlock Style="{StaticResource HardwareBody}" HorizontalAlignment="Left" Text="Type" Foreground="{DynamicResource IslandMutedInkBrush}" />
+                            <TextBlock Style="{StaticResource HardwareBody}" HorizontalAlignment="Right" Text="Dedicated" Foreground="{DynamicResource IslandInkBrush}" />
+                        </Grid>
+                        <Grid Margin="0,2">
+                            <TextBlock Style="{StaticResource HardwareBody}" HorizontalAlignment="Left" Text="Driver" Foreground="{DynamicResource IslandMutedInkBrush}" />
+                            <TextBlock Style="{StaticResource HardwareBody}" HorizontalAlignment="Right" Text="{Binding HardwareStats.GpuDriverVersion}" Foreground="{DynamicResource IslandInkBrush}" Typography.NumeralAlignment="Tabular" />
+                        </Grid>
+                        <Grid Margin="0,2">
+                            <TextBlock Style="{StaticResource HardwareBody}" HorizontalAlignment="Left" Text="Clock" Foreground="{DynamicResource IslandMutedInkBrush}" />
+                            <TextBlock Style="{StaticResource HardwareBody}" HorizontalAlignment="Right" Text="{Binding HardwareStats.GpuClockText}" Foreground="{DynamicResource IslandInkBrush}" Typography.NumeralAlignment="Tabular" />
+                        </Grid>
+                        <Grid Margin="0,2">
+                            <TextBlock Style="{StaticResource HardwareBody}" HorizontalAlignment="Left" Text="Power" Foreground="{DynamicResource IslandMutedInkBrush}" />
+                            <TextBlock Style="{StaticResource HardwareBody}" HorizontalAlignment="Right" Text="{Binding HardwareStats.GpuPowerText}" Foreground="{DynamicResource IslandInkBrush}" Typography.NumeralAlignment="Tabular" />
+                        </Grid>
+                        <Grid Margin="0,2">
+                            <TextBlock Style="{StaticResource HardwareBody}" HorizontalAlignment="Left" Text="Temperature" Foreground="{DynamicResource IslandMutedInkBrush}" />
+                            <TextBlock Style="{StaticResource HardwareBody}" HorizontalAlignment="Right" Text="{Binding HardwareStats.GpuTempText}" ToolTip="{Binding HardwareStats.GpuTempTooltip}" Foreground="{DynamicResource IslandGreenBrush}" Typography.NumeralAlignment="Tabular" />
+                        </Grid>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </Grid>
+
+        <!-- VIEW 3: MEMORY DASHBOARD (Active when IsMemoryModuleActive = True) -->
+        <Grid Tag="Memory" Visibility="Collapsed">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="182" />
+                <ColumnDefinition Width="16" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="16" />
+                <ColumnDefinition Width="172" />
+            </Grid.ColumnDefinitions>
+
+            <!-- COL 0: Left Gauge & Memory Breakdown -->
+            <StackPanel Grid.Column="0">
+                <Grid Margin="0,0,0,10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel Grid.Column="0" HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <Grid Width="42" Height="40">
+                            <controls:CircularProgressRing Width="40" Height="40" Progress="{Binding HardwareStats.FreeRamPercent}" StrokeThickness="3.2" TrackBrush="{DynamicResource IslandGaugeTrackBrush}" ProgressBrush="{DynamicResource IslandGreenBrush}" />
+                            <TextBlock Style="{StaticResource HardwareGaugeValue}" Text="{Binding HardwareStats.FreeRamPercent, StringFormat={}{0:0}%}" Foreground="{DynamicResource IslandGreenBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" Typography.NumeralAlignment="Tabular" />
+                        </Grid>
+                        <TextBlock Style="{StaticResource HardwareGaugeCaption}" Text="Free" Foreground="{DynamicResource IslandMutedInkBrush}" HorizontalAlignment="Center" Margin="0,2,0,0" />
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="4,0">
+                        <Grid Width="54" Height="54">
+                            <controls:CircularProgressRing Width="52" Height="52" Progress="{Binding HardwareStats.RamUsagePercent}" StrokeThickness="4.5" TrackBrush="{DynamicResource IslandGaugeTrackBrush}" ProgressBrush="{DynamicResource IslandPurpleBrush}" />
+                            <TextBlock Style="{StaticResource HardwareGaugeValue}" Text="{Binding HardwareStats.RamUsagePercent, StringFormat={}{0:0}%}" Foreground="{DynamicResource IslandInkBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" Typography.NumeralAlignment="Tabular" />
+                        </Grid>
+                        <TextBlock Style="{StaticResource HardwareGaugeCaption}" Text="Memory" Foreground="{DynamicResource IslandMutedInkBrush}" HorizontalAlignment="Center" Margin="0,2,0,0" />
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="2" HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <Grid Width="42" Height="40">
+                            <controls:CircularProgressRing Width="40" Height="40" Progress="{Binding HardwareStats.RamUsagePercent}" StrokeThickness="3.2" TrackBrush="{DynamicResource IslandGaugeTrackBrush}" ProgressBrush="{DynamicResource IslandStatusBrush}" />
+                            <TextBlock FontSize="10.5" Style="{StaticResource HardwareGaugeValue}" Text="{Binding HardwareStats.RamPressureText}" ToolTip="{Binding HardwareStats.RamPressureTooltip}" Foreground="{DynamicResource IslandInkBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Grid>
+                        <TextBlock Style="{StaticResource HardwareGaugeCaption}" Text="Pressure" Foreground="{DynamicResource IslandMutedInkBrush}" HorizontalAlignment="Center" Margin="0,2,0,0" />
+                    </StackPanel>
+                </Grid>
+
+                <Border Background="{DynamicResource IslandSubCardBackgroundBrush}" CornerRadius="10" Padding="10,8" BorderBrush="{DynamicResource IslandSubCardBorderBrush}" BorderThickness="1">
+                    <StackPanel>
+                        <Grid Margin="0,0,0,6">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Rectangle Grid.Column="0" Height="1" Fill="{DynamicResource IslandSubCardBorderBrush}" VerticalAlignment="Center" Margin="0,0,6,0" />
+                            <TextBlock Style="{StaticResource HardwareSection}" Grid.Column="1" Text="DETAILS" Foreground="{DynamicResource IslandMutedInkBrush}" />
+                            <Rectangle Grid.Column="2" Height="1" Fill="{DynamicResource IslandSubCardBorderBrush}" VerticalAlignment="Center" Margin="6,0,0,0" />
+                        </Grid>
+
+                        <Grid Margin="0,2">
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                                <Ellipse Width="6" Height="6" Fill="{DynamicResource IslandBlueBrush}" Margin="0,0,6,0" VerticalAlignment="Center" />
+                                <TextBlock Style="{StaticResource HardwareBody}" Text="App" Foreground="{DynamicResource IslandSecondaryInkBrush}" />
+                            </StackPanel>
+                            <TextBlock Style="{StaticResource HardwareBody}" HorizontalAlignment="Right" Text="{Binding HardwareStats.RamUsedText}" Foreground="{DynamicResource IslandInkBrush}" Typography.NumeralAlignment="Tabular" />
+                        </Grid>
+
+
+                        <Grid Margin="0,2">
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                                <Ellipse Width="6" Height="6" Fill="{DynamicResource IslandGreenBrush}" Margin="0,0,6,0" VerticalAlignment="Center" />
+                                <TextBlock Style="{StaticResource HardwareBody}" Text="Free" Foreground="{DynamicResource IslandSecondaryInkBrush}" />
+                            </StackPanel>
+                            <TextBlock Style="{StaticResource HardwareBody}" HorizontalAlignment="Right" Text="{Binding HardwareStats.RamAvailableGbText}" Foreground="{DynamicResource IslandGreenBrush}" Typography.NumeralAlignment="Tabular" />
+                        </Grid>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+
+            <!-- COL 1: Center Memory History & Allocation Meter -->
+            <StackPanel Grid.Column="2">
+                <Grid Margin="0,0,0,4">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Rectangle Grid.Column="0" Height="1" Fill="{DynamicResource IslandSubCardBorderBrush}" VerticalAlignment="Center" Margin="0,0,6,0" />
+                    <TextBlock Style="{StaticResource HardwareSection}" Grid.Column="1" Text="USAGE HISTORY" Foreground="{DynamicResource IslandMutedInkBrush}" />
+                    <Rectangle Grid.Column="2" Height="1" Fill="{DynamicResource IslandSubCardBorderBrush}" VerticalAlignment="Center" Margin="6,0,0,0" />
+                </Grid>
+
+                <Border Background="{DynamicResource IslandSubCardBackgroundBrush}" CornerRadius="10" Height="100" Margin="0,0,0,10" BorderBrush="{DynamicResource IslandSubCardBorderBrush}" BorderThickness="1" ClipToBounds="True">
+                    <Grid>
+                        <!-- 3-Bar Reference Grid (25%, 50%, 75%) -->
+                        <Rectangle Height="1" Fill="{DynamicResource IslandChartGridBrush}" VerticalAlignment="Top" Margin="4,25,4,0" />
+                        <Rectangle Height="1" Fill="{DynamicResource IslandChartGridStrongBrush}" VerticalAlignment="Top" Margin="4,50,4,0" />
+                        <Rectangle Height="1" Fill="{DynamicResource IslandChartGridBrush}" VerticalAlignment="Top" Margin="4,75,4,0" />
+
+                        <Polygon Points="{Binding HardwareStats.RamHistoryFillPoints}" Fill="{DynamicResource IslandPurpleBrush}" Opacity="0.06" />
+                        <Polyline Points="{Binding HardwareStats.RamHistoryPoints}" Stroke="{DynamicResource IslandPurpleBrush}" StrokeThickness="1.8" StrokeLineJoin="Round" />
+                    </Grid>
+                </Border>
+
+                <Grid Margin="0,0,0,4">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Rectangle Grid.Column="0" Height="1" Fill="{DynamicResource IslandSubCardBorderBrush}" VerticalAlignment="Center" Margin="0,0,6,0" />
+                    <TextBlock Style="{StaticResource HardwareSection}" Grid.Column="1" Text="USED" Foreground="{DynamicResource IslandMutedInkBrush}" />
+                    <Rectangle Grid.Column="2" Height="1" Fill="{DynamicResource IslandSubCardBorderBrush}" VerticalAlignment="Center" Margin="6,0,0,0" />
+                </Grid>
+
+                <Border Background="{DynamicResource IslandSubCardBackgroundBrush}" CornerRadius="10" Height="55" BorderBrush="{DynamicResource IslandSubCardBorderBrush}" BorderThickness="1" Padding="10,6">
+                    <StackPanel VerticalAlignment="Center">
+                        <Grid Margin="0,0,0,4">
+                            <TextBlock Style="{StaticResource HardwareBody}" HorizontalAlignment="Left" Text="{Binding HardwareStats.RamUsedText}" Foreground="{DynamicResource IslandInkBrush}" />
+                            <TextBlock Style="{StaticResource HardwareBody}" HorizontalAlignment="Right" Text="{Binding HardwareStats.TotalRamGb, StringFormat={}of {0:0.0} GB}" Foreground="{DynamicResource IslandMutedInkBrush}" />
+                        </Grid>
+                        <ProgressBar Minimum="0" Maximum="100" Value="{Binding HardwareStats.RamUsagePercent, Mode=OneWay}" Height="6" Foreground="{DynamicResource IslandPurpleBrush}" />
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+
+            <!-- COL 2: Top Memory Apps -->
+            <StackPanel Grid.Column="4">
+                <Grid Margin="0,0,0,6">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Rectangle Grid.Column="0" Height="1" Fill="{DynamicResource IslandSubCardBorderBrush}" VerticalAlignment="Center" Margin="0,0,6,0" />
+                    <TextBlock Style="{StaticResource HardwareSection}" Grid.Column="1" Text="TOP PROCESSES" Foreground="{DynamicResource IslandMutedInkBrush}" />
+                    <Rectangle Grid.Column="2" Height="1" Fill="{DynamicResource IslandSubCardBorderBrush}" VerticalAlignment="Center" Margin="6,0,0,0" />
+                </Grid>
+
+                <ItemsControl ItemsSource="{Binding HardwareStats.TopMemoryProcesses}" ItemTemplate="{StaticResource HardwareProcessRow}"/>
+            </StackPanel>
+        </Grid>
+
+        <!-- VIEW 4: DRIVES DASHBOARD (Active when IsDrivesModuleActive = True) -->
+        <Grid Tag="Drives" Visibility="Collapsed">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="182" />
+                <ColumnDefinition Width="16" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="16" />
+                <ColumnDefinition Width="172" />
+            </Grid.ColumnDefinitions>
+
+            <!-- COL 0: drives and free space -->
+            <StackPanel Grid.Column="0">
+                <Grid Margin="0,0,0,6">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Rectangle Grid.Column="0" Height="1" Fill="{DynamicResource IslandSubCardBorderBrush}" VerticalAlignment="Center" Margin="0,0,6,0" />
+                    <TextBlock Style="{StaticResource HardwareSection}" Grid.Column="1" Text="DRIVES" Foreground="{DynamicResource IslandMutedInkBrush}" />
+                    <Rectangle Grid.Column="2" Height="1" Fill="{DynamicResource IslandSubCardBorderBrush}" VerticalAlignment="Center" Margin="6,0,0,0" />
+                </Grid>
+
+                <Border Background="{DynamicResource IslandSubCardBackgroundBrush}" CornerRadius="10" Padding="10,8" BorderBrush="{DynamicResource IslandSubCardBorderBrush}" BorderThickness="1" Height="178">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                        <ItemsControl ItemsSource="{Binding HardwareStats.DrivesList}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <StackPanel Margin="0,0,0,8">
+                                        <Grid Margin="0,0,0,3">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Style="{StaticResource HardwareBody}" Grid.Column="0" HorizontalAlignment="Left" Text="{Binding TitleText}" Foreground="{DynamicResource IslandInkBrush}" TextTrimming="CharacterEllipsis" Margin="0,0,6,0" />
+                                            <TextBlock Style="{StaticResource HardwareBody}" Grid.Column="1" HorizontalAlignment="Right" Text="{Binding FreeText}" Foreground="{DynamicResource IslandMutedInkBrush}" Typography.NumeralAlignment="Tabular" />
+                                        </Grid>
+                                        <ProgressBar Minimum="0" Maximum="100" Value="{Binding UsedPercent, Mode=OneWay}" Height="6" Foreground="{DynamicResource IslandBlueBrush}" />
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                </Border>
+            </StackPanel>
+
+            <!-- COL 1: Center Disk Mirrored History Chart (Read up, Write down) -->
+            <StackPanel Grid.Column="2">
+                <Grid Margin="0,0,0,4">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Rectangle Grid.Column="0" Height="1" Fill="{DynamicResource IslandSubCardBorderBrush}" VerticalAlignment="Center" Margin="0,0,6,0" />
+                    <TextBlock Style="{StaticResource HardwareSection}" Grid.Column="1" Text="USAGE HISTORY" Foreground="{DynamicResource IslandMutedInkBrush}" />
+                    <Rectangle Grid.Column="2" Height="1" Fill="{DynamicResource IslandSubCardBorderBrush}" VerticalAlignment="Center" Margin="6,0,0,0" />
+                </Grid>
+
+                <Border Background="{DynamicResource IslandSubCardBackgroundBrush}" CornerRadius="10" Height="152" Margin="0,0,0,8" BorderBrush="{DynamicResource IslandSubCardBorderBrush}" BorderThickness="1" ClipToBounds="True">
+                    <Grid>
+                        <!-- Scale text in top-left (e.g. 10 MB/s or 1 KB/s) -->
+                        <TextBlock Style="{StaticResource HardwareBody}" Text="{Binding HardwareStats.DiskChartScaleText}" Foreground="{DynamicResource IslandMutedInkBrush}" Margin="6,3,0,0" HorizontalAlignment="Left" VerticalAlignment="Top" />
+
+                        <!-- 4-Zone Separation Reference Lines (Top 25%, Middle 50%, Bottom 75%) -->
+                        <Rectangle Height="1" Fill="{DynamicResource IslandChartGridBrush}" VerticalAlignment="Top" Margin="4,38,4,0" />
+                        <Rectangle Height="1" Fill="{DynamicResource IslandChartGridStrongBrush}" VerticalAlignment="Center" Margin="4,0" />
+                        <Rectangle Height="1" Fill="{DynamicResource IslandChartGridBrush}" VerticalAlignment="Bottom" Margin="4,0,4,38" />
+
+                        <!-- Mirrored Read (Blue up) -->
+                        <Polygon Points="{Binding HardwareStats.DiskHistoryFillPoints}" Fill="{DynamicResource IslandBlueBrush}" Opacity="0.15" />
+                        <Polyline Points="{Binding HardwareStats.DiskHistoryPoints}" Stroke="{DynamicResource IslandBlueBrush}" StrokeThickness="1.5" StrokeLineJoin="Round" />
+                        <!-- Mirrored Write (Red down) -->
+                        <Polygon Points="{Binding HardwareStats.DiskWriteHistoryFillPoints}" Fill="{DynamicResource IslandRedBrush}" Opacity="0.15" />
+                        <Polyline Points="{Binding HardwareStats.DiskWriteHistoryPoints}" Stroke="{DynamicResource IslandRedBrush}" StrokeThickness="1.5" StrokeLineJoin="Round" />
+                    </Grid>
+                </Border>
+
+                <!-- Legend row: ● Read X KB/s   ● Write Y KB/s -->
+                <Grid Margin="4,0">
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                        <Ellipse Width="6" Height="6" Fill="{DynamicResource IslandBlueBrush}" Margin="0,0,5,0" VerticalAlignment="Center" />
+                        <TextBlock Style="{StaticResource HardwareBody}" Text="Read" Foreground="{DynamicResource IslandSecondaryInkBrush}" />
+                        <TextBlock Style="{StaticResource HardwareBody}" Text="{Binding HardwareStats.DiskReadSpeedText}" Foreground="{DynamicResource IslandInkBrush}" Margin="4,0,0,0" Typography.NumeralAlignment="Tabular" />
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                        <Ellipse Width="6" Height="6" Fill="{DynamicResource IslandRedBrush}" Margin="0,0,5,0" VerticalAlignment="Center" />
+                        <TextBlock Style="{StaticResource HardwareBody}" Text="Write" Foreground="{DynamicResource IslandSecondaryInkBrush}" />
+                        <TextBlock Style="{StaticResource HardwareBody}" Text="{Binding HardwareStats.DiskWriteSpeedText}" Foreground="{DynamicResource IslandInkBrush}" Margin="4,0,0,0" Typography.NumeralAlignment="Tabular" />
+                    </StackPanel>
+                </Grid>
+            </StackPanel>
+
+            <!-- COL 2: processes with the most disk activity -->
+            <StackPanel Grid.Column="4">
+                <Grid Margin="0,0,0,6">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Rectangle Grid.Column="0" Height="1" Fill="{DynamicResource IslandSubCardBorderBrush}" VerticalAlignment="Center" Margin="0,0,6,0" />
+                    <TextBlock Style="{StaticResource HardwareSection}" Grid.Column="1" Text="TOP PROCESSES" Foreground="{DynamicResource IslandMutedInkBrush}" />
+                    <Rectangle Grid.Column="2" Height="1" Fill="{DynamicResource IslandSubCardBorderBrush}" VerticalAlignment="Center" Margin="6,0,0,0" />
+                </Grid>
+
+                <ItemsControl ItemsSource="{Binding HardwareStats.TopDiskProcesses}" ItemTemplate="{StaticResource HardwareProcessRow}"/>
+            </StackPanel>
+        </Grid>
+
+        <!-- VIEW 5: NETWORK DASHBOARD (Active when IsNetworkModuleActive = True) -->
+        <Grid Tag="Network" Visibility="Collapsed">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="182" />
+                <ColumnDefinition Width="16" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="16" />
+                <ColumnDefinition Width="172" />
+            </Grid.ColumnDefinitions>
+
+            <!-- COL 0: download/upload rates and network details -->
+            <StackPanel Grid.Column="0">
+                <Grid Margin="0,0,0,10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Big Download -->
+                    <StackPanel Grid.Column="0" HorizontalAlignment="Center">
+                        <TextBlock FontSize="18" FontWeight="{DynamicResource IslandSmallLabelWeight}" Text="{Binding HardwareStats.FormattedDownloadSpeed}" Foreground="{DynamicResource IslandInkBrush}" HorizontalAlignment="Center" Typography.NumeralAlignment="Tabular" />
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,2,0,0">
+                            <Ellipse Width="6" Height="6" Fill="{DynamicResource IslandBlueBrush}" Margin="0,0,4,0" VerticalAlignment="Center" />
+                            <TextBlock Style="{StaticResource HardwareBody}" Text="Download" Foreground="{DynamicResource IslandSecondaryInkBrush}" />
+                        </StackPanel>
+                    </StackPanel>
+
+                    <!-- Big Upload -->
+                    <StackPanel Grid.Column="1" HorizontalAlignment="Center">
+                        <TextBlock FontSize="18" FontWeight="{DynamicResource IslandSmallLabelWeight}" Text="{Binding HardwareStats.FormattedUploadSpeed}" Foreground="{DynamicResource IslandInkBrush}" HorizontalAlignment="Center" Typography.NumeralAlignment="Tabular" />
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,2,0,0">
+                            <Ellipse Width="6" Height="6" Fill="{DynamicResource IslandRedBrush}" Margin="0,0,4,0" VerticalAlignment="Center" />
+                            <TextBlock Style="{StaticResource HardwareBody}" Text="Upload" Foreground="{DynamicResource IslandSecondaryInkBrush}" />
+                        </StackPanel>
+                    </StackPanel>
+                </Grid>
+
+                <Border Background="{DynamicResource IslandSubCardBackgroundBrush}" CornerRadius="10" Padding="10,8" BorderBrush="{DynamicResource IslandSubCardBorderBrush}" BorderThickness="1">
+                    <StackPanel>
+                        <Grid Margin="0,0,0,6">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Rectangle Grid.Column="0" Height="1" Fill="{DynamicResource IslandSubCardBorderBrush}" VerticalAlignment="Center" Margin="0,0,6,0" />
+                            <TextBlock Style="{StaticResource HardwareSection}" Grid.Column="1" Text="DETAILS" Foreground="{DynamicResource IslandMutedInkBrush}" />
+                            <Rectangle Grid.Column="2" Height="1" Fill="{DynamicResource IslandSubCardBorderBrush}" VerticalAlignment="Center" Margin="6,0,0,0" />
+                        </Grid>
+
+                        <Grid Margin="0,2">
+                            <TextBlock Style="{StaticResource HardwareBody}" Text="Interface" ToolTip="Details describe one active adapter; traffic combines all active adapters. Virtual link speed is not measured internet speed." Foreground="{DynamicResource IslandSecondaryInkBrush}" />
+                            <TextBlock Style="{StaticResource HardwareBody}" HorizontalAlignment="Right" Text="{Binding HardwareStats.NetInterfaceName}" Foreground="{DynamicResource IslandInkBrush}" TextTrimming="CharacterEllipsis" MaxWidth="105" />
+                        </Grid>
+
+                        <Grid Margin="0,2">
+                            <TextBlock Style="{StaticResource HardwareBody}" Text="Status" Foreground="{DynamicResource IslandSecondaryInkBrush}" />
+                            <TextBlock Style="{StaticResource HardwareBody}" HorizontalAlignment="Right" Text="{Binding HardwareStats.NetStatusText}" Foreground="{DynamicResource IslandGreenBrush}" />
+                        </Grid>
+
+                        <Grid Margin="0,2">
+                            <TextBlock Style="{StaticResource HardwareBody}" Text="Address" Foreground="{DynamicResource IslandSecondaryInkBrush}" />
+                            <TextBlock Style="{StaticResource HardwareBody}" HorizontalAlignment="Right" Text="{Binding HardwareStats.NetIpAddress}" Foreground="{DynamicResource IslandInkBrush}" Typography.NumeralAlignment="Tabular" />
+                        </Grid>
+
+                        <Grid Margin="0,2">
+                            <TextBlock Style="{StaticResource HardwareBody}" Text="MAC" Foreground="{DynamicResource IslandSecondaryInkBrush}" />
+                            <TextBlock Style="{StaticResource HardwareBody}" HorizontalAlignment="Right" Text="{Binding HardwareStats.NetMacAddress}" Foreground="{DynamicResource IslandInkBrush}" Typography.NumeralAlignment="Tabular" />
+                        </Grid>
+
+                        <Grid Margin="0,2">
+                            <TextBlock Style="{StaticResource HardwareBody}" Text="Link Speed" Foreground="{DynamicResource IslandSecondaryInkBrush}" />
+                            <TextBlock Style="{StaticResource HardwareBody}" HorizontalAlignment="Right" Text="{Binding HardwareStats.NetLinkSpeedText}" Foreground="{DynamicResource IslandInkBrush}" Typography.NumeralAlignment="Tabular" />
+                        </Grid>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+
+            <!-- COL 1: Center Network Mirrored History (Downloads up, Uploads down) -->
+            <StackPanel Grid.Column="2">
+                <Grid Margin="0,0,0,4">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Rectangle Grid.Column="0" Height="1" Fill="{DynamicResource IslandSubCardBorderBrush}" VerticalAlignment="Center" Margin="0,0,6,0" />
+                    <TextBlock Style="{StaticResource HardwareSection}" Grid.Column="1" Text="USAGE HISTORY" ToolTip="All active adapters" Foreground="{DynamicResource IslandMutedInkBrush}" />
+                    <Rectangle Grid.Column="2" Height="1" Fill="{DynamicResource IslandSubCardBorderBrush}" VerticalAlignment="Center" Margin="6,0,0,0" />
+                </Grid>
+
+                <Border Background="{DynamicResource IslandSubCardBackgroundBrush}" CornerRadius="10" Height="152" Margin="0,0,0,8" BorderBrush="{DynamicResource IslandSubCardBorderBrush}" BorderThickness="1" ClipToBounds="True">
+                    <Grid>
+                        <!-- Scale text in top-left (e.g. 200 KB/s) -->
+                        <TextBlock Style="{StaticResource HardwareBody}" Text="{Binding HardwareStats.NetChartScaleText}" Foreground="{DynamicResource IslandMutedInkBrush}" Margin="6,3,0,0" HorizontalAlignment="Left" VerticalAlignment="Top" />
+
+                        <!-- 4-Zone Separation Reference Lines (Top 25%, Middle 50%, Bottom 75%) -->
+                        <Rectangle Height="1" Fill="{DynamicResource IslandChartGridBrush}" VerticalAlignment="Top" Margin="4,38,4,0" />
+                        <Rectangle Height="1" Fill="{DynamicResource IslandChartGridStrongBrush}" VerticalAlignment="Center" Margin="4,0" />
+                        <Rectangle Height="1" Fill="{DynamicResource IslandChartGridBrush}" VerticalAlignment="Bottom" Margin="4,0,4,38" />
+
+                        <!-- Mirrored Download (Blue up) -->
+                        <Polygon Points="{Binding HardwareStats.NetHistoryFillPoints}" Fill="{DynamicResource IslandBlueBrush}" Opacity="0.15" />
+                        <Polyline Points="{Binding HardwareStats.NetHistoryPoints}" Stroke="{DynamicResource IslandBlueBrush}" StrokeThickness="1.5" StrokeLineJoin="Round" />
+                        <!-- Mirrored Upload (Red down) -->
+                        <Polygon Points="{Binding HardwareStats.NetUploadHistoryFillPoints}" Fill="{DynamicResource IslandRedBrush}" Opacity="0.15" />
+                        <Polyline Points="{Binding HardwareStats.NetUploadHistoryPoints}" Stroke="{DynamicResource IslandRedBrush}" StrokeThickness="1.5" StrokeLineJoin="Round" />
+                    </Grid>
+                </Border>
+
+                <!-- Ping bar -->
+                <Border Background="{DynamicResource IslandSubCardBackgroundBrush}" CornerRadius="10" Padding="10,6" BorderBrush="{DynamicResource IslandSubCardBorderBrush}" BorderThickness="1">
+                    <Grid>
+                        <StackPanel Orientation="Horizontal">
+                            <Ellipse Width="6" Height="6" Fill="{DynamicResource IslandStatusBrush}" Margin="0,0,6,0" VerticalAlignment="Center" />
+                            <TextBlock Style="{StaticResource HardwareBody}" Text="Ping" Foreground="{DynamicResource IslandSecondaryInkBrush}" />
+                            <TextBlock Style="{StaticResource HardwareBody}" Text="{Binding HardwareStats.PingText}" ToolTip="Round-trip probe to 1.1.1.1; — means no successful response." Foreground="{DynamicResource IslandStatusBrush}" Margin="6,0,0,0" />
+                        </StackPanel>
+
+                    </Grid>
+                </Border>
+            </StackPanel>
+
+            <!-- COL 2: lifetime and peak stats -->
+            <StackPanel Grid.Column="4">
+                <Grid Margin="0,0,0,6">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Rectangle Grid.Column="0" Height="1" Fill="{DynamicResource IslandSubCardBorderBrush}" VerticalAlignment="Center" Margin="0,0,6,0" />
+                    <TextBlock Style="{StaticResource HardwareSection}" Grid.Column="1" Text="SINCE STARTUP" Foreground="{DynamicResource IslandMutedInkBrush}" />
+                    <Rectangle Grid.Column="2" Height="1" Fill="{DynamicResource IslandSubCardBorderBrush}" VerticalAlignment="Center" Margin="6,0,0,0" />
+                </Grid>
+
+                <Border Background="{DynamicResource IslandSubCardBackgroundBrush}" CornerRadius="10" Padding="10,8" BorderBrush="{DynamicResource IslandSubCardBorderBrush}" BorderThickness="1" Height="85" Margin="0,0,0,8">
+                    <StackPanel>
+                        <Grid Margin="0,2">
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                                <Ellipse Width="6" Height="6" Fill="{DynamicResource IslandBlueBrush}" Margin="0,0,5,0" VerticalAlignment="Center" />
+                                <TextBlock Style="{StaticResource HardwareBody}" Text="Received" Foreground="{DynamicResource IslandSecondaryInkBrush}" />
+                            </StackPanel>
+                            <TextBlock Style="{StaticResource HardwareBody}" HorizontalAlignment="Right" Text="{Binding HardwareStats.NetSessionReceivedText}" Foreground="{DynamicResource IslandInkBrush}" Typography.NumeralAlignment="Tabular" />
+                        </Grid>
+                        <Grid Margin="0,2">
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                                <Ellipse Width="6" Height="6" Fill="{DynamicResource IslandRedBrush}" Margin="0,0,5,0" VerticalAlignment="Center" />
+                                <TextBlock Style="{StaticResource HardwareBody}" Text="Sent" Foreground="{DynamicResource IslandSecondaryInkBrush}" />
+                            </StackPanel>
+                            <TextBlock Style="{StaticResource HardwareBody}" HorizontalAlignment="Right" Text="{Binding HardwareStats.NetSessionSentText}" Foreground="{DynamicResource IslandInkBrush}" Typography.NumeralAlignment="Tabular" />
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <Grid Margin="0,0,0,6">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Rectangle Grid.Column="0" Height="1" Fill="{DynamicResource IslandSubCardBorderBrush}" VerticalAlignment="Center" Margin="0,0,6,0" />
+                    <TextBlock Style="{StaticResource HardwareSection}" Grid.Column="1" Text="LAST MINUTE" Foreground="{DynamicResource IslandMutedInkBrush}" />
+                    <Rectangle Grid.Column="2" Height="1" Fill="{DynamicResource IslandSubCardBorderBrush}" VerticalAlignment="Center" Margin="6,0,0,0" />
+                </Grid>
+
+                <Border Background="{DynamicResource IslandSubCardBackgroundBrush}" CornerRadius="10" Padding="10,8" BorderBrush="{DynamicResource IslandSubCardBorderBrush}" BorderThickness="1" Height="85">
+                    <StackPanel>
+                        <Grid Margin="0,2">
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                                <Ellipse Width="6" Height="6" Fill="{DynamicResource IslandBlueBrush}" Margin="0,0,5,0" VerticalAlignment="Center" />
+                                <TextBlock Style="{StaticResource HardwareBody}" Text="Peak down" ToolTip="Peak download" Foreground="{DynamicResource IslandSecondaryInkBrush}" TextTrimming="CharacterEllipsis" />
+                            </StackPanel>
+                            <TextBlock Style="{StaticResource HardwareBody}" HorizontalAlignment="Right" Text="{Binding HardwareStats.NetPeakDownloadText}" Foreground="{DynamicResource IslandInkBrush}" Typography.NumeralAlignment="Tabular" />
+                        </Grid>
+                        <Grid Margin="0,2">
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                                <Ellipse Width="6" Height="6" Fill="{DynamicResource IslandRedBrush}" Margin="0,0,5,0" VerticalAlignment="Center" />
+                                <TextBlock Style="{StaticResource HardwareBody}" Text="Peak up" ToolTip="Peak upload" Foreground="{DynamicResource IslandSecondaryInkBrush}" TextTrimming="CharacterEllipsis" />
+                            </StackPanel>
+                            <TextBlock Style="{StaticResource HardwareBody}" HorizontalAlignment="Right" Text="{Binding HardwareStats.NetPeakUploadText}" Foreground="{DynamicResource IslandInkBrush}" Typography.NumeralAlignment="Tabular" />
+                        </Grid>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </Grid>
+
+        <!-- VIEW B: Games dashboard -->
+        <Grid Tag="Games" Visibility="Collapsed">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="182" />
+                <ColumnDefinition Width="16" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="16" />
+                <ColumnDefinition Width="172" />
+            </Grid.ColumnDefinitions>
+
+            <!-- COL 0: OVER GAMES & FPS Status -->
+            <StackPanel Grid.Column="0">
+                <!-- Hairline Centered Header: OVER GAMES -->
+                <Grid Margin="0,0,0,6">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Rectangle Grid.Column="0" Height="1" Fill="{DynamicResource IslandSubCardBorderBrush}" VerticalAlignment="Center" Margin="0,0,6,0" />
+                    <TextBlock Style="{StaticResource HardwareSection}" Grid.Column="1" Text="GAME READOUT" Foreground="{DynamicResource IslandMutedInkBrush}" />
+                    <Rectangle Grid.Column="2" Height="1" Fill="{DynamicResource IslandSubCardBorderBrush}" VerticalAlignment="Center" Margin="6,0,0,0" />
+                </Grid>
+
+                <!-- Show over games row -->
+                <Grid Margin="0,3,0,6">
+                    <TextBlock Style="{StaticResource HardwareBody}" Text="Pin readout" Foreground="{DynamicResource IslandInkBrush}" VerticalAlignment="Center" />
+                    <CheckBox HorizontalAlignment="Right" IsChecked="{Binding IsStatsPinnedToCapsule}" Style="{StaticResource ModernDarkCheckBox}" Margin="0" VerticalAlignment="Center" />
+                </Grid>
+                <!-- Automatic gaming display and manual pin help -->
+                <TextBlock Style="{StaticResource HardwareBody}" Text="FPS mode appears automatically when a game is detected. Pin keeps the readout visible outside games." Foreground="{DynamicResource IslandMutedInkBrush}" TextWrapping="Wrap" Margin="0,0,0,8" LineHeight="13" />
+
+                <!-- Hairline Centered Header: FPS -->
+                <Grid Margin="0,4,0,6">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Rectangle Grid.Column="0" Height="1" Fill="{DynamicResource IslandSubCardBorderBrush}" VerticalAlignment="Center" Margin="0,0,6,0" />
+                    <TextBlock Style="{StaticResource HardwareSection}" Grid.Column="1" Text="FPS" Foreground="{DynamicResource IslandMutedInkBrush}" />
+                    <Rectangle Grid.Column="2" Height="1" Fill="{DynamicResource IslandSubCardBorderBrush}" VerticalAlignment="Center" Margin="6,0,0,0" />
+                </Grid>
+
+                <TextBlock Style="{StaticResource HardwareBody}" Text="Ready. Counted from Windows' own log of each frame; nothing loads into the game." Foreground="{DynamicResource IslandMutedInkBrush}" TextWrapping="Wrap" LineHeight="13" />
+            </StackPanel>
+
+            <!-- COL 1: FRAMES PER SECOND & FRAME TIME -->
+            <StackPanel Grid.Column="2">
+                <!-- Hairline Centered Header: FRAMES PER SECOND -->
+                <Grid Margin="0,0,0,6">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Rectangle Grid.Column="0" Height="1" Fill="{DynamicResource IslandSubCardBorderBrush}" VerticalAlignment="Center" Margin="0,0,6,0" />
+                    <TextBlock Style="{StaticResource HardwareSection}" Grid.Column="1" Text="FRAMES PER SECOND" Foreground="{DynamicResource IslandMutedInkBrush}" />
+                    <Rectangle Grid.Column="2" Height="1" Fill="{DynamicResource IslandSubCardBorderBrush}" VerticalAlignment="Center" Margin="6,0,0,0" />
+                </Grid>
+
+                <!-- FPS area chart: solid fill with a ceiling label -->
+                <Border Background="{DynamicResource IslandSubCardBackgroundBrush}" CornerRadius="10" Padding="1,1" BorderBrush="{DynamicResource IslandSubCardBorderBrush}" BorderThickness="1" Height="80" ClipToBounds="True">
+                    <Grid>
+                        <!-- Top-left Ceiling Label (e.g. 165 or 144) -->
+                        <TextBlock Style="{StaticResource HardwareBody}" Text="{Binding HardwareStats.FpsCeilingText}" Foreground="{DynamicResource IslandMutedInkBrush}" Margin="6,4,0,0" HorizontalAlignment="Left" VerticalAlignment="Top" Typography.NumeralAlignment="Tabular" />
+
+                        <!-- Area Fill Polygon -->
+                        <Polygon Points="{Binding HardwareStats.FpsHistoryFillPoints}">
+                            <Polygon.Fill>
+                                <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                                    <GradientStop Color="#DD007AFF" Offset="0" />
+                                    <GradientStop Color="#77007AFF" Offset="1" />
+                                </LinearGradientBrush>
+                            </Polygon.Fill>
+                        </Polygon>
+
+                        <!-- Stroke Line -->
+                        <Polyline Points="{Binding HardwareStats.FpsHistoryPoints}" Stroke="{DynamicResource IslandBlueBrush}" StrokeThickness="1.5" />
+                    </Grid>
+                </Border>
+
+                <!-- Hairline Centered Header: FRAME TIME -->
+                <Grid Margin="0,10,0,6">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Rectangle Grid.Column="0" Height="1" Fill="{DynamicResource IslandSubCardBorderBrush}" VerticalAlignment="Center" Margin="0,0,6,0" />
+                    <TextBlock Style="{StaticResource HardwareSection}" Grid.Column="1" Text="FRAME TIME" Foreground="{DynamicResource IslandMutedInkBrush}" />
+                    <Rectangle Grid.Column="2" Height="1" Fill="{DynamicResource IslandSubCardBorderBrush}" VerticalAlignment="Center" Margin="6,0,0,0" />
+                </Grid>
+
+                <!-- Slowest frame of every 250 ms over the last minute; ticks above the guide line are stutters -->
+                <Border Background="{DynamicResource IslandSubCardBackgroundBrush}" CornerRadius="10" Padding="1,1" BorderBrush="{DynamicResource IslandSubCardBorderBrush}" BorderThickness="1" Height="44" ClipToBounds="True" Margin="0,0,0,4"
+                        Visibility="{Binding HardwareStats.HasFrameTimeChart, Converter={StaticResource BoolToVisibility}}">
+                    <Grid>
+                        <TextBlock Style="{StaticResource HardwareBody}" Text="{Binding HardwareStats.FrameTimeCeilingText}" Foreground="{DynamicResource IslandMutedInkBrush}" Margin="6,2,0,0" HorizontalAlignment="Left" VerticalAlignment="Top" Typography.NumeralAlignment="Tabular" />
+                        <Canvas Width="220" Height="40" HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <Rectangle Canvas.Top="{Binding HardwareStats.FrameTimeGuideY}" Width="220" Height="1" Fill="{DynamicResource IslandChartGridStrongBrush}" />
+                            <Polyline Points="{Binding HardwareStats.FrameTimePoints}" Stroke="{DynamicResource IslandStatusBrush}" StrokeThickness="1.3" StrokeLineJoin="Round" />
+                        </Canvas>
+                    </Grid>
+                </Border>
+
+                <Grid Margin="0,2">
+                    <TextBlock Style="{StaticResource HardwareBody}" Text="Average" Foreground="{DynamicResource IslandSecondaryInkBrush}" />
+                    <TextBlock Style="{StaticResource HardwareBody}" HorizontalAlignment="Right" Text="{Binding HardwareStats.AverageFrameTimeText}" Foreground="{DynamicResource IslandInkBrush}" Typography.NumeralAlignment="Tabular" />
+                </Grid>
+                <Grid Margin="0,2">
+                    <TextBlock Style="{StaticResource HardwareBody}" Text="Slowest in the last second" Foreground="{DynamicResource IslandSecondaryInkBrush}" />
+                    <TextBlock Style="{StaticResource HardwareBody}" HorizontalAlignment="Right" Text="{Binding HardwareStats.SlowestFrameTimeText}" Foreground="{DynamicResource IslandInkBrush}" Typography.NumeralAlignment="Tabular" />
+                </Grid>
+            </StackPanel>
+
+            <!-- COL 2: IN FRONT Game Telemetry -->
+            <ScrollViewer Grid.Column="4" Style="{DynamicResource ModernCardScrollViewer}">
+            <StackPanel>
+                <!-- Hairline Centered Header: IN FRONT -->
+                <Grid Margin="0,0,0,6">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Rectangle Grid.Column="0" Height="1" Fill="{DynamicResource IslandSubCardBorderBrush}" VerticalAlignment="Center" Margin="0,0,6,0" />
+                    <TextBlock Style="{StaticResource HardwareSection}" Grid.Column="1" Text="IN FRONT" Foreground="{DynamicResource IslandMutedInkBrush}" />
+                    <Rectangle Grid.Column="2" Height="1" Fill="{DynamicResource IslandSubCardBorderBrush}" VerticalAlignment="Center" Margin="6,0,0,0" />
+                </Grid>
+
+                <!-- Active Game Title -->
+                <TextBlock Style="{StaticResource HardwareBody}" Text="{Binding HardwareStats.DisplayGameTitle}" Foreground="{DynamicResource IslandInkBrush}" Margin="0,0,0,8" TextTrimming="CharacterEllipsis" />
+
+                <!-- 5 Telemetry Rows -->
+                <Grid Margin="0,2">
+                    <TextBlock Style="{StaticResource HardwareSection}" Text="FPS" Foreground="{DynamicResource IslandSecondaryInkBrush}" />
+                    <TextBlock Style="{StaticResource HardwareBody}" HorizontalAlignment="Right" Text="{Binding HardwareStats.CurrentFps}" Foreground="{DynamicResource IslandInkBrush}" Typography.NumeralAlignment="Tabular" />
+                </Grid>
+
+                <Grid Margin="0,2">
+                    <TextBlock Style="{StaticResource HardwareSection}" Text="GPU" Foreground="{DynamicResource IslandSecondaryInkBrush}" />
+                    <TextBlock Style="{StaticResource HardwareBody}" HorizontalAlignment="Right" Text="{Binding HardwareStats.GpuUsage, StringFormat={}{0:0}%}" Foreground="{DynamicResource IslandInkBrush}" Typography.NumeralAlignment="Tabular" />
+                </Grid>
+
+                <Grid Margin="0,2">
+                    <TextBlock Style="{StaticResource HardwareBody}" Text="GPU temperature" Foreground="{DynamicResource IslandSecondaryInkBrush}" />
+                    <TextBlock Style="{StaticResource HardwareBody}" HorizontalAlignment="Right" Text="{Binding HardwareStats.GpuTempText}" ToolTip="{Binding HardwareStats.GpuTempTooltip}" Foreground="{DynamicResource IslandInkBrush}" Typography.NumeralAlignment="Tabular" />
+                </Grid>
+
+                <Grid Margin="0,2">
+                    <TextBlock Style="{StaticResource HardwareBody}" Text="Video memory" Foreground="{DynamicResource IslandSecondaryInkBrush}" />
+                    <TextBlock Style="{StaticResource HardwareBody}" HorizontalAlignment="Right" Text="{Binding HardwareStats.VramUsedText}" Foreground="{DynamicResource IslandInkBrush}" Typography.NumeralAlignment="Tabular" />
+                </Grid>
+
+                <Grid Margin="0,2">
+                    <TextBlock Style="{StaticResource HardwareSection}" Text="CPU" Foreground="{DynamicResource IslandSecondaryInkBrush}" />
+                    <TextBlock Style="{StaticResource HardwareBody}" HorizontalAlignment="Right" Text="{Binding HardwareStats.CpuUsage, StringFormat={}{0:0}%}" Foreground="{DynamicResource IslandInkBrush}" Typography.NumeralAlignment="Tabular" />
+                </Grid>
+
+                <!-- Hairline Centered Header: RECENT SESSIONS -->
+                <Grid Margin="0,6,0,4" Visibility="{Binding HasRecentGameSessions, Converter={StaticResource BoolToVisibility}}">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Rectangle Grid.Column="0" Height="1" Fill="{DynamicResource IslandSubCardBorderBrush}" VerticalAlignment="Center" Margin="0,0,6,0" />
+                    <TextBlock Style="{StaticResource HardwareSection}" Grid.Column="1" Text="RECENT SESSIONS" Foreground="{DynamicResource IslandMutedInkBrush}" />
+                    <Rectangle Grid.Column="2" Height="1" Fill="{DynamicResource IslandSubCardBorderBrush}" VerticalAlignment="Center" Margin="6,0,0,0" />
+                </Grid>
+                <ItemsControl ItemsSource="{Binding RecentGameSessions}" Focusable="False">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Grid Margin="0,2">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Style="{StaticResource HardwareBody}" Text="{Binding Game}" ToolTip="{Binding Game}" Foreground="{DynamicResource IslandSecondaryInkBrush}" TextTrimming="CharacterEllipsis" Margin="0,0,8,0" />
+                                <TextBlock Style="{StaticResource HardwareBody}" Grid.Column="1" ToolTip="{Binding RowToolTip}" Foreground="{DynamicResource IslandInkBrush}" Typography.NumeralAlignment="Tabular">
+                                    <Run Text="{Binding AverageFps, Mode=OneWay, StringFormat={}{0:0}}"/><Run Text=" / "/><Run Text="{Binding Low1Fps, Mode=OneWay, StringFormat={}{0:0}}"/>
+                                </TextBlock>
+                            </Grid>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <!-- Hairline Centered Header: PLAYTIME -->
+                <Grid Margin="0,6,0,4" Visibility="{Binding HasPlaytime, Converter={StaticResource BoolToVisibility}}">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Rectangle Grid.Column="0" Height="1" Fill="{DynamicResource IslandSubCardBorderBrush}" VerticalAlignment="Center" Margin="0,0,6,0" />
+                    <TextBlock Style="{StaticResource HardwareSection}" Grid.Column="1" Text="PLAYTIME" Foreground="{DynamicResource IslandMutedInkBrush}" />
+                    <Rectangle Grid.Column="2" Height="1" Fill="{DynamicResource IslandSubCardBorderBrush}" VerticalAlignment="Center" Margin="6,0,0,0" />
+                </Grid>
+                <Grid Margin="0,2" Visibility="{Binding HasPlaytime, Converter={StaticResource BoolToVisibility}}" ToolTip="{Binding PlaytimeTooltip}">
+                    <TextBlock Style="{StaticResource HardwareBody}" Text="{Binding PlaytimeTodayText}" Foreground="{DynamicResource IslandSecondaryInkBrush}" Typography.NumeralAlignment="Tabular" />
+                    <TextBlock Style="{StaticResource HardwareBody}" HorizontalAlignment="Right" Text="{Binding PlaytimeWeekText}" Foreground="{DynamicResource IslandInkBrush}" Typography.NumeralAlignment="Tabular" />
+                </Grid>
+            </StackPanel>
+            </ScrollViewer>
+        </Grid>
+    <local:BatteryModuleView xmlns:local="clr-namespace:MochiDock.Views.Cards" Tag="Battery" Visibility="Collapsed"/></controls:TabTransitionHost></Grid>
+</UserControl>

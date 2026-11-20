@@ -1,0 +1,41 @@
+<UserControl x:Class="MochiDock.Views.Cards.AiUsageCardView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    FontFamily="{DynamicResource IslandUiFont}">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <Grid x:Name="HeaderGrid" Grid.Row="0" Margin="0,0,0,8" SizeChanged="Content_SizeChanged">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <StackPanel Grid.Column="0">
+                <TextBlock Text="Local AI Coding Plan Usage" Style="{StaticResource CardHeadingText}"/>
+                <TextBlock Text="Usage of the AI tools signed in on this PC" Style="{StaticResource CardCaptionText}" Foreground="{DynamicResource IslandMutedInkBrush}" Margin="0,2,0,0" TextTrimming="CharacterEllipsis"/>
+            </StackPanel>
+            <Button x:Name="RefreshButton" Grid.Column="1" Style="{DynamicResource IslandSecondaryButtonStyle}" Click="Refresh_Click" ToolTip="Re-read usage now (also refreshes by itself while this tab is open)" VerticalAlignment="Center">
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock Text="↻ " FontSize="11" VerticalAlignment="Center"/>
+                    <TextBlock x:Name="RefreshLabel" Text="Refresh" FontSize="11" VerticalAlignment="Center"/>
+                </StackPanel>
+            </Button>
+        </Grid>
+
+        <!-- Provider cards in two columns. Each card keeps its own height and goes into the shorter column (no stretched cards). -->
+        <ScrollViewer Grid.Row="1" Style="{DynamicResource ModernCardScrollViewer}">
+            <Grid x:Name="ProvidersPanel" SizeChanged="Content_SizeChanged">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel x:Name="ProvidersLeft" Grid.Column="0" VerticalAlignment="Top"/>
+                <StackPanel x:Name="ProvidersRight" Grid.Column="1" VerticalAlignment="Top"/>
+            </Grid>
+        </ScrollViewer>
+    </Grid>
+</UserControl>

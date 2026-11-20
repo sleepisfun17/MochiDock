@@ -1,0 +1,122 @@
+<UserControl x:Class="MochiDock.Views.Settings.Sections.GamingSectionView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:s="clr-namespace:MochiDock.Views.Settings">
+    <StackPanel>
+        <TextBlock Style="{StaticResource SettingsGroupHeader}" Text="Resolution" Margin="0,0,0,2"/>
+        <s:SettingRow Label="This display" Description="The monitor the dock is on. Its largest mode is treated as native.">
+            <TextBlock x:Name="DetectedText" Style="{StaticResource SettingsRowLabel}" VerticalAlignment="Center" TextAlignment="Right"/>
+        </s:SettingRow>
+        <s:SettingRow Label="Switch now" Description="Change this display's resolution right away. Native is the largest mode the display offers; Gaming is the resolution chosen below.">
+            <StackPanel Orientation="Horizontal">
+                <Button x:Name="ResNativeButton" Style="{StaticResource ActionButton}" Content="Native" Click="ResNative_Click" Margin="0"/>
+                <Button x:Name="ResGamingButton" Style="{StaticResource ActionButton}" Content="Gaming" Click="ResGaming_Click" Margin="8,0,0,0"/>
+            </StackPanel>
+        </s:SettingRow>
+        <s:SettingRow x:Name="QuickPickRow" Label="Pick a gaming resolution" Description="Choose a size, then a screen shape. The size is the picture height, so FHD is always 1080 rows tall: FHD with 16:10 gives 1728×1080. Only combinations this display offers are listed.">
+            <StackPanel Orientation="Horizontal">
+                <ComboBox x:Name="SizeCombo" Style="{StaticResource ModernDarkComboBox}" Width="130" SelectionChanged="Size_Changed" AutomationProperties.Name="Resolution size"/>
+                <ComboBox x:Name="AspectCombo" Style="{StaticResource ModernDarkComboBox}" Width="200" Margin="8,0,0,0" SelectionChanged="Aspect_Changed" AutomationProperties.Name="Screen shape"/>
+            </StackPanel>
+        </s:SettingRow>
+        <s:SettingRow x:Name="PreferredRow" Label="Gaming resolution" Description="The resolution the hotkey and tray toggle switch to. Set it with the pickers above, or type width x height, for example 1728x1080. It must be one your display offers.">
+            <TextBox x:Name="PreferredBox" Style="{StaticResource ModernDarkTextBox}" Width="150" LostFocus="Preferred_LostFocus" KeyDown="Preferred_KeyDown"/>
+        </s:SettingRow>
+        <s:SettingRow Label="Resolution hotkey" Description="Turn the shortcut on or off. It toggles between native and the preferred resolution from anywhere.">
+            <CheckBox x:Name="HotkeyCheck" Style="{StaticResource ModernDarkCheckBox}" Checked="Option_Changed" Unchecked="Option_Changed"/>
+        </s:SettingRow>
+        <s:SettingRow x:Name="HotkeyKeysRow" Label="Hotkey shortcut" Description="Click the box and press the shortcut you want, for example Ctrl+Alt+F9. Pick one that is not used by another program such as AutoHotkey." Validation="{Binding ResolutionHotkeyProblem}">
+            <StackPanel Orientation="Horizontal">
+                <TextBox x:Name="HotkeyBox" Style="{StaticResource ModernDarkTextBox}" Width="150" IsReadOnly="True" IsReadOnlyCaretVisible="False" PreviewKeyDown="HotkeyBox_PreviewKeyDown" AutomationProperties.Name="Resolution hotkey shortcut"/>
+                <Button Style="{StaticResource ActionButton}" Content="Reset" Click="HotkeyReset_Click" Margin="8,0,0,0"/>
+            </StackPanel>
+        </s:SettingRow>
+        <TextBlock Style="{StaticResource SettingsGroupHeader}" Text="Window sizes" Margin="0,18,0,2"/>
+        <s:SettingRow Label="Window size shortcuts" Description="Resize the window you are using to a set size and centre it on its screen, from anywhere. No AutoHotkey needed.">
+            <CheckBox x:Name="WindowSizesCheck" Style="{StaticResource ModernDarkCheckBox}" Checked="WindowSizes_Changed" Unchecked="WindowSizes_Changed" AutomationProperties.Name="Window size shortcuts"/>
+        </s:SettingRow>
+        <s:SettingRow x:Name="WindowSizesRow" Label="Sizes" Description="Width x height in pixels, frame included, for example 1920x1080. Click a shortcut box and press the keys. Untick a size to keep it without its shortcut." Validation="{Binding WindowSizeShortcutProblem}">
+            <StackPanel HorizontalAlignment="Right">
+                <StackPanel x:Name="WindowSizeList"/>
+                <Button x:Name="AddWindowSizeBtn" Style="{StaticResource ActionButton}" Content="Add size" Click="AddWindowSize_Click" HorizontalAlignment="Right" Margin="0,4,0,0"/>
+            </StackPanel>
+        </s:SettingRow>
+        <s:SettingRow x:Name="WindowFlipRow" Label="Flip window" Description="Swap the width and height of the window you are using, from landscape to portrait and back.">
+            <StackPanel Orientation="Horizontal">
+                <CheckBox x:Name="WindowFlipCheck" Style="{StaticResource ModernDarkCheckBox}" Checked="WindowSizes_Changed" Unchecked="WindowSizes_Changed" VerticalAlignment="Center" Margin="0,0,10,0" AutomationProperties.Name="Flip window shortcut on"/>
+                <TextBox x:Name="WindowFlipBox" Style="{StaticResource ModernDarkTextBox}" Width="130" IsReadOnly="True" IsReadOnlyCaretVisible="False" PreviewKeyDown="WindowFlipBox_PreviewKeyDown" AutomationProperties.Name="Flip window shortcut"/>
+            </StackPanel>
+        </s:SettingRow>
+
+        <TextBlock Style="{StaticResource SettingsGroupHeader}" Text="Gaming mode" Margin="0,18,0,2"/>
+        <s:SettingRow Label="Click-through in games" Description="Mouse clicks pass through the dock during games, so it never interrupts aiming.">
+            <CheckBox x:Name="ClickThroughCheck" Style="{StaticResource ModernDarkCheckBox}" Checked="Option_Changed" Unchecked="Option_Changed"/>
+        </s:SettingRow>
+        <s:SettingRow x:Name="OffsetRow" Label="Gaming top offset" Description="Floating dock only: while a game runs, the dock moves this far down from the top edge so scoreboards and HUDs stay visible. The Notch dock stays at the top edge and ignores this.">
+            <StackPanel Orientation="Horizontal">
+                <Slider x:Name="OffsetSlider" Style="{StaticResource ModernDarkSlider}" Width="200" Minimum="60" Maximum="260" ValueChanged="Offset_Changed"/>
+                <TextBlock Text="{Binding Value, ElementName=OffsetSlider, StringFormat='{}{0:0} px'}" Style="{StaticResource CardCaptionText}" Width="50" TextAlignment="Right" VerticalAlignment="Center"/>
+            </StackPanel>
+        </s:SettingRow>
+        <TextBlock Style="{StaticResource SettingsGroupHeader}" Text="Session summary and ping" Margin="0,18,0,2"/>
+        <s:SettingRow Label="Game session summary" Description="Record the FPS of each gaming session and show average FPS, 1% low (the average of the slowest 1% of frames), 0.1% low, minimum and stutters when you stop playing. Sessions shorter than a minute are ignored. Only gaming time is measured.">
+            <StackPanel Orientation="Horizontal">
+                <CheckBox x:Name="SessionSummaryCheck" Style="{StaticResource ModernDarkCheckBox}" Checked="Option_Changed" Unchecked="Option_Changed" Margin="0,0,12,0"/>
+                <Button Style="{StaticResource ActionButton}" Content="Clear history" Click="ClearSessions_Click" Margin="0"/>
+            </StackPanel>
+        </s:SettingRow>
+        <s:SettingRow Label="Break reminder" Description="While you play, show a short notice in the gaming capsule once per interval. Your playtime (today, this week, per game) is listed in the Games module whether or not this is on.">
+            <StackPanel Orientation="Horizontal">
+                <ComboBox x:Name="BreakCombo" Style="{StaticResource ModernDarkComboBox}" Width="150" SelectionChanged="Break_SelectionChanged" Margin="0,0,8,0">
+                    <ComboBoxItem Content="Off" Tag="0"/>
+                    <ComboBoxItem Content="Every hour" Tag="60"/>
+                    <ComboBoxItem Content="Every 90 minutes" Tag="90"/>
+                    <ComboBoxItem Content="Every 2 hours" Tag="120"/>
+                </ComboBox>
+                <Button Style="{StaticResource ActionButton}" Content="Clear playtime" Click="ClearPlaytime_Click" Margin="0"/>
+            </StackPanel>
+        </s:SettingRow>
+        <s:SettingRow Label="Match stats (League of Legends)" Description="While you play League of Legends, read the result, champion, kills/deaths/assists, CS and best multi-kill from the game's own local Live Client Data API (nothing is injected into the game). It shows in the session summary and the Recent sessions tooltip. Other games have no such API; Valorant offers none.">
+            <CheckBox x:Name="LolStatsCheck" Style="{StaticResource ModernDarkCheckBox}" Checked="Option_Changed" Unchecked="Option_Changed"/>
+        </s:SettingRow>
+        <s:SettingRow Label="Match stats (PUBG)" Description="A few minutes after a PUBG match, look it up in the official PUBG API and show placement, kills, damage, headshots and time survived. It needs your in-game name and a free API key from developer.pubg.com (the key is kept in Windows Credential Manager, never in settings). The API publishes matches late and allows about 10 lookups a minute; MochiDock tries a few times, three minutes apart.">
+            <CheckBox x:Name="PubgCheck" Style="{StaticResource ModernDarkCheckBox}" Checked="Option_Changed" Unchecked="Option_Changed"/>
+        </s:SettingRow>
+        <s:SettingRow x:Name="PubgNameRow" Label="PUBG player name" Description="Exactly as in the game: the API is case-sensitive.">
+            <StackPanel Orientation="Horizontal">
+                <TextBox x:Name="PubgNameBox" Style="{StaticResource ModernDarkTextBox}" Width="180" LostFocus="PubgName_LostFocus" KeyDown="PubgName_KeyDown" AutomationProperties.Name="PUBG player name"/>
+                <ComboBox x:Name="PubgPlatformCombo" Style="{StaticResource ModernDarkComboBox}" Width="130" Margin="8,0,0,0" SelectionChanged="PubgPlatform_SelectionChanged">
+                    <ComboBoxItem Content="Steam (PC)" Tag="steam"/>
+                    <ComboBoxItem Content="Kakao (PC)" Tag="kakao"/>
+                    <ComboBoxItem Content="Xbox" Tag="xbox"/>
+                    <ComboBoxItem Content="PlayStation" Tag="psn"/>
+                </ComboBox>
+            </StackPanel>
+        </s:SettingRow>
+        <s:SettingRow x:Name="PubgKeyRow" Label="PUBG API key" Description="Create a free key at developer.pubg.com and paste it here.">
+            <StackPanel>
+                <StackPanel Orientation="Horizontal">
+                    <PasswordBox x:Name="PubgKeyBox" Style="{StaticResource ModernDarkPasswordBox}" PasswordChar="•" Width="220" AutomationProperties.Name="PUBG API key"/>
+                    <Button Style="{StaticResource ActionButton}" Content="Save key" Click="PubgSaveKey_Click" Margin="8,0,0,0"/>
+                    <Button Style="{StaticResource ActionButton}" Content="Remove" Click="PubgRemoveKey_Click" Margin="8,0,0,0"/>
+                </StackPanel>
+                <TextBlock x:Name="PubgKeyStatus" Style="{StaticResource CardCaptionText}" Margin="0,6,0,0"/>
+            </StackPanel>
+        </s:SettingRow>
+        <s:SettingRow x:Name="PingHostRow" Label="Ping host" Description="The address pinged every 3 seconds during a game for the session's ping numbers (average, worst, jitter, spikes, lost). It measures your route to this host, not the game server. An IP address or a host name.">
+            <TextBox x:Name="PingHostBox" Style="{StaticResource ModernDarkTextBox}" Width="180" LostFocus="PingHost_LostFocus" KeyDown="PingHost_KeyDown"/>
+        </s:SettingRow>
+        <s:SettingRow Label="Ping in the gaming capsule" Description="Show the ping next to the FPS when the readout is pinned to the capsule during a game.">
+            <CheckBox x:Name="PingCapsuleCheck" Style="{StaticResource ModernDarkCheckBox}" Checked="Option_Changed" Unchecked="Option_Changed"/>
+        </s:SettingRow>
+        <TextBlock Style="{StaticResource SettingsGroupHeader}" Text="Per-game profiles" Margin="0,18,0,2"/>
+        <s:SettingRow x:Name="ProfileAddRow" Label="Add a game" Description="Type the game's process or window name (for example VALORANT-Win64-Shipping) or use the game that is running now, then press Add. Each profile then shows a Resolution list (only sizes this display offers, for example FHD · 16:10 · 1728×1080; &quot;No change&quot; leaves it alone). A profile can switch the resolution while the game runs and restore it afterwards, override click-through, and hold or allow notifications for that game only. Nothing changes for a game without a profile.">
+            <StackPanel Orientation="Horizontal">
+                <TextBox x:Name="ProfileNameBox" Style="{StaticResource ModernDarkTextBox}" Width="190" KeyDown="ProfileName_KeyDown" AutomationProperties.Name="Game name"/>
+                <Button Style="{StaticResource ActionButton}" Content="Add" Click="AddProfile_Click" Margin="8,0,0,0"/>
+                <Button Style="{StaticResource ActionButton}" Content="Use current game" Click="AddCurrentGameProfile_Click" Margin="8,0,0,0"/>
+            </StackPanel>
+        </s:SettingRow>
+        <StackPanel x:Name="ProfilesPanel" Margin="0,6,0,0"/>
+    </StackPanel>
+</UserControl>

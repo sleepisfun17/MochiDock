@@ -1,0 +1,13 @@
+<s:SettingsSectionBase x:Class="MochiDock.Views.Settings.Sections.AiUsageSectionView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:s="clr-namespace:MochiDock.Views.Settings">
+    <StackPanel>
+        <s:SettingRow Label="Usage alerts" Description="Notify when an AI tool is close to its usage limit.">
+            <CheckBox IsChecked="{Binding AiUsageAlertsEnabled, Mode=TwoWay}" Style="{StaticResource ModernDarkCheckBox}"/>
+        </s:SettingRow>
+        <s:SettingRow Label="Tracked providers" Description="Choose which AI tools appear in the AI usage tab.">
+            <StackPanel x:Name="ProviderPanel"/>
+        </s:SettingRow>
+    </StackPanel>
+</s:SettingsSectionBase>

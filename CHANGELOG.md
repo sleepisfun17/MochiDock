@@ -1,0 +1,56 @@
+# Changelog
+
+All notable changes to MochiDock are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
+
+## [0.1.0-beta]
+
+First public release.
+
+### Added
+
+- **Dock and capsule**: a dynamic-island overlay that stays compact and expands on hover, with PerMonitorV2 multi-monitor and high-DPI support, Default and Matcha themes, tray controls, an Advanced Settings window, an interface size setting and Mochi, an expressive mascot.
+- **Media and lyrics**: Windows media session (GSMTC) controls, a seekable timeline, audio-device switch, synced lyrics from LRCLIB with an adjustable offset, and romanized readings for Japanese, Korean and Chinese. Original-script lyrics are preferred over romaji copies, and a line too long for the capsule scrolls once, timed to finish before the next line.
+- **Notifications**: WhatsApp through a local or shared GOWA engine (several accounts, replies, chat muting), Email from Outlook Classic and Mailspring (spam filtering, verification-code copy that ignores links and IDs), and Discord toast notifications.
+- **Stats and gaming**: CPU, GPU, memory, drives, network and top processes; a gaming mode with a bottom-edge click-through readout (FPS, 1% and 0.1% lows, frame-time chart, ping statistics), per-game profiles and session summaries.
+- **Window-size shortcuts**: resize the window you are using to a set size and centre it (Ctrl+Alt+1-4 for 1920x1080, 2560x1440, 1080x1920 and 720x1280, Ctrl+Alt+F to swap width and height), editable in Settings > Gaming & Display. Off until turned on.
+- **Mochi's card faces**: Mochi reacts to what you are looking at, and spins round in 3D (three fast turns in about 0.6 s, in an anime-style whirlwind of glowing brush strokes, in the theme's colours) whenever his face changes: Electric on the Stats Battery page (circling lightning), Money on FX Rates (coin eyes, sad when the rate fell), the current sky on Weather (sunny, rainy, snowy or cloudy) and Studying while a Pomodoro runs. Warnings, notifications, games and sleep still come first; the user guide lists every face and its trigger.
+- **Date format**: Settings > Appearance & Dock chooses how dates are written in the header, the Today calendar, tasks, prayer times and power sessions: Automatic (the Windows region, the default), year first (`2026/11/19 木`), day first, month first or ISO.
+- **Capsule clock and weather**: the resting capsule measures itself so the clock is never clipped; Settings > Appearance & Dock chooses "At the edges" (clock centred) or "Even spacing".
+- **Prayer**: location-aware prayer times with a timeline, qibla bearing, a ten-minute pre-notification and a Tone or Silent chime. Off until turned on in Settings > Location & Prayer.
+- **Weather**: current conditions, hourly and three-day forecast for a configured city.
+- **Today and calendar**: month calendar, events from a Google Calendar iCal link, tasks with quick add, event and task reminders, and optional Japan and Indonesia holidays.
+- **FX**: USD/JPY, USD/IDR and JPY/IDR rates with a trajectory chart, using keyless providers.
+- **AI usage**: remaining usage for Claude, Codex, Antigravity, Cursor, Gemini and GitHub Copilot, with a low-usage alert. Plans and windows that a provider does not report are left blank instead of guessed.
+- **Wireless device batteries**: mouse, keyboard and headset battery levels in the Stats Battery page and an optional taskbar readout.
+- **Power chip**: on a desktop the Stats header's Power chip shows the PC's total power with a sparkline. It is sampled continuously with the other readings, so the chip and the Battery page's power history keep running while other tabs are open.
+- **Also**: Pomodoro, File Shelf with approved phone drop, Clipboard history, Script teleprompter, Downloads (yt-dlp and ffmpeg) and a missed-while-away Summary.
+- **Installer**: a self-contained Inno Setup installer (`scripts\build_installer.bat`) with optional Desktop shortcut and logon task.
+
+### Changed
+
+- **Email for everyone**: add Gmail, Yahoo, iCloud, Fastmail or any IMAP account in Settings > Email with an app password (checked once, then stored encrypted; read-only unless "Mark as read on the server" is turned on). Outlook Classic and Mailspring keep working.
+- **Opt-in WhatsApp**: the GOWA engine no longer starts by default; turn on "Enable WhatsApp" in Settings > WhatsApp. Existing installs that already linked a device or use a remote server keep it on.
+- **Compact defaults**: new installs show Media, Stats and Weather; prayer times, holidays, window-size shortcuts and the other tabs are switched on in Settings.
+- The installer's "Launch MochiDock" option now elevates correctly.
+- **Optional PawnIO driver**: Settings > Hardware & power > CPU sensors shows whether it is installed and links to it; the setup has an unchecked task that installs it through winget (never bundled, never required).
+- **Power total without a driver**: the Battery page's PC power estimate now reads CPU power from Windows' Energy Meter counters when the PawnIO driver is not installed, instead of showing "-".
+- **Updates**: MochiDock looks for a newer GitHub release at startup and every 12 hours (can be turned off). **Update now** (Settings > Data & diagnostics, or the tray) downloads the release's setup, checks it against GitHub's SHA-256 checksum, installs it silently and restarts MochiDock; nothing happens without your click, and a copy not installed with the setup links to the release page instead.
+
+### Fixed
+
+- Network and disk rates of 1 MB/s and more were shown wrong (5 MB/s read "51 MB/s").
+- Keyboard focus rings were cut off in Settings and did not fit checkboxes, toggles and radio buttons.
+- After a theme switch, the AI usage, Prayer, FX, Today and Battery views kept the previous theme's colours until their data refreshed; they now redraw right away.
+- The AI usage card is only as tall as its list of tools.
+- Settings safety: running the developer tests could overwrite the settings file with defaults. The tests now use a scratch folder, WhatsApp setup never saves settings on its own, and MochiDock keeps a daily copy of the last three days' settings (`settings.backup-yyyyMMdd.json`).
+
+### Known limitations
+
+- This is a beta. Many features are implemented and unit-tested but have not been verified in a running app on real hardware or services.
+- Administrator rights are required (the app manifest asks for them) because FPS capture uses ETW.
+- The installer and binaries are unsigned, so Windows SmartScreen warns on first run. The installer has not been tested on a clean machine.
+- The Discord toast listener is unverified for unpackaged installs; Windows may deny notification access.
+- Mailspring "mark as read" is a no-op, because its database is opened read only.
+- Phone drop and the shared GOWA server use plain HTTP on the local network, which is not encrypted.
+- The CPU temperature is an estimate unless the optional PawnIO driver is installed.
+- The one-click update has not yet been run against a real newer release: the download and checksum checks are tested, the silent install and restart are not.

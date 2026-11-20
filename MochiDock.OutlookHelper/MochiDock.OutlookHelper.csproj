@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <!-- No manifest on purpose: the default asInvoker level keeps this process at the user's normal (non-elevated) privileges. -->
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>MochiDock.OutlookHelper</AssemblyName>
+    <RootNamespace>MochiDock.OutlookHelper</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\MochiDock.Core\MochiDock.Core.csproj" />
+  </ItemGroup>
+</Project>

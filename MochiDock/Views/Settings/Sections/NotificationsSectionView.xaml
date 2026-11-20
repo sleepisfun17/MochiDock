@@ -1,0 +1,105 @@
+<UserControl x:Class="MochiDock.Views.Settings.Sections.NotificationsSectionView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:s="clr-namespace:MochiDock.Views.Settings"
+             xmlns:controls="clr-namespace:MochiDock.Controls">
+    <StackPanel>
+        <TextBlock Style="{StaticResource SettingsGroupHeader}" Text="Do not disturb" Margin="0,0,0,2"/>
+        <s:SettingRow Label="Quiet hours" Description="Silence notifications every day between the start and end time. A window that crosses midnight is fine; equal times mean no quiet period.">
+            <CheckBox x:Name="QuietHoursCheck" Style="{StaticResource ModernDarkCheckBox}" Checked="Option_Changed" Unchecked="Option_Changed"/>
+        </s:SettingRow>
+        <s:SettingRow x:Name="QuietStartRow" Label="Quiet hours start" Description="24-hour time, for example 22:00.">
+            <TextBox x:Name="QuietStartBox" Style="{StaticResource ModernDarkTextBox}" Width="80" LostFocus="Quiet_LostFocus" KeyDown="Quiet_KeyDown"/>
+        </s:SettingRow>
+        <s:SettingRow x:Name="QuietEndRow" Label="Quiet hours end" Description="24-hour time, for example 07:00.">
+            <TextBox x:Name="QuietEndBox" Style="{StaticResource ModernDarkTextBox}" Width="80" LostFocus="Quiet_LostFocus" KeyDown="Quiet_KeyDown"/>
+        </s:SettingRow>
+        <s:SettingRow Label="Snooze" Description="Pause every notification for a while.">
+            <StackPanel>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                    <Button Style="{StaticResource ActionButton}" Content="1 hour" Click="Snooze1_Click" Margin="0"/>
+                    <Button Style="{StaticResource ActionButton}" Content="8 hours" Click="Snooze8_Click" Margin="8,0,0,0"/>
+                    <Button x:Name="ClearSnoozeBtn" Style="{StaticResource ActionButton}" Content="Resume" Click="ClearSnooze_Click" Margin="8,0,0,0"/>
+                </StackPanel>
+                <TextBlock x:Name="SnoozeStatusText" Style="{StaticResource CardCaptionText}" HorizontalAlignment="Right" Margin="0,6,0,0"/>
+            </StackPanel>
+        </s:SettingRow>
+        <s:SettingRow Label="Do not disturb while gaming" Description="Hold notifications while a game is running.">
+            <CheckBox x:Name="GamingDndCheck" Style="{StaticResource ModernDarkCheckBox}" Checked="Option_Changed" Unchecked="Option_Changed"/>
+        </s:SettingRow>
+        <s:SettingRow x:Name="AllowAddRow" Label="Let through while gaming" Description="Chats and people whose messages still show in the gaming capsule (with a sound, never expanding the dock) while Do not disturb while gaming is on. Everything else waits for the summary. Add the sender of the latest notification, or type a Discord name and press Add Discord sender (Enter works too).">
+            <StackPanel>
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                    <Button Style="{StaticResource ActionButton}" Content="Add last WhatsApp chat" Click="AllowWhatsApp_Click" Margin="0"/>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal">
+                    <TextBox x:Name="AllowDiscordBox" Style="{StaticResource ModernDarkTextBox}" Width="200" KeyDown="AllowDiscord_KeyDown" AutomationProperties.Name="Discord sender" controls:TextBoxHint.Text="Discord name"/>
+                    <Button Style="{StaticResource ActionButton}" Content="Add Discord sender" Click="AllowDiscord_Click" Margin="8,0,0,0"/>
+                </StackPanel>
+            </StackPanel>
+        </s:SettingRow>
+        <ItemsControl x:Name="AllowList" Margin="0,2,0,0">
+            <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                    <Grid Margin="0,0,0,4">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="{Binding Kind}" Style="{StaticResource CardCaptionText}" Foreground="{DynamicResource IslandMutedInkBrush}" Width="70" VerticalAlignment="Center"/>
+                        <TextBlock Grid.Column="1" Text="{Binding Label}" Style="{StaticResource CardBodyText}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" ToolTip="{Binding Key}"/>
+                        <Button Grid.Column="2" Style="{StaticResource ActionButton}" Content="Remove" Tag="{Binding}" Click="RemoveAllow_Click" Margin="8,0,0,0" Padding="8,3"/>
+                    </Grid>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+        <TextBlock Style="{StaticResource SettingsGroupHeader}" Text="Pop-ups" Margin="0,18,0,2"/>
+        <s:SettingRow Label="Minimal capsule notice" Description="Show a small notice in the capsule and expand only when you hover. Turn off to expand the dock on arrival.">
+            <CheckBox x:Name="MinimalNoticeCheck" Style="{StaticResource ModernDarkCheckBox}" Checked="Option_Changed" Unchecked="Option_Changed"/>
+        </s:SettingRow>
+        <s:SettingRow Label="Charger and low-battery pop-ups" Description="Show a notice when the charger is plugged in or the battery is low.">
+            <CheckBox IsChecked="{Binding EnablePowerAlerts, Mode=TwoWay}" Style="{StaticResource ModernDarkCheckBox}"/>
+        </s:SettingRow>
+        <s:SettingRow Label="Overnight greeting" Description="Summarise what arrived while the PC was locked when you come back.">
+            <CheckBox x:Name="OvernightGreetingCheck" Style="{StaticResource ModernDarkCheckBox}" Checked="Option_Changed" Unchecked="Option_Changed"/>
+        </s:SettingRow>
+        <TextBlock Style="{StaticResource SettingsGroupHeader}" Text="Reminders" Margin="0,18,0,2"/>
+        <s:SettingRow Label="Event and task reminders" Description="Show a notice with a sound shortly before a calendar event or a task with a due time starts. One switch for both. Snooze, quiet hours, games and a locked PC hold it back.">
+            <CheckBox x:Name="RemindersCheck" Style="{StaticResource ModernDarkCheckBox}" Checked="Reminders_Changed" Unchecked="Reminders_Changed"/>
+        </s:SettingRow>
+        <s:SettingRow Label="Remind me" Description="How long before the start the reminder appears.">
+            <ComboBox x:Name="LeadCombo" Style="{StaticResource ModernDarkComboBox}" Width="170" SelectionChanged="Lead_SelectionChanged">
+                <ComboBoxItem Content="At the start" Tag="0"/>
+                <ComboBoxItem Content="5 minutes before" Tag="5"/>
+                <ComboBoxItem Content="10 minutes before" Tag="10"/>
+                <ComboBoxItem Content="15 minutes before" Tag="15"/>
+                <ComboBoxItem Content="30 minutes before" Tag="30"/>
+            </ComboBox>
+        </s:SettingRow>
+        <s:SettingRow x:Name="OverdueRow" Label="Remind about overdue tasks" Description="A task with a due time is reminded again when it is due and 10 and 30 minutes later while it stays open. Click the reminder, or tick or delete the task, to stop them. A calendar event is reminded before it starts and once at its start.">
+            <CheckBox x:Name="OverdueCheck" Style="{StaticResource ModernDarkCheckBox}" Checked="Overdue_Changed" Unchecked="Overdue_Changed"/>
+        </s:SettingRow>
+        <s:SettingRow Label="When the dock is hidden" Description="A fullscreen app (a video, a game) hides the dock, so a reminder could not be seen. Play the sound and/or show a Windows notification once. Windows may hide notifications over a fullscreen app (Focus assist), so the sound is the reliable part.">
+            <ComboBox x:Name="HiddenFallbackCombo" Style="{StaticResource ModernDarkComboBox}" Width="200" SelectionChanged="HiddenFallback_SelectionChanged">
+                <ComboBoxItem Content="Sound and notification" Tag="SoundAndNotification"/>
+                <ComboBoxItem Content="Sound only" Tag="Sound"/>
+                <ComboBoxItem Content="Nothing" Tag="Off"/>
+            </ComboBox>
+        </s:SettingRow>
+        <TextBlock Style="{StaticResource SettingsGroupHeader}" Text="Sounds" Margin="0,18,0,2"/>
+        <s:SettingRow Label="Notification sounds" Description="Play a sound with notifications.">
+            <CheckBox IsChecked="{Binding EnableSounds, Mode=TwoWay}" Style="{StaticResource ModernDarkCheckBox}"/>
+        </s:SettingRow>
+        <TextBlock Style="{StaticResource SettingsGroupHeader}" Text="Mutes" Margin="0,18,0,2"/>
+        <s:SettingRow Label="Mute email" Description="No pop-ups for new email.">
+            <CheckBox x:Name="MuteEmailCheck" Style="{StaticResource ModernDarkCheckBox}" Checked="Option_Changed" Unchecked="Option_Changed"/>
+        </s:SettingRow>
+        <s:SettingRow Label="Mute Discord" Description="No pop-ups for Discord notifications.">
+            <CheckBox x:Name="MuteDiscordCheck" Style="{StaticResource ModernDarkCheckBox}" Checked="Option_Changed" Unchecked="Option_Changed"/>
+        </s:SettingRow>
+        <s:SettingRow Label="Mute WhatsApp" Description="No pop-ups for WhatsApp messages.">
+            <CheckBox x:Name="MuteWhatsAppCheck" Style="{StaticResource ModernDarkCheckBox}" Checked="Option_Changed" Unchecked="Option_Changed"/>
+        </s:SettingRow>
+    </StackPanel>
+</UserControl>

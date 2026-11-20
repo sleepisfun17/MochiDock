@@ -1,0 +1,74 @@
+<UserControl x:Class="MochiDock.Views.Cards.PomodoroCardView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:controls="clr-namespace:MochiDock.Controls"
+             mc:Ignorable="d"
+             FontFamily="{DynamicResource IslandUiFont}">
+    <Grid VerticalAlignment="Center">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="Auto" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+
+        <!-- Circular time ring (left) -->
+        <Border Grid.Column="0" Width="100" Height="100" Margin="0,0,16,0" VerticalAlignment="Center">
+            <Grid>
+                <!-- Animated Circular Progress Ring -->
+                <controls:CircularProgressRing Width="96" Height="96"
+                                              Progress="{Binding PomodoroProgress}"
+                                              StrokeThickness="5"
+                                              TrackBrush="{DynamicResource IslandGaugeTrackBrush}"
+                                              ProgressBrush="{DynamicResource IslandRedBrush}"
+                                              HorizontalAlignment="Center" VerticalAlignment="Center" />
+
+                <!-- Center Content: Countdown + State -->
+                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                    <TextBlock Text="{Binding PomodoroTimeDisplay}" Foreground="{DynamicResource IslandInkBrush}" FontSize="26" FontWeight="{DynamicResource IslandHeadingWeight}" HorizontalAlignment="Center" />
+                    <TextBlock Text="{Binding PomodoroStateText}" Foreground="{DynamicResource IslandRedBrush}" FontSize="11" FontWeight="{DynamicResource IslandSmallLabelWeight}" HorizontalAlignment="Center" Margin="0,2,0,0" />
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- Main Timer Controls & Presets (Right) -->
+        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+            <Grid Margin="0,0,0,8">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="0">
+                    <TextBlock Text="Focus Session" Style="{StaticResource CardHeadingText}" />
+                    <TextBlock Text="{Binding PomodoroModeLabel}" Style="{StaticResource CardCaptionText}" Foreground="{DynamicResource IslandMutedInkBrush}" Margin="0,2,0,0" />
+                </StackPanel>
+
+                <!-- Quick Reset / Stop Button -->
+                <Button Grid.Column="1" Style="{StaticResource IslandIconButton}" Click="Reset_Click" ToolTip="Reset Timer" VerticalAlignment="Center">
+                    <TextBlock Text="✕" FontSize="11" Foreground="{DynamicResource IslandMutedInkBrush}" FontWeight="{DynamicResource IslandSmallLabelWeight}" />
+                </Button>
+            </Grid>
+
+            <!-- Action Controls & Presets -->
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                <!-- Play / Pause Button -->
+                <Button Style="{StaticResource IslandPrimaryButtonStyle}" Click="TogglePlay_Click" ToolTip="Start / Pause Timer" Margin="0">
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <TextBlock Text="{Binding PomodoroPlayPauseIcon}" FontSize="11" Margin="0,0,4,0" VerticalAlignment="Center" />
+                        <TextBlock Text="{Binding PomodoroPlayPauseLabel}" FontSize="11" FontWeight="{DynamicResource IslandSmallLabelWeight}" VerticalAlignment="Center" />
+                    </StackPanel>
+                </Button>
+
+                <!-- 25m Focus Preset -->
+                <Button Style="{StaticResource IslandChipButtonStyle}" Content="25m Focus" Click="Preset25_Click"  Margin="8,0,0,0"/>
+
+                <!-- 50m Deep Work Preset -->
+                <Button Style="{StaticResource IslandChipButtonStyle}" Content="50m Work" Click="Preset50_Click"  Margin="8,0,0,0"/>
+
+                <!-- 5m Break Preset -->
+                <Button Style="{StaticResource IslandChipButtonStyle}" Content="5m Break" Click="Preset5_Click" Foreground="{DynamicResource IslandGreenBrush}" Margin="8,0,0,0" />
+            </StackPanel>
+        </StackPanel>
+    </Grid>
+</UserControl>

@@ -1,0 +1,144 @@
+<UserControl x:Class="MochiDock.Views.Cards.SettingsCardView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:settings="clr-namespace:MochiDock.Views.Settings"
+             xmlns:controls="clr-namespace:MochiDock.Controls"
+             mc:Ignorable="d"
+             FontFamily="{DynamicResource IslandUiFont}">
+    <Grid VerticalAlignment="Stretch">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!-- Main Scrollable Settings Body -->
+        <ScrollViewer Grid.Row="0" Style="{StaticResource ModernCardScrollViewer}" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+            <!-- 3-DIP inset so the keyboard focus ring (drawn 2 DIPs outside each control) is not clipped by the scroll viewport. -->
+            <StackPanel VerticalAlignment="Top" Margin="3,3,5,3">
+                <!-- Top Header & Live Integration Status -->
+                <Grid Margin="0,0,0,8">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0">
+                        <TextBlock Text="MochiDock Preferences" Style="{StaticResource CardHeadingText}" />
+                        <TextBlock Text="{Binding IntegrationStatus}" Style="{StaticResource CardCaptionText}" Foreground="{DynamicResource IslandMutedInkBrush}" Margin="0,2,0,0" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                        <Button Style="{StaticResource IslandSecondaryButtonStyle}" Content="↻ Reconnect" Click="RetryIntegrations_Click" ToolTip="Test &amp; Reconnect WhatsApp / Outlook" />
+                    </StackPanel>
+                </Grid>
+
+                <!-- Quick settings. Everything else lives in the Advanced Settings window (Open all settings). -->
+                <Border Background="{DynamicResource IslandSubCardBackgroundBrush}" CornerRadius="10" Padding="10,8" Margin="0,0,0,8" BorderBrush="{DynamicResource IslandSubCardBorderBrush}" BorderThickness="1">
+                    <StackPanel>
+                        <TextBlock Text="Appearance" Style="{StaticResource CardSectionLabel}" Margin="0,0,0,6" />
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="78"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            <TextBlock Grid.Row="0" Text="Theme" Style="{StaticResource CardBodyText}" VerticalAlignment="Center" Margin="0,0,0,6"/>
+                            <WrapPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,0,6">
+                                <RadioButton x:Name="ThemeClassicRadio" Style="{StaticResource ModernDarkRadioButton}" Content="Default" GroupName="CapsuleThemeGroup" Margin="0,0,14,0" Checked="ThemeRadio_Checked" />
+                                <RadioButton x:Name="ThemeMatchaRadio" Style="{StaticResource ModernDarkRadioButton}" Content="Matcha" GroupName="CapsuleThemeGroup" Margin="0,0,14,0" Checked="ThemeRadio_Checked" />
+                            </WrapPanel>
+                            <TextBlock Grid.Row="1" Text="Dock style" Style="{StaticResource CardBodyText}" VerticalAlignment="Center" Margin="0,0,0,6" ToolTip="Floating is a pill below the top edge; Notch attaches to the top edge of the screen."/>
+                            <WrapPanel Grid.Row="1" Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,0,6">
+                                <RadioButton x:Name="DockFloatingRadio" Style="{StaticResource ModernDarkRadioButton}" Content="Floating" GroupName="QuickDockStyleGroup" Margin="0,0,14,0" Checked="DockStyle_Checked" />
+                                <RadioButton x:Name="DockNotchRadio" Style="{StaticResource ModernDarkRadioButton}" Content="Notch" GroupName="QuickDockStyleGroup" Margin="0,0,14,0" Checked="DockStyle_Checked" />
+                            </WrapPanel>
+                            <TextBlock Grid.Row="2" Text="Display" Style="{StaticResource CardBodyText}" VerticalAlignment="Top" Margin="0,5,0,0" ToolTip="Which display the dock appears on."/>
+                            <controls:MonitorPicker Grid.Row="2" Grid.Column="1"/>
+                            <TextBlock Grid.Row="3" Text="Size" Style="{StaticResource CardBodyText}" VerticalAlignment="Center" Margin="0,2,0,0" ToolTip="Interface size: makes MochiDock bigger or smaller (80% to 200%)."/>
+                            <StackPanel Grid.Row="3" Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,2,0,0">
+                                <Button Style="{StaticResource IslandSecondaryButtonStyle}" Content="&#x2212;" Width="28" Padding="0,3" Click="ScaleDown_Click" ToolTip="Smaller" AutomationProperties.Name="Smaller interface"/>
+                                <TextBlock x:Name="QuickScaleText" Style="{StaticResource CardBodyText}" MinWidth="64" TextAlignment="Center" VerticalAlignment="Center" Margin="8,0,0,0"/>
+                                <Button Style="{StaticResource IslandSecondaryButtonStyle}" Content="+" Width="28" Padding="0,3" Margin="8,0,0,0" Click="ScaleUp_Click" ToolTip="Bigger" AutomationProperties.Name="Bigger interface"/>
+                            </StackPanel>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <Border Background="{DynamicResource IslandSubCardBackgroundBrush}" CornerRadius="10" Padding="10,8" Margin="0,0,0,8" BorderBrush="{DynamicResource IslandSubCardBorderBrush}" BorderThickness="1">
+                    <StackPanel>
+                        <TextBlock Text="Tabs" Style="{StaticResource CardSectionLabel}" Margin="0,0,0,4" />
+                        <settings:TabToggleList />
+                    </StackPanel>
+                </Border>
+
+                <Border Background="{DynamicResource IslandSubCardBackgroundBrush}" CornerRadius="10" Padding="10,8" Margin="0,0,0,8" BorderBrush="{DynamicResource IslandSubCardBorderBrush}" BorderThickness="1">
+                    <StackPanel>
+                        <Grid Margin="0,0,0,6">
+                            <TextBlock Text="Notifications &amp; Snooze" Style="{StaticResource CardSectionLabel}" VerticalAlignment="Center" />
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                <Button Style="{StaticResource ActionButton}" Content="Snooze 1h" Click="Snooze_Click"  Margin="0"/>
+                                <Button Style="{StaticResource ActionButton}" Content="Snooze 8h" Click="SnoozeLong_Click" Margin="8,0,0,0" />
+                                <Button x:Name="ClearSnoozeBtn" Style="{StaticResource IslandSecondaryButtonStyle}" Content="✕ Clear" Click="ClearSnooze_Click" Foreground="{DynamicResource IslandNegativeBrush}" Margin="8,0,0,0" Visibility="Collapsed" />
+                            </StackPanel>
+                        </Grid>
+
+                        <!-- Live Active Snooze Banner -->
+                        <Border x:Name="SnoozeActiveBanner" Background="{DynamicResource IslandHighlightSubtleBrush}" CornerRadius="6" Padding="8,6" Margin="0,0,0,6" Visibility="Collapsed">
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <Image Source="{StaticResource IconBell}" Stretch="Uniform" RenderOptions.BitmapScalingMode="HighQuality" Width="12" Height="12" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                                <TextBlock Text="Notifications snoozed until:" Foreground="{DynamicResource IslandHighlightBrush}" FontSize="11" FontWeight="{DynamicResource IslandSmallLabelWeight}" VerticalAlignment="Center" />
+                                <TextBlock x:Name="SnoozeTimeText" Text="14:30" Foreground="{DynamicResource IslandInkBrush}" FontSize="11" FontWeight="{DynamicResource IslandSmallLabelWeight}" Margin="6,0,0,0" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Border>
+
+                        <WrapPanel Margin="0,2,0,0">
+                            <CheckBox x:Name="MuteEmailCheck" Style="{StaticResource ModernDarkCheckBox}" Content="Mute Email" Checked="NotificationSetting_Changed" Unchecked="NotificationSetting_Changed" Margin="0,2,14,2" />
+                            <CheckBox x:Name="MuteDiscordCheck" Style="{StaticResource ModernDarkCheckBox}" Content="Mute Discord" Checked="NotificationSetting_Changed" Unchecked="NotificationSetting_Changed" Margin="0,2,14,2" />
+                            <CheckBox x:Name="MuteWhatsAppCheck" Style="{StaticResource ModernDarkCheckBox}" Content="Mute WhatsApp" Checked="NotificationSetting_Changed" Unchecked="NotificationSetting_Changed" Margin="0,2,14,2" />
+                        </WrapPanel>
+                    </StackPanel>
+                </Border>
+
+                <!-- One-tap switches; each is also in the Advanced Settings window (General / Notifications). -->
+                <Border Background="{DynamicResource IslandSubCardBackgroundBrush}" CornerRadius="10" Padding="10,8" Margin="0,0,0,8" BorderBrush="{DynamicResource IslandSubCardBorderBrush}" BorderThickness="1">
+                    <StackPanel>
+                        <TextBlock Text="Quick switches" Style="{StaticResource CardSectionLabel}" Margin="0,0,0,4" />
+                        <WrapPanel>
+                            <CheckBox Style="{StaticResource ModernDarkCheckBox}" Width="196" Margin="0,3,8,3" Content="Notification sounds" IsChecked="{Binding EnableSounds, Mode=TwoWay}" ToolTip="Play a sound with notifications." />
+                            <CheckBox x:Name="GamingDndCheck" Style="{StaticResource ModernDarkCheckBox}" Width="196" Margin="0,3,8,3" Content="Quiet while gaming" Checked="QuickSetting_Changed" Unchecked="QuickSetting_Changed" ToolTip="Hold notifications while a game is running." />
+                            <CheckBox x:Name="RemindersCheck" Style="{StaticResource ModernDarkCheckBox}" Width="196" Margin="0,3,8,3" Content="Event and task reminders" Checked="QuickSetting_Changed" Unchecked="QuickSetting_Changed" ToolTip="Show a notice shortly before a calendar event or timed task." />
+                            <CheckBox Style="{StaticResource ModernDarkCheckBox}" Width="196" Margin="0,3,8,3" Content="Hide in fullscreen apps" IsChecked="{Binding HideInFullscreen, Mode=TwoWay}" ToolTip="Hide the dock while a fullscreen app or game is in front." />
+                            <CheckBox Style="{StaticResource ModernDarkCheckBox}" Width="196" Margin="0,3,8,3" Content="Hide from screen capture" IsChecked="{Binding ExcludeFromScreenCapture, Mode=TwoWay}" ToolTip="Keep the dock out of screenshots, recordings and screen sharing." />
+                        </WrapPanel>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- Row 1: Fixed Bottom Action Bar with Visual Feedback -->
+        <Border Grid.Row="1" Background="{DynamicResource IslandGroundBrush}" BorderBrush="{DynamicResource IslandBorderBrush}" BorderThickness="0,1,0,0" Padding="0,8,0,0" Margin="0,4,0,0">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <!-- Left: Subtle Auto-save indicator -->
+                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock Text="✓ All changes are saved automatically" Foreground="{DynamicResource IslandMutedInkBrush}" FontSize="11" VerticalAlignment="Center" />
+                </StackPanel>
+
+                <!-- Right: all settings, Back -->
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button Style="{StaticResource IslandPrimaryButtonStyle}" Content="Open all settings" Click="OpenAllSettings_Click" ToolTip="Open the full Settings window (export, import, logs and more)" Margin="0" />
+                    <Button Style="{StaticResource IslandSecondaryButtonStyle}" Content="Back to Media" Click="BackFromSettings_Click" Margin="8,0,0,0" />
+                </StackPanel>
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>

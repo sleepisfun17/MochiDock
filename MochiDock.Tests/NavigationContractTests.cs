@@ -1,0 +1,9 @@
+using System.Xml.Linq;
+public class NavigationContractTests {
+ static readonly XNamespace W="http://schemas.microsoft.com/winfx/2006/xaml/presentation";
+ static readonly XNamespace X="http://schemas.microsoft.com/winfx/2006/xaml";
+ static XElement Header()=>XDocument.Load(Path.Combine(AppContext.BaseDirectory,"Fixtures","MainWindow.xaml")).Descendants(W+"StackPanel").Single(e=>(string?)e.Attribute(X+"Name")=="HeaderTabsPanel");
+ [Fact]public void NavigationIsMediaThenNotificationsAndFxLast(){var names=Header().Elements(W+"Button").Select(b=>(string?)b.Attribute("Click")).ToArray();Assert.Equal(new[]{"TabMedia_Click","TabWhatsApp_Click","TabEmail_Click","TabDiscord_Click","TabHardware_Click","TabWeather_Click","TabPomodoro_Click","TabPrayer_Click","TabFileShelf_Click","TabClipboard_Click","TabToday_Click","TabAiUsage_Click","TabScript_Click","TabDownloads_Click","TabFxRates_Click"},names);}
+ [Fact]public void NotificationsRemainConditionalAndAllTabsShareIconLabelConcept(){foreach(var b in Header().Elements(W+"Button")){Assert.Equal("{StaticResource ActivityTabButton}",(string?)b.Attribute("Style"));Assert.Single(b.Descendants(W+"ContentControl"));var label=Assert.Single(b.Descendants(W+"TextBlock"));Assert.Contains("Active",label.Attribute(XName.Get("TabLabelMotion.Active","clr-namespace:MochiDock.Controls"))!.Value);if(b.Attribute("Click")!.Value is "TabWhatsApp_Click" or "TabEmail_Click" or "TabDiscord_Click")Assert.Contains("HasActive",b.Attribute("Visibility")!.Value);}}
+ [Fact]public void ManifestRequestsPerMonitorV2WithoutChangingElevation(){var doc=XDocument.Load(Path.Combine(AppContext.BaseDirectory,"Fixtures","app.manifest"));Assert.Contains(doc.Descendants(),e=>e.Name.LocalName=="dpiAwareness"&&e.Value=="PerMonitorV2");Assert.Contains(doc.Descendants(),e=>e.Name.LocalName=="requestedExecutionLevel"&&(string?)e.Attribute("level")=="requireAdministrator");}
+}

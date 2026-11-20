@@ -1,0 +1,43 @@
+<s:SettingsSectionBase x:Class="MochiDock.Views.Settings.Sections.LocationSectionView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:s="clr-namespace:MochiDock.Views.Settings">
+    <StackPanel>
+        <s:SettingRow Label="City" Description="Used for weather and prayer times. Include the country or district if the city is ambiguous, for example Serpong, Indonesia.">
+            <StackPanel>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                    <TextBox x:Name="CityBox" Style="{StaticResource ModernDarkTextBox}" Width="220" LostFocus="City_LostFocus" KeyDown="City_KeyDown"/>
+                    <Button x:Name="CheckCityBtn" Style="{StaticResource ActionButton}" Content="Check city" Click="CheckCity_Click" Margin="8,0,0,0"/>
+                </StackPanel>
+                <TextBlock x:Name="CityResultText" Style="{StaticResource CardCaptionText}" HorizontalAlignment="Right" TextWrapping="Wrap" MaxWidth="360" Margin="0,6,0,0"/>
+            </StackPanel>
+        </s:SettingRow>
+
+        <s:SettingRow Label="Prayer times" Description="Show the Prayer tab and schedule prayer reminders.">
+            <CheckBox IsChecked="{Binding EnablePrayerTimes, Mode=TwoWay}" Style="{StaticResource ModernDarkCheckBox}"/>
+        </s:SettingRow>
+        <s:SettingRow Label="Calculation method" Description="Which authority's rules are used to compute prayer times.">
+            <ComboBox x:Name="MethodCombo" Style="{StaticResource ModernDarkComboBox}" Width="260" SelectionChanged="Method_SelectionChanged">
+                <ComboBoxItem Content="MWL (Muslim World League)" Tag="MWL"/>
+                <ComboBoxItem Content="Kemenag (Indonesia)" Tag="Kemenag"/>
+                <ComboBoxItem Content="ISNA (North America)" Tag="ISNA"/>
+                <ComboBoxItem Content="Umm Al-Qura (Makkah)" Tag="UmmAlQura"/>
+                <ComboBoxItem Content="Egyptian General Authority" Tag="Egypt"/>
+                <ComboBoxItem Content="Karachi (Pakistan)" Tag="Karachi"/>
+            </ComboBox>
+        </s:SettingRow>
+        <s:SettingRow Label="Prayer sound" Description="What plays when a prayer time arrives.">
+            <ComboBox x:Name="SoundCombo" Style="{StaticResource ModernDarkComboBox}" Width="160" SelectionChanged="Sound_SelectionChanged">
+                <ComboBoxItem Content="Silent" Tag="Silent"/>
+                <ComboBoxItem Content="Tone" Tag="Tone"/>
+                <ComboBoxItem Content="Adzan" Tag="Adzan"/>
+            </ComboBox>
+        </s:SettingRow>
+        <s:SettingRow Label="Pre-prayer reminder" Description="Show a notice shortly before each prayer.">
+            <CheckBox IsChecked="{Binding EnablePrayerPreNotification, Mode=TwoWay}" Style="{StaticResource ModernDarkCheckBox}"/>
+        </s:SettingRow>
+        <s:SettingRow Label="Prayer in the capsule" Description="Show the next prayer in the collapsed capsule.">
+            <CheckBox x:Name="PrayerCapsuleCheck" Style="{StaticResource ModernDarkCheckBox}" Checked="PrayerCapsule_Changed" Unchecked="PrayerCapsule_Changed"/>
+        </s:SettingRow>
+    </StackPanel>
+</s:SettingsSectionBase>

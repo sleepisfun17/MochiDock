@@ -1,0 +1,24 @@
+<UserControl x:Class="MochiDock.Views.Settings.Sections.MusicSectionView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:s="clr-namespace:MochiDock.Views.Settings">
+    <StackPanel>
+        <s:SettingRow Label="Synced lyrics" Description="Fetch time-synced lyrics for the playing track.">
+            <CheckBox IsChecked="{Binding EnableSyncedLyrics, Mode=TwoWay}" Style="{StaticResource ModernDarkCheckBox}"/>
+        </s:SettingRow>
+        <s:SettingRow Label="Lyrics pronunciation" Description="Show romanised pronunciation under the lyric line.">
+            <CheckBox IsChecked="{Binding ShowLyricsPronunciation, Mode=TwoWay}" Style="{StaticResource ModernDarkCheckBox}"/>
+        </s:SettingRow>
+        <s:SettingRow Label="Furigana readings" Description="Show kana readings above kanji in Japanese lyrics.">
+            <CheckBox IsChecked="{Binding ShowLyricsFurigana, Mode=TwoWay}" Style="{StaticResource ModernDarkCheckBox}"/>
+        </s:SettingRow>
+        <s:SettingRow Label="Lyric timing" Description="Shift all lyric lines earlier or later if they drift from the audio (up to 5 seconds).">
+            <StackPanel Orientation="Horizontal">
+                <TextBlock Text="{Binding LyricsOffsetText}" Style="{StaticResource CardBodyText}" VerticalAlignment="Center" MinWidth="70" Margin="0,0,10,0" TextAlignment="Right"/>
+                <Button Style="{StaticResource ActionButton}" Content="Earlier +0.1s" Click="Earlier_Click" Margin="0"/>
+                <Button Style="{StaticResource ActionButton}" Content="Later −0.1s" Click="Later_Click" Margin="8,0,0,0"/>
+                <Button Style="{StaticResource ActionButton}" Content="Reset" Click="Reset_Click" Margin="8,0,0,0"/>
+            </StackPanel>
+        </s:SettingRow>
+    </StackPanel>
+</UserControl>

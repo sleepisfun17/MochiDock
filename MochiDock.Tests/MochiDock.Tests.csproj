@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="coverlet.collector" Version="6.0.4" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="8.0.0" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+    <Compile Include="..\MochiDock\Models\AppSettings.cs" Link="AppSettings.cs" />
+  </ItemGroup>
+
+<ItemGroup><ProjectReference Include="..\MochiDock.Core\MochiDock.Core.csproj" /><Compile Include="..\MochiDock\Services\AtomicJsonStore.cs" Link="AtomicJsonStore.cs" /></ItemGroup><ItemGroup><Compile Include="..\MochiDock\Services\PhoneDropServer.cs" Link="PhoneDropServer.cs" /></ItemGroup><ItemGroup>
+<Compile Include="..\MochiDock\Models\PrayerSchedule.cs" Link="PrayerSchedule.cs"/>
+<Compile Include="..\MochiDock\Services\PrayerTimesService.cs" Link="LegacyPrayerCalculator.cs"/>
+<Compile Include="..\MochiDock\Services\PrayerScheduleProvider.cs" Link="PrayerScheduleProvider.cs"/>
+</ItemGroup><ItemGroup><Compile Include="..\MochiDock\Services\LrclibService.cs" Link="LrclibService.cs"/><Compile Include="..\MochiDock\Services\RubyPiece.cs" Link="RubyPiece.cs"/></ItemGroup><ItemGroup><Compile Include="..\MochiDock\Services\FxRateProvider.cs" Link="FxRateProvider.cs"/><Compile Include="..\MochiDock\Services\FxCredentialStore.cs" Link="FxCredentialStore.cs"/><Compile Include="..\MochiDock\Services\FxRatesService.cs" Link="FxRatesService.cs"/></ItemGroup><ItemGroup><None Include="..\MochiDock\MainWindow.xaml" Link="Fixtures\MainWindow.xaml" CopyToOutputDirectory="PreserveNewest"/><None Include="..\MochiDock\app.manifest" Link="Fixtures\app.manifest" CopyToOutputDirectory="PreserveNewest"/></ItemGroup><ItemGroup><Compile Include="..\MochiDock\Services\KeylessFxProvider.cs" Link="KeylessFxProvider.cs"/><Compile Include="..\MochiDock\Services\CalendarFeedService.cs" Link="CalendarFeedService.cs"/><Compile Include="..\MochiDock\Services\AppUserAgent.cs" Link="AppUserAgent.cs"/></ItemGroup><ItemGroup><Compile Include="..\MochiDock\Services\AppDataPaths.cs" Link="AppDataPaths.cs" /><Compile Include="..\MochiDock\Services\AppLog.cs" Link="AppLog.cs" /><Compile Include="..\MochiDock\Services\EnergyMeterReader.cs" Link="EnergyMeterReader.cs" /><Compile Include="..\MochiDock\Services\UpdateInstaller.cs" Link="UpdateInstaller.cs" /><Compile Include="..\MochiDock\Services\UpdateCheckService.cs" Link="UpdateCheckService.cs" /><Compile Include="..\MochiDock\Services\IMailService.cs" Link="Services_IMailService.cs" /><Compile Include="..\MochiDock\Models\EmailNotification.cs" Link="Models_EmailNotification.cs" /><Compile Include="..\MochiDock\Services\ImapMailService.cs" Link="Services_ImapMailService.cs" /><Compile Include="..\MochiDock\Services\MailCredentialStore.cs" Link="Services_MailCredentialStore.cs" /><Compile Include="..\MochiDock\Helpers\CodeDetectionHelper.cs" Link="Helpers_CodeDetectionHelper.cs" /><Compile Include="..\MochiDock\Services\GowaService.cs" Link="GowaService.cs" /><Compile Include="..\MochiDock\Services\GowaCredentialStore.cs" Link="GowaCredentialStore.cs" /><Compile Include="..\MochiDock\Services\DpapiProtector.cs" Link="DpapiProtector.cs" /><Compile Include="..\MochiDock\Services\SettingsService.cs" Link="SettingsService.cs" /><Compile Include="..\MochiDock\Models\WhatsAppNotification.cs" Link="WhatsAppNotification.cs" /><Compile Include="..\MochiDock\Services\GameSessionStore.cs" Link="GameSessionStore.cs" /><Compile Include="..\MochiDock\Services\PowerSessionStore.cs" Link="PowerSessionStore.cs" /><Compile Include="..\MochiDock\Services\PowerLogService.cs" Link="PowerLogService.cs" /><Compile Include="..\MochiDock\Services\GamePlaytimeStore.cs" Link="GamePlaytimeStore.cs" /><Compile Include="..\MochiDock\Services\LolLiveClientService.cs" Link="LolLiveClientService.cs" /><Compile Include="..\MochiDock\Services\PubgStatsService.cs" Link="PubgStatsService.cs" /></ItemGroup>
+</Project>

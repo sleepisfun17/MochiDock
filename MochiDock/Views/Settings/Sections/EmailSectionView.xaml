@@ -1,0 +1,87 @@
+<UserControl x:Class="MochiDock.Views.Settings.Sections.EmailSectionView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:s="clr-namespace:MochiDock.Views.Settings">
+    <StackPanel>
+        <TextBlock Style="{StaticResource SettingsGroupHeader}" Text="Mail accounts (Gmail, Yahoo, iCloud and other IMAP)" Margin="0,0,0,2"/>
+        <TextBlock Style="{StaticResource SettingsRowDescription}" TextWrapping="Wrap" Margin="0,0,0,8"
+                   Text="MochiDock signs in with an app password (not your normal password) and only reads new mail: sender, subject and a short preview. Mail is never stored on disk. The app password is kept encrypted for your Windows user, and it can still open your whole mailbox, so create one just for MochiDock and revoke it in your account if you stop using it."/>
+        <ItemsControl x:Name="ImapList" MinWidth="320">
+            <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                    <Grid Margin="0,0,0,6">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="{Binding Address}" Style="{StaticResource CardBodyText}" TextTrimming="CharacterEllipsis" MaxWidth="320"/>
+                            <TextBlock Text="{Binding Status}" Style="{StaticResource CardCaptionText}" Opacity="0.8"/>
+                        </StackPanel>
+                        <Button Grid.Column="1" Style="{StaticResource ActionButton}" Content="Remove" Tag="{Binding Address}" Click="RemoveImap_Click" Margin="8,0,0,0" Padding="8,3"/>
+                    </Grid>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+        <TextBlock x:Name="NoImapText" Style="{StaticResource CardCaptionText}" Text="No mail account yet. Add one below to get new-mail notifications." Margin="0,0,0,6"/>
+        <s:SettingRow Label="Provider" Description="Pick your provider, or Other for any IMAP server.">
+            <ComboBox x:Name="ProviderCombo" Style="{StaticResource ModernDarkComboBox}" Width="200" SelectionChanged="Provider_Changed" AutomationProperties.Name="Mail provider"/>
+        </s:SettingRow>
+        <s:SettingRow x:Name="HostRow" Label="Server and port" Description="IMAP server name and TLS port (993).">
+            <StackPanel Orientation="Horizontal">
+                <TextBox x:Name="HostBox" Style="{StaticResource ModernDarkTextBox}" Width="200" AutomationProperties.Name="IMAP server"/>
+                <TextBox x:Name="PortBox" Style="{StaticResource ModernDarkTextBox}" Width="70" Margin="8,0,0,0" Text="993" AutomationProperties.Name="IMAP port"/>
+            </StackPanel>
+        </s:SettingRow>
+        <s:SettingRow Label="Email address" Description="The address to watch.">
+            <TextBox x:Name="AddressBox" Style="{StaticResource ModernDarkTextBox}" Width="260" AutomationProperties.Name="Email address"/>
+        </s:SettingRow>
+        <s:SettingRow Label="App password" Description="Gmail needs 2-step verification on, then an app password. It is checked once and then stored encrypted.">
+            <StackPanel Orientation="Horizontal">
+                <PasswordBox x:Name="ImapPasswordBox" Style="{StaticResource ModernDarkPasswordBox}" PasswordChar="•" Width="200" AutomationProperties.Name="App password"/>
+                <Button x:Name="HelpButton" Style="{StaticResource ActionButton}" Content="How to create one" Click="Help_Click" Margin="8,0,0,0"/>
+            </StackPanel>
+        </s:SettingRow>
+        <s:SettingRow Label="Mark as read on the server" Description="Off: MochiDock never changes your mailbox. On: dismissing a mail in MochiDock also marks it read.">
+            <CheckBox x:Name="MarkReadCheck" Style="{StaticResource ModernDarkCheckBox}"/>
+        </s:SettingRow>
+        <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+            <Button x:Name="AddImapButton" Style="{StaticResource ActionButton}" Content="Test and add account" Click="AddImap_Click" Margin="0"/>
+        </StackPanel>
+        <TextBlock x:Name="ImapMessageText" Style="{StaticResource CardCaptionText}" TextWrapping="Wrap" Margin="0,6,0,0"/>
+
+        <TextBlock Style="{StaticResource SettingsGroupHeader}" Text="Desktop mail apps and filtering" Margin="0,18,0,2"/>
+        <s:SettingRow Label="Filter advertisements" Description="Hide mail that looks like advertising from mail notifications.">
+            <CheckBox x:Name="FilterAdsCheck" Style="{StaticResource ModernDarkCheckBox}" Checked="FilterAds_Changed" Unchecked="FilterAds_Changed"/>
+        </s:SettingRow>
+
+        <s:SettingRow x:Name="OnlyListedRow" Label="Only watch the folders listed below" Description="Off: every Inbox and all its subfolders are watched, plus the folders below. On: only the folders below and their subfolders are watched, so other folders under the Inbox are ignored.">
+            <CheckBox x:Name="OnlyListedCheck" Style="{StaticResource ModernDarkCheckBox}" Checked="OnlyListed_Changed" Unchecked="OnlyListed_Changed"/>
+        </s:SettingRow>
+
+        <s:SettingRow x:Name="FoldersRow" Label="Watched Outlook folders" Description="Classic Outlook only. Folders listed here are watched with all their subfolders; the name must match the folder's name exactly.">
+            <ItemsControl x:Name="FolderList" MinWidth="260">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Grid Margin="0,0,0,4">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="{Binding}" Style="{StaticResource CardBodyText}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" MaxWidth="260" Margin="0,0,8,0" ToolTip="{Binding}"/>
+                            <Button Grid.Column="1" Style="{StaticResource ActionButton}" Content="Remove" Tag="{Binding}" Click="RemoveFolder_Click" Margin="0" Padding="8,3"/>
+                        </Grid>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </s:SettingRow>
+        <TextBlock x:Name="NoFoldersText" Style="{StaticResource CardCaptionText}" Text="No extra folders. Only Inboxes are watched." Margin="0,6,0,0"/>
+
+        <s:SettingRow x:Name="AddRow" Label="Add folder" Description="Folder name; separate several with commas.">
+            <StackPanel Orientation="Horizontal">
+                <TextBox x:Name="AddFolderBox" Style="{StaticResource ModernDarkTextBox}" Width="200" KeyDown="AddFolderBox_KeyDown"/>
+                <Button Style="{StaticResource ActionButton}" Content="Add" Click="AddFolder_Click" Margin="8,0,0,0"/>
+            </StackPanel>
+        </s:SettingRow>
+    </StackPanel>
+</UserControl>

@@ -1,0 +1,40 @@
+# Build and publish outputs
+bin/
+obj/
+Publish/
+Publish-Installer/
+tools/gowa-relay/publish/
+installer/Output/
+installer/redist/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Visual Studio / VS Code / Rider
+.vs/
+.vscode/
+.idea/
+
+# Application logs & user settings
+*.log
+settings.json
+crash.log
+startup_error.log
+gowa_service.log
+
+# Database files & session storage
+*.db
+*.db-shm
+*.db-wal
+**/storages/
+MochiDock.lnk
+MochiDock - Shortcut.lnk
+
+# Local reference source code
+Oyenza/
+oyenza/
+Oyenza-Studio
+
+# Local GOWA login storage
+gowa_storages/

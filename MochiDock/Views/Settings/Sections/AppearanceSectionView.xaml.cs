@@ -1,0 +1,161 @@
+using System;
+using System.Windows;
+using System.Windows.Controls;
+using MochiDock.Controls;
+using MochiDock.Core;
+using MochiDock.Services;
+using MochiDock.ViewModels;
+using KeyEventArgs = System.Windows.Input.KeyEventArgs;
+using UserControl = System.Windows.Controls.UserControl;
+
+namespace MochiDock.Views.Settings.Sections;
+
+/// <summary>Theme, dock style, monitor and capsule content. Writes go through <see cref="MainViewModel.UpdateSettings"/>; fullscreen and capture options bind to the view model.</summary>
+public partial class AppearanceSectionView : UserControl
+{
+    private bool _loading;
+    private MainViewModel? _subscribed;
+
+    public AppearanceSectionView()
+    {
+        InitializeComponent();
+        foreach (var preset in InterfaceScale.Presets)
+            ScaleCombo.Items.Add(new ComboBoxItem { Content = preset == InterfaceScale.Default ? $"{preset}% (default)" : $"{preset}%", Tag = preset });
+        Loaded += (s, e) => { Subscribe(); LoadFromSettings(); };
+        Unloaded += (s, e) => Unsubscribe();
+        IsVisibleChanged += (s, e) => { if (IsVisible) LoadFromSettings(); };
+    }
+
+    private MainViewModel? ViewModel => DataContext as MainViewModel;
+
+    private void Subscribe()
+    {
+        if (ReferenceEquals(_subscribed, ViewModel)) return;
+        Unsubscribe();
+        _subscribed = ViewModel;
+        if (_subscribed != null) _subscribed.SettingsChanged += OnSettingsChanged;
+    }
+
+    private void Unsubscribe()
+    {
+        if (_subscribed != null) _subscribed.SettingsChanged -= OnSettingsChanged;
+        _subscribed = null;
+    }
+
+    private void OnSettingsChanged(SettingsApply effects) => Dispatcher.BeginInvoke(LoadFromSettings);
+
+    private void LoadFromSettings()
+    {
+        var vm = ViewModel;
+        if (vm == null) return;
+        var settings = vm.Settings;
+        _loading = true;
+        try
+        {
+            bool matcha = string.Equals(settings.CapsuleTheme, "Matcha", StringComparison.OrdinalIgnoreCase);
+            ThemeMatchaRadio.IsChecked = matcha;
+            ThemeDefaultRadio.IsChecked = !matcha;
+            bool notch = string.Equals(settings.DockStyle, "Notch", StringComparison.OrdinalIgnoreCase);
+            DockNotchRadio.IsChecked = notch;
+            DockFloatingRadio.IsChecked = !notch;
+            int chosen = vm.InterfaceScalePercent;
+            ScaleCombo.SelectedItem = ScaleCombo.Items.OfType<ComboBoxItem>().FirstOrDefault(i => i.Tag is int p && p == chosen);
+            ScaleRow.Validation = vm.IsInterfaceScaleLimited ? $"Limited to {vm.EffectiveInterfaceScalePercent}% on this display." : "";
+            if (!TopMarginBox.IsKeyboardFocused) TopMarginBox.Text = settings.TopMargin.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
+            if (!ScrollSpeedSlider.IsMouseCaptureWithin) ScrollSpeedSlider.Value = settings.CapsuleScrollSpeed;
+            WeatherCheck.IsChecked = settings.ShowWeatherInCapsule;
+            bool even = MochiDock.Core.CapsuleClockLayout.Parse(settings.CapsuleClockLayout) == MochiDock.Core.CapsuleClockAlignment.EvenSpacing;
+            ClockEvenRadio.IsChecked = even;
+            ClockEdgesRadio.IsChecked = !even;
+            ExpressiveCheck.IsChecked = settings.ExpressiveMochi;
+            // Labels carry today's date as the example, so rebuild them each time the page is shown.
+            var chosenDate = DateDisplay.Parse(settings.DateFormat);
+            DateFormatCombo.Items.Clear();
+            foreach (var style in Enum.GetValues<DateStyle>())
+                DateFormatCombo.Items.Add(new ComboBoxItem { Content = DateDisplay.Label(style, DateTime.Today), Tag = style });
+            DateFormatCombo.SelectedItem = DateFormatCombo.Items.OfType<ComboBoxItem>().FirstOrDefault(i => i.Tag is DateStyle s && s == chosenDate);
+        }
+        finally { _loading = false; }
+    }
+
+    private void DateFormat_Changed(object sender, SelectionChangedEventArgs e)
+    {
+        if (!IsLoaded || _loading) return;
+        if (DateFormatCombo.SelectedItem is ComboBoxItem { Tag: DateStyle style }) ViewModel?.UpdateSettings(x => x.DateFormat = style.ToString());
+    }
+
+    private void Scale_Changed(object sender, SelectionChangedEventArgs e)
+    {
+        if (!IsLoaded || _loading) return;
+        if (ScaleCombo.SelectedItem is ComboBoxItem { Tag: int percent } && ViewModel != null) ViewModel.InterfaceScalePercent = percent;
+    }
+
+    private void ScaleDown_Click(object sender, RoutedEventArgs e) => ViewModel?.StepInterfaceScale(-1);
+    private void ScaleUp_Click(object sender, RoutedEventArgs e) => ViewModel?.StepInterfaceScale(1);
+
+    private void Theme_Checked(object sender, RoutedEventArgs e)
+    {
+        if (!IsLoaded || _loading) return;
+        string theme = ThemeMatchaRadio.IsChecked == true ? "Matcha" : "Default";
+        ViewModel?.UpdateSettings(x => x.CapsuleTheme = theme, SettingsApply.Theme);
+    }
+
+    private void DockStyle_Checked(object sender, RoutedEventArgs e)
+    {
+        if (!IsLoaded || _loading) return;
+        string style = DockNotchRadio.IsChecked == true ? "Notch" : "Floating";
+        ViewModel?.UpdateSettings(x => x.DockStyle = style, SettingsApply.Reposition);
+    }
+
+    private void TopMargin_LostFocus(object sender, RoutedEventArgs e) => CommitTopMargin();
+
+    private void TopMargin_KeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key != System.Windows.Input.Key.Enter) return;
+        CommitTopMargin();
+        e.Handled = true;
+    }
+
+    private void CommitTopMargin()
+    {
+        if (!IsLoaded || _loading || ViewModel == null) return;
+        TopMarginRow.Validation = "";
+        if (!SettingsValidation.TryParseTopMargin(TopMarginBox.Text, out double margin))
+        {
+            TopMarginRow.Validation = $"Enter a number from {SettingsValidation.TopMarginMin:0} to {SettingsValidation.TopMarginMax:0}. Keeping {ViewModel.Settings.TopMargin:0.##}.";
+            return;
+        }
+        if (margin != ViewModel.Settings.TopMargin)
+            ViewModel.UpdateSettings(x => x.TopMargin = margin, SettingsApply.Reposition);
+    }
+
+    private void ResetPosition_Click(object sender, RoutedEventArgs e) =>
+        ViewModel?.UpdateSettings(x => x.IslandHorizontalRatio = null, SettingsApply.Reposition);
+
+    private void ScrollSpeed_Changed(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
+        if (!IsLoaded || _loading) return;
+        ViewModel?.SetCapsuleScrollSpeed(ScrollSpeedSlider.Value);
+    }
+
+    private void Expressive_Changed(object sender, RoutedEventArgs e)
+    {
+        if (!IsLoaded || _loading) return;
+        bool on = ExpressiveCheck.IsChecked == true;
+        ViewModel?.UpdateSettings(x => x.ExpressiveMochi = on);
+    }
+
+    private void ClockLayout_Checked(object sender, RoutedEventArgs e)
+    {
+        if (!IsLoaded || _loading) return;
+        string value = ClockEvenRadio.IsChecked == true ? nameof(MochiDock.Core.CapsuleClockAlignment.EvenSpacing) : nameof(MochiDock.Core.CapsuleClockAlignment.EqualEdges);
+        ViewModel?.UpdateSettings(x => x.CapsuleClockLayout = value, SettingsApply.CapsuleRefresh);
+    }
+
+    private void Weather_Changed(object sender, RoutedEventArgs e)
+    {
+        if (!IsLoaded || _loading) return;
+        bool show = WeatherCheck.IsChecked == true;
+        ViewModel?.UpdateSettings(x => x.ShowWeatherInCapsule = show, SettingsApply.CapsuleRefresh);
+    }
+}

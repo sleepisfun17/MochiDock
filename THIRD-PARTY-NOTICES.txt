@@ -1,0 +1,329 @@
+Third-party notices for MochiDock
+
+MochiDock's own code is under the MIT licence (LICENSE). The parts below come
+from others and keep their own terms.
+
+==============================================================================
+Inspiration (no code or artwork included)
+
+The idea for MochiDock came from coucou (https://github.com/Louis-CFM/coucou),
+a notch companion for macOS; MochiDock is a light take on the idea for Windows.
+Some card layouts were also influenced by Oyenza Studio
+(https://github.com/lucacadalora/oyenza-studio). Neither project's code or
+artwork is part of MochiDock, so their licences do not apply to it.
+
+==============================================================================
+Japanese reading dictionary (MochiDock/Assets/ja_readings.tsv.gz)
+
+Surface/reading pairs derived from mecab-ipadic, trimmed for lyrics (person and
+organisation names left out, readings in katakana).
+Source: https://taku910.github.io/mecab/ (mecab-ipadic)
+
+Its license (COPYING), unchanged:
+
+Copyright 2000, 2001, 2002, 2003 Nara Institute of Science
+and Technology.  All Rights Reserved.
+
+Use, reproduction, and distribution of this software is permitted.
+Any copy of this software, whether in its original form or modified,
+must include both the above copyright notice and the following
+paragraphs.
+
+Nara Institute of Science and Technology (NAIST),
+the copyright holders, disclaims all warranties with regard to this
+software, including all implied warranties of merchantability and
+fitness, in no event shall NAIST be liable for
+any special, indirect or consequential damages or any damages
+whatsoever resulting from loss of use, data or profits, whether in an
+action of contract, negligence or other tortuous action, arising out
+of or in connection with the use or performance of this software.
+
+A large portion of the dictionary entries
+originate from ICOT Free Software.  The following conditions for ICOT
+Free Software applies to the current dictionary as well.
+
+Each User may also freely distribute the Program, whether in its
+original form or modified, to any third party or parties, PROVIDED
+that the provisions of Section 3 ("NO WARRANTY") will ALWAYS appear
+on, or be attached to, the Program, which is distributed substantially
+in the same form as set out herein and that such intended
+distribution, if actually made, will neither violate or otherwise
+contravene any of the laws and regulations of the countries having
+jurisdiction over the User or the intended distribution itself.
+
+NO WARRANTY
+
+The program was produced on an experimental basis in the course of the
+research and development conducted during the project and is provided
+to users as so produced on an experimental basis.  Accordingly, the
+program is provided without any warranty whatsoever, whether express,
+implied, statutory or otherwise.  The term "warranty" used herein
+includes, but is not limited to, any warranty of the quality,
+performance, merchantability and fitness for a particular purpose of
+the program and the nonexistence of any infringement or violation of
+any right of any third party.
+
+Each user of the program will agree and understand, and be deemed to
+have agreed and understood, that there is no warranty whatsoever for
+the program and, accordingly, the entire risk arising from or
+otherwise connected with the program is assumed by the user.
+
+Therefore, neither ICOT, the copyright holder, or any other
+organization that participated in or was otherwise related to the
+development of the program and their respective officials, directors,
+officers and other employees shall be held liable for any and all
+damages, including, without limitation, general, special, incidental
+and consequential damages, arising out of or otherwise in connection
+with the use or inability to use the program or any product, material
+or result produced or otherwise obtained by using the program,
+regardless of whether they have been advised of, or otherwise had
+knowledge of, the possibility of such damages at any time during the
+project or thereafter.  Each user will be deemed to have agreed to the
+foregoing by his or her commencement of use of the program.  The term
+"use" as used herein includes, but is not limited to, the use,
+modification, copying and distribution of the program and the
+production of secondary products from the program.
+
+In the case where the program, whether in its original form or
+modified, was distributed or delivered to or received by a user from
+any person, organization or entity other than ICOT, unless it makes or
+grants independently of ICOT any specific warranty to the user in
+writing, such person, organization or entity, will also be exempted
+from and not be held liable to the user for any such damages as noted
+above as far as the program is concerned.
+
+==============================================================================
+Chinese pinyin table (MochiDock/Assets/zh_pinyin.tsv.gz)
+
+The first kMandarin reading of each Basic Multilingual Plane character in the
+Unicode Han Database (Unihan), Unicode 16.0.0 (Unihan_Readings.txt), built by
+tools/data/build-pinyin-table.ps1.
+Source: https://www.unicode.org/Public/16.0.0/ucd/Unihan.zip
+Documentation: https://www.unicode.org/reports/tr38/
+
+UNICODE LICENSE V3
+
+COPYRIGHT AND PERMISSION NOTICE
+
+Copyright © 1991-2026 Unicode, Inc.
+
+NOTICE TO USER: Carefully read the following legal agreement. BY
+DOWNLOADING, INSTALLING, COPYING OR OTHERWISE USING DATA FILES, AND/OR
+SOFTWARE, YOU UNEQUIVOCALLY ACCEPT, AND AGREE TO BE BOUND BY, ALL OF THE
+TERMS AND CONDITIONS OF THIS AGREEMENT. IF YOU DO NOT AGREE, DO NOT
+DOWNLOAD, INSTALL, COPY, DISTRIBUTE OR USE THE DATA FILES OR SOFTWARE.
+
+Permission is hereby granted, free of charge, to any person obtaining a
+copy of data files and any associated documentation (the "Data Files") or
+software and any associated documentation (the "Software") to deal in the
+Data Files or Software without restriction, including without limitation
+the rights to use, copy, modify, merge, publish, distribute, and/or sell
+copies of the Data Files or Software, and to permit persons to whom the
+Data Files or Software are furnished to do so, provided that either (a)
+this copyright and permission notice appear with all copies of the Data
+Files or Software, or (b) this copyright and permission notice appear in
+associated Documentation.
+
+THE DATA FILES AND SOFTWARE ARE PROVIDED "AS IS", WITHOUT WARRANTY OF ANY
+KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT OF
+THIRD PARTY RIGHTS.
+
+IN NO EVENT SHALL THE COPYRIGHT HOLDER OR HOLDERS INCLUDED IN THIS NOTICE
+BE LIABLE FOR ANY CLAIM, OR ANY SPECIAL INDIRECT OR CONSEQUENTIAL DAMAGES,
+OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS,
+WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION,
+ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THE DATA
+FILES OR SOFTWARE.
+
+Except as contained in this notice, the name of a copyright holder shall
+not be used in advertising or otherwise to promote the sale, use or other
+dealings in these Data Files or Software without prior written
+authorization of the copyright holder.
+
+==============================================================================
+Microsoft Fluent Emoji (MochiDock/Assets/Icons/*.png, all except whatsapp.png)
+3D PNG files, not modified.
+Source: https://github.com/microsoft/fluentui-emoji
+
+MIT License
+
+Copyright (c) Microsoft Corporation.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+==============================================================================
+Quicksand fonts: Copyright 2011 The Quicksand Project Authors.
+SIL Open Font License 1.1; see Assets/Fonts/OFL.Quicksand.txt.
+Source: https://github.com/ThomasJockin/QuicksandFamily
+Commit: 02ead1c009102a433b9cd155f611df1e5f49bd9c (static Regular/Medium/SemiBold/Bold).
+
+==============================================================================
+Twemoji 15.1.0 graphics (emoji pictures in message text, Assets/emoji.pak): Copyright 2019 Twitter, Inc and other contributors, Copyright 2022-present Jason Sofonia & Justine De Caires.
+Licensed under CC-BY 4.0: https://creativecommons.org/licenses/by/4.0/
+Source: https://github.com/jdecked/twemoji (the 72x72 PNG files, packed into one zip; not modified).
+
+==============================================================================
+NuGet packages and runtime
+
+- LibreHardwareMonitorLib 0.9.6: Mozilla Public License 2.0. Used, unmodified,
+  for CPU/GPU temperature, GPU clock and GPU power sensors.
+  Source: https://github.com/LibreHardwareMonitor/LibreHardwareMonitor
+  License text: https://www.mozilla.org/MPL/2.0/
+- Microsoft.Diagnostics.Tracing.TraceEvent 4.0.0 (FPS capture through ETW):
+  MIT License, Copyright (c) Microsoft Corporation.
+  Source: https://github.com/microsoft/perfview
+- Microsoft.Data.Sqlite, System.Management,
+  System.Security.Cryptography.ProtectedData, and the .NET runtime included in
+  the self-contained installer: MIT License, Copyright (c) .NET Foundation and
+  Contributors. Source: https://github.com/dotnet/runtime and
+  https://github.com/dotnet/efcore
+- SQLitePCLRaw 2.1.6 (used by Microsoft.Data.Sqlite): Apache License 2.0,
+  Copyright 2014-2023 SourceGear, LLC. Source: https://github.com/ericsink/SQLitePCL.raw
+  License text: https://www.apache.org/licenses/LICENSE-2.0
+  SQLite itself is in the public domain.
+
+MailKit and MimeKit (IMAP mail)
+Source: https://github.com/jstedfast/MailKit
+
+MIT License
+
+Copyright (c) .NET Foundation and Contributors
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+==============================================================================
+Wireless device batteries (MochiDock/Services/DeviceBattery, MochiDock.Core/DeviceBattery.cs)
+
+The code is MochiDock's own. Device facts come from:
+- BatteryTray by qu1ncky (MIT): the Rongyuan/Monsgeek receiver status query
+  and the list of Rongyuan receiver IDs, which BatteryTray read from the
+  official ATTACK SHARK web driver (qmk.top).
+  Source: https://github.com/qu1ncky/BatteryTray
+- LAMZU Aurora web driver (https://lamzu.net, read for interoperability, no
+  code included): the LAMZU product IDs, model names, cable and receiver IDs
+  (Config/env-models.json) and the battery request and reply layout.
+- Wireless-Device-Battery-Monitor by krisgfx9 (GPL-3.0), consulted for
+  protocol facts only (no code or lists included): report layouts, the Phone
+  Link Start-menu companion card layout, and the Windows 11 Widgets-button /
+  right-to-left taskbar placement behaviour.
+  Source: https://github.com/krisgfx9/Wireless-Device-Battery-Monitor
+- Solaar (GPL-2.0): the Li-ion voltage-to-percent table used for Logitech
+  HID++ voltage readings. Source: https://github.com/pwr-Solaar/Solaar
+
+BatteryTray's licence:
+
+MIT License
+
+Copyright (c) 2026 qu1ncky
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+==============================================================================
+Bundled and optional tools
+
+GOWA / go-whatsapp-web-multidevice (GOWA/windows-amd64.exe and GOWA/readme.md)
+Source: https://github.com/aldinokemal/go-whatsapp-web-multidevice
+Run as a separate local process; its session data stays in
+%LocalAppData%\MochiDock\GOWA and is never packaged.
+The GOWA executable includes Go modules under their own licences, among them
+whatsmeow (Mozilla Public License 2.0, source: https://github.com/tulir/whatsmeow),
+Fiber (MIT, https://github.com/gofiber/fiber) and go-sqlite3 (MIT,
+https://github.com/mattn/go-sqlite3; SQLite is in the public domain). The full
+module list is printed by: go version -m GOWA\windows-amd64.exe
+
+MIT License
+
+Copyright (c) 2022 Aldino Kemal
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+- yt-dlp (Downloads card), The Unlicense (public domain). Not bundled by default: downloaded on first use with a SHA-256 check, or supplied as installer\redist\yt-dlp.exe. Source: https://github.com/yt-dlp/yt-dlp
+- ffmpeg (Downloads card MP3 extraction and stream merging), LGPL 2.1+ or GPL 2+ depending on the build. Not bundled by default; placing ffmpeg.exe in installer\redist or the Tools folder means redistributing a build under its own licence. Source and licence: https://ffmpeg.org/legal.html
+
+==============================================================================
+Online data sources (no code included)
+
+- Weather and the weather used for prayer times: Open-Meteo
+  (https://open-meteo.com), data under CC BY 4.0.
+- Place search: OpenStreetMap Nominatim. Data (c) OpenStreetMap contributors,
+  ODbL 1.0 (https://www.openstreetmap.org/copyright).
+- Exchange rates: ExchangeRate-API (https://www.exchangerate-api.com),
+  fawazahmed0/exchange-api (through jsDelivr), Yahoo Finance, and optionally
+  Open Exchange Rates with your own key.
+- Prayer times: AlAdhan (https://aladhan.com). Lyrics: LRCLIB
+  (https://lrclib.net). Weather fallback: wttr.in.
+
+==============================================================================
+Trademarks
+
+WhatsApp, Discord, Gmail, Outlook, Mailspring, Spotify, YouTube Music, Claude,
+Codex, Cursor, Gemini, Antigravity, GitHub Copilot, Logitech, LAMZU and other
+product names and logos are trademarks of their owners. MochiDock is an
+independent project and is not affiliated with, endorsed by or sponsored by
+any of them. The WhatsApp logo (MochiDock/Assets/Icons/whatsapp.png) is used
+only to label WhatsApp notifications.

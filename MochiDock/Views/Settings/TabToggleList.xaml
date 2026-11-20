@@ -1,0 +1,19 @@
+<UserControl x:Class="MochiDock.Views.Settings.TabToggleList"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <!-- One switch per header tab, in header order. Media and the WhatsApp, Email and Discord tabs are not listed:
+         Media is always there and the others appear when they have something to show. Binds to the view model. -->
+    <WrapPanel x:Name="TabsPanel" Orientation="Horizontal">
+        <CheckBox Style="{StaticResource ModernDarkCheckBox}" Width="136" Margin="0,3,8,3" Content="Performance" IsChecked="{Binding ShowStatsTab, Mode=TwoWay}" ToolTip="Hardware stats, battery and games readout."/>
+        <CheckBox Style="{StaticResource ModernDarkCheckBox}" Width="136" Margin="0,3,8,3" Content="Weather" IsChecked="{Binding ShowWeatherTab, Mode=TwoWay}" ToolTip="Current weather and forecast."/>
+        <CheckBox Style="{StaticResource ModernDarkCheckBox}" Width="136" Margin="0,3,8,3" Content="Pomodoro" IsChecked="{Binding ShowPomodoroTab, Mode=TwoWay}" ToolTip="Focus timer."/>
+        <CheckBox Style="{StaticResource ModernDarkCheckBox}" Width="136" Margin="0,3,8,3" Content="Prayer" IsChecked="{Binding EnablePrayerTimes, Mode=TwoWay}" ToolTip="Prayer times tab and prayer reminders."/>
+        <CheckBox Style="{StaticResource ModernDarkCheckBox}" Width="136" Margin="0,3,8,3" Content="File shelf" IsChecked="{Binding ShowFileShelfTab, Mode=TwoWay}" ToolTip="Temporary shelf for files and phone drops."/>
+        <CheckBox Style="{StaticResource ModernDarkCheckBox}" Width="136" Margin="0,3,8,3" Content="Clipboard" IsChecked="{Binding ShowClipboardTab, Mode=TwoWay}" ToolTip="Clipboard history."/>
+        <CheckBox Style="{StaticResource ModernDarkCheckBox}" Width="136" Margin="0,3,8,3" Content="Today" IsChecked="{Binding ShowTodayTab, Mode=TwoWay}" ToolTip="The calendar, the day's agenda and your tasks."/>
+        <CheckBox Style="{StaticResource ModernDarkCheckBox}" Width="136" Margin="0,3,8,3" Content="AI usage" IsChecked="{Binding ShowAiUsageTab, Mode=TwoWay}" ToolTip="Usage of AI coding tools."/>
+        <CheckBox Style="{StaticResource ModernDarkCheckBox}" Width="136" Margin="0,3,8,3" Content="Script" IsChecked="{Binding ShowScriptTab, Mode=TwoWay}" ToolTip="Teleprompter-style script reader."/>
+        <CheckBox Style="{StaticResource ModernDarkCheckBox}" Width="136" Margin="0,3,8,3" Content="Downloads" IsChecked="{Binding ShowDownloadsTab, Mode=TwoWay}" ToolTip="Media downloader."/>
+        <CheckBox Style="{StaticResource ModernDarkCheckBox}" Width="136" Margin="0,3,8,3" Content="FX rates" IsChecked="{Binding ShowFxRatesTab, Mode=TwoWay}" ToolTip="Currency rates dashboard."/>
+    </WrapPanel>
+</UserControl>

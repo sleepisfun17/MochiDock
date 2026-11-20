@@ -1,0 +1,110 @@
+<UserControl xmlns:controls="clr-namespace:MochiDock.Controls" x:Class="MochiDock.Views.Cards.EmailCardView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             mc:Ignorable="d"
+             FontFamily="{DynamicResource IslandUiFont}"
+             UseLayoutRounding="True"
+             SnapsToDevicePixels="True">
+
+    <Grid VerticalAlignment="Stretch">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" MinHeight="85" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!-- Sender & Account Info Header + Counter Badge -->
+        <Grid Grid.Row="0" Margin="0,0,0,6">
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                <Border Background="{DynamicResource IslandEmailBadgeBackgroundBrush}" CornerRadius="4" Padding="5,1" Margin="0,0,6,0" VerticalAlignment="Center">
+                    <TextBlock Text="{Binding CurrentEmail.FolderName}" Foreground="{DynamicResource IslandEmailBadgeInkBrush}" FontSize="11" FontWeight="{DynamicResource IslandSmallLabelWeight}" />
+                </Border>
+                <TextBlock Text="{Binding CurrentEmail.Sender}" ToolTip="{Binding CurrentEmail.Sender}" Foreground="{DynamicResource IslandInkBrush}" FontSize="13" FontWeight="{DynamicResource IslandSmallLabelWeight}" TextTrimming="CharacterEllipsis" MaxWidth="210" VerticalAlignment="Center" />
+                <TextBlock Text="{Binding CurrentEmail.FormattedTime, StringFormat=' · {0}'}" Foreground="{DynamicResource IslandMutedInkBrush}" FontSize="11" VerticalAlignment="Center" Margin="4,0,0,0" />
+            </StackPanel>
+
+            <!-- Unread Email Counter Badge -->
+            <Border HorizontalAlignment="Right" VerticalAlignment="Center" Background="{DynamicResource IslandChipBackgroundBrush}" BorderBrush="{DynamicResource IslandChipBorderBrush}" BorderThickness="1" CornerRadius="10" Padding="8,3">
+                <TextBlock Text="{Binding RecentEmailMessages.Count, StringFormat='{}{0} unread'}" Foreground="{DynamicResource IslandSecondaryInkBrush}" FontSize="11" FontWeight="{DynamicResource IslandSmallLabelWeight}" />
+            </Border>
+        </Grid>
+
+        <!-- Vertical Email Feed with ScrollViewer (Stretches to use available height) -->
+        <Border Grid.Row="1" Background="{DynamicResource IslandSubCardBackgroundBrush}" CornerRadius="10" Padding="6" Margin="0,0,0,8" BorderBrush="{DynamicResource IslandSubCardBorderBrush}" BorderThickness="1">
+            <ScrollViewer x:Name="EmailScrollViewer"
+                          Style="{StaticResource ModernCardScrollViewer}"
+                          VerticalScrollBarVisibility="Auto"
+                          HorizontalScrollBarVisibility="Disabled"
+                          PreviewMouseWheel="EmailScrollViewer_PreviewMouseWheel">
+                <ItemsControl ItemsSource="{Binding RecentEmailMessages}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <StackPanel Orientation="Vertical" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border Background="{DynamicResource IslandSurfaceBrush}" CornerRadius="6" BorderBrush="{DynamicResource IslandBorderBrush}" BorderThickness="1"
+                                    Margin="0,0,0,4" Padding="8,6" Cursor="Hand" MouseLeftButtonDown="HistoryItem_Click">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+
+                                    <!-- Email Summary -->
+                                    <StackPanel Grid.Column="0">
+                                        <StackPanel Orientation="Horizontal" Margin="0,0,0,2">
+                                            <Border Background="{DynamicResource IslandEmailBadgeBackgroundBrush}" CornerRadius="4" Padding="5,1" Margin="0,0,6,0" VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding FolderName}" Foreground="{DynamicResource IslandEmailBadgeInkBrush}" FontSize="11" FontWeight="{DynamicResource IslandSmallLabelWeight}" />
+                                            </Border>
+                                            <TextBlock Text="{Binding Sender}" ToolTip="{Binding Sender}" Foreground="{DynamicResource IslandInkBrush}" FontSize="12" FontWeight="{DynamicResource IslandSmallLabelWeight}" Margin="0,0,6,0" TextTrimming="CharacterEllipsis" MaxWidth="150" />
+                                            <TextBlock Text="{Binding FormattedTime}" Foreground="{DynamicResource IslandMutedInkBrush}" FontSize="11" VerticalAlignment="Center" />
+                                        </StackPanel>
+                                        <TextBlock controls:Emoji.Text="{Binding Subject}" Foreground="{DynamicResource IslandInkBrush}" FontSize="13" FontWeight="{DynamicResource IslandSmallLabelWeight}" TextTrimming="CharacterEllipsis" Margin="0,0,0,2" />
+                                        <TextBlock controls:Emoji.Text="{Binding BodyPreview}" Foreground="{DynamicResource IslandSecondaryInkBrush}" FontSize="11" LineHeight="16" TextWrapping="Wrap" MaxHeight="45" TextTrimming="CharacterEllipsis" />
+                                    </StackPanel>
+
+                                    <!-- Dismiss Single Email Button -->
+                                    <Button Grid.Column="1" VerticalAlignment="Top" Margin="6,0,0,0" Click="DismissItem_Click"
+                                            Background="Transparent" BorderThickness="0" Cursor="Hand" ToolTip="Dismiss email">
+                                        <TextBlock Text="✕" Foreground="{DynamicResource IslandMutedInkBrush}" FontSize="11" FontWeight="{DynamicResource IslandSmallLabelWeight}" />
+                                    </Button>
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+        </Border>
+
+        <!-- Row 2: 2FA / OTP Verification Code Quick Copy Pill -->
+        <Border Grid.Row="2" x:Name="CopyCodeBanner"
+                Visibility="{Binding CurrentEmail.HasVerificationCode, Converter={StaticResource BoolToVisibility}}"
+                Background="{DynamicResource IslandChipBackgroundBrush}" BorderBrush="{DynamicResource IslandAccentBrush}" BorderThickness="1"
+                CornerRadius="10" Padding="10,8" Margin="0,0,0,8" Cursor="Hand"
+                MouseLeftButtonDown="CopyCode_Click"
+                ToolTip="Click to copy verification code">
+            <Grid>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <Image Source="{StaticResource IconClipboard}" Stretch="Uniform" RenderOptions.BitmapScalingMode="HighQuality" Width="13" Height="13" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                    <TextBlock Text="Code:" Foreground="{DynamicResource IslandMutedInkBrush}" FontSize="11" Margin="0,0,6,0" VerticalAlignment="Center" />
+                    <TextBlock x:Name="CodeDisplayLabel" Text="{Binding CurrentEmail.ExtractedVerificationCode}"
+                               Foreground="{DynamicResource IslandAccentBrush}" FontSize="13" FontWeight="{DynamicResource IslandSmallLabelWeight}" VerticalAlignment="Center" />
+                </StackPanel>
+                <TextBlock x:Name="CopyStatusText" Text="Copy Code" Foreground="{DynamicResource IslandAccentBrush}" FontSize="11" FontWeight="{DynamicResource IslandSmallLabelWeight}"
+                           HorizontalAlignment="Right" VerticalAlignment="Center" />
+            </Grid>
+        </Border>
+
+        <!-- Action Buttons -->
+        <StackPanel Grid.Row="3" Orientation="Horizontal" VerticalAlignment="Bottom">
+            <Button Style="{StaticResource IslandPrimaryButtonStyle}" Content="{Binding CurrentEmail.ClientSource, StringFormat='Open in {0}'}" Click="OpenEmail_Click" Margin="0" />
+            <Button Style="{StaticResource ActionButton}" Content="Mark Read" ToolTip="{Binding MarkReadTooltip}" Click="MarkRead_Click" Margin="8,0,0,0" />
+            <Button Style="{StaticResource ActionButton}" Content="Dismiss All" Click="DismissEmail_Click"  Margin="8,0,0,0"/>
+        </StackPanel>
+    </Grid>
+</UserControl>

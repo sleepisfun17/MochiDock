@@ -1,0 +1,11 @@
+using MochiDock.Core;
+public class HardwareAlertPolicyTests {
+ static readonly DateTimeOffset Start=DateTimeOffset.Parse("2026-11-06T00:00:00Z");
+ static AlertReading R(double value,int second,bool measured=true)=>new(value,"test counter",Start.AddSeconds(second),measured);
+ [Fact]public void RequiresFiveSecondsAndRearmsOnlyAfterRecovery(){var p=new HardwareAlertPolicy();Assert.False(p.Evaluate("cpu",R(95,0),90,Start));Assert.False(p.Evaluate("cpu",R(95,4),90,Start.AddSeconds(4)));Assert.True(p.Evaluate("cpu",R(95,5),90,Start.AddSeconds(5)));Assert.False(p.Evaluate("cpu",R(95,310),90,Start.AddSeconds(310)));Assert.False(p.Evaluate("cpu",R(0,311),90,Start.AddSeconds(311)));Assert.False(p.Evaluate("cpu",R(95,312),90,Start.AddSeconds(312)));Assert.True(p.Evaluate("cpu",R(95,317),90,Start.AddSeconds(317)));}
+ [Fact]public void RejectsEstimatesStaleFutureAndUnavailable(){var p=new HardwareAlertPolicy();Assert.False(p.Evaluate("temp",null,70,Start));Assert.False(p.Evaluate("temp",R(99,0,false),70,Start));Assert.False(p.Evaluate("temp",R(99,0),70,Start.AddSeconds(6)));Assert.False(p.Evaluate("temp",R(99,1),70,Start));}
+ [Fact]public void RepeatedCachedValueDoesNotSatisfyDuration(){var p=new HardwareAlertPolicy();p.Evaluate("cpu",R(95,0),90,Start);Assert.False(p.Evaluate("cpu",R(95,0),90,Start.AddSeconds(5)));Assert.False(p.Evaluate("cpu",R(95,6),90,Start.AddSeconds(6)));}
+ [Fact]public void CooldownSuppressesAnotherMetric(){var p=new HardwareAlertPolicy();p.Evaluate("cpu",R(95,0),90,Start);Assert.True(p.Evaluate("cpu",R(95,5),90,Start.AddSeconds(5)));p.Evaluate("gpu",R(95,6),90,Start.AddSeconds(6));Assert.False(p.Evaluate("gpu",R(95,11),90,Start.AddSeconds(11)));}
+ [Fact]public void LatestExpansionRequestWinsAndStaleCompletionIsIgnored(){var t=new ExpansionTransition();Assert.True(t.Request(true));var g=t.Generation;Assert.False(t.Request(false));Assert.False(t.Desired);Assert.True(t.Complete(g));Assert.True(t.Request(false));Assert.False(t.Complete(g));Assert.True(t.Running);t.Invalidate();Assert.False(t.Complete(t.Generation-1));}
+ [Fact]public void OpenDuringCloseIsRetained(){var t=new ExpansionTransition();t.Request(false);var g=t.Generation;Assert.False(t.Request(true));Assert.True(t.Desired);Assert.True(t.Complete(g));Assert.True(t.Request(t.Desired));}
+}

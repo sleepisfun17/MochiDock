@@ -1,0 +1,185 @@
+<UserControl x:Class="MochiDock.Views.Cards.WhatsAppCardView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="clr-namespace:MochiDock.Controls"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             mc:Ignorable="d" 
+             FontFamily="{DynamicResource IslandUiFont}"
+             UseLayoutRounding="True"
+             SnapsToDevicePixels="True">
+
+    <UserControl.Resources>
+        <Style x:Key="ReactionChipButton" TargetType="Button" BasedOn="{StaticResource IslandChipButtonStyle}">
+            <Setter Property="FontSize" Value="12" />
+        </Style>
+
+    </UserControl.Resources>
+
+    <!-- Grid structure: Row 0 Header, Row 1 Vertical Messages Thread, Row 2 Reactions, Row 3 Reply, Row 4 Actions -->
+    <Grid VerticalAlignment="Stretch">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" MinHeight="68" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!-- Row 0: Sender Header with Contact Name, Timestamp & History Count -->
+        <Grid Grid.Row="0" Margin="0,0,0,6">
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                <Border Background="{DynamicResource IslandChipBackgroundBrush}" CornerRadius="4" Padding="5,1" Margin="0,0,6,0" VerticalAlignment="Center">
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <Image Width="11" Height="11" Source="pack://application:,,,/Assets/Icons/whatsapp.png" RenderOptions.BitmapScalingMode="HighQuality" Margin="0,0,4,0" VerticalAlignment="Center" />
+                        <TextBlock Text="WhatsApp" Foreground="{DynamicResource IslandWhatsAppBrush}" FontSize="11" FontWeight="{DynamicResource IslandSmallLabelWeight}" VerticalAlignment="Center" />
+                    </StackPanel>
+                </Border>
+                <!-- Account badge: shown only when more than one WhatsApp account is linked -->
+                <Border Background="{DynamicResource IslandChipBackgroundBrush}" CornerRadius="4" Padding="5,1" Margin="0,0,6,0" VerticalAlignment="Center"
+                        Visibility="{Binding HasMultipleWhatsAppAccounts, Converter={StaticResource BoolToVisibility}}">
+                    <TextBlock Text="{Binding CurrentWhatsApp.AccountName}" Foreground="{DynamicResource IslandInfoBrush}" FontSize="11" FontWeight="{DynamicResource IslandSmallLabelWeight}" VerticalAlignment="Center" />
+                </Border>
+                <!-- Group Indicator Badge (Visible if Group) -->
+                <Border Background="{DynamicResource IslandChipBackgroundBrush}" BorderBrush="{DynamicResource IslandChipBorderBrush}" BorderThickness="1" CornerRadius="4" Padding="5,1" Margin="0,0,6,0" VerticalAlignment="Center"
+                        Visibility="{Binding CurrentWhatsApp.IsGroup, Converter={StaticResource BoolToVisibility}}">
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center"><Image Source="{StaticResource IconGroup}" Stretch="Uniform" RenderOptions.BitmapScalingMode="HighQuality" Width="12" Height="12" VerticalAlignment="Center" Margin="0,0,4,0"/><TextBlock Text="Group" Foreground="{DynamicResource IslandInfoBrush}" FontSize="11" FontWeight="{DynamicResource IslandSmallLabelWeight}" VerticalAlignment="Center" /></StackPanel>
+                </Border>
+                <TextBlock Text="{Binding CurrentWhatsApp.Sender}" 
+                           Foreground="{DynamicResource IslandInkBrush}" 
+                           FontSize="13" 
+                           FontWeight="{DynamicResource IslandSmallLabelWeight}"
+                           TextTrimming="CharacterEllipsis" 
+                           VerticalAlignment="Center" />
+                <TextBlock Text="{Binding CurrentWhatsApp.FormattedTime, StringFormat=' · {0}'}" 
+                           Foreground="{DynamicResource IslandMutedInkBrush}" 
+                           FontSize="11" 
+                           VerticalAlignment="Center" />
+            </StackPanel>
+
+            <!-- Message Counter Badge (Dynamic 'XX+ msgs') -->
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                <Border Background="{DynamicResource IslandChipBackgroundBrush}" BorderBrush="{DynamicResource IslandChipBorderBrush}" BorderThickness="1" CornerRadius="10" Padding="8,3" Margin="0,0,4,0" VerticalAlignment="Center">
+                    <TextBlock Text="{Binding SelectedWhatsAppConversation.CounterBadgeText, FallbackValue='1 msg'}" Foreground="{DynamicResource IslandSecondaryInkBrush}" FontSize="11" FontWeight="{DynamicResource IslandSmallLabelWeight}" />
+                </Border>
+            </StackPanel>
+        </Grid>
+
+        <!-- Row 1: Vertical Messages Feed (Scrollable with minimalist scrollbar) -->
+        <Border Grid.Row="1" Background="{DynamicResource IslandSubCardBackgroundBrush}" CornerRadius="10" Padding="6" Margin="0,0,0,8" BorderBrush="{DynamicResource IslandSubCardBorderBrush}" BorderThickness="1" MinHeight="75" MaxHeight="165">
+            <ScrollViewer x:Name="MessageScrollViewer" 
+                          Style="{StaticResource ModernCardScrollViewer}"
+                          VerticalScrollBarVisibility="Auto" 
+                          HorizontalScrollBarVisibility="Disabled"
+                          CanContentScroll="False"
+                          PreviewMouseWheel="MessageScrollViewer_PreviewMouseWheel"
+                          Padding="0,0,4,0">
+                <!-- If multiple messages exist: vertical thread stack -->
+                <ItemsControl ItemsSource="{Binding RecentWhatsAppMessages}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <StackPanel Orientation="Vertical" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border x:Name="HistoryItemBorder" Background="{DynamicResource IslandSurfaceBrush}" CornerRadius="6" BorderBrush="{DynamicResource IslandBorderBrush}" BorderThickness="1"
+                                    Margin="0,0,0,4" Padding="8,6" Cursor="Hand" MouseLeftButtonDown="HistoryItem_Click">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0">
+                                        <!-- Show Sender Name inside message bubble -->
+                                        <StackPanel Orientation="Horizontal" Margin="0,0,0,2">
+                                            <TextBlock Text="{Binding SenderName}"
+                                                       Foreground="{DynamicResource IslandWhatsAppBrush}"
+                                                       FontSize="11"
+                                                       FontWeight="{DynamicResource IslandSmallLabelWeight}" />
+                                            <TextBlock Text="{Binding AccountName, StringFormat=' · {0}'}"
+                                                       Foreground="{DynamicResource IslandMutedInkBrush}"
+                                                       FontSize="11"
+                                                       Visibility="{Binding DataContext.HasMultipleWhatsAppAccounts, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource BoolToVisibility}}" />
+                                        </StackPanel>
+                                        <TextBlock controls:Emoji.Text="{Binding Message}" 
+                                                   FontFamily="{DynamicResource IslandUiFont}"
+                                                   Foreground="{DynamicResource IslandInkBrush}" 
+                                                   FontSize="12" 
+                                                   LineHeight="17"
+                                                   TextWrapping="Wrap" />
+                                    </StackPanel>
+                                    <TextBlock Grid.Column="1" Text="{Binding FormattedTime}" Foreground="{DynamicResource IslandMutedInkBrush}" FontSize="11" Margin="8,0,0,0" VerticalAlignment="Top" />
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+        </Border>
+
+        <!-- Row 2: Quick Emoji Reaction Chips Bar with Official Fluent 3D Emoji Assets -->
+        <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,0,0,4" VerticalAlignment="Center">
+            <TextBlock Text="React: " Foreground="{DynamicResource IslandMutedInkBrush}" FontSize="11" VerticalAlignment="Center" Margin="0,0,4,0" />
+            <!-- Like / Thumbs Up -->
+            <Button Style="{StaticResource ReactionChipButton}" Click="Reaction_Click" Tag="👍" ToolTip="Like">
+                <Image Width="14" Height="14" Source="pack://application:,,,/Assets/Icons/like.png" RenderOptions.BitmapScalingMode="HighQuality" />
+            </Button>
+            <!-- Heart -->
+            <Button Style="{StaticResource ReactionChipButton}" Click="Reaction_Click" Tag="❤️" ToolTip="Love">
+                <Image Width="14" Height="14" Source="pack://application:,,,/Assets/Icons/heart.png" RenderOptions.BitmapScalingMode="HighQuality" />
+            </Button>
+            <!-- Laughing -->
+            <Button Style="{StaticResource ReactionChipButton}" Click="Reaction_Click" Tag="😂" ToolTip="Haha">
+                <Image Width="14" Height="14" Source="pack://application:,,,/Assets/Icons/haha.png" RenderOptions.BitmapScalingMode="HighQuality" />
+            </Button>
+            <!-- Fire -->
+            <Button Style="{StaticResource ReactionChipButton}" Click="Reaction_Click" Tag="🔥" ToolTip="Fire">
+                <Image Width="14" Height="14" Source="pack://application:,,,/Assets/Icons/fire.png" RenderOptions.BitmapScalingMode="HighQuality" />
+            </Button>
+            <!-- Pray / Thanks -->
+            <Button Style="{StaticResource ReactionChipButton}" Click="Reaction_Click" Tag="🙏" ToolTip="Thanks">
+                <Image Width="14" Height="14" Source="pack://application:,,,/Assets/Icons/pray.png" RenderOptions.BitmapScalingMode="HighQuality" />
+            </Button>
+        </StackPanel>
+
+        <!-- Row 3: Inline Reply Box -->
+        <Grid Grid.Row="3" Margin="0,0,0,5">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <Grid Grid.Column="0">
+                <TextBox x:Name="ReplyTextBox"
+                         Text="{Binding ReplyText, UpdateSourceTrigger=PropertyChanged}"
+                         KeyDown="ReplyTextBox_KeyDown"
+                         AutomationProperties.Name="Reply"
+                         VerticalAlignment="Center"
+                         controls:TextBoxHint.Text="Reply…" />
+            </Grid>
+            <Button Grid.Column="1"
+                    Style="{StaticResource IslandPrimaryButtonStyle}"
+                    Click="SendWhatsApp_Click"
+                    Background="{DynamicResource IslandWhatsAppBrush}"
+                    Foreground="{DynamicResource IslandWhatsAppInkBrush}"
+                    Margin="6,0,0,0"
+                    ToolTip="Send reply to WhatsApp">
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <Path Width="11" Height="11" Stretch="Uniform" Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" Margin="0,0,5,0"
+                          Data="M2,21L23,12L2,3V10L17,12L2,14V21Z" />
+                    <TextBlock Text="Send" FontWeight="{DynamicResource IslandSmallLabelWeight}" />
+                </StackPanel>
+            </Button>
+        </Grid>
+
+        <!-- Row 4: Action Buttons (Bottom aligned, utilizing space cleanly) -->
+        <StackPanel Grid.Row="4" Orientation="Horizontal" VerticalAlignment="Bottom">
+            <Button Style="{StaticResource ActionButton}" Content="Open App" Click="OpenWhatsAppApp_Click" Margin="0" />
+            <Button Style="{StaticResource ActionButton}" Click="MuteChat_Click" Margin="8,0,0,0" ToolTip="Mute notifications from this contact or group"><StackPanel Orientation="Horizontal" VerticalAlignment="Center"><Image Source="{StaticResource IconBellOff}" Stretch="Uniform" RenderOptions.BitmapScalingMode="HighQuality" Width="14" Height="14" VerticalAlignment="Center" Margin="0,0,5,0"/><TextBlock Text="Mute Chat" VerticalAlignment="Center" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"/></StackPanel></Button>
+            <Button Style="{StaticResource ActionButton}" Click="AllowGroup_Click" Margin="8,0,0,0" ToolTip="This group keeps notifying while only listed groups do" Visibility="{Binding CanAllowCurrentWhatsAppGroup, Converter={StaticResource BoolToVisibility}}"><StackPanel Orientation="Horizontal" VerticalAlignment="Center"><Image Source="{StaticResource IconBell}" Stretch="Uniform" RenderOptions.BitmapScalingMode="HighQuality" Width="14" Height="14" VerticalAlignment="Center" Margin="0,0,5,0"/><TextBlock Text="Always notify" VerticalAlignment="Center" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"/></StackPanel></Button>
+            <Button Style="{StaticResource ActionButton}" Content="Dismiss" Click="DismissWhatsApp_Click" Margin="8,0,0,0" />
+            <Button Style="{StaticResource IslandSecondaryButtonStyle}" Content="Clear All" Click="ClearAllWhatsApp_Click" Margin="8,0,0,0" />
+            <Button Style="{StaticResource ActionButton}" Content="Pairing / Dashboard" Click="OpenWhatsAppQR_Click"  Margin="8,0,0,0"/>
+        </StackPanel>
+    </Grid>
+</UserControl>

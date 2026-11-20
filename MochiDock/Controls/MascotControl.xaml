@@ -1,0 +1,387 @@
+<UserControl x:Class="MochiDock.Controls.MascotControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             mc:Ignorable="d" 
+             Cursor="Hand"
+             UseLayoutRounding="True"
+             SnapsToDevicePixels="True"
+             MouseLeftButtonDown="Mascot_MouseLeftButtonDown">
+
+    <Viewbox Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center">
+    <Grid Width="30" Height="26" ClipToBounds="False" UseLayoutRounding="True" SnapsToDevicePixels="True">
+        <!-- The turn's wind (an anime transformation whirlwind), behind Mochi: the far halves of the brush-stroke rings, built in code
+             (MascotControl.BuildWind); collapsed except while he spins -->
+        <Canvas x:Name="WindBack" Visibility="Collapsed" Opacity="0" IsHitTestVisible="False" Width="30" Height="26">
+            <Canvas.RenderTransform><TranslateTransform x:Name="WindBackRise" Y="0" /></Canvas.RenderTransform>
+        </Canvas>
+        <Grid x:Name="RootGrid" RenderTransformOrigin="0.5, 0.5">
+            <Grid.RenderTransform>
+                <TransformGroup>
+                    <!-- The turn on a change of face: ScaleX 1 -> 0 -> -1 -> 0 -> 1 reads as Mochi spinning round his vertical axis -->
+                    <ScaleTransform x:Name="FlipScaleTransform" ScaleX="1.0" />
+                    <ScaleTransform x:Name="BodyScaleTransform" ScaleX="1.0" ScaleY="1.0" />
+                    <TranslateTransform x:Name="BodyBounceTransform" Y="0" />
+                </TransformGroup>
+            </Grid.RenderTransform>
+
+            <!-- Coucou Authentic Mochi Squircle Body (#EDEDEF to #C4C5CA) -->
+            <Border x:Name="MochiBodyBorder"
+                    CornerRadius="9" 
+                    BorderThickness="0.8" 
+                    BorderBrush="#B8B9C0"
+                    ClipToBounds="True">
+                <Border.Background>
+                    <LinearGradientBrush x:Name="MochiBodyGradient" StartPoint="0.3, 0" EndPoint="0.7, 1">
+                        <GradientStop x:Name="BodyGradStopTop" Color="#EDEDEF" Offset="0.0" />
+                        <GradientStop x:Name="BodyGradStopBottom" Color="#C4C5CA" Offset="1.0" />
+                    </LinearGradientBrush>
+                </Border.Background>
+                <Border.Effect>
+                    <DropShadowEffect BlurRadius="4" ShadowDepth="1" Direction="270" Color="#000000" Opacity="0.25" />
+                </Border.Effect>
+
+                <Grid HorizontalAlignment="Stretch" VerticalAlignment="Stretch" UseLayoutRounding="True" SnapsToDevicePixels="True">
+                    <!-- Subtle Top-Left Specular Highlight -->
+                    <Ellipse Width="16" Height="10" 
+                             HorizontalAlignment="Left" VerticalAlignment="Top" 
+                             Margin="3,2,0,0" 
+                             IsHitTestVisible="False">
+                        <Ellipse.Fill>
+                            <RadialGradientBrush Center="0.5,0.5" RadiusX="0.5" RadiusY="0.5">
+                                <GradientStop Color="#90FFFFFF" Offset="0" />
+                                <GradientStop Color="#00FFFFFF" Offset="1" />
+                            </RadialGradientBrush>
+                        </Ellipse.Fill>
+                    </Ellipse>
+
+                    <!-- The front surface: it rides round toward the edge and narrows while Mochi turns (MascotTurn), hidden on his back -->
+                    <Grid x:Name="FaceLayer" RenderTransformOrigin="0.5,0.5" IsHitTestVisible="False">
+                    <Grid.RenderTransform>
+                        <TransformGroup>
+                            <ScaleTransform x:Name="FaceTurnScale" ScaleX="1" />
+                            <TranslateTransform x:Name="FaceTurnShift" X="0" />
+                        </TransformGroup>
+                    </Grid.RenderTransform>
+                    <!-- Soft Pink Blush Cheeks (Coucou exact: rgba(255, 120, 150, 0.45)) -->
+                    <Ellipse x:Name="LeftCheek" Width="6" Height="3.2" 
+                             Fill="#73FF7896" 
+                             HorizontalAlignment="Center" VerticalAlignment="Center" 
+                             Margin="-15,7,0,0" 
+                             IsHitTestVisible="False" />
+                    
+                    <Ellipse x:Name="RightCheek" Width="6" Height="3.2" 
+                             Fill="#73FF7896" 
+                             HorizontalAlignment="Center" VerticalAlignment="Center" 
+                             Margin="15,7,0,0" 
+                             IsHitTestVisible="False" />
+
+                    <!-- Coucou Deep Ink Eyes (#1A1412) with Pill and Happy (Music) modes -->
+                    <Grid x:Name="FaceGrid" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,-1,0,0"
+                          UseLayoutRounding="False" SnapsToDevicePixels="False">
+                        <Grid.RenderTransform>
+                            <TranslateTransform x:Name="FaceTransform" X="0" Y="0" />
+                        </Grid.RenderTransform>
+
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="6" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+
+                        <!-- Left Eye -->
+                        <Grid Grid.Column="0" Width="4.8" Height="7.2" RenderTransformOrigin="0.5, 0.5"
+                              UseLayoutRounding="False" SnapsToDevicePixels="False">
+                            <Grid.RenderTransform>
+                                <ScaleTransform x:Name="LeftEyeBlinkTransform" ScaleY="1.0" />
+                            </Grid.RenderTransform>
+
+                            <!-- Standard Pill Eye Shape (#1A1412) via Vector Rectangle to prevent sub-pixel rounding jitter -->
+                            <Rectangle x:Name="LeftPillEye" 
+                                       Width="4.8" Height="7.2" 
+                                       RadiusX="2.4" RadiusY="2.4"
+                                       Fill="#1A1412"
+                                       UseLayoutRounding="False" SnapsToDevicePixels="False" />
+
+                            <!-- Happy Eye Arc (Shown when playing music / happy mood) -->
+                            <Path x:Name="LeftHappyEye" 
+                                  Visibility="Collapsed"
+                                  Data="M 0,5.5 A 2.9,2.9 0 0 1 4.8,5.5" 
+                                  Stroke="#1A1412" 
+                                  StrokeThickness="1.5" 
+                                  StrokeStartLineCap="Round" 
+                                  StrokeEndLineCap="Round" />
+                            <!-- Faces: flat eye (hot), droopy eye (drained) and spiral eye (dizzy) -->
+                            <Path x:Name="LeftDetermEye" Visibility="Collapsed" Data="M 0,0.6 L 4.8,2.2 L 4.8,4.2 A 2.4,2.4 0 0 1 0,4.2 Z" Fill="#1A1412" />
+                            <Path x:Name="LeftFlatEye" Visibility="Collapsed" Data="M 0,3.6 L 4.8,3.6" Stroke="#1A1412" StrokeThickness="1.5" StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
+                            <Path x:Name="LeftDroopEye" Visibility="Collapsed" Data="M 0,4.6 L 4.8,2.6" Stroke="#1A1412" StrokeThickness="1.5" StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
+                            <Grid x:Name="LeftSpiralEye" Visibility="Collapsed" Width="6" Height="6" HorizontalAlignment="Center" VerticalAlignment="Center" RenderTransformOrigin="0.5,0.5">
+                                <Grid.RenderTransform><RotateTransform x:Name="LeftSpiralRotate" Angle="0" /></Grid.RenderTransform>
+                                <Ellipse Width="6" Height="6" Stroke="#1A1412" StrokeThickness="1.15" Fill="Transparent" />
+                                <Ellipse Width="2.6" Height="2.6" Stroke="#1A1412" StrokeThickness="1.15" Fill="Transparent" />
+                                <Ellipse Width="1" Height="1" Fill="#1A1412" />
+                            </Grid>
+                            <!-- Sleepy Closed Eye Arc -->
+                            <Path x:Name="LeftSleepyEye" 
+                                  Visibility="Collapsed"
+                                  Data="M 0,3.5 A 2.9,2.9 0 0 0 4.8,3.5" 
+                                  Stroke="#2C2422" 
+                                  StrokeThickness="1.5" 
+                                  StrokeStartLineCap="Round" 
+                                  StrokeEndLineCap="Round" />
+                        </Grid>
+
+                        <!-- Right Eye -->
+                        <Grid Grid.Column="2" Width="4.8" Height="7.2" RenderTransformOrigin="0.5, 0.5"
+                              UseLayoutRounding="False" SnapsToDevicePixels="False">
+                            <Grid.RenderTransform>
+                                <ScaleTransform x:Name="RightEyeBlinkTransform" ScaleY="1.0" />
+                            </Grid.RenderTransform>
+
+                            <!-- Standard Pill Eye Shape (#1A1412) via Vector Rectangle to prevent sub-pixel rounding jitter -->
+                            <Rectangle x:Name="RightPillEye" 
+                                       Width="4.8" Height="7.2" 
+                                       RadiusX="2.4" RadiusY="2.4"
+                                       Fill="#1A1412"
+                                       UseLayoutRounding="False" SnapsToDevicePixels="False" />
+
+                            <!-- Happy Eye Arc (Shown when playing music / happy mood) -->
+                            <Path x:Name="RightHappyEye" 
+                                  Visibility="Collapsed"
+                                  Data="M 0,5.5 A 2.9,2.9 0 0 1 4.8,5.5" 
+                                  Stroke="#1A1412" 
+                                  StrokeThickness="1.5" 
+                                  StrokeStartLineCap="Round" 
+                                  StrokeEndLineCap="Round" />
+                            <!-- Faces: flat eye (hot), droopy eye (drained) and spiral eye (dizzy) -->
+                            <Path x:Name="RightDetermEye" Visibility="Collapsed" Data="M 4.8,0.6 L 0,2.2 L 0,4.2 A 2.4,2.4 0 0 0 4.8,4.2 Z" Fill="#1A1412" />
+                            <Path x:Name="RightFlatEye" Visibility="Collapsed" Data="M 0,3.6 L 4.8,3.6" Stroke="#1A1412" StrokeThickness="1.5" StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
+                            <Path x:Name="RightDroopEye" Visibility="Collapsed" Data="M 0,2.6 L 4.8,4.6" Stroke="#1A1412" StrokeThickness="1.5" StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
+                            <Grid x:Name="RightSpiralEye" Visibility="Collapsed" Width="6" Height="6" HorizontalAlignment="Center" VerticalAlignment="Center" RenderTransformOrigin="0.5,0.5">
+                                <Grid.RenderTransform><RotateTransform x:Name="RightSpiralRotate" Angle="0" /></Grid.RenderTransform>
+                                <Ellipse Width="6" Height="6" Stroke="#1A1412" StrokeThickness="1.15" Fill="Transparent" />
+                                <Ellipse Width="2.6" Height="2.6" Stroke="#1A1412" StrokeThickness="1.15" Fill="Transparent" />
+                                <Ellipse Width="1" Height="1" Fill="#1A1412" />
+                            </Grid>
+                            <!-- Sleepy Closed Eye Arc -->
+                            <Path x:Name="RightSleepyEye" 
+                                  Visibility="Collapsed"
+                                  Data="M 0,3.5 A 2.9,2.9 0 0 0 4.8,3.5" 
+                                  Stroke="#2C2422" 
+                                  StrokeThickness="1.5" 
+                                  StrokeStartLineCap="Round" 
+                                  StrokeEndLineCap="Round" />
+                        </Grid>
+                    </Grid>
+
+                    <!-- Faces: the tears, drawn in the same 30 x 26 space as the face and moving with the gaze. Mochi has no mouth and no eyebrows. -->
+                    <Canvas x:Name="FaceExtras" Width="30" Height="26" IsHitTestVisible="False" RenderTransform="{Binding RenderTransform, ElementName=FaceGrid}">
+                        <Path x:Name="TearDrop" Visibility="Collapsed" Data="M 6.4,14.6 C 5.5,16 5.2,16.8 5.2,17.4 A 1.2,1.2 0 0 0 7.6,17.4 C 7.6,16.8 7.3,16 6.4,14.6 Z" Fill="#7FC4F5" Stroke="#2F86C8" StrokeThickness="0.5">
+                            <Path.RenderTransform><TranslateTransform x:Name="TearT" Y="0" /></Path.RenderTransform>
+                        </Path>
+                        <Path x:Name="TearDropRight" Visibility="Collapsed" Data="M 23.6,14.6 C 22.7,16 22.4,16.8 22.4,17.4 A 1.2,1.2 0 0 0 24.8,17.4 C 24.8,16.8 24.5,16 23.6,14.6 Z" Fill="#7FC4F5" Stroke="#2F86C8" StrokeThickness="0.5">
+                            <Path.RenderTransform><TranslateTransform x:Name="TearRightT" Y="0" /></Path.RenderTransform>
+                        </Path>
+                        <!-- Activity faces drawn over the eyes (they follow the gaze): star eyes (Electric), coin eyes (Money), sunglasses (Sunny) -->
+                        <Canvas x:Name="StarEyes" Visibility="Collapsed" Canvas.Left="-1" Canvas.Top="-1" UseLayoutRounding="False" SnapsToDevicePixels="False">
+                            <Path Data="M 9.6,8.9 L 10.6,11.5 L 13.2,12.5 L 10.6,13.5 L 9.6,16.1 L 8.6,13.5 L 6,12.5 L 8.6,11.5 Z" Fill="#1A1412" />
+                            <Path Data="M 20.4,8.9 L 21.4,11.5 L 24,12.5 L 21.4,13.5 L 20.4,16.1 L 19.4,13.5 L 16.8,12.5 L 19.4,11.5 Z" Fill="#1A1412" />
+                            <Ellipse Canvas.Left="9.9" Canvas.Top="11.2" Width="1" Height="1" Fill="#FFF3B0" />
+                            <Ellipse Canvas.Left="20.7" Canvas.Top="11.2" Width="1" Height="1" Fill="#FFF3B0" />
+                        </Canvas>
+                        <Canvas x:Name="CoinEyes" Visibility="Collapsed" Canvas.Left="-1" Canvas.Top="-1" UseLayoutRounding="False" SnapsToDevicePixels="False">
+                            <Ellipse Canvas.Left="6.8" Canvas.Top="9.7" Width="5.6" Height="5.6" Fill="#F5C542" Stroke="#A87A12" StrokeThickness="0.6" />
+                            <Ellipse Canvas.Left="17.6" Canvas.Top="9.7" Width="5.6" Height="5.6" Fill="#F5C542" Stroke="#A87A12" StrokeThickness="0.6" />
+                            <Path Data="M 8.61,11.15 L 9.6,12.41 L 10.59,11.15 M 9.6,12.41 L 9.6,13.94 M 8.79,12.68 L 10.41,12.68 M 8.79,13.31 L 10.41,13.31" Stroke="#7A5200" StrokeThickness="0.55" StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
+                            <Path Data="M 19.41,11.15 L 20.4,12.41 L 21.39,11.15 M 20.4,12.41 L 20.4,13.94 M 19.59,12.68 L 21.21,12.68 M 19.59,13.31 L 21.21,13.31" Stroke="#7A5200" StrokeThickness="0.55" StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
+                        </Canvas>
+                        <Canvas x:Name="Sunglasses" Visibility="Collapsed" Canvas.Left="-1" Canvas.Top="-1" UseLayoutRounding="False" SnapsToDevicePixels="False">
+                            <Rectangle Canvas.Left="6.4" Canvas.Top="10.4" Width="6.4" Height="4.4" RadiusX="1.8" RadiusY="1.8" Fill="#1A1412" />
+                            <Rectangle Canvas.Left="17.2" Canvas.Top="10.4" Width="6.4" Height="4.4" RadiusX="1.8" RadiusY="1.8" Fill="#1A1412" />
+                            <Path Data="M 12.8,11.4 Q 15,10.4 17.2,11.4" Stroke="#1A1412" StrokeThickness="0.8" StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
+                            <Path Data="M 7.6,11.4 L 9.2,11.4 M 18.4,11.4 L 20,11.4" Stroke="#9CC9FF" StrokeThickness="0.6" StrokeStartLineCap="Round" StrokeEndLineCap="Round" Opacity="0.85" />
+                        </Canvas>
+                    </Canvas>
+                    <!-- Vector Sweat Droplet (Shown when GPU/CPU runs hot) -->
+                    <Path x:Name="SweatDrop" Visibility="Collapsed" IsHitTestVisible="False"
+                          Data="M 23,2 C 21,5 20,7 20,8.5 A 2,2 0 0 0 24,8.5 C 24,7 23,5 23,2 Z"
+                          Fill="#40C8FF" Stroke="#007ACC" StrokeThickness="0.5" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,1,3,0">
+                        <Path.RenderTransform><TranslateTransform x:Name="SweatTransform" Y="0" /></Path.RenderTransform>
+                    </Path>
+                    </Grid>
+                </Grid>
+            </Border>
+
+            <!-- Faces: things outside the body (steam, heat lines, icicles, stars, battery); every child starts collapsed -->
+            <Canvas x:Name="ExtrasLayer" Width="30" Height="26" IsHitTestVisible="False" HorizontalAlignment="Center" VerticalAlignment="Center">
+                <Ellipse x:Name="SteamLeft" Visibility="Collapsed" Width="3.6" Height="3.6" Canvas.Left="1" Canvas.Top="-3" Fill="#F7C1C1" Stroke="#E24B4A" StrokeThickness="0.7">
+                    <Ellipse.RenderTransform><TranslateTransform x:Name="SteamLeftT" Y="0" /></Ellipse.RenderTransform>
+                </Ellipse>
+                <Ellipse x:Name="SteamRight" Visibility="Collapsed" Width="3.6" Height="3.6" Canvas.Left="25.4" Canvas.Top="-3" Fill="#F7C1C1" Stroke="#E24B4A" StrokeThickness="0.7">
+                    <Ellipse.RenderTransform><TranslateTransform x:Name="SteamRightT" Y="0" /></Ellipse.RenderTransform>
+                </Ellipse>
+                <Path x:Name="HeatLines" Visibility="Collapsed" Data="M 9,-1 Q 10,-2.4 9,-3.8 Q 8,-5.2 9,-6.6 M 15,-1 Q 16,-2.4 15,-3.8 Q 14,-5.2 15,-6.6 M 21,-1 Q 22,-2.4 21,-3.8 Q 20,-5.2 21,-6.6"
+                      Stroke="#E85D24" StrokeThickness="0.9" StrokeStartLineCap="Round" StrokeEndLineCap="Round" Opacity="0.75">
+                    <Path.RenderTransform><TranslateTransform x:Name="HeatT" Y="0" /></Path.RenderTransform>
+                </Path>
+                <!-- The anger mark: four short ticks around a point, above the head -->
+                <Path x:Name="AngerMark" Visibility="Collapsed" Data="M 12.4,-6.6 L 13.9,-5.1 M 17.6,-6.6 L 16.1,-5.1 M 12.4,-1.4 L 13.9,-2.9 M 17.6,-1.4 L 16.1,-2.9"
+                      Stroke="#E24B4A" StrokeThickness="1.3" StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
+                <!-- The startle lines: three short strokes fanning out above the head -->
+                <Path x:Name="StartleLines" Visibility="Collapsed" Data="M 15,-2 L 15,-7 M 9.4,-1.4 L 7.4,-5.8 M 20.6,-1.4 L 22.6,-5.8"
+                      Stroke="#F2A33A" StrokeThickness="1.3" StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
+                <Canvas x:Name="IcicleGroup" Visibility="Collapsed">
+                    <Polygon Points="7,0.4 9,-4.6 11,0.4" Fill="#E6F1FB" Stroke="#85B7EB" StrokeThickness="0.5" StrokeLineJoin="Round" />
+                    <Polygon Points="13,0.4 15,-6 17,0.4" Fill="#E6F1FB" Stroke="#85B7EB" StrokeThickness="0.5" StrokeLineJoin="Round" />
+                    <Polygon Points="19,0.4 21,-4.6 23,0.4" Fill="#E6F1FB" Stroke="#85B7EB" StrokeThickness="0.5" StrokeLineJoin="Round" />
+                </Canvas>
+                <Canvas x:Name="StarsGroup" Visibility="Collapsed">
+                    <Ellipse x:Name="StarA" Width="2.2" Height="2.2" Canvas.Left="5" Canvas.Top="-4.5" Fill="#EF9F27" />
+                    <Ellipse x:Name="StarB" Width="2.2" Height="2.2" Canvas.Left="13.9" Canvas.Top="-6" Fill="#EF9F27" />
+                    <Ellipse x:Name="StarC" Width="2.2" Height="2.2" Canvas.Left="22.8" Canvas.Top="-4.5" Fill="#EF9F27" />
+                </Canvas>
+                <Canvas x:Name="SparkleGroup" Visibility="Collapsed">
+                    <Path x:Name="SparkleA" Data="M 5,-6.1 L 5.8,-4.3 L 7.6,-3.5 L 5.8,-2.7 L 5,-0.9 L 4.2,-2.7 L 2.4,-3.5 L 4.2,-4.3 Z" Fill="#FFD23F" Stroke="#D9A21C" StrokeThickness="0.4" StrokeLineJoin="Round" />
+                    <Path x:Name="SparkleB" Data="M 15,-8.1 L 15.8,-6.3 L 17.6,-5.5 L 15.8,-4.7 L 15,-2.9 L 14.2,-4.7 L 12.4,-5.5 L 14.2,-6.3 Z" Fill="#FFD23F" Stroke="#D9A21C" StrokeThickness="0.4" StrokeLineJoin="Round" />
+                    <Path x:Name="SparkleC" Data="M 25,-6.1 L 25.8,-4.3 L 27.6,-3.5 L 25.8,-2.7 L 25,-0.9 L 24.2,-2.7 L 22.4,-3.5 L 24.2,-4.3 Z" Fill="#FFD23F" Stroke="#D9A21C" StrokeThickness="0.4" StrokeLineJoin="Round" />
+                </Canvas>
+                <Path x:Name="WorryDrop" Visibility="Collapsed" Data="M 25,-9 C 23,-6 22,-4.5 22,-3 A 2,2 0 0 0 26,-3 C 26,-4.5 25,-6 25,-9 Z" Fill="#40C8FF" Stroke="#007ACC" StrokeThickness="0.5">
+                    <Path.RenderTransform><TranslateTransform x:Name="WorryDropT" Y="0" /></Path.RenderTransform>
+                </Path>
+                <Canvas x:Name="SighGroup" Visibility="Collapsed">
+                    <Canvas.RenderTransform><TranslateTransform x:Name="SighT" Y="0" /></Canvas.RenderTransform>
+                    <Ellipse Canvas.Left="24.4" Canvas.Top="-1.6" Width="2.6" Height="2.6" Fill="#E6F1FB" Stroke="#85B7EB" StrokeThickness="0.5" />
+                    <Ellipse Canvas.Left="27" Canvas.Top="-5" Width="1.8" Height="1.8" Fill="#E6F1FB" Stroke="#85B7EB" StrokeThickness="0.5" />
+                </Canvas>
+                <Canvas x:Name="ExclaimGroup" Visibility="Collapsed">
+                    <Rectangle Canvas.Left="13.6" Canvas.Top="-9.4" Width="2.8" Height="5.6" RadiusX="1.4" RadiusY="1.4" Fill="#F26B1D" />
+                    <Ellipse Canvas.Left="13.6" Canvas.Top="-2.6" Width="2.8" Height="2.8" Fill="#F26B1D" />
+                </Canvas>
+                <Canvas x:Name="ConfettiGroup" Visibility="Collapsed">
+                    <Canvas.RenderTransform><TranslateTransform x:Name="ConfettiT" Y="0" /></Canvas.RenderTransform>
+                    <Rectangle Canvas.Left="2" Canvas.Top="-6" Width="2.4" Height="1.2" Fill="#E24B4A" RenderTransformOrigin="0.5,0.5"><Rectangle.RenderTransform><RotateTransform Angle="30" /></Rectangle.RenderTransform></Rectangle>
+                    <Ellipse Canvas.Left="8" Canvas.Top="-8.4" Width="1.8" Height="1.8" Fill="#378ADD" />
+                    <Rectangle Canvas.Left="13.4" Canvas.Top="-6.4" Width="2.4" Height="1.2" Fill="#5DB55F" RenderTransformOrigin="0.5,0.5"><Rectangle.RenderTransform><RotateTransform Angle="-35" /></Rectangle.RenderTransform></Rectangle>
+                    <Ellipse Canvas.Left="19.6" Canvas.Top="-8.6" Width="1.8" Height="1.8" Fill="#EF9F27" />
+                    <Rectangle Canvas.Left="25.4" Canvas.Top="-6" Width="2.4" Height="1.2" Fill="#D4537E" RenderTransformOrigin="0.5,0.5"><Rectangle.RenderTransform><RotateTransform Angle="50" /></Rectangle.RenderTransform></Rectangle>
+                </Canvas>
+                <Canvas x:Name="CoffeeGroup" Visibility="Collapsed">
+                    <Path Data="M 21.4,-6.2 L 27.8,-6.2 L 27.2,-1.4 Q 27,-0.4 26,-0.4 L 23.2,-0.4 Q 22.2,-0.4 22,-1.4 Z" Fill="#FFFFFF" Stroke="#8A5A3C" StrokeThickness="0.8" StrokeLineJoin="Round" />
+                    <Path Data="M 27.6,-5.2 Q 30.2,-5.2 30,-3.4 Q 29.8,-2 27.3,-2.2" Stroke="#8A5A3C" StrokeThickness="0.8" StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
+                    <Rectangle Canvas.Left="22.1" Canvas.Top="-5.6" Width="5.2" Height="1.4" Fill="#8A5A3C" />
+                    <Path x:Name="CoffeeSteam" Data="M 23.4,-8 Q 24.4,-9.2 23.4,-10.4 M 25.6,-8 Q 26.6,-9.2 25.6,-10.4" Stroke="#B9B2AA" StrokeThickness="0.8" StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
+                </Canvas>
+                <Canvas x:Name="BatteryGroup" Visibility="Collapsed">
+                    <Border Canvas.Left="10" Canvas.Top="-6.5" Width="10" Height="5" BorderBrush="#888780" BorderThickness="0.8" CornerRadius="1">
+                        <Rectangle Width="2.4" Height="2.6" HorizontalAlignment="Left" Margin="0.6,0,0,0" Fill="#E24B4A" />
+                    </Border>
+                    <Rectangle Canvas.Left="20.1" Canvas.Top="-5" Width="0.9" Height="2" Fill="#888780" />
+                </Canvas>
+                <!-- Activity faces outside the body: lightning ring (Electric), floating coin (Money), umbrella and rain (Rainy), scarf and
+                     snowflakes (Snowy), a cloud (Cloudy), the sun (Sunny) and the tomato timer (Studying) -->
+                <Canvas x:Name="BoltOrbit" Visibility="Collapsed" Width="30" Height="26">
+                    <Canvas.RenderTransform><RotateTransform x:Name="BoltOrbitRotate" CenterX="15" CenterY="13" Angle="0" /></Canvas.RenderTransform>
+                    <Path x:Name="BoltA" Canvas.Left="13.5" Canvas.Top="-1.6" Data="M 1.7,0 L 0,2.9 L 1.4,2.9 L 0.7,5 L 3,1.9 L 1.6,1.9 L 2.5,0 Z" Fill="#FFD23F" Stroke="#C98A00" StrokeThickness="0.4" StrokeLineJoin="Round" />
+                    <Path x:Name="BoltB" Canvas.Left="24.2" Canvas.Top="16.2" Data="M 1.7,0 L 0,2.9 L 1.4,2.9 L 0.7,5 L 3,1.9 L 1.6,1.9 L 2.5,0 Z" Fill="#FFD23F" Stroke="#C98A00" StrokeThickness="0.4" StrokeLineJoin="Round" />
+                    <Path x:Name="BoltC" Canvas.Left="2.8" Canvas.Top="16.2" Data="M 1.7,0 L 0,2.9 L 1.4,2.9 L 0.7,5 L 3,1.9 L 1.6,1.9 L 2.5,0 Z" Fill="#FFD23F" Stroke="#C98A00" StrokeThickness="0.4" StrokeLineJoin="Round" />
+                </Canvas>
+                <Canvas x:Name="CoinFloat" Visibility="Collapsed">
+                    <Canvas.RenderTransform><TranslateTransform x:Name="CoinT" Y="0" /></Canvas.RenderTransform>
+                    <Ellipse Canvas.Left="12.6" Canvas.Top="-7.6" Width="4.8" Height="4.8" Fill="#F5C542" Stroke="#A87A12" StrokeThickness="0.55" />
+                    <Path Data="M 14.12,-6.4 L 15,-5.28 L 15.88,-6.4 M 15,-5.28 L 15,-3.92 M 14.28,-5.04 L 15.72,-5.04 M 14.28,-4.48 L 15.72,-4.48" Stroke="#7A5200" StrokeThickness="0.5" StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
+                </Canvas>
+                <Canvas x:Name="UmbrellaGroup" Visibility="Collapsed">
+                    <Path Data="M 6.5,-1.6 Q 15,-10.4 23.5,-1.6 Q 21.4,-3.1 19.25,-1.6 Q 17.1,-3.1 15,-1.6 Q 12.9,-3.1 10.75,-1.6 Q 8.6,-3.1 6.5,-1.6 Z" Fill="#378ADD" Stroke="#1F5E9E" StrokeThickness="0.5" StrokeLineJoin="Round" />
+                    <Path Data="M 15,-1.6 L 15,1" Stroke="#1F5E9E" StrokeThickness="0.7" StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
+                </Canvas>
+                <Canvas x:Name="RainGroup" Visibility="Collapsed">
+                    <Canvas.RenderTransform><TranslateTransform x:Name="RainT" Y="0" /></Canvas.RenderTransform>
+                    <Path Data="M 3,-2 C 2.3,-0.9 2.1,-0.4 2.1,0 A 0.9,0.9 0 0 0 3.9,0 C 3.9,-0.4 3.7,-0.9 3,-2 Z" Fill="#7FC4F5" Stroke="#2F86C8" StrokeThickness="0.4" />
+                    <Path Data="M 27,-4 C 26.3,-2.9 26.1,-2.4 26.1,-2 A 0.9,0.9 0 0 0 27.9,-2 C 27.9,-2.4 27.7,-2.9 27,-4 Z" Fill="#7FC4F5" Stroke="#2F86C8" StrokeThickness="0.4" />
+                </Canvas>
+                <Canvas x:Name="ScarfGroup" Visibility="Collapsed">
+                    <Rectangle Canvas.Left="2.6" Canvas.Top="18.2" Width="24.8" Height="3.2" RadiusX="1.6" RadiusY="1.6" Fill="#E24B4A" Stroke="#A8302F" StrokeThickness="0.4" />
+                    <Rectangle Canvas.Left="20" Canvas.Top="19.6" Width="3.2" Height="6.2" RadiusX="1" RadiusY="1" Fill="#E24B4A" Stroke="#A8302F" StrokeThickness="0.4" />
+                    <Path Data="M 6,18.4 L 6,21.2 M 10,18.4 L 10,21.2 M 14,18.4 L 14,21.2" Stroke="#F7C1C1" StrokeThickness="0.5" />
+                </Canvas>
+                <Canvas x:Name="SnowGroup" Visibility="Collapsed">
+                    <Canvas.RenderTransform><TranslateTransform x:Name="SnowT" Y="0" /></Canvas.RenderTransform>
+                    <Path Data="M 4,-6.6 L 4,-2.6 M 2.3,-5.6 L 5.7,-3.6 M 2.3,-3.6 L 5.7,-5.6" Stroke="#9CC9FF" StrokeThickness="0.6" StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
+                    <Path Data="M 26,-8.4 L 26,-5.2 M 24.6,-7.6 L 27.4,-6 M 24.6,-6 L 27.4,-7.6" Stroke="#9CC9FF" StrokeThickness="0.6" StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
+                </Canvas>
+                <Canvas x:Name="CloudGroup" Visibility="Collapsed">
+                    <Canvas.RenderTransform><TranslateTransform x:Name="CloudT" X="0" /></Canvas.RenderTransform>
+                    <Path Data="M 10,-2 L 20,-2 A 2.4,2.4 0 0 0 19.6,-6.6 A 3.4,3.4 0 0 0 13.4,-7.6 A 2.6,2.6 0 0 0 10,-2 Z" Fill="#E6EBF2" Stroke="#8E9AAE" StrokeThickness="0.5" StrokeLineJoin="Round" />
+                </Canvas>
+                <Canvas x:Name="SunGroup" Visibility="Collapsed">
+                    <Canvas Width="6" Height="6" Canvas.Left="22" Canvas.Top="-9">
+                        <Canvas.RenderTransform><RotateTransform x:Name="SunRaysRotate" CenterX="3" CenterY="3" Angle="0" /></Canvas.RenderTransform>
+                        <Path Data="M 3,0 L 3,0.9 M 3,5.1 L 3,6 M 0,3 L 0.9,3 M 5.1,3 L 6,3 M 0.9,0.9 L 1.5,1.5 M 4.5,4.5 L 5.1,5.1 M 0.9,5.1 L 1.5,4.5 M 4.5,1.5 L 5.1,0.9" Stroke="#F2A33A" StrokeThickness="0.6" StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
+                    </Canvas>
+                    <Ellipse Canvas.Left="23.6" Canvas.Top="-7.4" Width="2.8" Height="2.8" Fill="#FFC83D" Stroke="#E08A00" StrokeThickness="0.4" />
+                </Canvas>
+                <Canvas x:Name="TimerBadge" Visibility="Collapsed">
+                    <Ellipse Canvas.Left="21.6" Canvas.Top="-7.2" Width="5.8" Height="5.8" Fill="#E8503A" Stroke="#B23A28" StrokeThickness="0.5" />
+                    <Path Data="M 24.5,-7.2 Q 23.4,-8.6 22.6,-8.2 M 24.5,-7.2 Q 25.6,-8.6 26.4,-8.2" Stroke="#3F8F3A" StrokeThickness="0.7" StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
+                    <Path Data="M 24.5,-4.3 L 24.5,-6.2" Stroke="#FFFFFF" StrokeThickness="0.6" StrokeStartLineCap="Round" StrokeEndLineCap="Round">
+                        <Path.RenderTransform><RotateTransform x:Name="TimerHandRotate" CenterX="24.5" CenterY="-4.3" Angle="0" /></Path.RenderTransform>
+                    </Path>
+                </Canvas>
+            </Canvas>
+            <!-- Vector Headphones Layer (OUTSIDE the clipped body so the band is never clipped), drawn in the body's 30 x 26 space:
+                 the band rests on top of the head and runs down both sides into the ear cups, which sit on the edge of the body at ear height and stay inside its 30 unit width (anything wider is cut by the capsule) -->
+            <Canvas x:Name="HeadphonesLayer" Visibility="Collapsed" IsHitTestVisible="False" Width="30" Height="26" HorizontalAlignment="Center" VerticalAlignment="Center">
+                <Path x:Name="HeadbandArc" Data="M 1.5,9 C 1.5,-4.5 28.5,-4.5 28.5,9" Stroke="#0A84FF" StrokeThickness="2.2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
+                <Border x:Name="EarCupLeft" Canvas.Left="0" Canvas.Top="7.6" Width="4.8" Height="8.8" Background="#0062D6" BorderBrush="#FFFFFF" BorderThickness="0.6" CornerRadius="2.2" />
+                <Border x:Name="EarCupRight" Canvas.Left="25.2" Canvas.Top="7.6" Width="4.8" Height="8.8" Background="#0062D6" BorderBrush="#FFFFFF" BorderThickness="0.6" CornerRadius="2.2" />
+            </Canvas>
+        </Grid>
+
+        <!-- The turn's wind in front of Mochi: the near halves of the rings and the curl (built in code), and dust puffing at his feet -->
+        <Canvas x:Name="WindFront" Visibility="Collapsed" Opacity="0" IsHitTestVisible="False" Width="30" Height="26">
+            <Canvas.RenderTransform><TranslateTransform x:Name="WindFrontRise" Y="0" /></Canvas.RenderTransform>
+            <Canvas x:Name="DustPuffs">
+                <Canvas.RenderTransform><ScaleTransform x:Name="DustScale" CenterX="15" CenterY="24" ScaleX="1" ScaleY="1" /></Canvas.RenderTransform>
+                <Ellipse x:Name="DustA" Canvas.Left="4.4" Canvas.Top="22.6" Width="3.2" Height="2.4" Fill="#40FFFFFF" />
+                <Ellipse x:Name="DustB" Canvas.Left="13.4" Canvas.Top="23.4" Width="3.2" Height="2.2" Fill="#40FFFFFF" />
+                <Ellipse x:Name="DustC" Canvas.Left="22.4" Canvas.Top="22.6" Width="3.2" Height="2.4" Fill="#40FFFFFF" />
+            </Canvas>
+        </Canvas>
+
+        <!-- Sleepy Zzz Particle: three vector letters (WPF text cannot draw colour emoji, so the old emoji was black and white) -->
+        <Canvas x:Name="SleepyParticle"
+                Width="12"
+                Height="11"
+                HorizontalAlignment="Right"
+                VerticalAlignment="Top"
+                Margin="0,-6,-4,0"
+                Opacity="0"
+                IsHitTestVisible="False">
+            <Canvas.RenderTransform>
+                <TranslateTransform x:Name="SleepyTranslate" X="0" Y="0" />
+            </Canvas.RenderTransform>
+            <Path Data="M 0.2,7.4 L 2.6,7.4 L 0.2,9.8 L 2.6,9.8" Stroke="#7FB5E8" StrokeThickness="1.1" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" />
+            <Path Data="M 3.8,3.8 L 6.8,3.8 L 3.8,6.8 L 6.8,6.8" Stroke="#5B9BD5" StrokeThickness="1.2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" />
+            <Path Data="M 7.6,0.6 L 11.2,0.6 L 7.6,4.2 L 11.2,4.2" Stroke="#378ADD" StrokeThickness="1.3" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" />
+        </Canvas>
+
+        <!-- Floating Heart (click feedback): a vector heart, because WPF text cannot draw the colour emoji -->
+        <Grid x:Name="FloatingHeart"
+              Width="9"
+              Height="8"
+              HorizontalAlignment="Center"
+              VerticalAlignment="Top"
+              Margin="0,-2,0,0"
+              Opacity="0"
+              IsHitTestVisible="False">
+            <Grid.RenderTransform>
+                <TranslateTransform x:Name="HeartTranslate" X="0" Y="0" />
+            </Grid.RenderTransform>
+            <Path Data="M 4.5,7.6 C 1,5 0.4,3.6 0.4,2.4 C 0.4,1.2 1.4,0.4 2.5,0.4 C 3.4,0.4 4.1,0.9 4.5,1.6 C 4.9,0.9 5.6,0.4 6.5,0.4 C 7.6,0.4 8.6,1.2 8.6,2.4 C 8.6,3.6 8,5 4.5,7.6 Z"
+                  Fill="#FF5C8A" Stroke="#D63A6A" StrokeThickness="0.6" StrokeLineJoin="Round" />
+            <Path Data="M 1.7,2.5 Q 1.8,1.5 2.8,1.3" Stroke="#FFFFFF" StrokeThickness="0.7" StrokeStartLineCap="Round" StrokeEndLineCap="Round" Opacity="0.85" />
+        </Grid>
+    </Grid>
+    </Viewbox>
+</UserControl>

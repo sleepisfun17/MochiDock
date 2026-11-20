@@ -1,0 +1,36 @@
+MochiDock (beta)
+================
+
+MochiDock is a small "dynamic island" for Windows: a capsule at the top of
+your screen that shows music and lyrics, notifications, system stats, weather,
+prayer times, your calendar and more, and opens into cards when you hover it.
+
+This is a BETA. Most features work, but not every combination of hardware
+and apps has been tested. Please report anything that looks wrong.
+
+Before you install
+------------------
+- Windows 10 (version 2004 or later) or Windows 11, 64-bit.
+- MochiDock asks for Administrator access every time it starts. Windows needs
+  this to measure game FPS. You can let it start at logon (one of the next
+  options) so you are not asked each time.
+- Nothing else is required: .NET is included.
+
+Optional extras
+---------------
+Some cards only fill in when the matching app or driver is on this PC:
+- GPU stats: work with NVIDIA, AMD and Intel graphics; an NVIDIA driver adds
+  temperature, memory, clock and power.
+- CPU temperature: the PawnIO driver (https://pawnio.eu). The setup can install it for you through winget if you tick the PawnIO option; it is a separate third-party driver with its own licence and is never required.
+- Email: a Gmail, Yahoo, iCloud or other IMAP account (app password), classic
+  Outlook or Mailspring.
+- WhatsApp: linked through the bundled GOWA helper (set up in Settings).
+- Downloads card: ffmpeg for MP3 and merged video files.
+
+Your data
+---------
+Settings and tasks are stored in %AppData%\MochiDock, caches and the WhatsApp
+session in %LocalAppData%\MochiDock. Uninstalling asks before deleting them.
+
+Licences for the fonts, icons and tools MochiDock uses are in
+THIRD-PARTY-NOTICES.txt in the install folder.

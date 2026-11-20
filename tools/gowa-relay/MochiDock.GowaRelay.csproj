@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Loopback webhook relay for the shared GOWA server: GOWA posts each event once, the relay fans it out to every dock in parallel.
+       Publish: tools/gowa-relay/publish.ps1 (self-contained, single file). -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>MochiDock.GowaRelay</AssemblyName>
+    <RootNamespace>MochiDock.GowaRelay</RootNamespace>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- The pure rules (target parsing, token redaction, forwarded headers) are shared with the app and its tests. -->
+    <Compile Include="..\..\MochiDock.Core\GowaWebhookRules.cs" Link="GowaWebhookRules.cs" />
+  </ItemGroup>
+
+</Project>

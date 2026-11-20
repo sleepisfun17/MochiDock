@@ -1,0 +1,7 @@
+using MochiDock.Core;
+public class NetworkCalendarTests{
+ [Fact] public void BaselinesAndCounterResetsDoNotCreateTraffic(){var h=new NetworkHistory();h.Update(0,new[]{new AdapterCounter("a",100,50)});Assert.Equal(0,h.Received);h.Update(2,new[]{new AdapterCounter("a",300,90)});Assert.Equal(100,h.Down);Assert.Equal(200,h.Received);h.Update(3,new[]{new AdapterCounter("a",1,1),new AdapterCounter("b",99999,99999)});Assert.Equal(200,h.Received);h.Update(4,Array.Empty<AdapterCounter>());h.Update(5,new[]{new AdapterCounter("a",9999,9999)});Assert.Equal(200,h.Received);}
+ [Fact] public void PeaksExpireByTimeNotNumberOfSamples(){var h=new NetworkHistory();h.Update(0,new[]{new AdapterCounter("a",0,0)});h.Update(1,new[]{new AdapterCounter("a",100,10)});Assert.Equal(100,h.PeakDown);h.Update(62,new[]{new AdapterCounter("a",100,10)});Assert.Equal(0,h.PeakDown);}
+ [Theory][InlineData(2024,2)][InlineData(2026,8)][InlineData(2027,1)] public void CalendarCanStartOnMonday(int y,int m){var days=LocalCalendar.Days(new DateTime(y,m,1),DayOfWeek.Monday);Assert.Equal(42,days.Length);Assert.Equal(DayOfWeek.Monday,days[0].DayOfWeek);Assert.Contains(new DateTime(y,m,1),days.Take(7));}
+ [Theory][InlineData(2024,2)][InlineData(2026,8)][InlineData(2027,1)] public void CalendarAlwaysHasSixSundayFirstWeeks(int y,int m){var days=LocalCalendar.Days(new DateTime(y,m,1));Assert.Equal(42,days.Length);Assert.Equal(DayOfWeek.Sunday,days[0].DayOfWeek);Assert.Contains(new DateTime(y,m,DateTime.DaysInMonth(y,m)),days);}
+}

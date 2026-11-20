@@ -1,0 +1,117 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:models="clr-namespace:MochiDock.Models">
+
+    <DataTemplate x:Key="WeatherVectorIconTemplate" DataType="{x:Type models:WeatherInfo}">
+        <Viewbox Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center">
+            <Grid Width="24" Height="24">
+                <!-- 1. Clear: Radiant Sun with organic cloud accent (eliminates cog/gear silhouette) -->
+                <Grid x:Name="ClearLayer" Visibility="Collapsed">
+                    <!-- Warm Radiant Sun disc -->
+                    <Ellipse Width="11" Height="11" Fill="{DynamicResource WeatherSunBrush}" Margin="9,2,0,0" HorizontalAlignment="Left" VerticalAlignment="Top" />
+                    <!-- Delicate warm corona glow / sunbeam accent -->
+                    <Path Stretch="Uniform" Fill="{DynamicResource WeatherCoronaBrush}" Width="17" Height="17" Margin="6,0,0,0" HorizontalAlignment="Left" VerticalAlignment="Top" Opacity="0.85"
+                          Data="M 12,2 L 13,5 L 16,3 L 15,6 L 18,7 L 15,9 L 17,12 L 14,12 L 14,15 L 12,13 L 10,15 L 10,12 L 7,12 L 9,9 L 6,7 L 9,6 L 8,3 L 11,5 Z" />
+                    <!-- Crisp white miniature weather cloud in foreground -->
+                    <Path Stretch="Uniform" Width="17" Height="12" Margin="0,8,3,0" HorizontalAlignment="Center" VerticalAlignment="Top"
+                          Fill="{DynamicResource WeatherClearCloudBrush}" Stroke="{DynamicResource WeatherCloudStroke}" StrokeThickness="1" Opacity="0.95"
+                          Data="M 4,11 A 4,4 0 0 1 8,7 A 5,5 0 0 1 16,7 A 3.5,3.5 0 0 1 18.5,11 A 2.5,2.5 0 0 1 17,14 L 4,14 A 3,3 0 0 1 4,11 Z" />
+                </Grid>
+
+                <!-- 2. Partly Cloudy: Sun behind cloud -->
+                <Grid x:Name="PartlyCloudyLayer" Visibility="Collapsed">
+                    <!-- Sun peaking out top-right -->
+                    <Ellipse Width="10" Height="10" Fill="{DynamicResource WeatherPartlySunBrush}" Margin="9,2,0,0" HorizontalAlignment="Left" VerticalAlignment="Top" />
+                    <!-- Cloud in foreground -->
+                    <Path Stretch="Uniform" Width="18" Height="13" Margin="0,7,2,0" HorizontalAlignment="Center" VerticalAlignment="Top"
+                          Fill="{DynamicResource WeatherPartlyCloudBrush}" Stroke="{DynamicResource WeatherCloudStroke}" StrokeThickness="1"
+                          Data="M 4,11 A 4,4 0 0 1 8,7 A 5,5 0 0 1 16,7 A 3.5,3.5 0 0 1 18.5,11 A 2.5,2.5 0 0 1 17,14 L 4,14 A 3,3 0 0 1 4,11 Z" />
+                </Grid>
+
+                <!-- 3. Cloudy: Full Cloud -->
+                <Grid x:Name="CloudyLayer" Visibility="Collapsed">
+                    <Path Stretch="Uniform" Width="20" Height="14" HorizontalAlignment="Center" VerticalAlignment="Center"
+                          Fill="{DynamicResource WeatherCloudBrush}"
+                          Stroke="{DynamicResource WeatherCloudStroke}"
+                          StrokeThickness="1"
+                          Data="M 4,11 A 4,4 0 0 1 8,7 A 5,5 0 0 1 16,7 A 3.5,3.5 0 0 1 18.5,11 A 2.5,2.5 0 0 1 17,14 L 4,14 A 3,3 0 0 1 4,11 Z" />
+                </Grid>
+
+                <!-- 4. Fog / Mist -->
+                <Grid x:Name="FogLayer" Visibility="Collapsed">
+                    <Path Stretch="Uniform" Width="18" Height="12" HorizontalAlignment="Center" VerticalAlignment="Center"
+                          Stroke="{DynamicResource WeatherMistBrush}" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                          Data="M 3,4 L 21,4 M 5,8 L 19,8 M 4,12 L 20,12" />
+                </Grid>
+
+                <!-- 5. Drizzle -->
+                <Grid x:Name="DrizzleLayer" Visibility="Collapsed">
+                    <Path Stretch="Uniform" Width="17" Height="11" Margin="0,1,0,0" HorizontalAlignment="Center" VerticalAlignment="Top"
+                          Fill="#98A0B8"
+                          Data="M 4,11 A 4,4 0 0 1 8,7 A 5,5 0 0 1 16,7 A 3.5,3.5 0 0 1 18.5,11 A 2.5,2.5 0 0 1 17,14 L 4,14 A 3,3 0 0 1 4,11 Z" />
+                    <Path Stretch="Uniform" Width="12" Height="6" Margin="0,14,0,0" HorizontalAlignment="Center" VerticalAlignment="Top"
+                          Stroke="#4DA3FF" StrokeThickness="1.5" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                          Data="M 4,2 L 3,5 M 8,2 L 7,5 M 12,2 L 11,5" />
+                </Grid>
+
+                <!-- 6. Rain -->
+                <Grid x:Name="RainLayer" Visibility="Collapsed">
+                    <Path Stretch="Uniform" Width="18" Height="12" Margin="0,1,0,0" HorizontalAlignment="Center" VerticalAlignment="Top"
+                          Fill="#7C88A8"
+                          Data="M 4,11 A 4,4 0 0 1 8,7 A 5,5 0 0 1 16,7 A 3.5,3.5 0 0 1 18.5,11 A 2.5,2.5 0 0 1 17,14 L 4,14 A 3,3 0 0 1 4,11 Z" />
+                    <Path Stretch="Uniform" Width="14" Height="7" Margin="0,14,0,0" HorizontalAlignment="Center" VerticalAlignment="Top"
+                          Stroke="#0A84FF" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                          Data="M 4,1 L 2,6 M 9,1 L 7,6 M 14,1 L 12,6" />
+                </Grid>
+
+                <!-- 7. Snow -->
+                <Grid x:Name="SnowLayer" Visibility="Collapsed">
+                    <Path Stretch="Uniform" Width="18" Height="12" Margin="0,1,0,0" HorizontalAlignment="Center" VerticalAlignment="Top"
+                          Fill="#8E99B2"
+                          Data="M 4,11 A 4,4 0 0 1 8,7 A 5,5 0 0 1 16,7 A 3.5,3.5 0 0 1 18.5,11 A 2.5,2.5 0 0 1 17,14 L 4,14 A 3,3 0 0 1 4,11 Z" />
+                    <Path Stretch="Uniform" Width="14" Height="7" Margin="0,14,0,0" HorizontalAlignment="Center" VerticalAlignment="Top"
+                          Fill="{DynamicResource WeatherSnowflakeBrush}"
+                          Data="M 4,3 A 1.2,1.2 0 1 1 4,3.01 M 9,3 A 1.2,1.2 0 1 1 9,3.01 M 14,3 A 1.2,1.2 0 1 1 14,3.01 M 6.5,6 A 1.2,1.2 0 1 1 6.5,6.01 M 11.5,6 A 1.2,1.2 0 1 1 11.5,6.01" />
+                </Grid>
+
+                <!-- 8. Thunderstorm -->
+                <Grid x:Name="ThunderLayer" Visibility="Collapsed">
+                    <Path Stretch="Uniform" Width="18" Height="12" Margin="0,1,0,0" HorizontalAlignment="Center" VerticalAlignment="Top"
+                          Fill="#55556E"
+                          Data="M 4,11 A 4,4 0 0 1 8,7 A 5,5 0 0 1 16,7 A 3.5,3.5 0 0 1 18.5,11 A 2.5,2.5 0 0 1 17,14 L 4,14 A 3,3 0 0 1 4,11 Z" />
+                    <Path Stretch="Uniform" Width="8" Height="10" Margin="1,12,0,0" HorizontalAlignment="Center" VerticalAlignment="Top"
+                          Fill="#FFD60A"
+                          Data="M 5,0 L 0,6 L 4,6 L 2,11 L 8,4 L 4,4 Z" />
+                </Grid>
+            </Grid>
+        </Viewbox>
+        <DataTemplate.Triggers>
+            <DataTrigger Binding="{Binding IconKind}" Value="Clear">
+                <Setter TargetName="ClearLayer" Property="Visibility" Value="Visible" />
+            </DataTrigger>
+            <DataTrigger Binding="{Binding IconKind}" Value="PartlyCloudy">
+                <Setter TargetName="PartlyCloudyLayer" Property="Visibility" Value="Visible" />
+            </DataTrigger>
+            <DataTrigger Binding="{Binding IconKind}" Value="Cloudy">
+                <Setter TargetName="CloudyLayer" Property="Visibility" Value="Visible" />
+            </DataTrigger>
+            <DataTrigger Binding="{Binding IconKind}" Value="Fog">
+                <Setter TargetName="FogLayer" Property="Visibility" Value="Visible" />
+            </DataTrigger>
+            <DataTrigger Binding="{Binding IconKind}" Value="Drizzle">
+                <Setter TargetName="DrizzleLayer" Property="Visibility" Value="Visible" />
+            </DataTrigger>
+            <DataTrigger Binding="{Binding IconKind}" Value="Rain">
+                <Setter TargetName="RainLayer" Property="Visibility" Value="Visible" />
+            </DataTrigger>
+            <DataTrigger Binding="{Binding IconKind}" Value="Snow">
+                <Setter TargetName="SnowLayer" Property="Visibility" Value="Visible" />
+            </DataTrigger>
+            <DataTrigger Binding="{Binding IconKind}" Value="Thunder">
+                <Setter TargetName="ThunderLayer" Property="Visibility" Value="Visible" />
+            </DataTrigger>
+        </DataTemplate.Triggers>
+    </DataTemplate>
+
+</ResourceDictionary>
+
