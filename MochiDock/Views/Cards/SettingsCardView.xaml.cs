@@ -98,9 +98,10 @@ public partial class SettingsCardView : UserControl
             GamingDndCheck.IsChecked = settings.EnableGamingDnd;
             RemindersCheck.IsChecked = settings.EnableAgendaReminders;
 
-            bool matcha = string.Equals(settings.CapsuleTheme, "Matcha", StringComparison.OrdinalIgnoreCase);
-            ThemeMatchaRadio.IsChecked = matcha;
-            ThemeClassicRadio.IsChecked = !matcha;
+            string theme = MochiDock.Core.ThemePolicy.Normalize(settings.CapsuleTheme);
+            ThemeMatchaRadio.IsChecked = theme == MochiDock.Core.ThemePolicy.Matcha;
+            ThemeHojichaRadio.IsChecked = theme == MochiDock.Core.ThemePolicy.Hojicha;
+            ThemeClassicRadio.IsChecked = theme == MochiDock.Core.ThemePolicy.Default;
             bool notch = string.Equals(settings.DockStyle, "Notch", StringComparison.OrdinalIgnoreCase);
             DockNotchRadio.IsChecked = notch;
             DockFloatingRadio.IsChecked = !notch;
@@ -116,7 +117,9 @@ public partial class SettingsCardView : UserControl
     private void ThemeRadio_Checked(object sender, RoutedEventArgs e)
     {
         if (!IsLoaded || _isLoadingPreferences) return;
-        string chosen = ThemeMatchaRadio.IsChecked == true ? "Matcha" : "Default";
+        string chosen = ThemeMatchaRadio.IsChecked == true ? MochiDock.Core.ThemePolicy.Matcha
+                      : ThemeHojichaRadio.IsChecked == true ? MochiDock.Core.ThemePolicy.Hojicha
+                      : MochiDock.Core.ThemePolicy.Default;
         ViewModel?.UpdateSettings(x => x.CapsuleTheme = chosen, SettingsApply.Theme);
     }
 

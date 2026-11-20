@@ -11,6 +11,7 @@ All notable changes to MochiDock are documented here. The format follows [Keep a
 - **Rain soon**: a short capsule notice when rain, snow or a thunderstorm is expected within the hour (Open-Meteo 15-minute forecast); tap it to open Weather. Settings > Location & Prayer > Rain soon.
 - **Stats 24-hour history**: the CPU, GPU and Memory charts switch between the live 2 minutes and the last 24 hours (load, measured temperature and the day's peak; the line breaks where the PC slept). A light reading every 15 seconds, one point a minute, kept on this PC in `StatsHistory.json`; paused while locked or the screen is off; off or cleared in Settings > Hardware & power > History.
 - **Sustained-heat alert**: a capsule notice once a measured CPU or GPU temperature has stayed at 80 °C or more for 10 minutes (both adjustable); Mochi looks hot while it lasts, and tapping the notice opens that chart's 24-hour view.
+- **Hojicha theme**: a third theme, a warm roasted-tea dark with a caramel accent, next to Default and Matcha in Settings > Appearance & Dock. Mochi wears a kinako-tan body and a caramel whirlwind on it.
 - **Mochi's day**: new faces for being up late (a crescent moon), your birthday (a party hat; set it in Settings > Appearance & Dock), a calendar meeting (a headset with a microphone) and all of today's tasks done (a green tick, with a cheer when you tick off the last one). Hovering over Mochi gets a quick happy glance.
 
 ### Changed

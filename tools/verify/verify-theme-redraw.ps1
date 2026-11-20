@@ -33,5 +33,8 @@ try {
   $hidden.Visibility='Visible'; Pump;      Expect 1 1 'hidden view shown'
   $hidden.Visibility='Collapsed'; Pump; $hidden.Visibility='Visible'; Pump; Expect 1 1 'shown again without a switch'
   Apply 'Default';                         Expect 2 2 'switch back to Default'
+  Apply 'Hojicha';                         Expect 3 3 'switch to Hojicha (dark to dark)'
+  Apply 'hojicha';                         Expect 3 3 'Hojicha again, other spelling'
+  Apply 'Default';                         Expect 4 4 'Hojicha back to Default'
   'Theme redraw checks passed.'
 } finally { $window.Close() }

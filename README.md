@@ -47,7 +47,7 @@ A new install starts small: the **Media**, **Stats** and **Weather** tabs, plus 
 | **Mochi** | The mascot's faces follow what is going on (music, messages, games, the weather, a hot GPU, overdue tasks…) and the card you open (Electric on the Battery page, Money on FX, the sky on Weather, Studying during a Pomodoro). He spins round in a little whirlwind when his face changes. [Every face and its trigger](docs/USER_GUIDE.md#mochis-faces). | On | Appearance & Dock (Expressive Mochi) |
 | **Updates** | Checks GitHub for a new version; **Update now** downloads it, verifies its checksum, installs it silently and restarts MochiDock. Nothing installs without your click. | Check on | Data & diagnostics |
 
-Two themes, `Default` (dark) and `Matcha` (warm oat and green), are in Appearance & Dock, along with the dock style, date format, monitor and interface size. MochiDock is multi-monitor and high-DPI aware. The [user guide](docs/USER_GUIDE.md) explains every tab and setting.
+Three themes, `Default` (dark), `Hojicha` (warm roasted-tea brown with a caramel accent) and `Matcha` (warm oat and green), are in Appearance & Dock, along with the dock style, date format, monitor and interface size. MochiDock is multi-monitor and high-DPI aware. The [user guide](docs/USER_GUIDE.md) explains every tab and setting.
 
 ## Screenshots
 

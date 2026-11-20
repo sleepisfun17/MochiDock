@@ -125,7 +125,7 @@ public partial class MascotControl : System.Windows.Controls.UserControl
     {
 
         InitializeComponent();
-        if (_isMatcha) ApplyMood(Mood);   // the XAML body is the grey one
+        if (_theme != MascotTheme.Default) ApplyMood(Mood);   // the XAML body is the grey one
         BuildWind();
         Unloaded += (_, _) => { if (_spinning) EndSpin(landing: false); };
         IsVisibleChanged += (_, _) => { if (!IsVisible && _spinning) EndSpin(landing: false); };
@@ -917,10 +917,10 @@ public partial class MascotControl : System.Windows.Controls.UserControl
 
     private void StartWind()
     {
-        var core = Ink(_isMatcha ? "#F5F0DF" : "#F4F4F8");
-        var glow = Ink(_isMatcha ? "#CC4E6B36" : "#CCD4BC8E");
-        var inner = Ink(_isMatcha ? "#85B957" : "#F3E2BD");
-        var wisp = Ink(_isMatcha ? "#CC4E6B36" : "#CCEBEBF0");
+        var core = Ink(_isMatcha ? "#F5F0DF" : _isHojicha ? "#F6EBDC" : "#F4F4F8");
+        var glow = Ink(_isMatcha ? "#CC4E6B36" : _isHojicha ? "#CCE0A96D" : "#CCD4BC8E");
+        var inner = Ink(_isMatcha ? "#85B957" : _isHojicha ? "#E8C38A" : "#F3E2BD");
+        var wisp = Ink(_isMatcha ? "#CC4E6B36" : _isHojicha ? "#CCE8C38A" : "#CCEBEBF0");
         foreach (var s in _windStrokes)
         {
             var fill = s.Strand.Wisp ? wisp : s.Strand.Inner ? inner : core;
@@ -933,7 +933,7 @@ public partial class MascotControl : System.Windows.Controls.UserControl
         }
         _windCurl[0].Fill = glow;
         _windCurl[1].Fill = core;
-        DustA.Fill = DustB.Fill = DustC.Fill = Ink(_isMatcha ? "#554E6B36" : "#55D4BC8E");
+        DustA.Fill = DustB.Fill = DustC.Fill = Ink(_isMatcha ? "#554E6B36" : _isHojicha ? "#55E0A96D" : "#55D4BC8E");
         UpdateWind(0);
 
         WindBack.Visibility = WindFront.Visibility = Visibility.Visible;
@@ -1609,26 +1609,60 @@ public partial class MascotControl : System.Windows.Controls.UserControl
     }
 
 
+    public enum MascotTheme { Default, Matcha, Hojicha }
+
     /// <summary>The theme the app is using; set by ThemeService so a Mochi created later starts with the right body.</summary>
-    public static bool CurrentIsMatcha { get; set; }
+    public static MascotTheme CurrentTheme { get; set; }
 
-    private bool _isMatcha = CurrentIsMatcha;
+    /// <summary>Kept for the render harnesses: true means Matcha, false Default.</summary>
+    public static bool CurrentIsMatcha
+    {
+        get => CurrentTheme == MascotTheme.Matcha;
+        set => CurrentTheme = value ? MascotTheme.Matcha : MascotTheme.Default;
+    }
 
-    /// <summary>Picks the body tint for the theme: the faces that are neutral in colour have their own Matcha tint, so they do not turn grey on the green theme.</summary>
+    private MascotTheme _theme = CurrentTheme;
+    private bool _isMatcha => _theme == MascotTheme.Matcha;
+    private bool _isHojicha => _theme == MascotTheme.Hojicha;
+
+    // Hojicha's roasted kinako-tan body, worn instead of the neutral (grey-white) faces; the cheek colour is kept.
+    private static readonly string[] HojichaBody = { "#E9D3B4", "#CFAF86", "#B08A60" };
+
+    /// <summary>
+    /// Picks the body tint for the theme: the faces that are neutral in colour have their own Matcha tint, so they do not turn grey
+    /// on the green theme. Hojicha wears the normal faces, with the neutral ones in its tan body.
+    /// </summary>
     private void SetTint(string[] normal, string[] matcha, bool animate = true)
     {
         var tint = _isMatcha ? matcha : normal;
+        // The faces Matcha shows in its plain green body are Hojicha's plain tan body; faces with a tint of their own keep it.
+        if (_isHojicha && string.Equals(matcha[0], MatchaBodyTop, StringComparison.OrdinalIgnoreCase))
+            tint = new[] { HojichaBody[0], HojichaBody[1], HojichaBody[2], normal[3] };
         SetTint(tint[0], tint[1], tint[2], tint[3], animate);
     }
+
+    private const string MatchaBodyTop = "#85B957";
 
     // The resting body of the theme (every mood starts from it).
     private void SetThemeBaseTint() =>
         SetTint(new[] { "#EDEDEF", "#C4C5CA", "#B8B9C0", "#73FF7896" }, new[] { "#85B957", "#54863B", "#365D2A", "#73FF7896" }, animate: false);
 
-    public void ApplyTheme(bool isMatcha)
+    /// <summary>Default or Matcha (kept for the render harnesses).</summary>
+    public void ApplyTheme(bool isMatcha) => ApplyTheme(isMatcha ? MascotTheme.Matcha : MascotTheme.Default);
+
+    public void ApplyTheme(string theme) => ApplyTheme(ToMascotTheme(theme));
+
+    public static MascotTheme ToMascotTheme(string? theme) => MochiDock.Core.ThemePolicy.Normalize(theme) switch
+    {
+        MochiDock.Core.ThemePolicy.Matcha => MascotTheme.Matcha,
+        MochiDock.Core.ThemePolicy.Hojicha => MascotTheme.Hojicha,
+        _ => MascotTheme.Default,
+    };
+
+    public void ApplyTheme(MascotTheme theme)
     {
         if (MochiBodyBorder == null || BodyGradStopTop == null || BodyGradStopBottom == null) return;
-        _isMatcha = isMatcha;
+        _theme = theme;
         if (_spinning) return;   // the turn applies the face (in the new theme) when it comes round
         ApplyMood(Mood);   // repaint the face being worn, not only the resting body
     }

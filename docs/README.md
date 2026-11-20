@@ -68,7 +68,7 @@ Captures and reports are written under `MochiDock/obj/`. Capturing the README sc
 | Feature | Status | Notes |
 | --- | --- | --- |
 | Dock, capsule, hover and navigation | Implemented | Mutually exclusive capsule content; manual card selection persists |
-| Themes, typography, Advanced Settings window | Implemented | Default and Matcha; settings saved atomically; window not runtime-verified |
+| Themes, typography, Advanced Settings window | Implemented | Default, Hojicha and Matcha; settings saved atomically; window not runtime-verified; Hojicha render-verified only |
 | Date format (Automatic, year/day/month first, ISO) | Implemented | `DateDisplay` unit-tested across regions; header, Today, tasks, prayer, power and FX dates follow it |
 | Interface size (80-200%) | Not runtime-verified | `InterfaceScalePercent` |
 | Startup (logon task) and publish/installer scripts | Implemented | Installer not run on a clean machine; unsigned |
@@ -123,7 +123,7 @@ Record date, build/commit, Windows version, monitor layout/DPI, hardware, prereq
 | Gaming transitions | Dock moves to the bottom, click-through, end-of-session summary |
 | Lock and display wake | Summary correct; no replayed stale actions or sounds |
 | Monitors | Mixed DPI, negative coordinates, removal and reconnection keep the dock reachable |
-| Themes and cards | All 18 cards readable in Default and Matcha at 100/125/150% |
+| Themes and cards | All 18 cards readable in Default, Hojicha and Matcha at 100/125/150% |
 | Startup | Enable and disable the logon task; only one launch at logon |
 | Phone drop | Old or invalid links rejected, approval required, limits enforced, Stop/lock removes staging files |
 | FX rates | Quotes, 24-hour badges, trajectory, fallback labels, refresh cooldown, lock/resume |

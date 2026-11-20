@@ -322,6 +322,24 @@ $late.ApplyTheme($false)
 if((Body-Top $late) -ne '#EDEDEF'){throw "Default: switching back should restore the grey body but is $(Body-Top $late)"}
 $checks++
 $mascotClass.GetProperty('CurrentIsMatcha').SetValue($null,$false)
+# ---- Hojicha: neutral faces wear the kinako-tan body; coloured faces (Angry, Hot, Freezing...) keep their own colour.
+$themeType=$mascotClass.GetNestedType('MascotTheme')
+$hojichaTheme=[Enum]::Parse($themeType,'Hojicha')
+$hojicha=[Activator]::CreateInstance($mascotClass);$hojicha.ApplyTheme($hojichaTheme)
+foreach($name in 'Idle','Waiting','Music','Alert','Sleeping','Happy','Money','Snowy','Cloudy','Studying','Coffee','Yawning','Birthday','Meeting','Proud'){
+ $hojicha.Mood=[Enum]::Parse($moodType,'Angry');$hojicha.Mood=[Enum]::Parse($moodType,$name)
+ if((Body-Top $hojicha) -ne '#E9D3B4'){throw "Hojicha: $name should wear the tan body but is $(Body-Top $hojicha)"}
+ $checks++
+}
+$hojicha.Mood=[Enum]::Parse($moodType,'Angry')
+if((Body-Top $hojicha) -eq '#E9D3B4'){throw 'Hojicha: Angry lost its own colour'}
+$mascotClass.GetProperty('CurrentTheme').SetValue($null,$hojichaTheme)
+$lateTan=[Activator]::CreateInstance($mascotClass)
+if((Body-Top $lateTan) -ne '#E9D3B4'){throw "Hojicha: a Mochi created after the theme starts $(Body-Top $lateTan), not tan"}
+$lateTan.ApplyTheme('Default')
+if((Body-Top $lateTan) -ne '#EDEDEF'){throw "Default: switching back from Hojicha should restore the grey body but is $(Body-Top $lateTan)"}
+$checks+=2
+$mascotClass.GetProperty('CurrentIsMatcha').SetValue($null,$false)
 $panel=[Windows.Controls.StackPanel]::new();$panel.Orientation=[Windows.Controls.Orientation]::Horizontal;$panel.Background=[Windows.Media.SolidColorBrush]::new([Windows.Media.Color]::FromRgb(0xE4,0xEC,0xD8))
 foreach($name in 'Idle','Music','Sleeping','Happy','Angry','Hot','Freezing','Dizzy','Drained','Worried','Focused','Bored','Waking','Defeat','Victory','Excited','Surprised','Cheering','Praying','Electric','Money','MoneyDown','Sunny','Rainy','Snowy','Cloudy','Studying','Turning'){
  $m=[Activator]::CreateInstance($mascotClass);$m.Width=150;$m.Height=130;$m.Margin=[Windows.Thickness]::new(8,60,16,12);$m.ApplyTheme($true);$m.Mood=[Enum]::Parse($moodType,$(if($name -eq 'Turning'){'Idle'}else{$name}));if($name -eq 'Turning'){Show-Turn $m 600};$panel.Children.Add($m)|Out-Null}

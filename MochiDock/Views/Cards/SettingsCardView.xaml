@@ -50,6 +50,7 @@
                             <TextBlock Grid.Row="0" Text="Theme" Style="{StaticResource CardBodyText}" VerticalAlignment="Center" Margin="0,0,0,6"/>
                             <WrapPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,0,6">
                                 <RadioButton x:Name="ThemeClassicRadio" Style="{StaticResource ModernDarkRadioButton}" Content="Default" GroupName="CapsuleThemeGroup" Margin="0,0,14,0" Checked="ThemeRadio_Checked" />
+                                <RadioButton x:Name="ThemeHojichaRadio" Style="{StaticResource ModernDarkRadioButton}" Content="Hojicha" GroupName="CapsuleThemeGroup" Margin="0,0,14,0" Checked="ThemeRadio_Checked" />
                                 <RadioButton x:Name="ThemeMatchaRadio" Style="{StaticResource ModernDarkRadioButton}" Content="Matcha" GroupName="CapsuleThemeGroup" Margin="0,0,14,0" Checked="ThemeRadio_Checked" />
                             </WrapPanel>
                             <TextBlock Grid.Row="1" Text="Dock style" Style="{StaticResource CardBodyText}" VerticalAlignment="Center" Margin="0,0,0,6" ToolTip="Floating is a pill below the top edge; Notch attaches to the top edge of the screen."/>

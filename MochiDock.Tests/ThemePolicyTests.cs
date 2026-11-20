@@ -11,10 +11,19 @@ public class ThemePolicyTests
     [InlineData(null, "Default")]
     [InlineData("unknown", "Default")]
     [InlineData("matcha", "Matcha")]
+    [InlineData(" hojicha ", "Hojicha")]
+    [InlineData("HOJICHA", "Hojicha")]
     public void SettingsNormalizeAndRoundTrip(string? input, string expected)
     {
         var settings = JsonSerializer.Deserialize<AppSettings>(JsonSerializer.Serialize(new { CapsuleTheme = input }))!;
         Assert.Equal(expected,settings.CapsuleTheme);
         Assert.Equal(expected,JsonSerializer.Deserialize<AppSettings>(JsonSerializer.Serialize(settings))!.CapsuleTheme);
     }
+
+    [Theory]
+    [InlineData("Default", true)]
+    [InlineData("Hojicha", true)]
+    [InlineData("Matcha", false)]
+    [InlineData("whatever", true)]
+    public void OnlyMatchaIsLight(string theme, bool dark) => Assert.Equal(dark, MochiDock.Core.ThemePolicy.IsDark(theme));
 }

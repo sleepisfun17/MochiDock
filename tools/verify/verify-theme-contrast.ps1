@@ -1,12 +1,17 @@
 # Checks WCAG contrast of ThemeService text/accent brushes against the card surface, without launching MochiDock.
-# Parses MochiDock/Services/ThemeService.cs (Matcha block = "if (isMatcha)", Dark block = "else").
+# Parses MochiDock/Services/ThemeService.cs (Matcha block = "if (isMatcha)", Dark block = "else", Hojicha = Dark + ApplyHojichaPalette).
 $ErrorActionPreference = "Stop"
 $repo = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
 $source = Get-Content (Join-Path $repo "MochiDock/Services/ThemeService.cs") -Raw
 $matchaStart = $source.IndexOf("if (isMatcha)")
 $darkStart = $source.IndexOf("else", $matchaStart)
 if ($matchaStart -lt 0 -or $darkStart -lt 0) { throw "Could not locate theme blocks in ThemeService.cs" }
-$blocks = @{ Matcha = $source.Substring($matchaStart, $darkStart - $matchaStart); Dark = $source.Substring($darkStart, [Math]::Min(9000, $source.Length - $darkStart)) }
+$hojichaStart = $source.IndexOf("private static void ApplyHojichaPalette")
+if ($hojichaStart -lt 0) { throw "Could not locate ApplyHojichaPalette in ThemeService.cs" }
+$hojichaEnd = $source.IndexOf("private static void SetBrushes", $hojichaStart)
+$darkEnd = $source.IndexOf("if (isHojicha) ApplyHojichaPalette", $darkStart)
+$blocks = @{ Matcha = $source.Substring($matchaStart, $darkStart - $matchaStart); Dark = $source.Substring($darkStart, $darkEnd - $darkStart)
+             Hojicha = $source.Substring($hojichaStart, $hojichaEnd - $hojichaStart) }
 
 function Read-Palette([string]$text) {
     $palette = @{}
@@ -36,8 +41,9 @@ $textBrushes = "IslandInkBrush", "IslandSecondaryInkBrush", "IslandMutedInkBrush
     "IslandPositiveBrush", "IslandNegativeBrush", "IslandWarningBrush", "IslandGreenBrush", "IslandOrangeBrush", "IslandRedBrush",
     "IslandBlueBrush", "IslandInfoBrush", "IslandWhatsAppBrush", "IslandSaturdayBrush"
 $failures = @()
-foreach ($theme in "Dark", "Matcha") {
+foreach ($theme in "Dark", "Matcha", "Hojicha") {
     $p = Read-Palette $blocks[$theme]
+    if ($theme -eq "Hojicha") { $layered = Read-Palette $blocks["Dark"]; foreach ($k in $p.Keys) { $layered[$k] = $p[$k] }; $p = $layered }
     $surface = $p["IslandSubCardBackgroundBrush"]; if (-not $surface) { throw "$theme card surface not found" }
     foreach ($name in $textBrushes) {
         if (-not $p.ContainsKey($name)) { $failures += "$theme $name is not defined"; continue }

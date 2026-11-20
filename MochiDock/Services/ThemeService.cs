@@ -19,9 +19,9 @@ public static class ThemeService
     private static readonly ConditionalWeakTable<DependencyObject, MediaBrush> _originalBackgrounds = new();
     private static readonly ConditionalWeakTable<DependencyObject, MediaBrush> _originalBorderBrushes = new();
 
-    private static bool? _appliedMatcha;
+    private static string? _appliedTheme;
 
-    /// <summary>Raised on the UI thread after the palette switched between Default and Matcha (not on every re-apply).</summary>
+    /// <summary>Raised on the UI thread after the palette switched to another theme (not on every re-apply).</summary>
     public static event Action? ThemeChanged;
 
     /// <summary>
@@ -41,12 +41,18 @@ public static class ThemeService
     public static bool IsMatchaTheme(string? theme) =>
         string.Equals(theme, "Matcha", StringComparison.OrdinalIgnoreCase);
 
+    public static bool IsHojichaTheme(string? theme) =>
+        string.Equals(theme, "Hojicha", StringComparison.OrdinalIgnoreCase);
+
     public static void ApplyTheme(Window window, string theme)
     {
+        theme = MochiDock.Core.ThemePolicy.Normalize(theme);
         bool isMatcha = IsMatchaTheme(theme);
+        bool isHojicha = IsHojichaTheme(theme);
         var app = WpfApplication.Current;
         if (app == null) return;
-        Controls.MascotControl.CurrentIsMatcha = isMatcha;   // a Mochi created later starts with the right body
+        var mascotTheme = Controls.MascotControl.ToMascotTheme(theme);
+        Controls.MascotControl.CurrentTheme = mascotTheme;   // a Mochi created later starts with the right body
 
         var uiFont = (System.Windows.Media.FontFamily)app.FindResource("QuicksandFont");
         if (!ReferenceEquals(app.Resources["IslandUiFont"], uiFont)) app.Resources["IslandUiFont"] = uiFont;
@@ -200,19 +206,87 @@ public static class ThemeService
             SetBrushes(app,"#FFD043","WeatherCoronaBrush");
             SetBrushes(app,"#9898AA","WeatherMistBrush");
             SetBrushes(app,"#E0F2FE","WeatherSnowflakeBrush");
+
+            // Hojicha is the Default dark palette with warm roasted-tea surfaces and a caramel accent on top.
+            if (isHojicha) ApplyHojichaPalette(app);
         }
 
-        // 2. Recursively style / restore elements across the visual tree
+        // 2. Recursively style / restore elements across the visual tree (Hojicha keeps the XAML's own dark colours)
         if (window != null)
         {
-            UpdateVisualTree(window, isMatcha);
+            UpdateVisualTree(window, isMatcha, mascotTheme);
         }
 
-        if (_appliedMatcha != isMatcha)
+        if (_appliedTheme != theme)
         {
-            _appliedMatcha = isMatcha;
+            _appliedTheme = theme;
             ThemeChanged?.Invoke();
         }
+    }
+
+    /// <summary>
+    /// Hojicha: roasted-tea browns with a caramel accent, layered over the Default palette (brand colours such as WhatsApp, Discord and
+    /// Spotify stay as they are). Every text brush is at least 4.5:1 on the sub-card (#1E1814); verify-theme-contrast checks it.
+    /// </summary>
+    private static void ApplyHojichaPalette(WpfApplication app)
+    {
+        SetBrushes(app, "#14100D", "IslandGroundBrush");
+        SetBrushes(app, "#1A1511", "IslandSurfaceBrush");
+        SetBrushes(app, "#1E1814", "IslandSubCardBackgroundBrush");
+        SetBrushes(app, "#241C17", "IslandChipBackgroundBrush");
+        SetBrushes(app, "#2E241D", "IslandChipActiveBrush");
+        SetBrushes(app, "#30261F", "IslandTabActiveBrush");
+        SetBrushes(app, "#14F3E9DC", "IslandTabHoverBrush");
+        SetBrushes(app, "#221B16", "IslandControlBackgroundBrush");
+        SetBrushes(app, "#2A211B", "IslandIconButtonBackgroundBrush", "IslandPrayerBadgeBackgroundBrush", "IslandEmailBadgeBackgroundBrush");
+        SetBrushes(app, "#3A2E25", "IslandIconButtonHoverBrush");
+        SetBrushes(app, "#4A3B30", "IslandIconButtonPressedBrush", "IslandControlBorderBrush");
+        SetBrushes(app, "#2C231C", "IslandActionButtonBackgroundBrush");
+        SetBrushes(app, "#3C3027", "IslandActionButtonHoverBrush");
+        SetBrushes(app, "#4C3D31", "IslandActionButtonPressedBrush");
+        SetBrushes(app, "#3A2E25", "IslandBorderBrush", "IslandSubCardBorderBrush", "IslandGaugeTrackBrush", "IslandTrackBrush", "IslandVolumeTrackBrush");
+        SetBrushes(app, "#4A3A2E", "IslandChipBorderBrush");
+        SetBrushes(app, "#5A4A3C", "IslandScrollBarThumbBrush");
+        SetBrushes(app, "#8A7560", "IslandScrollBarThumbHoverBrush");
+        SetBrushes(app, "#F3E9DC", "IslandInkBrush");
+        SetBrushes(app, "#B8A794", "IslandSecondaryInkBrush");
+        SetBrushes(app, "#9A8875", "IslandMutedInkBrush");
+        SetBrushes(app, "#E8DCCB", "IslandEmailBadgeInkBrush");
+        SetBrushes(app, "#E0A96D", "IslandAccentBrush", "IslandAccentFillBrush", "IslandVolumeBrush", "IslandPrayerBadgeStrokeBrush", "IslandSelectionBorderBrush");
+        SetBrushes(app, "#2A1A0C", "IslandAccentButtonInkBrush", "IslandMediaGlyphBrush");
+        SetBrushes(app, "#FFF3E4", "IslandSliderThumbBrush");
+        app.Resources["IslandAccentColor"] = MediaColor.FromRgb(224, 169, 109);
+        app.Resources["IslandSelectionColor"] = MediaColor.FromRgb(224, 169, 109);
+        SetBrushes(app, "#26E0A96D", "IslandSelectionFillBrush");
+        SetBrushes(app, "#2EE0A96D", "IslandAccentSubtleBrush");
+        SetBrushes(app, "#E8C38A", "IslandHighlightBrush", "IslandQiblaBrush");
+        SetBrushes(app, "#26E8C38A", "IslandHighlightSubtleBrush");
+        SetBrushes(app, "#F2C14E", "IslandStatusBrush");
+        SetBrushes(app, "#7CC4E8", "IslandSaturdayBrush");
+        SetBrushes(app, "#8FD18B", "IslandGreenBrush");
+        SetBrushes(app, "#F0A04B", "IslandOrangeBrush");
+        SetBrushes(app, "#FF7A6B", "IslandRedBrush");
+        SetBrushes(app, "#6FA8FF", "IslandBlueBrush");
+        SetBrushes(app, "#8EC1F0", "IslandInfoBrush");
+        SetBrushes(app, "#C9A0F0", "IslandPurpleBrush");
+        SetBrushes(app, "#6CD4A0", "IslandPositiveBrush");
+        SetBrushes(app, "#266CD4A0", "IslandPositiveSubtleBrush");
+        SetBrushes(app, "#FF8FA0", "IslandNegativeBrush");
+        SetBrushes(app, "#26FF8FA0", "IslandNegativeSubtleBrush");
+        SetBrushes(app, "#F2B13C", "IslandWarningBrush");
+        SetBrushes(app, "#26F2B13C", "IslandWarningSubtleBrush");
+        SetBrushes(app, "#16F3E9DC", "IslandChartGridBrush");
+        SetBrushes(app, "#28F3E9DC", "IslandChartGridStrongBrush");
+
+        SetBrushes(app, "#FFF8EF", "ActiveLyricBrush");
+        SetBrushes(app, "#D0FFF8EF", "ActiveLyricRomajiBrush");
+        SetBrushes(app, "#8CF3E9DC", "InactiveLyricBrush");
+        SetBrushes(app, "#6EF3E9DC", "InactiveLyricRomajiBrush");
+
+        SetBrushes(app, "#BFAE98", "WeatherCloudBrush");
+        SetBrushes(app, "#FFF6EA", "WeatherClearCloudBrush");
+        SetBrushes(app, "#E6D9C6", "WeatherPartlyCloudBrush");
+        SetBrushes(app, "#9A8875", "WeatherMistBrush");
     }
 
     private static void SetBrushes(WpfApplication app, string color, params string[] keys)
@@ -220,7 +294,7 @@ public static class ThemeService
         foreach (var key in keys) app.Resources[key] = new SolidColorBrush((MediaColor)System.Windows.Media.ColorConverter.ConvertFromString(color));
     }
 
-    private static void UpdateVisualTree(DependencyObject parent, bool isMatcha)
+    private static void UpdateVisualTree(DependencyObject parent, bool isMatcha, Controls.MascotControl.MascotTheme mascotTheme)
     {
         int count = VisualTreeHelper.GetChildrenCount(parent);
         for (int i = 0; i < count; i++)
@@ -228,7 +302,7 @@ public static class ThemeService
             var child = VisualTreeHelper.GetChild(parent, i);
             if (child is Controls.MascotControl mascot)
             {
-                mascot.ApplyTheme(isMatcha);
+                mascot.ApplyTheme(mascotTheme);
                 continue; // Never step into MascotControl children so eyes stay #1A1412!
             }
             if (child.GetType().Name.Contains("MascotControl"))
@@ -237,7 +311,7 @@ public static class ThemeService
             }
 
             ApplyElementStyle(child, isMatcha);
-            UpdateVisualTree(child, isMatcha);
+            UpdateVisualTree(child, isMatcha, mascotTheme);
         }
     }
 

@@ -52,9 +52,10 @@ public partial class AppearanceSectionView : UserControl
         _loading = true;
         try
         {
-            bool matcha = string.Equals(settings.CapsuleTheme, "Matcha", StringComparison.OrdinalIgnoreCase);
-            ThemeMatchaRadio.IsChecked = matcha;
-            ThemeDefaultRadio.IsChecked = !matcha;
+            string theme = MochiDock.Core.ThemePolicy.Normalize(settings.CapsuleTheme);
+            ThemeMatchaRadio.IsChecked = theme == MochiDock.Core.ThemePolicy.Matcha;
+            ThemeHojichaRadio.IsChecked = theme == MochiDock.Core.ThemePolicy.Hojicha;
+            ThemeDefaultRadio.IsChecked = theme == MochiDock.Core.ThemePolicy.Default;
             bool notch = string.Equals(settings.DockStyle, "Notch", StringComparison.OrdinalIgnoreCase);
             DockNotchRadio.IsChecked = notch;
             DockFloatingRadio.IsChecked = !notch;
@@ -97,7 +98,9 @@ public partial class AppearanceSectionView : UserControl
     private void Theme_Checked(object sender, RoutedEventArgs e)
     {
         if (!IsLoaded || _loading) return;
-        string theme = ThemeMatchaRadio.IsChecked == true ? "Matcha" : "Default";
+        string theme = ThemeMatchaRadio.IsChecked == true ? MochiDock.Core.ThemePolicy.Matcha
+                     : ThemeHojichaRadio.IsChecked == true ? MochiDock.Core.ThemePolicy.Hojicha
+                     : MochiDock.Core.ThemePolicy.Default;
         ViewModel?.UpdateSettings(x => x.CapsuleTheme = theme, SettingsApply.Theme);
     }
 

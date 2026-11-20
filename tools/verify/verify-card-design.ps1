@@ -156,7 +156,7 @@ foreach($file in Get-ChildItem (Join-Path $repo "MochiDock/Views/Cards") -Filter
  $xml.DocumentElement.RemoveAttribute("Class","http://schemas.microsoft.com/winfx/2006/xaml")
  foreach($attribute in @($xml.SelectNodes('//@*'))){if($attribute.LocalName -match ('^(?:[A-Za-z]+\.)?(?:'+$events+')$')){$null=$attribute.OwnerElement.RemoveAttributeNode($attribute)}}
  $markup=$xml.OuterXml -replace 'clr-namespace:(MochiDock[.A-Za-z]+)(?=")','clr-namespace:$1;assembly=MochiDock'
- foreach($theme in @("Dark","Matcha")){foreach($scale in @(1,1.25,1.5,2)){
+ foreach($theme in @("Dark","Matcha","Hojicha")){foreach($scale in @(1,1.25,1.5,2)){
  $script:fixtureTheme=$theme;$script:fixtureScale=$scale
   $view=[Windows.Markup.XamlReader]::Parse($markup,$context);$view.DataContext=$data;$view.SetResourceReference([Windows.Controls.Control]::FontFamilyProperty,"IslandUiFont")
   if($name -eq "Today"){

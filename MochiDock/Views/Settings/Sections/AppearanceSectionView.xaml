@@ -5,9 +5,10 @@
              xmlns:controls="clr-namespace:MochiDock.Controls">
     <StackPanel>
         <TextBlock Style="{StaticResource SettingsGroupHeader}" Text="Theme and style" Margin="0,0,0,2"/>
-        <s:SettingRow Label="Theme" Description="Default is the dark island; Matcha is the light, warm palette.">
+        <s:SettingRow Label="Theme" Description="Default is the dark island, Hojicha a warm roasted-tea dark with a caramel accent, and Matcha the light, warm palette.">
             <StackPanel Orientation="Horizontal">
                 <RadioButton x:Name="ThemeDefaultRadio" Style="{StaticResource ModernDarkRadioButton}" Content="Default" GroupName="AppearanceTheme" Checked="Theme_Checked" Margin="0,0,14,0"/>
+                <RadioButton x:Name="ThemeHojichaRadio" Style="{StaticResource ModernDarkRadioButton}" Content="Hojicha" GroupName="AppearanceTheme" Checked="Theme_Checked" Margin="0,0,14,0"/>
                 <RadioButton x:Name="ThemeMatchaRadio" Style="{StaticResource ModernDarkRadioButton}" Content="Matcha" GroupName="AppearanceTheme" Checked="Theme_Checked"/>
             </StackPanel>
         </s:SettingRow>

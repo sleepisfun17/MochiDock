@@ -36,7 +36,7 @@ A new install shows three tabs: **Media**, **Stats** and **Weather**. Everything
 | Section | What you set there |
 | --- | --- |
 | General | Start with Windows, hide in fullscreen, hide from screen capture. |
-| Appearance & Dock | Theme (Default or Matcha), dock style, date format (Automatic follows the Windows region; or year first `2026/11/19 木`, day first `Thu 19 Nov 2026`, month first `Thu, Nov 19, 2026`, ISO `2026-11-19 Thu`), monitor, capsule content, interface size. |
+| Appearance & Dock | Theme (Default, Hojicha or Matcha), dock style, date format (Automatic follows the Windows region; or year first `2026/11/19 木`, day first `Thu 19 Nov 2026`, month first `Thu, Nov 19, 2026`, ISO `2026-11-19 Thu`), monitor, capsule content, interface size. |
 | Tabs | Which tabs the dock shows. |
 | WhatsApp | Enable WhatsApp, pairing, engine (local or remote), ports, read sync, muted and listed chats. |
 | Email | Mail accounts (Gmail, Yahoo, iCloud, Fastmail or any IMAP server), which Outlook folders to watch (empty by default) and ad filtering. |
@@ -136,7 +136,7 @@ Warnings (hot GPU, overdue task, low battery, overload), notifications, games an
 
 **Resting while you work.** Typing counts as being there. When you are busy at the PC but have not touched the dock for a minute and a half, Mochi rests instead of falling asleep: every 2 minutes he moves on through his idle thoughts, a coffee, a bored sigh and a short doze. He only really sleeps once nobody has used the keyboard or mouse for 10 minutes, and he looks up as soon as you come to the dock.
 
-When his face changes, Mochi spins round three times in about 0.6 seconds inside a little anime whirlwind (glowing brush strokes, gold on Default and green on Matcha) and comes round wearing the new face; he turns as a rounded body, not a flat card. He does not turn for the small blink between thoughts while idle, or for swaps between the gaming faces during a game, and not at all when Windows animations are off.
+When his face changes, Mochi spins round three times in about 0.6 seconds inside a little anime whirlwind (glowing brush strokes, gold on Default, caramel on Hojicha and green on Matcha) and comes round wearing the new face; he turns as a rounded body, not a flat card. He does not turn for the small blink between thoughts while idle, or for swaps between the gaming faces during a game, and not at all when Windows animations are off.
 
 ## Updating and uninstalling
 
