@@ -89,4 +89,9 @@ public partial class HardwareCardView : UserControl
         if (!CompleteChipClick(sender, e)) return;
         ViewModel?.SelectSystemModule("Games");
     }
+    private void ChartSpan_Click(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        (DataContext as MochiDock.ViewModels.MainViewModel)?.ToggleStatsChartSpan();
+        e.Handled = true;
+    }
 }

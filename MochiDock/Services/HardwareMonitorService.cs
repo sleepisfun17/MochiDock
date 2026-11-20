@@ -18,6 +18,52 @@ public class HardwareMonitorService
     private readonly EnergyMeterReader _energyMeter = new();
     public void StopCpuTelemetry() { _cpuTelemetry.Dispose(); _sensors.Dispose(); _energyMeter.Dispose(); }
 
+    [DllImport("kernel32.dll")] private static extern bool GetSystemTimes(out ulong idle, out ulong kernel, out ulong user);
+    private (ulong Idle, ulong Total)? _lightTimes;
+
+    /// <summary>
+    /// A light reading for the 24-hour Stats history while the dock is closed: total CPU load (from its own GetSystemTimes deltas, so the
+    /// Stats page's counters are untouched), RAM, GPU load and temperature (NVML, or the sensor library) and the measured CPU temperature.
+    /// No process list, no per-core or chart work. Temperatures are null unless measured. Call on the UI thread, like GetCurrentStats.
+    /// </summary>
+    public MochiDock.Core.HistorySample GetLightSample(DateTimeOffset now)
+    {
+        double? cpuLoad = null;
+        if (GetSystemTimes(out var idle, out var kernel, out var user))
+        {
+            ulong total = kernel + user;   // kernel time includes idle time
+            if (_lightTimes is { } previous && total > previous.Total)
+                cpuLoad = Math.Clamp(100.0 * (1 - (double)(idle - previous.Idle) / (total - previous.Total)), 0, 100);
+            _lightTimes = (idle, total);
+        }
+
+        double? ram = null;
+        try
+        {
+            var memory = GC.GetGCMemoryInfo();
+            if (memory.TotalAvailableMemoryBytes > 0) ram = 100.0 * memory.MemoryLoadBytes / memory.TotalAvailableMemoryBytes;
+        }
+        catch (Exception ex) { AppLog.Warn("Hardware", ex); }
+
+        // The sensor reader refreshes in the background when asked, so a 15-second sampler gets the previous refresh: allow 30 s.
+        var sensors = _sensors.Latest(_detectedGpuName);
+        bool fresh = sensors.CapturedAt != DateTimeOffset.MinValue && DateTimeOffset.UtcNow - sensors.CapturedAt < TimeSpan.FromSeconds(30);
+        double? gpuLoad = null, gpuTemp = null;
+        if (_nvmlLoaded && _nvmlDevice != IntPtr.Zero)
+        {
+            try
+            {
+                var util = new NvmlUtilization();
+                if (nvmlDeviceGetUtilizationRates(_nvmlDevice, ref util) == 0) gpuLoad = util.gpu;
+                if (nvmlDeviceGetTemperature(_nvmlDevice, 0, out uint temp) == 0) gpuTemp = temp;
+            }
+            catch (Exception ex) { AppLog.Warn("Hardware", ex); }
+        }
+        if (gpuTemp is null && fresh) gpuTemp = sensors.GpuTempC;
+        double? cpuTemp = fresh ? sensors.CpuTempC : null;
+        return new MochiDock.Core.HistorySample(now, cpuLoad, cpuTemp, gpuLoad, gpuTemp, ram);
+    }
+
     /// <summary>
     /// Light power sample for the Battery page: CPU package and memory power from the sensor reader (or Windows' Energy Meter counters when that has none) plus GPU board power (NVML first, sensors as fallback).
     /// Does not touch the hardware-card sampling state. Values are null when no measured reading exists.

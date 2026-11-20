@@ -80,6 +80,7 @@ Captures and reports are written under `MochiDock/obj/`. Capturing the README sc
 | Discord toasts | Not runtime-verified | Listener unproven for unpackaged installs |
 | Apps card (other apps' toasts) | Not runtime-verified | Filter unit-tested and card rendered; shares the Discord listener, so the same access caveat applies |
 | Rain soon notice | Not runtime-verified | Policy unit-tested; the Open-Meteo 15-minute fields were checked against the live API |
+| Stats 24-hour history and sustained-heat alert | Not runtime-verified | History, chart series and heat policy unit-tested; the 24 h chart is rendered by `verify-card-design.ps1` with synthetic lines; the light sampler's cost is unmeasured |
 | Mochi day faces (meeting, birthday, all tasks done, up late) and hover glance | Not runtime-verified | Rules unit-tested; faces rendered by `verify-mascot.ps1` |
 | Stats (CPU, GPU, memory, drives, network, processes) | Partial | CPU temperature is an estimate (real value needs PawnIO); some fallbacks remain |
 | Battery page and wireless device batteries | Not runtime-verified | One mouse verified on hardware; Logitech HID++ untested |

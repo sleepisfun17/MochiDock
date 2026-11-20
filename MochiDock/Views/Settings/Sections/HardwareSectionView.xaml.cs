@@ -48,6 +48,10 @@ public partial class HardwareSectionView : UserControl
             if (!CpuSlider.IsMouseCaptureWithin) CpuSlider.Value = vm.Settings.CpuAlertThreshold;
             if (!GpuSlider.IsMouseCaptureWithin) GpuSlider.Value = vm.Settings.GpuAlertThreshold;
             if (!TempSlider.IsMouseCaptureWithin) TempSlider.Value = vm.Settings.TemperatureAlertThreshold;
+            if (!HeatSlider.IsMouseCaptureWithin) HeatSlider.Value = Math.Clamp(vm.Settings.SustainedHeatThreshold, 60, 95);
+            int minutes = vm.Settings.SustainedHeatMinutes;
+            HeatMinutesCombo.SelectedItem = HeatMinutesCombo.Items.OfType<ComboBoxItem>().FirstOrDefault(i => (string)i.Tag == minutes.ToString(System.Globalization.CultureInfo.InvariantCulture))
+                                            ?? HeatMinutesCombo.Items[1];
             UpdatePawnIoStatus();
         }
         finally { _loading = false; }
@@ -117,6 +121,20 @@ public partial class HardwareSectionView : UserControl
         foreach (var kind in Enum.GetValues<PowerComponentKind>().Where(k => k != PowerComponentKind.Motherboard))
             ComponentKindCombo.Items.Add(new ComboBoxItem { Content = $"{PowerComponentDefaults.Label(kind)} · ~{PowerComponentDefaults.Watts(kind):0.#} W", Tag = kind });
         ComponentKindCombo.SelectedIndex = 0;
+    }
+
+    private void Heat_Changed(object sender, RoutedEventArgs e)
+    {
+        if (!IsLoaded || _loading) return;
+        double heat = Math.Round(Math.Clamp(HeatSlider.Value, 60, 95));
+        int minutes = int.TryParse((HeatMinutesCombo.SelectedItem as ComboBoxItem)?.Tag as string, out int m) ? m : 10;
+        ViewModel?.UpdateSettings(x => { x.SustainedHeatThreshold = heat; x.SustainedHeatMinutes = minutes; });
+    }
+
+    private void ClearHistory_Click(object sender, RoutedEventArgs e)
+    {
+        ViewModel?.StatsHistory?.Clear();
+        HistoryRow.Validation = "History cleared.";
     }
 
     private void Threshold_Changed(object sender, RoutedPropertyChangedEventArgs<double> e)

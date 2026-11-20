@@ -770,6 +770,7 @@ public partial class MainViewModel : INotifyPropertyChanged
             if (MochiDock.Core.LocalFeaturePolicy.SampleHardware(_isWorkstationLocked,_displayAwake,statsVisible,IsStatsShownInCapsule,isGaming && _settings.IsHardwareGamingMode,EnableHardwareAlerts))
             {
                 HardwareStats = _hardwareService.GetCurrentStats();
+                NoteFullSample();
                 UpdateMascotFromHardware(HardwareStats);
                 if(EnableHardwareAlerts) CheckHardwareAlerts();
                 SamplePowerTick();
@@ -810,6 +811,7 @@ public partial class MainViewModel : INotifyPropertyChanged
                 if(!value)IsAutoCollapseDeferred=false;
                 OnPropertyChanged();
                 UpdateActivityFace();
+                RefreshHistoryCharts(force: true);
                 if (!_isExpanded && !_isPinned)
                 {
                     _autoCollapseTimer.Stop();
@@ -884,6 +886,7 @@ public partial class MainViewModel : INotifyPropertyChanged
                 NotifyActiveCardState(oldType);
                 NotifyActiveCardState(value);
                 UpdateActivityFace();
+                RefreshHistoryCharts(force: true);
             }
         }
     }
@@ -1453,6 +1456,7 @@ public partial class MainViewModel : INotifyPropertyChanged
         OnPropertyChanged(nameof(IsGamesModuleActive));
         OnPropertyChanged(nameof(IsBatteryModuleActive));
         UpdateActivityFace();
+                RefreshHistoryCharts(force: true);
     }
 
     public bool IsCpuModuleActive => ActiveSystemModule == "CPU";
@@ -1810,7 +1814,7 @@ public partial class MainViewModel : INotifyPropertyChanged
     public void RefreshMascotMood()
     {
         var mood = MochiDock.Core.MascotMoodPolicy.Choose(new MochiDock.Core.MascotInputs(
-            _baseMood, _settings?.ExpressiveMochi ?? true, _mascotOverdue, _mascotGpuHot, _mascotOverloaded, _mascotBatteryLow, _mascotWeather, _mascotPetted, _isWorkstationLocked || !_displayAwake, _mascotActivity, _mascotDay));
+            _baseMood, _settings?.ExpressiveMochi ?? true, _mascotOverdue, _mascotGpuHot || _mascotSustainedHot, _mascotOverloaded, _mascotBatteryLow, _mascotWeather, _mascotPetted, _isWorkstationLocked || !_displayAwake, _mascotActivity, _mascotDay));
         if (_mascotMood == mood) return;
         _mascotMood = mood;
         OnPropertyChanged(nameof(MascotMood));
@@ -2059,7 +2063,7 @@ public partial class MainViewModel : INotifyPropertyChanged
 
     private readonly MochiDock.Core.HardwareAlertPolicy _hardwareAlerts=new();
     private readonly DispatcherTimer _hardwareNoticeTimer=new(){Interval=TimeSpan.FromSeconds(8)};
-    public void StopPresentationTimers(){_aiUsageService.Dispose();_hardwareNoticeTimer.Stop();_prayerArrivalTimer.Stop();_autoCollapseTimer.Stop();_hardwarePollTimer.Stop();}
+    public void StopPresentationTimers(){_aiUsageService.Dispose();_hardwareNoticeTimer.Stop();StopStatsHistory();_prayerArrivalTimer.Stop();_autoCollapseTimer.Stop();_hardwarePollTimer.Stop();}
     private DateTimeOffset _hardwareNoticeUntil;
     private string _hardwareNoticeText="";
     private bool _hardwarePresentationSuppressed;
@@ -2069,7 +2073,7 @@ public partial class MainViewModel : INotifyPropertyChanged
     public bool IsHardwareNoticeVisible => !_hardwarePresentationSuppressed && (EnableHardwareAlerts || _noticeIsAi || _noticeIsAgenda || _noticeIsGame || _noticeIsDevice || _noticeIsWeather) && !_isWorkstationLocked && _displayAwake && !_wasGaming && !IsNotificationInMainPill && !IsPrayerReminderVisible && ShouldShowNotification("Hardware") && DateTimeOffset.UtcNow<_hardwareNoticeUntil;
     public string HardwareNoticeText => _hardwareNoticeText;
     private void NotifyHardwareNotice(){OnPropertyChanged(nameof(IsHardwareNoticeVisible));OnPropertyChanged(nameof(HardwareNoticeText));OnPropertyChanged(nameof(CompactCapsuleText));OnPropertyChanged(nameof(HasCompactLyricRomaji));OnPropertyChanged(nameof(IsAudioWaveformVisible));}
-    public void OpenHardwareNotice(){bool ai=_noticeIsAi,agenda=_noticeIsAgenda,device=_noticeIsDevice,weather=_noticeIsWeather;_hardwareNoticeUntil=default;_noticeIsAi=false;_noticeIsAgenda=false;_noticeIsGame=false;_noticeIsDevice=false;_noticeIsWeather=false;NotifyHardwareNotice();if(agenda){AcknowledgeShownReminders();ShowToday(false);}else if(weather)ShowWeather(false);else if(ai)ShowAiUsage(false);else{if(device)SelectSystemModule("Battery");ShowHardware(false);}}
+    public void OpenHardwareNotice(){bool ai=_noticeIsAi,agenda=_noticeIsAgenda,device=_noticeIsDevice,weather=_noticeIsWeather;string? heat=_noticeHeatModule;_noticeHeatModule=null;if(heat!=null){_hardwareNoticeUntil=default;NotifyHardwareNotice();StatsChartSpan="24h";SelectSystemModule(heat);ShowHardware(false);return;}_hardwareNoticeUntil=default;_noticeIsAi=false;_noticeIsAgenda=false;_noticeIsGame=false;_noticeIsDevice=false;_noticeIsWeather=false;NotifyHardwareNotice();if(agenda){AcknowledgeShownReminders();ShowToday(false);}else if(weather)ShowWeather(false);else if(ai)ShowAiUsage(false);else{if(device)SelectSystemModule("Battery");ShowHardware(false);}}
     private void CheckHardwareAlerts()
     {
         var now=DateTimeOffset.UtcNow;

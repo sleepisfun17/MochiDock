@@ -155,6 +155,13 @@ public class AppSettings
     public double CapsuleScrollSpeed { get; set; } = 35;
     public double CpuAlertThreshold { get; set; } = 90;
     public double GpuAlertThreshold { get; set; } = 90;
+    /// <summary>Keep a 24-hour Stats history on disk (a light reading every 15 s while unlocked and the screen is on).</summary>
+    public bool RecordStatsHistory { get; set; } = true;
+    /// <summary>The Stats charts' span: "2m" (the live readings) or "24h" (the saved history).</summary>
+    public string StatsChartSpan { get; set; } = "2m";
+    /// <summary>Sustained-heat alert: a measured CPU or GPU temperature at or above this for <see cref="SustainedHeatMinutes"/>.</summary>
+    public double SustainedHeatThreshold { get; set; } = 80;
+    public int SustainedHeatMinutes { get; set; } = 10;
     public double TemperatureAlertThreshold { get; set; } = 85;
 
     // Weather

@@ -21,10 +21,29 @@
                 <TextBlock Text="{Binding Value, ElementName=GpuSlider, StringFormat='{}{0:0}%'}" Style="{StaticResource CardCaptionText}" Width="44" TextAlignment="Right" VerticalAlignment="Center"/>
             </StackPanel>
         </s:SettingRow>
-        <s:SettingRow Label="Temperature threshold" Description="Alert when the CPU or GPU temperature stays above this level. The CPU temperature is an estimate." IsEnabled="{Binding EnableHardwareAlerts}">
+        <s:SettingRow Label="Temperature threshold" Description="Alert when a measured CPU or GPU temperature stays above this level for a few seconds. The CPU temperature is only measured with the PawnIO driver; an estimate never alerts." IsEnabled="{Binding EnableHardwareAlerts}">
             <StackPanel Orientation="Horizontal">
                 <Slider x:Name="TempSlider" Style="{StaticResource ModernDarkSlider}" Width="200" Minimum="60" Maximum="100" ValueChanged="Threshold_Changed"/>
                 <TextBlock Text="{Binding Value, ElementName=TempSlider, StringFormat='{}{0:0} °C'}" Style="{StaticResource CardCaptionText}" Width="44" TextAlignment="Right" VerticalAlignment="Center"/>
+            </StackPanel>
+        </s:SettingRow>
+        <s:SettingRow Label="Sustained heat" Description="Also alert once when a measured CPU or GPU temperature stays at or above this level for the whole time chosen, for example during a long game. Mochi looks hot while it lasts." IsEnabled="{Binding EnableHardwareAlerts}">
+            <StackPanel Orientation="Horizontal">
+                <Slider x:Name="HeatSlider" Style="{StaticResource ModernDarkSlider}" Width="140" Minimum="60" Maximum="95" ValueChanged="Heat_Changed" AutomationProperties.Name="Sustained heat temperature"/>
+                <TextBlock Text="{Binding Value, ElementName=HeatSlider, StringFormat='{}{0:0} °C'}" Style="{StaticResource CardCaptionText}" Width="44" TextAlignment="Right" VerticalAlignment="Center"/>
+                <ComboBox x:Name="HeatMinutesCombo" Style="{StaticResource ModernDarkComboBox}" Width="90" Margin="8,0,0,0" SelectionChanged="Heat_Changed" AutomationProperties.Name="Sustained heat duration">
+                    <ComboBoxItem Content="5 min" Tag="5"/>
+                    <ComboBoxItem Content="10 min" Tag="10"/>
+                    <ComboBoxItem Content="20 min" Tag="20"/>
+                </ComboBox>
+            </StackPanel>
+        </s:SettingRow>
+
+        <TextBlock Style="{StaticResource SettingsGroupHeader}" Text="History" Margin="0,18,0,2"/>
+        <s:SettingRow x:Name="HistoryRow" Label="Keep a 24-hour history" Description="Records CPU and GPU load and temperature and memory once every 15 seconds (one point a minute) for the Stats charts' 24 h view. Paused while the PC is locked or the screen is off. Kept on this PC only, in StatsHistory.json.">
+            <StackPanel Orientation="Horizontal">
+                <CheckBox IsChecked="{Binding RecordStatsHistory, Mode=TwoWay}" Style="{StaticResource ModernDarkCheckBox}" VerticalAlignment="Center"/>
+                <Button Style="{StaticResource ActionButton}" Content="Clear history" Click="ClearHistory_Click" Margin="12,0,0,0"/>
             </StackPanel>
         </s:SettingRow>
 

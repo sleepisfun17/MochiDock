@@ -336,6 +336,12 @@
                     <Rectangle Grid.Column="0" Height="1" Fill="{DynamicResource IslandSubCardBorderBrush}" VerticalAlignment="Center" Margin="0,0,6,0" />
                     <TextBlock Style="{StaticResource HardwareSection}" Grid.Column="1" Text="USAGE HISTORY" Foreground="{DynamicResource IslandMutedInkBrush}" />
                     <Rectangle Grid.Column="2" Height="1" Fill="{DynamicResource IslandSubCardBorderBrush}" VerticalAlignment="Center" Margin="6,0,0,0" />
+                    <!-- "2 min | 24 h": the live readings or the saved 24-hour history (StatsHistory); the choice is shared by CPU, GPU and Memory -->
+                    <Border Grid.Column="2" HorizontalAlignment="Right" VerticalAlignment="Center" Cursor="Hand" CornerRadius="6" Padding="6,1"
+                            Background="{DynamicResource IslandChipBackgroundBrush}" BorderBrush="{DynamicResource IslandChipBorderBrush}" BorderThickness="1"
+                            ToolTip="{Binding StatsChartSpanTooltip}" MouseLeftButtonUp="ChartSpan_Click">
+                        <TextBlock Style="{StaticResource HardwareSection}" Text="{Binding StatsChartSpanLabel}" Foreground="{DynamicResource IslandSecondaryInkBrush}" />
+                    </Border>
                 </Grid>
 
                 <Border Background="{DynamicResource IslandSubCardBackgroundBrush}" CornerRadius="10" Height="100" Margin="0,0,0,8" BorderBrush="{DynamicResource IslandSubCardBorderBrush}" BorderThickness="1" ClipToBounds="True">
@@ -345,8 +351,21 @@
                         <Rectangle Height="1" Fill="{DynamicResource IslandChartGridStrongBrush}" VerticalAlignment="Top" Margin="4,50,4,0" />
                         <Rectangle Height="1" Fill="{DynamicResource IslandChartGridBrush}" VerticalAlignment="Top" Margin="4,75,4,0" />
 
-                        <Polygon Points="{Binding HardwareStats.CpuHistoryFillPoints}" Fill="{DynamicResource IslandGreenBrush}" Opacity="0.08" />
-                        <Polyline Points="{Binding HardwareStats.CpuHistoryPoints}" Stroke="{DynamicResource IslandGreenBrush}" StrokeThickness="1.8" StrokeLineJoin="Round" />
+                        <Polygon Points="{Binding HardwareStats.CpuHistoryFillPoints}" Fill="{DynamicResource IslandGreenBrush}" Opacity="0.08" Visibility="{Binding IsStatsChart24h, Converter={StaticResource InverseBoolToVisibility}}" />
+                        <Polyline Points="{Binding HardwareStats.CpuHistoryPoints}" Stroke="{DynamicResource IslandGreenBrush}" StrokeThickness="1.8" StrokeLineJoin="Round" Visibility="{Binding IsStatsChart24h, Converter={StaticResource InverseBoolToVisibility}}" />
+                        <!-- The last 24 hours, one point a minute; breaks where the PC slept or was locked -->
+                        <Path Data="{Binding CpuLoad24Geometry}" Stroke="{DynamicResource IslandGreenBrush}" StrokeThickness="1.4" StrokeLineJoin="Round"
+                              Visibility="{Binding IsStatsChart24h, Converter={StaticResource BoolToVisibility}}" />
+                        <Path Data="{Binding CpuTemp24Geometry}" Stroke="{DynamicResource IslandOrangeBrush}" StrokeThickness="1.2" StrokeLineJoin="Round" Opacity="0.9"
+                              Visibility="{Binding IsStatsChart24h, Converter={StaticResource BoolToVisibility}}" ToolTip="Measured temperature (0-100 °C)" />
+                        <Grid Visibility="{Binding IsStatsChart24h, Converter={StaticResource BoolToVisibility}}" Margin="6,3,6,2" IsHitTestVisible="False">
+                            <TextBlock Style="{StaticResource HardwareGaugeCaption}" Text="{Binding CpuPeak24Text}" Foreground="{DynamicResource IslandMutedInkBrush}" HorizontalAlignment="Left" VerticalAlignment="Top" />
+                            <TextBlock Style="{StaticResource HardwareGaugeCaption}" Text="24 h ago" Foreground="{DynamicResource IslandMutedInkBrush}" HorizontalAlignment="Left" VerticalAlignment="Bottom" />
+                            <TextBlock Style="{StaticResource HardwareGaugeCaption}" Text="now" Foreground="{DynamicResource IslandMutedInkBrush}" HorizontalAlignment="Right" VerticalAlignment="Bottom" />
+                            <TextBlock Style="{StaticResource HardwareGaugeCaption}" Text="Collecting... the 24-hour view fills in as you use the PC" TextWrapping="Wrap" TextAlignment="Center" MaxWidth="170"
+                                       Foreground="{DynamicResource IslandSecondaryInkBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                       Visibility="{Binding HasStatsHistory, Converter={StaticResource InverseBoolToVisibility}}" />
+                        </Grid>
                     </Grid>
                 </Border>
 
@@ -497,6 +516,12 @@
                     <Rectangle Grid.Column="0" Height="1" Fill="{DynamicResource IslandSubCardBorderBrush}" VerticalAlignment="Center" Margin="0,0,6,0" />
                     <TextBlock Style="{StaticResource HardwareSection}" Grid.Column="1" Text="USAGE HISTORY" Foreground="{DynamicResource IslandMutedInkBrush}" />
                     <Rectangle Grid.Column="2" Height="1" Fill="{DynamicResource IslandSubCardBorderBrush}" VerticalAlignment="Center" Margin="6,0,0,0" />
+                    <!-- "2 min | 24 h": the live readings or the saved 24-hour history (StatsHistory); the choice is shared by CPU, GPU and Memory -->
+                    <Border Grid.Column="2" HorizontalAlignment="Right" VerticalAlignment="Center" Cursor="Hand" CornerRadius="6" Padding="6,1"
+                            Background="{DynamicResource IslandChipBackgroundBrush}" BorderBrush="{DynamicResource IslandChipBorderBrush}" BorderThickness="1"
+                            ToolTip="{Binding StatsChartSpanTooltip}" MouseLeftButtonUp="ChartSpan_Click">
+                        <TextBlock Style="{StaticResource HardwareSection}" Text="{Binding StatsChartSpanLabel}" Foreground="{DynamicResource IslandSecondaryInkBrush}" />
+                    </Border>
                 </Grid>
 
                 <Border Background="{DynamicResource IslandSubCardBackgroundBrush}" CornerRadius="10" Height="100" Margin="0,0,0,10" BorderBrush="{DynamicResource IslandSubCardBorderBrush}" BorderThickness="1" ClipToBounds="True">
@@ -506,8 +531,21 @@
                         <Rectangle Height="1" Fill="{DynamicResource IslandChartGridStrongBrush}" VerticalAlignment="Top" Margin="4,50,4,0" />
                         <Rectangle Height="1" Fill="{DynamicResource IslandChartGridBrush}" VerticalAlignment="Top" Margin="4,75,4,0" />
 
-                        <Polygon Points="{Binding HardwareStats.GpuHistoryFillPoints}" Fill="{DynamicResource IslandBlueBrush}" Opacity="0.09" />
-                        <Polyline Points="{Binding HardwareStats.GpuHistoryPoints}" Stroke="{DynamicResource IslandBlueBrush}" StrokeThickness="1.8" StrokeLineJoin="Round" />
+                        <Polygon Points="{Binding HardwareStats.GpuHistoryFillPoints}" Fill="{DynamicResource IslandBlueBrush}" Opacity="0.09" Visibility="{Binding IsStatsChart24h, Converter={StaticResource InverseBoolToVisibility}}" />
+                        <Polyline Points="{Binding HardwareStats.GpuHistoryPoints}" Stroke="{DynamicResource IslandBlueBrush}" StrokeThickness="1.8" StrokeLineJoin="Round" Visibility="{Binding IsStatsChart24h, Converter={StaticResource InverseBoolToVisibility}}" />
+                        <!-- The last 24 hours, one point a minute; breaks where the PC slept or was locked -->
+                        <Path Data="{Binding GpuLoad24Geometry}" Stroke="{DynamicResource IslandBlueBrush}" StrokeThickness="1.4" StrokeLineJoin="Round"
+                              Visibility="{Binding IsStatsChart24h, Converter={StaticResource BoolToVisibility}}" />
+                        <Path Data="{Binding GpuTemp24Geometry}" Stroke="{DynamicResource IslandOrangeBrush}" StrokeThickness="1.2" StrokeLineJoin="Round" Opacity="0.9"
+                              Visibility="{Binding IsStatsChart24h, Converter={StaticResource BoolToVisibility}}" ToolTip="Measured temperature (0-100 °C)" />
+                        <Grid Visibility="{Binding IsStatsChart24h, Converter={StaticResource BoolToVisibility}}" Margin="6,3,6,2" IsHitTestVisible="False">
+                            <TextBlock Style="{StaticResource HardwareGaugeCaption}" Text="{Binding GpuPeak24Text}" Foreground="{DynamicResource IslandMutedInkBrush}" HorizontalAlignment="Left" VerticalAlignment="Top" />
+                            <TextBlock Style="{StaticResource HardwareGaugeCaption}" Text="24 h ago" Foreground="{DynamicResource IslandMutedInkBrush}" HorizontalAlignment="Left" VerticalAlignment="Bottom" />
+                            <TextBlock Style="{StaticResource HardwareGaugeCaption}" Text="now" Foreground="{DynamicResource IslandMutedInkBrush}" HorizontalAlignment="Right" VerticalAlignment="Bottom" />
+                            <TextBlock Style="{StaticResource HardwareGaugeCaption}" Text="Collecting... the 24-hour view fills in as you use the PC" TextWrapping="Wrap" TextAlignment="Center" MaxWidth="170"
+                                       Foreground="{DynamicResource IslandSecondaryInkBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                       Visibility="{Binding HasStatsHistory, Converter={StaticResource InverseBoolToVisibility}}" />
+                        </Grid>
                     </Grid>
                 </Border>
 
@@ -710,6 +748,12 @@
                     <Rectangle Grid.Column="0" Height="1" Fill="{DynamicResource IslandSubCardBorderBrush}" VerticalAlignment="Center" Margin="0,0,6,0" />
                     <TextBlock Style="{StaticResource HardwareSection}" Grid.Column="1" Text="USAGE HISTORY" Foreground="{DynamicResource IslandMutedInkBrush}" />
                     <Rectangle Grid.Column="2" Height="1" Fill="{DynamicResource IslandSubCardBorderBrush}" VerticalAlignment="Center" Margin="6,0,0,0" />
+                    <!-- "2 min | 24 h": the live readings or the saved 24-hour history (StatsHistory); the choice is shared by CPU, GPU and Memory -->
+                    <Border Grid.Column="2" HorizontalAlignment="Right" VerticalAlignment="Center" Cursor="Hand" CornerRadius="6" Padding="6,1"
+                            Background="{DynamicResource IslandChipBackgroundBrush}" BorderBrush="{DynamicResource IslandChipBorderBrush}" BorderThickness="1"
+                            ToolTip="{Binding StatsChartSpanTooltip}" MouseLeftButtonUp="ChartSpan_Click">
+                        <TextBlock Style="{StaticResource HardwareSection}" Text="{Binding StatsChartSpanLabel}" Foreground="{DynamicResource IslandSecondaryInkBrush}" />
+                    </Border>
                 </Grid>
 
                 <Border Background="{DynamicResource IslandSubCardBackgroundBrush}" CornerRadius="10" Height="100" Margin="0,0,0,10" BorderBrush="{DynamicResource IslandSubCardBorderBrush}" BorderThickness="1" ClipToBounds="True">
@@ -719,8 +763,19 @@
                         <Rectangle Height="1" Fill="{DynamicResource IslandChartGridStrongBrush}" VerticalAlignment="Top" Margin="4,50,4,0" />
                         <Rectangle Height="1" Fill="{DynamicResource IslandChartGridBrush}" VerticalAlignment="Top" Margin="4,75,4,0" />
 
-                        <Polygon Points="{Binding HardwareStats.RamHistoryFillPoints}" Fill="{DynamicResource IslandPurpleBrush}" Opacity="0.06" />
-                        <Polyline Points="{Binding HardwareStats.RamHistoryPoints}" Stroke="{DynamicResource IslandPurpleBrush}" StrokeThickness="1.8" StrokeLineJoin="Round" />
+                        <Polygon Points="{Binding HardwareStats.RamHistoryFillPoints}" Fill="{DynamicResource IslandPurpleBrush}" Opacity="0.06" Visibility="{Binding IsStatsChart24h, Converter={StaticResource InverseBoolToVisibility}}" />
+                        <Polyline Points="{Binding HardwareStats.RamHistoryPoints}" Stroke="{DynamicResource IslandPurpleBrush}" StrokeThickness="1.8" StrokeLineJoin="Round" Visibility="{Binding IsStatsChart24h, Converter={StaticResource InverseBoolToVisibility}}" />
+                        <!-- The last 24 hours, one point a minute; breaks where the PC slept or was locked -->
+                        <Path Data="{Binding Ram24Geometry}" Stroke="{DynamicResource IslandPurpleBrush}" StrokeThickness="1.4" StrokeLineJoin="Round"
+                              Visibility="{Binding IsStatsChart24h, Converter={StaticResource BoolToVisibility}}" />
+                        <Grid Visibility="{Binding IsStatsChart24h, Converter={StaticResource BoolToVisibility}}" Margin="6,3,6,2" IsHitTestVisible="False">
+                            <TextBlock Style="{StaticResource HardwareGaugeCaption}" Text="{Binding RamPeak24Text}" Foreground="{DynamicResource IslandMutedInkBrush}" HorizontalAlignment="Left" VerticalAlignment="Top" />
+                            <TextBlock Style="{StaticResource HardwareGaugeCaption}" Text="24 h ago" Foreground="{DynamicResource IslandMutedInkBrush}" HorizontalAlignment="Left" VerticalAlignment="Bottom" />
+                            <TextBlock Style="{StaticResource HardwareGaugeCaption}" Text="now" Foreground="{DynamicResource IslandMutedInkBrush}" HorizontalAlignment="Right" VerticalAlignment="Bottom" />
+                            <TextBlock Style="{StaticResource HardwareGaugeCaption}" Text="Collecting... the 24-hour view fills in as you use the PC" TextWrapping="Wrap" TextAlignment="Center" MaxWidth="170"
+                                       Foreground="{DynamicResource IslandSecondaryInkBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                       Visibility="{Binding HasStatsHistory, Converter={StaticResource InverseBoolToVisibility}}" />
+                        </Grid>
                     </Grid>
                 </Border>
 

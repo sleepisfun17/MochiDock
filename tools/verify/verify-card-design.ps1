@@ -130,7 +130,7 @@ $data=[pscustomobject]@{
  ShelfFiles=@([pscustomobject]@{FileName="Layout notes 日本語.txt";ExtensionBadge="TXT";FormattedSize="12 KB"});ClipboardHistory=@([pscustomobject]@{PreviewText="Copied text · 日本語 😀";FormattedTime="13:44";IsPinned=$false})
  PhoneDropAddresses=@("192.168.1.20");PhoneDropAddress="192.168.1.20";PhoneDropStatus="Stopped";PhoneDropState="Stopped";CanStartPhoneDrop=$true;CanStopPhoneDrop=$false;HasPendingDropApproval=$false;IsPhoneDropEnabled=$false
  CurrentMedia=$media;HasLyrics=$false;LyricsStatusText="Loading lyrics";PlainLyrics="";PomodoroTimeDisplay="25:00";PomodoroStateText="Ready";PomodoroModeLabel="Focus";PomodoroPlayPauseIcon="▶";PomodoroPlayPauseLabel="Start";HardwareStats=$stats
- WeatherCityDisplay="Tokyo";WeatherDisplayText="18°C";WeatherConditionText="Partly cloudy";WeatherInfo=[pscustomobject]@{HourlyList=@();DailyList=@()};ActiveSystemModule="CPU";IsCpuModuleActive=$true;IsGpuModuleActive=$false;IsMemoryModuleActive=$false;IsDrivesModuleActive=$false;IsNetworkModuleActive=$false;IsGamesModuleActive=$false;IsBatteryModuleActive=$false
+ WeatherCityDisplay="Tokyo";WeatherDisplayText="18°C";WeatherConditionText="Partly cloudy";WeatherInfo=[pscustomobject]@{HourlyList=@();DailyList=@()};ActiveSystemModule="CPU";IsStatsChart24h=$true;StatsChartSpanLabel="24 H";StatsChartSpanTooltip="Showing the last 24 hours";HasStatsHistory=$true;CpuPeak24Text="Peak 86 °C at 21:40";CpuLoad24Geometry=[Windows.Media.Geometry]::Parse("M0,80 L40,60 80,85 110,30 M150,70 L220,50");CpuTemp24Geometry=[Windows.Media.Geometry]::Parse("M0,50 L40,45 80,55 110,20 M150,48 L220,44");IsCpuModuleActive=$true;IsGpuModuleActive=$false;IsMemoryModuleActive=$false;IsDrivesModuleActive=$false;IsNetworkModuleActive=$false;IsGamesModuleActive=$false;IsBatteryModuleActive=$false
 }
 $heights=@{Media=170;WhatsApp=340;Discord=230;Apps=230;Email=230;Settings=400;Hardware=345;Summary=350;Weather=275;Pomodoro=170;Prayer=270;FileShelf=410;Clipboard=250;Today=360;FxRates=360;BatteryModule=345;AiUsage=360;Script=300;Downloads=260}
 $glyphEvidence=[Collections.Generic.List[object]]::new()
@@ -267,6 +267,12 @@ foreach($file in Get-ChildItem (Join-Path $repo "MochiDock/Views/Cards") -Filter
    $rows=@($visuals | Where-Object {$_ -is [Windows.Controls.ContentPresenter] -and $_.Content -and $_.Content.GetType().Name -eq "ProcessMetricItem" -and $_.IsVisible})
    foreach($row in $rows){$rowBottom=$row.TransformToAncestor($cpu).Transform([Windows.Point]::new(0,$row.ActualHeight)).Y;if($rowBottom -gt $cpu.ActualHeight+0.5){throw "Process row $($row.Content.Name) is cut off at $rowBottom, $theme, $scale"}}
    if($rows.Count -lt 10){throw "Expected ten process rows on the CPU page, found $($rows.Count)"}
+   # 24 h view: the lines stay inside the chart, the captions are not clipped and the span switch is drawn.
+   $paths=@($visuals | Where-Object {$_ -is [Windows.Shapes.Path] -and $_.IsVisible -and $_.Data -and $_.Data.Bounds.Width -gt 100})
+   if($paths.Count -lt 2){throw "The 24 h lines are missing ($($paths.Count)), $theme, $scale"}
+   foreach($line in $paths){$chart=[Windows.Media.VisualTreeHelper]::GetParent($line);$b=$line.Data.Bounds;if($b.Right -gt $chart.ActualWidth+30 -or $b.Bottom -gt $chart.ActualHeight+0.5 -or $b.Top -lt -0.5){throw "A 24 h line leaves its chart: $b in $($chart.ActualWidth)x$($chart.ActualHeight)"}}
+   foreach($caption in @($visuals | Where-Object {$_ -is [Windows.Controls.TextBlock] -and $_.IsVisible -and $_.Text -in @("24 h ago","now","Peak 86 °C at 21:40","24 H")})){if($caption.DesiredSize.Width -gt $caption.ActualWidth+0.5 -or $caption.DesiredSize.Height -gt $caption.ActualHeight+0.5){throw "Caption clipped: $($caption.Text), $theme, $scale"}}
+   if(@($visuals | Where-Object {$_ -is [Windows.Controls.TextBlock] -and $_.IsVisible -and $_.Text -eq "24 H"}).Count -lt 1){throw "The 2 min / 24 h switch is missing"}
    $strip=$view.FindName("HardwareModuleStrip")
    $chips=@($strip.Children | Where-Object {$_ -is [Windows.Controls.Border] -and [Windows.Controls.Grid]::GetColumn($_) -lt 12}) # column 12 is the optional Battery chip
    if($chips.Count -ne 6){throw "Expected six hardware chips"}

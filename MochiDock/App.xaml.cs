@@ -34,17 +34,18 @@ public partial class App : System.Windows.Application
     private FxRatesService? _fxRates;
     private DeviceBatteryService? _deviceBatteries;
     private PowerLogService? _powerLog;
+    private StatsHistoryService? _statsHistory;
     private CalendarFeedService? _calendarFeed;
 
     private void OnPowerModeChanged(object? sender, Microsoft.Win32.PowerModeChangedEventArgs e)
     {
-        if (e.Mode == Microsoft.Win32.PowerModes.Suspend) { try { _powerLog?.Checkpoint(); } catch (Exception ex) { MochiDock.Services.AppLog.Warn("App", ex); } }
+        if (e.Mode == Microsoft.Win32.PowerModes.Suspend) { try { _powerLog?.Checkpoint(); _statsHistory?.FlushAsync(); } catch (Exception ex) { MochiDock.Services.AppLog.Warn("App", ex); } }
     }
 
     // Windows shutdown, restart or sign-out: close and write the power session now, because the process may be ended soon after.
     protected override void OnSessionEnding(SessionEndingCancelEventArgs e)
     {
-        try { _powerLog?.StopAsync().Wait(TimeSpan.FromSeconds(2)); }
+        try { Task.WhenAll(_powerLog?.StopAsync() ?? Task.CompletedTask, _statsHistory?.FlushAsync() ?? Task.CompletedTask).Wait(TimeSpan.FromSeconds(2)); }
         catch (Exception ex) { MochiDock.Services.AppLog.Warn("App", ex); }
         base.OnSessionEnding(e);
     }
@@ -143,6 +144,7 @@ public partial class App : System.Windows.Application
             _fxRates=new FxRatesService(new KeylessFxProvider(_fxHttp));viewModel.ConfigureFx(_fxRates);_ = _fxRates.StartAsync(settings.ShowFxRatesTab);
             _deviceBatteries = new DeviceBatteryService();viewModel.ConfigureDeviceBatteries(_deviceBatteries);
             _powerLog = new PowerLogService();_powerLog.PersistenceError += message => System.Diagnostics.Debug.WriteLine(message);viewModel.ConfigurePowerLog(_powerLog);
+            _statsHistory = new StatsHistoryService();_statsHistory.PersistenceError += message => MochiDock.Services.AppLog.Warn("StatsHistory", message);viewModel.ConfigureStatsHistory(_statsHistory);
             // A suspend leaves a gap the log ignores; save what we have first in case the PC never comes back (battery runs out).
             Microsoft.Win32.SystemEvents.PowerModeChanged += OnPowerModeChanged;
             _calendarFeed = new CalendarFeedService(new DpapiProtector());viewModel.ConfigureCalendar(_calendarFeed);
@@ -189,7 +191,7 @@ public partial class App : System.Windows.Application
         catch (Exception ex) { MochiDock.Services.AppLog.Warn("App", ex); }
         try
         {
-            Task.WhenAll(_fxRates?.StopAsync() ?? Task.CompletedTask, _deviceBatteries?.StopAsync() ?? Task.CompletedTask, _powerLog?.StopAsync() ?? Task.CompletedTask, SettingsService.FlushAsync(), _tasksService?.FlushAsync() ?? Task.CompletedTask, _fileShelfService?.StopServerAsync() ?? Task.CompletedTask).Wait(TimeSpan.FromSeconds(5));
+            Task.WhenAll(_fxRates?.StopAsync() ?? Task.CompletedTask, _deviceBatteries?.StopAsync() ?? Task.CompletedTask, _powerLog?.StopAsync() ?? Task.CompletedTask, _statsHistory?.FlushAsync() ?? Task.CompletedTask, SettingsService.FlushAsync(), _tasksService?.FlushAsync() ?? Task.CompletedTask, _fileShelfService?.StopServerAsync() ?? Task.CompletedTask).Wait(TimeSpan.FromSeconds(5));
         }
         catch (Exception ex) { System.Diagnostics.Debug.WriteLine("Persistence flush: " + ex.Message); }
         _fxRates?.Dispose();_fxHttp?.Dispose();_deviceBatteries?.Dispose();
