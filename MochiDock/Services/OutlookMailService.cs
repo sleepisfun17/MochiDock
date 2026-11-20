@@ -82,6 +82,8 @@ public class OutlookMailService : IMailService
         else _reader?.MarkRead(email.EntryId);
     }
 
+    public bool CanMarkAsRead(EmailNotification email) => true;
+
     void OnMail(OutlookMailDto mail)
     {
         try

@@ -103,7 +103,8 @@
         <!-- Action Buttons -->
         <StackPanel Grid.Row="3" Orientation="Horizontal" VerticalAlignment="Bottom">
             <Button Style="{StaticResource IslandPrimaryButtonStyle}" Content="{Binding CurrentEmail.ClientSource, StringFormat='Open in {0}'}" Click="OpenEmail_Click" Margin="0" />
-            <Button Style="{StaticResource ActionButton}" Content="Mark Read" ToolTip="{Binding MarkReadTooltip}" Click="MarkRead_Click" Margin="8,0,0,0" />
+            <Button Style="{StaticResource ActionButton}" Content="Mark Read" ToolTip="{Binding MarkReadTooltip}" Click="MarkRead_Click" Margin="8,0,0,0"
+                    Visibility="{Binding CanMarkCurrentEmailRead, Converter={StaticResource BoolToVisibility}}" />
             <Button Style="{StaticResource ActionButton}" Content="Dismiss All" Click="DismissEmail_Click"  Margin="8,0,0,0"/>
         </StackPanel>
     </Grid>

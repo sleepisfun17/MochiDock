@@ -19,7 +19,7 @@ A new install shows three tabs: **Media**, **Stats** and **Weather**. Everything
 | Weather | Current conditions, hourly and three-day forecast. | A city (Settings > Location & Prayer). |
 | Prayer | Prayer times, countdown, qibla bearing and reminders. | A city and a calculation method. |
 | WhatsApp | Recent messages, quick replies and reactions. Appears when WhatsApp is enabled. | A linked phone. |
-| Email | New-mail notifications with sender, subject and a short preview; verification codes can be copied. | A Gmail, Yahoo, iCloud or other IMAP account (app password), or Outlook Classic or Mailspring installed. |
+| Email | New-mail notifications with sender, subject and a short preview; verification codes can be copied. **Mark Read** appears for Outlook mail and for accounts with "Mark as read on the server"; Mailspring mail and read-only accounts are only dismissed. | A Gmail, Yahoo, iCloud or other IMAP account (app password), or Outlook Classic or Mailspring installed. |
 | Discord | Discord toast notifications. | Experimental for unpackaged installs. |
 | Today | Month calendar, the day's agenda and your tasks with reminders. | A Google Calendar iCal link for events ([how to get it](#connecting-google-calendar)). |
 | Pomodoro | Focus timer. | Nothing. |
@@ -55,7 +55,7 @@ A new install shows three tabs: **Media**, **Stats** and **Weather**. Everything
 3. On your phone: WhatsApp > Linked devices > Link a device, and scan the QR code.
 4. The status line changes to "Linked". Use **Choose chats** to silence groups or limit notifications to a list.
 
-Sharing one engine between PCs: pick **Remote server** and enter the address (for example over Tailscale). The server connection is plain HTTP, so use it only on a network you trust.
+Sharing one engine between PCs: pick **Remote server** and enter the address (for example over Tailscale). The server needs its user name and password (GOWA basic auth), and its messages back to this PC carry a secret token. Unless the address starts with `https://` or the link runs over an encrypted network such as Tailscale, the traffic itself is not encrypted, so use it only on a network you trust.
 
 ## Connecting Google Calendar
 
@@ -145,4 +145,4 @@ When his face changes, Mochi spins round three times in about 0.6 seconds inside
 - **Downloads says "ffmpeg required":** install ffmpeg into one of the folders above, or put it on PATH.
 - **WhatsApp stays "Not linked yet":** open the QR dashboard again and rescan; use **Reconnect**.
 - **Discord shows nothing:** the toast listener is unproven for unpackaged installs.
-- **Phone drop and the GOWA server use plain LAN HTTP:** nothing is encrypted; do not use them on untrusted networks.
+- **Phone drop and a shared GOWA server use plain HTTP on the local network:** both need a secret (phone drop also asks you to approve every transfer), but the traffic is not encrypted, so someone on the same network could read it. Use them only on networks you trust; a shared GOWA server can be reached over Tailscale or an `https://` address instead.

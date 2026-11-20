@@ -2,6 +2,12 @@
 
 All notable changes to MochiDock are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Changed
+
+- The email card shows **Mark Read** only when it really marks the email read: in Outlook, or on the server for a mail account with "Mark as read on the server" turned on. For Mailspring and read-only accounts it used to only remove the email from MochiDock, which **Dismiss** already does.
+
 ## [0.1.1-beta]
 
 ### Added

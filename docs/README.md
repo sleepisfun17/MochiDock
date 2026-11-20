@@ -73,7 +73,7 @@ Captures and reports are written under `MochiDock/obj/`. Capturing the README sc
 | Media, GSMTC controls, seeking | Implemented | Real-player seek behavior not runtime-verified |
 | Lyrics (LRCLIB, offset, romanization) | Implemented | Race guards and cache unit-tested; live latency unmeasured |
 | WhatsApp (GOWA local and shared, multi-account) | Not runtime-verified | Read sync and relay tested on loopback only; own mute state not readable |
-| Email (Outlook Classic, Mailspring) | Partial | Outlook scan needs a human check; Mailspring is read only (mark-as-read is a no-op) |
+| Email (Outlook Classic, Mailspring) | Partial | Outlook scan needs a human check; Mailspring is read only (Mark Read is hidden for its mail) |
 | Email (IMAP, app password) | Not runtime-verified | Logic and reconnect covered by fake-session tests; never run against a real server |
 | Discord toasts | Not runtime-verified | Listener unproven for unpackaged installs |
 | Stats (CPU, GPU, memory, drives, network, processes) | Partial | CPU temperature is an estimate (real value needs PawnIO); some fallbacks remain |

@@ -46,11 +46,11 @@ public class CompositeMailService : IMailService
         target?.OpenEmail(email);
     }
 
-    public void MarkAsRead(EmailNotification email)
-    {
-        var target = _services.FirstOrDefault(s => s.ServiceName.Equals(email.ClientSource, StringComparison.OrdinalIgnoreCase))
-                     ?? _services.FirstOrDefault(s => s.IsAvailable);
+    public void MarkAsRead(EmailNotification email) => Source(email)?.MarkAsRead(email);
 
-        target?.MarkAsRead(email);
-    }
+    public bool CanMarkAsRead(EmailNotification email) => Source(email)?.CanMarkAsRead(email) == true;
+
+    private IMailService? Source(EmailNotification email) =>
+        _services.FirstOrDefault(s => s.ServiceName.Equals(email.ClientSource, StringComparison.OrdinalIgnoreCase))
+        ?? _services.FirstOrDefault(s => s.IsAvailable);
 }

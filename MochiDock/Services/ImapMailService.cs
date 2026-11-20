@@ -210,6 +210,9 @@ public sealed class ImapMailService : IMailService
         catch (Exception ex) { AppLog.Warn("Mail", ex); }
     }
 
+    // Only accounts with "Mark as read on the server" turned on; the others are read only.
+    public bool CanMarkAsRead(EmailNotification email) => Find(email.AccountEmail) is { MarkAsRead: true };
+
     public void MarkAsRead(EmailNotification email)
     {
         var account = Find(email.AccountEmail);

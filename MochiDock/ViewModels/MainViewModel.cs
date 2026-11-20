@@ -1820,16 +1820,22 @@ public partial class MainViewModel : INotifyPropertyChanged
             _currentEmail = value;
             OnPropertyChanged();
             OnPropertyChanged(nameof(MarkReadTooltip));
+            OnPropertyChanged(nameof(CanMarkCurrentEmailRead));
             if (value != null) { if (!_recordSilently) EnqueueNotification(IslandCardType.Email); }
             else RemoveFromNotificationQueue(IslandCardType.Email);
         }
     }
 
-    /// <summary>Mailspring's database is read-only here, so Mark Read only removes the item from the island for its mail.</summary>
+    /// <summary>
+    /// Mark Read is shown only when it really marks the email read at its source: not for Mailspring (its database is opened read
+    /// only) or a mail account without "Mark as read on the server". Dismiss still removes those from the island.
+    /// </summary>
+    public bool CanMarkCurrentEmailRead => CurrentEmail is { } email && _mailService.CanMarkAsRead(email);
+
     public string MarkReadTooltip =>
-        string.Equals(CurrentEmail?.ClientSource, "Mailspring", StringComparison.OrdinalIgnoreCase)
-            ? "Removes it from MochiDock only. Mailspring keeps it unread until you open it there."
-            : "Mark this email as read in Outlook";
+        string.Equals(CurrentEmail?.ClientSource, "Webmail", StringComparison.OrdinalIgnoreCase)
+            ? "Mark this email as read on the mail server"
+            : $"Mark this email as read in {CurrentEmail?.ClientSource ?? "Outlook"}";
 
     public WhatsAppNotification? CurrentWhatsApp
     {

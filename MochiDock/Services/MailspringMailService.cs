@@ -213,4 +213,7 @@ public class MailspringMailService : IMailService
     {
         // Marking read in Mailspring happens via its sync engine or when opening the client
     }
+
+    // Mailspring's database is opened read only, so MochiDock cannot mark its mail read.
+    public bool CanMarkAsRead(EmailNotification email) => false;
 }

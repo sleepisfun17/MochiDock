@@ -11,4 +11,6 @@ public interface IMailService
     void Stop();
     void OpenEmail(EmailNotification email);
     void MarkAsRead(EmailNotification email);
+    /// <summary>Whether <see cref="MarkAsRead"/> really marks this email read at its source; the email card hides Mark Read otherwise.</summary>
+    bool CanMarkAsRead(EmailNotification email);
 }
