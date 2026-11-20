@@ -2,6 +2,7 @@ using System;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 using System.Windows.Threading;
 using MochiDock.Models;
@@ -23,6 +24,7 @@ public class TasksService
     public TasksService()
     {
         LoadTasks();
+        Current = this;
 
         _countdownTimer = new DispatcherTimer(
             TimeSpan.FromSeconds(10),
@@ -61,6 +63,38 @@ public class TasksService
         TasksChanged?.Invoke();
     }
     public Task FlushAsync() { lock (_saveGate) return _pendingSave; }
+
+    /// <summary>The app's task list for settings export and import. Read and changed on the UI thread only.</summary>
+    public static TasksService? Current { get; private set; }
+
+    /// <summary>The task list as JSON, the same shape as tasks.json, for the settings export.</summary>
+    public JsonArray ExportTasks() => JsonSerializer.SerializeToNode(Tasks.ToList()) as JsonArray ?? new JsonArray();
+
+    /// <summary>Reads the tasks of an export file. Throws <see cref="JsonException"/> when one cannot be read; a task without an id gets a new one.</summary>
+    public static List<TodoTaskItem> ParseTasks(JsonArray tasks)
+    {
+        var parsed = tasks.Deserialize<List<TodoTaskItem?>>() ?? new();
+        var result = new List<TodoTaskItem>();
+        foreach (var task in parsed)
+        {
+            if (task == null) continue;
+            if (string.IsNullOrWhiteSpace(task.Id)) task.Id = Guid.NewGuid().ToString("N");
+            result.Add(task);
+        }
+        return result;
+    }
+
+    /// <summary>
+    /// Merges imported tasks by id: same id is updated, new ones are added at the top, and local tasks missing from the file stay.
+    /// Call on the UI thread.
+    /// </summary>
+    public void ImportTasks(IEnumerable<TodoTaskItem> imported)
+    {
+        var merged = MochiDock.Core.SettingsTransfer.MergeById(Tasks, imported, t => t.Id);
+        Tasks.Clear();
+        foreach (var task in merged) Tasks.Add(task);
+        SaveTasks();
+    }
     public TodoTaskItem AddTaskWithNaturalLanguage(string input, int? explicitDueMinutes = null)
     {
         if (string.IsNullOrWhiteSpace(input)) return new TodoTaskItem();

@@ -62,7 +62,7 @@ public partial class DataSectionView : UserControl
     {
         var dialog = new Microsoft.Win32.SaveFileDialog { Filter = "MochiDock settings (*.json)|*.json", FileName = "MochiDock-settings.json" };
         if (dialog.ShowDialog() != true) return;
-        try { SettingsService.Export(dialog.FileName); }
+        try { SettingsService.Export(dialog.FileName, TasksService.Current?.ExportTasks() ?? new System.Text.Json.Nodes.JsonArray()); }
         catch (Exception ex) { System.Windows.MessageBox.Show(ex.Message, "MochiDock settings"); }
     }
 
@@ -73,7 +73,15 @@ public partial class DataSectionView : UserControl
         if (dialog.ShowDialog() != true || ViewModel == null) return;
         try
         {
-            ViewModel.ApplyImportedSettings(SettingsService.Import(dialog.FileName));
+            // Read and check everything in the file first, so a bad task list leaves the settings untouched too.
+            var import = SettingsService.ReadImport(dialog.FileName);
+            var tasks = import.Tasks is { } list ? TasksService.ParseTasks(list) : null;
+            SettingsService.CommitImport(import.Settings);
+            ViewModel.ApplyImportedSettings(import.Settings);
+            if (tasks != null) TasksService.Current?.ImportTasks(tasks);
+            string what = tasks == null ? "Settings imported" : $"Settings and {tasks.Count} {(tasks.Count == 1 ? "task" : "tasks")} imported";
+            // Passwords live in Windows-protected stores that only open on the PC that saved them.
+            ImportRow.Validation = what + ". Enter mail account passwords and the WhatsApp server login again in their sections.";
         }
         catch (Exception ex)
         {

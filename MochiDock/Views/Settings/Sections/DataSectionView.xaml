@@ -22,10 +22,10 @@
         <s:SettingRow Label="Check for updates automatically" Description="At startup and every 12 hours. Only a generic request to GitHub is sent; nothing about you or your PC.">
             <CheckBox x:Name="AutoUpdateCheck" Style="{StaticResource ModernDarkCheckBox}" Checked="AutoUpdate_Changed" Unchecked="AutoUpdate_Changed"/>
         </s:SettingRow>
-        <s:SettingRow Label="Export settings" Description="Save a copy of settings.json. Secrets such as the WhatsApp login and calendar link are not included.">
+        <s:SettingRow Label="Export settings" Description="Save your settings and tasks to a file for another PC. Passwords, keys and values that belong to this PC (monitor, positions, ports, startup) stay here.">
             <Button Style="{StaticResource ActionButton}" Content="Export…" Click="Export_Click" Margin="0"/>
         </s:SettingRow>
-        <s:SettingRow x:Name="ImportRow" Label="Import settings" Description="Replace the current settings with a settings.json you exported earlier.">
+        <s:SettingRow x:Name="ImportRow" Label="Import settings" Description="Load an export or an older settings.json. This PC keeps its own monitor, position, port and startup values; tasks are added or updated, and your other tasks stay.">
             <Button Style="{StaticResource ActionButton}" Content="Import…" Click="Import_Click" Margin="0"/>
         </s:SettingRow>
         <s:SettingRow x:Name="ReloadRow" Label="Reload settings" Description="Read settings.json from disk again, for example after editing it by hand.">

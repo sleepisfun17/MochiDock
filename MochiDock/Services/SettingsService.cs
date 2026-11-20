@@ -1,5 +1,6 @@
 using System.IO;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using MochiDock.Models;
 
 namespace MochiDock.Services;
@@ -81,22 +82,64 @@ public static class SettingsService
     }
 
     public static Task FlushAsync() { lock (QueueGate) return Pending; }
-    public static void Export(string path) { FlushAsync().GetAwaiter().GetResult(); File.Copy(SettingsPath, path, true); }
-    public static AppSettings Import(string path)
+    /// <summary>
+    /// Writes a portable export (<see cref="MochiDock.Core.SettingsTransfer.Format"/>): the saved settings without secrets or
+    /// this PC's own values, plus <paramref name="tasks"/>. Mail and WhatsApp passwords live in DPAPI stores and never leave the PC.
+    /// </summary>
+    public static void Export(string path, JsonArray tasks)
     {
-        string json = File.ReadAllText(path);
-        var settings = JsonSerializer.Deserialize<AppSettings>(json) ?? throw new JsonException("Settings must be an object.");
+        FlushAsync().GetAwaiter().GetResult();
+        var settings = JsonNode.Parse(File.ReadAllText(SettingsPath)) as JsonObject ?? throw new JsonException("Settings must be an object.");
+        var export = MochiDock.Core.SettingsTransfer.BuildExport(settings, tasks);
+        File.WriteAllText(path, export.ToJsonString(new JsonSerializerOptions { WriteIndented = true }));
+    }
+
+    /// <summary>A validated import that has not been saved yet. <see cref="Tasks"/> is null for a plain settings.json.</summary>
+    public sealed record ImportedSettings(AppSettings Settings, JsonArray? Tasks);
+
+    /// <summary>
+    /// Reads an export file or an older plain settings.json, keeps this PC's values for the local-only keys, then validates
+    /// and migrates the result. Nothing is written; call <see cref="CommitImport"/> once everything in the file is accepted.
+    /// </summary>
+    public static ImportedSettings ReadImport(string path)
+    {
+        var (imported, tasks) = MochiDock.Core.SettingsTransfer.Parse(File.ReadAllText(path));
+        FlushAsync().GetAwaiter().GetResult();
+        MochiDock.Core.SettingsTransfer.Merge(imported, ReadCurrentJson());
+        var settings = imported.Deserialize<AppSettings>() ?? throw new JsonException("Settings must be an object.");
         if (!MochiDock.Core.SettingsValidation.IsValidPort(settings.GowaPort) || !MochiDock.Core.SettingsValidation.IsValidPort(settings.WebhookPort) ||
             !double.IsFinite(settings.TopMargin) || !double.IsFinite(settings.CapsuleScrollSpeed))
             throw new JsonException("Invalid port or display value in settings.");
-        FlushAsync().GetAwaiter().GetResult();
         if(settings.PrayerAudioVersion==0){settings.PrayerSoundMode=MochiDock.Core.PrayerTime.MigrateSound(settings.EnableAdhanAudio,settings.PrayerSoundMode);settings.PrayerAudioVersion=1;}
         if(settings.PrayerSoundMode is not ("Silent" or "Tone" or "Adzan"))throw new JsonException("Invalid prayer sound mode.");
         settings.PrayerSoundMode=MochiDock.Core.PrayerTime.NormalizeSound(settings.PrayerSoundMode);settings.PrayerAudioVersion=2;
         settings.LyricsOffsetMs=MochiDock.Core.LyricOffset.Clamp(settings.LyricsOffsetMs);
         settings.MigrateTasksTab();
         settings.MigrateWhatsAppOptIn(HasGowaSession());
+        // The webhook token is never exported; a PC without one gets a fresh token, as on a normal start.
+        if (string.IsNullOrWhiteSpace(settings.RemoteWebhookToken)) settings.RemoteWebhookToken = GowaService.NewWebhookToken();
+        return new ImportedSettings(settings, tasks);
+    }
+
+    /// <summary>Saves imported settings, even over a settings file that failed to load (an explicit user action).</summary>
+    public static void CommitImport(AppSettings settings)
+    {
+        FlushAsync().GetAwaiter().GetResult();
         AtomicJsonStore.SaveJson(SettingsPath, JsonSerializer.Serialize(settings), explicitImport: true);
-        return settings;
+    }
+
+    /// <summary>Reads and saves an import in one step. Returns the saved settings and the file's tasks (not applied here).</summary>
+    public static ImportedSettings Import(string path)
+    {
+        var import = ReadImport(path);
+        CommitImport(import.Settings);
+        return import;
+    }
+
+    /// <summary>The saved settings.json as JSON, or null when it is missing or unreadable (local-only keys then fall back to defaults).</summary>
+    private static JsonObject? ReadCurrentJson()
+    {
+        try { return File.Exists(SettingsPath) ? JsonNode.Parse(File.ReadAllText(SettingsPath)) as JsonObject : null; }
+        catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException) { AppLog.Warn("Settings", ex); return null; }
     }
 }
