@@ -232,7 +232,7 @@ public partial class MainViewModel
         if (reading is null || !EnableDeviceBatteries) return;
         if (_hardwarePresentationSuppressed || _wasGaming || _isWorkstationLocked || !_displayAwake ||
             IsNotificationInMainPill || IsPrayerArrivalVisible || IsPrayerReminderVisible || !ShouldShowNotification("Hardware")) return;
-        _noticeIsAi = false; _noticeIsAgenda = false; _noticeIsGame = false; _noticeIsDevice = true;
+        _noticeIsAi = false; _noticeIsAgenda = false; _noticeIsGame = false; _noticeIsDevice = true; _noticeIsWeather = false;
         _hardwareNoticeText = DeviceBatteryAlertPolicy.Text(reading);
         _hardwareNoticeUntil = DateTimeOffset.UtcNow.AddSeconds(8);
         _hardwareNoticeTimer.Stop(); _hardwareNoticeTimer.Start();

@@ -13,6 +13,9 @@
             </StackPanel>
         </s:SettingRow>
 
+        <s:SettingRow Label="Rain soon" Description="A short capsule notice when rain, snow or a thunderstorm is expected within the hour in this city. Tap it to open Weather.">
+            <CheckBox IsChecked="{Binding RainSoonNotice, Mode=TwoWay}" Style="{StaticResource ModernDarkCheckBox}"/>
+        </s:SettingRow>
         <s:SettingRow Label="Prayer times" Description="Show the Prayer tab and schedule prayer reminders.">
             <CheckBox IsChecked="{Binding EnablePrayerTimes, Mode=TwoWay}" Style="{StaticResource ModernDarkCheckBox}"/>
         </s:SettingRow>

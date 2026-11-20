@@ -162,6 +162,8 @@ public class AppSettings
     /// <summary>Mochi shows more faces (angry, hot, freezing, dizzy, drained) for overdue items, temperature, load and battery.</summary>
     public bool ExpressiveMochi { get; set; } = true;
     public bool ShowWeatherInCapsule { get; set; } = true;
+    /// <summary>A short capsule notice when rain, snow or a thunderstorm is expected within the hour.</summary>
+    public bool RainSoonNotice { get; set; } = true;
     /// <summary>Resting capsule with weather: "EqualEdges" (clock exactly centred, Mochi and the weather at the edges) or "EvenSpacing" (the same space before, between and after the three items). "EqualGaps" from an earlier build reads as EvenSpacing.</summary>
     public string CapsuleClockLayout { get; set; } = "EqualEdges";
     /// <summary>How dates are shown: "Automatic" (Windows region), "YearFirst" (2026/11/19 木), "DayFirst", "MonthFirst" or "Iso". See <see cref="MochiDock.Core.DateDisplay"/>.</summary>

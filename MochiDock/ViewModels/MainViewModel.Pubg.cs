@@ -87,7 +87,7 @@ public partial class MainViewModel
         if (_wasGaming || _isWorkstationLocked || !_displayAwake) return;
         _noticeIsAi = false;
         _noticeIsAgenda = false;
-        _noticeIsGame = true;_noticeIsDevice = false;
+        _noticeIsGame = true;_noticeIsDevice = false; _noticeIsWeather = false;
         _hardwareNoticeText = "PUBG stats ready · " + GameMatchFormat.Line(match).Split(" · ", 3)[0] + " · " + match.Kills + (match.Kills == 1 ? " kill" : " kills");
         _hardwareNoticeUntil = DateTimeOffset.UtcNow.AddSeconds(8);
         _hardwareNoticeTimer.Stop();

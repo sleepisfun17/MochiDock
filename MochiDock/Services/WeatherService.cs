@@ -144,11 +144,13 @@ public class WeatherService
                 string latStr = geo.Latitude.ToString("F4", CultureInfo.InvariantCulture);
                 string lonStr = geo.Longitude.ToString("F4", CultureInfo.InvariantCulture);
 
-                var weatherUrl = $"https://api.open-meteo.com/v1/forecast?latitude={latStr}&longitude={lonStr}&current=temperature_2m,wind_speed_10m,weather_code&hourly=temperature_2m,weather_code,precipitation_probability&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max&forecast_days=3&wind_speed_unit=ms";
+                var weatherUrl = $"https://api.open-meteo.com/v1/forecast?latitude={latStr}&longitude={lonStr}&current=temperature_2m,wind_speed_10m,weather_code&hourly=temperature_2m,weather_code,precipitation_probability&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max&minutely_15=precipitation,weather_code&forecast_minutely_15=8&forecast_days=3&wind_speed_unit=ms&timezone=auto";
                 var weatherResponse = await _httpClient.GetStringAsync(weatherUrl);
                 using var weatherDoc = JsonDocument.Parse(weatherResponse);
                 var root = weatherDoc.RootElement;
                 var current = root.GetProperty("current");
+                // timezone=auto: times are the city's local time (so "Today" is the city's day); this offset turns them into instants.
+                int utcOffset = root.TryGetProperty("utc_offset_seconds", out var offsetEl) ? offsetEl.GetInt32() : 0;
 
                 int weatherCode = current.TryGetProperty("weather_code", out var codeEl) ? codeEl.GetInt32() : 0;
                 var (condition, icon, kind) = DecodeWmoWeatherCode(weatherCode);
@@ -179,8 +181,10 @@ public class WeatherService
 
                     for (int i = 0; i < count && added < 12; i++)
                     {
-                        if (DateTime.TryParse(times[i].GetString(), out var dt))
+                        // Shown in this PC's time (the forecast hours used to be read as local while Open-Meteo sent GMT).
+                        if (MochiDock.Core.RainSoonPolicy.ParseTime(times[i].GetString(), utcOffset) is { } at)
                         {
+                            var dt = at.LocalDateTime;
                             if (dt >= now.AddHours(-0.5))
                             {
                                 int hCode = codes[i].GetInt32();
@@ -197,6 +201,20 @@ public class WeatherService
                                 added++;
                             }
                         }
+                    }
+                }
+
+                // The next two hours in 15-minute steps, for the "rain soon" notice.
+                if (root.TryGetProperty("minutely_15", out var quarter) && quarter.TryGetProperty("time", out var qTimes))
+                {
+                    var qRain = quarter.TryGetProperty("precipitation", out var qp) ? qp : default;
+                    var qCodes = quarter.TryGetProperty("weather_code", out var qc) ? qc : default;
+                    for (int i = 0; i < qTimes.GetArrayLength(); i++)
+                    {
+                        if (MochiDock.Core.RainSoonPolicy.ParseTime(qTimes[i].GetString(), utcOffset) is not { } start) continue;
+                        double mm = qRain.ValueKind == JsonValueKind.Array && qRain[i].ValueKind == JsonValueKind.Number ? qRain[i].GetDouble() : 0;
+                        int qCode = qCodes.ValueKind == JsonValueKind.Array && qCodes[i].ValueKind == JsonValueKind.Number ? qCodes[i].GetInt32() : 0;
+                        weatherInfo.Next15.Add(new MochiDock.Core.PrecipitationSlot(start, mm, qCode));
                     }
                 }
 

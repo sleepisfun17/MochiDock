@@ -41,4 +41,6 @@ public class WeatherInfo
 
     public ObservableCollection<HourlyForecast> HourlyList { get; set; } = new();
     public ObservableCollection<DailyForecast> DailyList { get; set; } = new();
+    /// <summary>The next two hours of precipitation in 15-minute steps (Open-Meteo only; empty from the fallback provider).</summary>
+    public List<MochiDock.Core.PrecipitationSlot> Next15 { get; set; } = new();
 }

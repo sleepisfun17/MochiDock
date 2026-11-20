@@ -124,7 +124,7 @@ public partial class MainViewModel
 
         AppLog.Warn("Reminder", $"Shown: \"{text}\".");
         _noticeIsAi = false;
-        _noticeIsGame = false; _noticeIsDevice = false;
+        _noticeIsGame = false; _noticeIsDevice = false; _noticeIsWeather = false;
         _noticeIsAgenda = true;
         _noticeAgendaItems = due.Select(r => r.ItemKey).ToList();
         _hardwareNoticeText = text;
