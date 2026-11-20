@@ -26,14 +26,14 @@ public class TestDataIsolationTests
     }
 
     [Fact]
-    public void ConfiguringWhatsAppNeverWritesSettings()
+    public async Task ConfiguringWhatsAppNeverWritesSettings()
     {
         // A blank settings object used to be saved over settings.json when it had no webhook token.
         var settings = new MochiDock.Models.AppSettings();
         var service = new GowaService();
         service.ConfigureFromSettings(settings);
         Assert.False(string.IsNullOrEmpty(settings.RemoteWebhookToken));
-        SettingsService.FlushAsync().GetAwaiter().GetResult();
+        await SettingsService.FlushAsync();
         // Other tests may save settings to the scratch folder in parallel; this object (with its fresh token) must not be among them.
         string path = SettingsService.SettingsFilePath;
         Assert.False(File.Exists(path) && File.ReadAllText(path).Contains(settings.RemoteWebhookToken));

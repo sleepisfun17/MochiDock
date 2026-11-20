@@ -32,7 +32,7 @@ public class GamingResolutionOptionsTests
     public void OnlyListsCombinationsTheDisplayHas()
     {
         var options = GamingResolutionOptions.Build(new (int, int)[] { (1920, 1080), (1280, 720) });
-        Assert.Empty(GamingResolutionOptions.AspectsFor(options, 1080).Where(o => o.Aspect == "16:10"));
+        Assert.DoesNotContain(GamingResolutionOptions.AspectsFor(options, 1080), o => o.Aspect == "16:10");
         Assert.Null(GamingResolutionOptions.Find(options, "1728x1080"));
     }
 
