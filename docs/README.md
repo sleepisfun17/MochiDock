@@ -12,7 +12,8 @@ Short developer reference: layout, build commands, verification harnesses, featu
 | `MochiDock.Tests/` | xUnit regression tests |
 | `GOWA/` | Bundled WhatsApp engine binary (never package its session storage) |
 | `installer/` | Inno Setup script (`MochiDock.iss`) and notes |
-| `scripts/` | Portable publish and installer build scripts (`build_and_publish.bat`, `build_installer.bat`, `publish.ps1`); run from anywhere |
+| `scripts/` | Portable publish and installer build scripts (`build_and_publish.bat`, `build_installer.bat`, `publish.ps1`) and `release-notes.ps1`; run from anywhere |
+| `.github/workflows/` | `ci.yml` (build and unit tests on push and pull request) and `release.yml` (installer and draft release on a `v*` tag) |
 | `tools/` | Render harnesses (`verify/verify-*.ps1`), icon/capture scripts, GOWA server and relay helpers |
 | `docs/` | This file, README images (`images/`) and GIFs (`media/`) |
 
@@ -93,12 +94,16 @@ Captures and reports are written under `MochiDock/obj/`. Capturing the README sc
 | Persistence | Partial | Atomic queued saves; a daily copy of the last three days of settings; tests write to a scratch folder only; asynchronous loading and full validation pending |
 | Service lifecycle and performance | Partial | No performance baseline measured; make no performance claims |
 
+## Continuous integration
+
+`.github/workflows/ci.yml` builds the app and runs the unit tests on Windows for every push to `main` and every pull request (documentation-only changes are skipped). It never launches the app, and the render harnesses are not run there.
+
 ## Releasing a version
 
 1. Change `<Version>` in `MochiDock/MochiDock.csproj` and `MyAppVersion` in `installer/MochiDock.iss` to the same value (a test fails if they differ). Add the notes to `CHANGELOG.md`.
-2. Build, run the tests and harnesses, then `scripts\build_installer.bat`.
-3. Commit, tag `v<version>` (for example `v0.2.0-beta`) and push the tag.
-4. Create a GitHub Release for that tag (mark beta versions as pre-release) and attach `installer\Output\MochiDock-Setup-<version>.exe` under exactly that name. GitHub records the asset's SHA-256 digest itself; installed copies use it to verify the download before **Update now** runs the setup silently (`/VERYSILENT ... /RELAUNCH`). Without the asset, or under another name, running copies only link to the release page.
+2. Build, run the tests and harnesses (the harnesses only run locally).
+3. Commit, tag `v<version>` (for example `v0.2.0-beta`) and push `main` and the tag.
+4. The **Release** workflow (`.github/workflows/release.yml`) then checks that the tag matches `<Version>`, runs the tests, builds the installer with `scripts\build_installer.bat` and creates a **draft** release (pre-release for a version with a `-` suffix) with `MochiDock-Setup-<version>.exe` attached and notes from the version's `CHANGELOG.md` section (`scripts/release-notes.ps1`). Review and publish the draft by hand. To release without GitHub Actions, run `scripts\build_installer.bat` and attach the setup under exactly that name yourself. GitHub records the asset's SHA-256 digest itself; installed copies use it to verify the download before **Update now** runs the setup silently (`/VERYSILENT ... /RELAUNCH`). Without the asset, or under another name, running copies only link to the release page.
 
 ## Human runtime checklist
 

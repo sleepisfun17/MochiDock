@@ -1,0 +1,73 @@
+# Pushing a version tag (for example v0.1.2-beta) builds the self-contained installer on GitHub and creates a DRAFT release with
+# it attached. Nothing is published automatically: review the draft on GitHub and publish it by hand.
+# Before tagging, bump <Version> in MochiDock/MochiDock.csproj and MyAppVersion in installer/MochiDock.iss (the tests check
+# they match) and add a "## [x.y.z]" section to CHANGELOG.md; this workflow stops if the tag and the version differ.
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  installer:
+    runs-on: windows-latest
+    timeout-minutes: 45
+    env:
+      DOTNET_NOLOGO: true
+      DOTNET_CLI_TELEMETRY_OPTOUT: true
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Check the tag matches the app version
+        id: version
+        shell: pwsh
+        run: |
+          $tag = '${{ github.ref_name }}'
+          $version = ([xml](Get-Content MochiDock/MochiDock.csproj -Raw)).Project.PropertyGroup.Version | Where-Object { $_ } | Select-Object -First 1
+          if ("v$version" -ne $tag) { throw "Tag $tag does not match <Version>$version</Version> in MochiDock.csproj." }
+          "version=$version" >> $env:GITHUB_OUTPUT
+
+      - name: Run the tests
+        run: dotnet test MochiDock.Tests/MochiDock.Tests.csproj -c Release
+
+      - name: Install Inno Setup
+        shell: pwsh
+        run: |
+          if (-not (Test-Path "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe")) { choco install innosetup --no-progress -y }
+
+      - name: Build the installer
+        shell: cmd
+        run: scripts\build_installer.bat /nopause
+
+      # Code signing (for example SignPath) goes here: sign MochiDock.exe and the setup before they are uploaded.
+
+      - name: Keep the installer as a workflow artifact
+        uses: actions/upload-artifact@v5
+        with:
+          name: MochiDock-Setup-${{ steps.version.outputs.version }}
+          path: installer/Output/MochiDock-Setup-${{ steps.version.outputs.version }}.exe
+          if-no-files-found: error
+
+      - name: Create the draft release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $version = '${{ steps.version.outputs.version }}'
+          $setup = "installer/Output/MochiDock-Setup-$version.exe"
+          $notes = & ./scripts/release-notes.ps1 -Version $version -Setup $setup
+          $notes | Set-Content -Encoding utf8 release-notes.md
+          $flags = @('--draft', '--verify-tag', '--title', "MochiDock $version", '--notes-file', 'release-notes.md')
+          if ($version -match '-') { $flags += '--prerelease' }
+          gh release create '${{ github.ref_name }}' $setup @flags

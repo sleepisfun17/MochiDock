@@ -19,6 +19,7 @@ Run commands from the repository root.
 | Verify compilation | `dotnet build MochiDock/MochiDock.csproj -c Release` |
 | Full build and publish | `scripts\build_and_publish.bat` |
 | Beta installer | `scripts\build_installer.bat` (self-contained publish to `Publish-Installer/`, then Inno Setup via `installer/MochiDock.iss`; see `installer/README.md`) |
+| GitHub Actions | `.github/workflows/ci.yml` builds and runs the unit tests on push to `main` and pull requests; `release.yml` on a `v*` tag checks the tag against `<Version>`, builds the installer and creates a draft release (notes from `scripts/release-notes.ps1`). Neither launches the app or runs the render harnesses. |
 | Manual publish | `dotnet publish MochiDock/MochiDock.csproj -c Release -o Publish --source https://api.nuget.org/v3/index.json` |
 | Documentation checks | `git diff --check` and review the complete diff |
 

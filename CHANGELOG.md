@@ -4,6 +4,10 @@ All notable changes to MochiDock are documented here. The format follows [Keep a
 
 ## [Unreleased]
 
+### Added
+
+- GitHub Actions: every push and pull request is built and tested, and a version tag builds the installer and drafts the release on GitHub.
+
 ### Changed
 
 - The email card shows **Mark Read** only when it really marks the email read: in Outlook, or on the server for a mail account with "Mark as read on the server" turned on. For Mailspring and read-only accounts it used to only remove the email from MochiDock, which **Dismiss** already does.
