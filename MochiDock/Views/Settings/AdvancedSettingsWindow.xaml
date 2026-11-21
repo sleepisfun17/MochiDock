@@ -67,7 +67,7 @@
             </StackPanel>
             <!-- The scroll viewport clips its content, and the keyboard focus ring (IslandFocusVisual) draws 2 DIPs outside each control:
                  SectionHost's 4-DIP margin keeps the ring visible while the content still lines up with the 32-DIP header. -->
-            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="28,0,28,20">
+            <ScrollViewer x:Name="SectionScroller" Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="28,0,28,20">
                 <ContentPresenter x:Name="SectionHost" Margin="4"/>
             </ScrollViewer>
         </Grid>

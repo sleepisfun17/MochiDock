@@ -23,6 +23,8 @@ public partial class AdvancedSettingsWindow : Window
     private readonly MainViewModel _viewModel;
     private readonly Dictionary<string, UserControl> _sections = new(StringComparer.OrdinalIgnoreCase);
     private bool _selecting;
+    private readonly Dictionary<string, double> _scrollOffsets = new(StringComparer.OrdinalIgnoreCase);
+    private string? _shownSectionId;
 
     public AdvancedSettingsWindow(MainViewModel viewModel)
     {
@@ -107,9 +109,22 @@ public partial class AdvancedSettingsWindow : Window
                 view = CreateSection(section.Id);
                 _sections[section.Id] = view;
             }
+            // Each section keeps its own scroll position while the window is open; a section not visited yet starts at the top.
+            bool switching = _shownSectionId != section.Id;
+            if (switching && _shownSectionId != null) _scrollOffsets[_shownSectionId] = SectionScroller.VerticalOffset;
             SectionTitle.Text = section.Title;
             SectionDescription.Text = section.Description;
             SectionHost.Content = view;
+            _shownSectionId = section.Id;
+            if (switching)
+            {
+                double offset = _scrollOffsets.TryGetValue(section.Id, out double saved) ? saved : 0;
+                SectionScroller.ScrollToVerticalOffset(0);
+                // The new content's height is known only after layout; skip the restore if another section was opened meanwhile.
+                if (offset > 0)
+                    Dispatcher.BeginInvoke(() => { if (ReferenceEquals(SectionHost.Content, view)) SectionScroller.ScrollToVerticalOffset(offset); },
+                        System.Windows.Threading.DispatcherPriority.Loaded);
+            }
         }
         finally { _selecting = false; }
     }
