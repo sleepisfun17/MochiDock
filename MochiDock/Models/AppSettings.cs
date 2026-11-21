@@ -50,6 +50,8 @@ public class AppSettings
     public bool IsExpandedPinned { get; set; } = false;
     public string LastActiveCardType { get; set; } = "Media";
     public string FxHistorySpan { get; set; } = "7D"; // "7D", "1M", "1Y"
+    /// <summary>The FX card's three "BASE/QUOTE" pairs. Read it through <c>FxPairPolicy.Normalize</c>; old files without the key get the defaults.</summary>
+    public List<string> FxPairs { get; set; } = new(MochiDock.Core.FxPairPolicy.Defaults);
 
     // Display Resolution & Gaming Click-Through
     /// <summary>Gaming resolution for the hotkey and tray, e.g. "1728x1080". Empty (new installs) = the display's own 16:10 suggestion, see GamingResolutionOptions.Resolve.</summary>

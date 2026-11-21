@@ -424,6 +424,8 @@ public partial class MainViewModel : INotifyPropertyChanged
         OnPropertyChanged(nameof(ShowScriptTab));
         OnPropertyChanged(nameof(ShowDownloadsTab));
         Fx?.Configure(ShowFxRatesTab, _isWorkstationLocked || !_displayAwake);
+        Fx?.SetPairs(_settings.FxPairs);   // imported or reloaded settings bring their own pairs (no-op when unchanged)
+        OnPropertyChanged(nameof(FxPairs));
         OnPropertyChanged(nameof(EnableDeviceBatteries));OnPropertyChanged(nameof(ShowDeviceBatteriesOnTaskbar));OnPropertyChanged(nameof(ShowDeviceBatteryBackground));
         ApplyDeviceBatteryConfiguration();DeviceBatterySettingsChanged?.Invoke();
         OnPropertyChanged(nameof(EnablePowerLogging));_powerComponentItems=null;OnPropertyChanged(nameof(PowerComponentItems));RecomputePowerAllowance();ApplyPowerLogConfiguration();
@@ -947,6 +949,16 @@ public partial class MainViewModel : INotifyPropertyChanged
     public bool IsBatteryModuleActive => ActiveSystemModule=="Battery";
     public FxRatesService? Fx {get;private set;}
     public void ConfigureFx(FxRatesService service){Fx=service;OnPropertyChanged(nameof(Fx));}
+    /// <summary>The FX card's three pairs as saved (always normalized).</summary>
+    public string[] FxPairs=>MochiDock.Core.FxPairPolicy.Normalize(_settings.FxPairs);
+    /// <summary>Saves the FX card's pairs (normalized to three valid, distinct ones), applies them to the FX service and notifies the settings pages. Call on the UI thread.</summary>
+    public void SetFxPairs(IEnumerable<string>? pairs)
+    {
+        var normalized=MochiDock.Core.FxPairPolicy.Normalize(pairs);
+        UpdateSettings(s=>s.FxPairs=normalized.ToList());
+        Fx?.SetPairs(normalized);
+        OnPropertyChanged(nameof(FxPairs));
+    }
     /// <summary>Read-only calendar feed behind the Today agenda (null until the app wires it up).</summary>
     public CalendarFeedService? CalendarFeed {get;private set;}
     public void ConfigureCalendar(CalendarFeedService service){CalendarFeed=service;OnPropertyChanged(nameof(CalendarFeed));ApplyReminderSettings();}

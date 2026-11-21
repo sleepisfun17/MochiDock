@@ -4,6 +4,10 @@ All notable changes to MochiDock are documented here. The format follows [Keep a
 
 ## [Unreleased]
 
+### Added
+
+- **FX rates**: pick the three currency pairs the card shows (about 25 currencies) in Settings, Tabs, FX rates. The default stays USD/JPY, USD/IDR and JPY/IDR; the daily fallback computes any pair as a cross rate.
+
 ### Fixed
 
 - **Wireless batteries**: Arbiter Studio Akitsu mice (Akitsu, Akitsu 3950, Akitsu Medium) are now named as such instead of "LAMZU wireless mouse", and the cable and receiver show as one device.

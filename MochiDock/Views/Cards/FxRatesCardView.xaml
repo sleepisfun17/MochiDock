@@ -3,37 +3,6 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     FontFamily="{DynamicResource IslandUiFont}">
     <UserControl.Resources>
-        <ControlTemplate x:Key="UsFlagTemplate" TargetType="{x:Type Control}">
-            <Border BorderBrush="#607080" BorderThickness="0.5" CornerRadius="1" ClipToBounds="True">
-                <Canvas Width="18" Height="12" Background="White">
-                    <Rectangle Width="18" Height="1.734" Canvas.Top="0.000" Fill="#B22234"/>
-                    <Rectangle Width="18" Height="1.734" Canvas.Top="3.429" Fill="#B22234"/>
-                    <Rectangle Width="18" Height="1.734" Canvas.Top="6.857" Fill="#B22234"/>
-                    <Rectangle Width="18" Height="1.734" Canvas.Top="10.286" Fill="#B22234"/>
-                    <Rectangle Width="8" Height="6.857" Canvas.Left="0" Canvas.Top="0" Fill="#3C3B6E"/>
-                    <Ellipse Width="1.2" Height="1.2" Canvas.Left="1.2" Canvas.Top="1.5" Fill="White"/>
-                    <Ellipse Width="1.2" Height="1.2" Canvas.Left="3.6" Canvas.Top="1.5" Fill="White"/>
-                    <Ellipse Width="1.2" Height="1.2" Canvas.Left="6.0" Canvas.Top="1.5" Fill="White"/>
-                    <Ellipse Width="1.2" Height="1.2" Canvas.Left="1.2" Canvas.Top="4.3" Fill="White"/>
-                    <Ellipse Width="1.2" Height="1.2" Canvas.Left="3.6" Canvas.Top="4.3" Fill="White"/>
-                    <Ellipse Width="1.2" Height="1.2" Canvas.Left="6.0" Canvas.Top="4.3" Fill="White"/>
-                </Canvas>
-            </Border>
-        </ControlTemplate>
-        <ControlTemplate x:Key="JapanFlagTemplate" TargetType="{x:Type Control}">
-            <Border Background="White" BorderBrush="#A0A0A0" BorderThickness="0.5" CornerRadius="1">
-                <Ellipse Width="6" Height="6" Fill="#BC002D" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-            </Border>
-        </ControlTemplate>
-        <ControlTemplate x:Key="IndonesiaFlagTemplate" TargetType="{x:Type Control}">
-            <Border BorderBrush="#A0A0A0" BorderThickness="0.5" CornerRadius="1" ClipToBounds="True">
-                <Grid>
-                    <Grid.RowDefinitions><RowDefinition/><RowDefinition/></Grid.RowDefinitions>
-                    <Border Background="#CE1126"/>
-                    <Border Grid.Row="1" Background="White"/>
-                </Grid>
-            </Border>
-        </ControlTemplate>
         <Style x:Key="FxPairCardStyle" TargetType="RadioButton">
             <Setter Property="Background" Value="{DynamicResource IslandSubCardBackgroundBrush}"/>
             <Setter Property="BorderBrush" Value="{DynamicResource IslandSubCardBorderBrush}"/>
@@ -112,46 +81,46 @@
         </DockPanel>
 
         <UniformGrid Grid.Row="1" Columns="3" Margin="0,0,0,6">
-            <RadioButton x:Name="UsdJpy" Tag="USD/JPY" GroupName="FxPair" Checked="Pair_Checked" Style="{StaticResource FxPairCardStyle}" Margin="0,0,3,0" ToolTip="Select the USD/JPY 7-day trajectory">
+            <RadioButton x:Name="Pair1" Tag="USD/JPY" GroupName="FxPair" Checked="Pair_Checked" Style="{StaticResource FxPairCardStyle}" Margin="0,0,3,0" ToolTip="Select the USD/JPY trajectory">
                 <Grid>
                     <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
                     <Grid>
                         <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,5,0">
-                            <Control Width="18" Height="12" Template="{StaticResource UsFlagTemplate}"/><Control Width="18" Height="12" Margin="2,0,0,0" Template="{StaticResource JapanFlagTemplate}"/>
-                        </StackPanel>
-                        <TextBlock Grid.Column="1" Text="USD / JPY" FontSize="10.5" FontWeight="{DynamicResource IslandSmallLabelWeight}" Foreground="{DynamicResource IslandSecondaryInkBrush}" VerticalAlignment="Center"/>
-                        <Border x:Name="UsdJpyBadge" Grid.Column="2" CornerRadius="4" Padding="5,1" Background="{DynamicResource IslandChipBackgroundBrush}"><TextBlock x:Name="UsdJpyChange" Text="—" FontSize="10.5" FontWeight="{DynamicResource IslandSmallLabelWeight}"/></Border>
+                        <Border Margin="0,0,5,0" CornerRadius="3" Padding="4,0" VerticalAlignment="Center" Background="{DynamicResource IslandAccentSubtleBrush}" BorderBrush="{DynamicResource IslandAccentBrush}" BorderThickness="1">
+                            <TextBlock x:Name="Pair1Symbols" Text="" FontFamily="Segoe UI" FontSize="9.5" FontWeight="{DynamicResource IslandSmallStrongWeight}" Foreground="{DynamicResource IslandAccentBrush}"/>
+                        </Border>
+                        <TextBlock x:Name="Pair1Label" Grid.Column="1" Text="USD / JPY" FontSize="10.5" FontWeight="{DynamicResource IslandSmallLabelWeight}" Foreground="{DynamicResource IslandSecondaryInkBrush}" VerticalAlignment="Center"/>
+                        <Border x:Name="Pair1Badge" Grid.Column="2" CornerRadius="4" Padding="5,1" Background="{DynamicResource IslandChipBackgroundBrush}"><TextBlock x:Name="Pair1Change" Text="—" FontSize="10.5" FontWeight="{DynamicResource IslandSmallLabelWeight}"/></Border>
                     </Grid>
-                    <TextBlock x:Name="UsdJpyValue" Grid.Row="1" Text="¥—" Margin="0,5,0,0" FontSize="17" FontWeight="{DynamicResource IslandSmallLabelWeight}" Foreground="{DynamicResource IslandInkBrush}"/>
+                    <TextBlock x:Name="Pair1Value" Grid.Row="1" Text="—" Margin="0,5,0,0" FontSize="17" FontWeight="{DynamicResource IslandSmallLabelWeight}" Foreground="{DynamicResource IslandInkBrush}"/>
                 </Grid>
             </RadioButton>
-            <RadioButton x:Name="UsdIdr" Tag="USD/IDR" GroupName="FxPair" Checked="Pair_Checked" Style="{StaticResource FxPairCardStyle}" Margin="3,0" ToolTip="Select the USD/IDR 7-day trajectory">
+            <RadioButton x:Name="Pair2" Tag="USD/IDR" GroupName="FxPair" Checked="Pair_Checked" Style="{StaticResource FxPairCardStyle}" Margin="3,0" ToolTip="Select the USD/IDR trajectory">
                 <Grid>
                     <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
                     <Grid>
                         <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,5,0">
-                            <Control Width="18" Height="12" Template="{StaticResource UsFlagTemplate}"/><Control Width="18" Height="12" Margin="2,0,0,0" Template="{StaticResource IndonesiaFlagTemplate}"/>
-                        </StackPanel>
-                        <TextBlock Grid.Column="1" Text="USD / IDR" FontSize="10.5" FontWeight="{DynamicResource IslandSmallLabelWeight}" Foreground="{DynamicResource IslandSecondaryInkBrush}" VerticalAlignment="Center"/>
-                        <Border x:Name="UsdIdrBadge" Grid.Column="2" CornerRadius="4" Padding="5,1" Background="{DynamicResource IslandChipBackgroundBrush}"><TextBlock x:Name="UsdIdrChange" Text="—" FontSize="10.5" FontWeight="{DynamicResource IslandSmallLabelWeight}"/></Border>
+                        <Border Margin="0,0,5,0" CornerRadius="3" Padding="4,0" VerticalAlignment="Center" Background="{DynamicResource IslandAccentSubtleBrush}" BorderBrush="{DynamicResource IslandAccentBrush}" BorderThickness="1">
+                            <TextBlock x:Name="Pair2Symbols" Text="" FontFamily="Segoe UI" FontSize="9.5" FontWeight="{DynamicResource IslandSmallStrongWeight}" Foreground="{DynamicResource IslandAccentBrush}"/>
+                        </Border>
+                        <TextBlock x:Name="Pair2Label" Grid.Column="1" Text="USD / IDR" FontSize="10.5" FontWeight="{DynamicResource IslandSmallLabelWeight}" Foreground="{DynamicResource IslandSecondaryInkBrush}" VerticalAlignment="Center"/>
+                        <Border x:Name="Pair2Badge" Grid.Column="2" CornerRadius="4" Padding="5,1" Background="{DynamicResource IslandChipBackgroundBrush}"><TextBlock x:Name="Pair2Change" Text="—" FontSize="10.5" FontWeight="{DynamicResource IslandSmallLabelWeight}"/></Border>
                     </Grid>
-                    <TextBlock x:Name="UsdIdrValue" Grid.Row="1" Text="Rp —" Margin="0,5,0,0" FontSize="17" FontWeight="{DynamicResource IslandSmallLabelWeight}" Foreground="{DynamicResource IslandInkBrush}"/>
+                    <TextBlock x:Name="Pair2Value" Grid.Row="1" Text="—" Margin="0,5,0,0" FontSize="17" FontWeight="{DynamicResource IslandSmallLabelWeight}" Foreground="{DynamicResource IslandInkBrush}"/>
                 </Grid>
             </RadioButton>
-            <RadioButton x:Name="JpyIdr" Tag="JPY/IDR" GroupName="FxPair" Checked="Pair_Checked" Style="{StaticResource FxPairCardStyle}" Margin="3,0,0,0" ToolTip="Select the JPY/IDR 7-day trajectory">
+            <RadioButton x:Name="Pair3" Tag="JPY/IDR" GroupName="FxPair" Checked="Pair_Checked" Style="{StaticResource FxPairCardStyle}" Margin="3,0,0,0" ToolTip="Select the JPY/IDR trajectory">
                 <Grid>
                     <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
                     <Grid>
                         <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,5,0">
-                            <Control Width="18" Height="12" Template="{StaticResource JapanFlagTemplate}"/><Control Width="18" Height="12" Margin="2,0,0,0" Template="{StaticResource IndonesiaFlagTemplate}"/>
-                        </StackPanel>
-                        <TextBlock Grid.Column="1" Text="JPY / IDR" FontSize="10.5" FontWeight="{DynamicResource IslandSmallLabelWeight}" Foreground="{DynamicResource IslandSecondaryInkBrush}" VerticalAlignment="Center"/>
-                        <Border x:Name="JpyIdrBadge" Grid.Column="2" CornerRadius="4" Padding="5,1" Background="{DynamicResource IslandChipBackgroundBrush}"><TextBlock x:Name="JpyIdrChange" Text="—" FontSize="10.5" FontWeight="{DynamicResource IslandSmallLabelWeight}"/></Border>
+                        <Border Margin="0,0,5,0" CornerRadius="3" Padding="4,0" VerticalAlignment="Center" Background="{DynamicResource IslandAccentSubtleBrush}" BorderBrush="{DynamicResource IslandAccentBrush}" BorderThickness="1">
+                            <TextBlock x:Name="Pair3Symbols" Text="" FontFamily="Segoe UI" FontSize="9.5" FontWeight="{DynamicResource IslandSmallStrongWeight}" Foreground="{DynamicResource IslandAccentBrush}"/>
+                        </Border>
+                        <TextBlock x:Name="Pair3Label" Grid.Column="1" Text="JPY / IDR" FontSize="10.5" FontWeight="{DynamicResource IslandSmallLabelWeight}" Foreground="{DynamicResource IslandSecondaryInkBrush}" VerticalAlignment="Center"/>
+                        <Border x:Name="Pair3Badge" Grid.Column="2" CornerRadius="4" Padding="5,1" Background="{DynamicResource IslandChipBackgroundBrush}"><TextBlock x:Name="Pair3Change" Text="—" FontSize="10.5" FontWeight="{DynamicResource IslandSmallLabelWeight}"/></Border>
                     </Grid>
-                    <TextBlock x:Name="JpyIdrValue" Grid.Row="1" Text="Rp —" Margin="0,5,0,0" FontSize="17" FontWeight="{DynamicResource IslandSmallLabelWeight}" Foreground="{DynamicResource IslandInkBrush}"/>
+                    <TextBlock x:Name="Pair3Value" Grid.Row="1" Text="—" Margin="0,5,0,0" FontSize="17" FontWeight="{DynamicResource IslandSmallLabelWeight}" Foreground="{DynamicResource IslandInkBrush}"/>
                 </Grid>
             </RadioButton>
         </UniformGrid>

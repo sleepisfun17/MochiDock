@@ -52,7 +52,7 @@ public class KeylessFxTests
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request,CancellationToken token)
         {
             Hosts.Add(request.RequestUri!.Host);
-            return Task.FromResult(request.RequestUri.Host=="open.er-api.com"?new HttpResponseMessage(HttpStatusCode.ServiceUnavailable):new HttpResponseMessage(HttpStatusCode.OK){Content=new StringContent("""{"date":"2026-11-06","usd":{"jpy":150,"idr":15000}}""")});
+            return Task.FromResult(request.RequestUri.Host=="open.er-api.com"?new HttpResponseMessage(HttpStatusCode.ServiceUnavailable):new HttpResponseMessage(HttpStatusCode.OK){Content=new StringContent("""{"date":"2026-11-06","usd":{"jpy":150,"idr":15000,"sgd":1.5}}""")});
         }
     }
     [Fact] public async Task FallbackIsKeylessAndCrossRateUsesOneSnapshot()
@@ -147,6 +147,31 @@ public class KeylessFxTests
         var provider = new KeylessFxProvider(new HttpClient(handler), () => DateTimeOffset.FromUnixTimeSeconds(2000));
         await provider.Yahoo("USD/JPY", span, CancellationToken.None);
         Assert.Contains(expected, Assert.Single(handler.Urls));
+    }
+
+    [Fact]
+    public async Task SetPairsRefreshesNewPairsAndDropsOldCacheKeys()
+    {
+        var handler = new Handler(); using var http = new HttpClient(handler);
+        var now = DateTimeOffset.Parse("2026-11-06T12:00:00Z");
+        var directory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        var service = new FxRatesService(new KeylessFxProvider(http, () => now), directory, () => now);
+        try
+        {
+            await service.StartAsync(true, false); await service.RefreshAsync();
+            Assert.Contains("JPY/IDR", service.Markets.Keys);
+            service.SetPairs(["USD/JPY", "USD/IDR", "SGD/IDR"]);
+            Assert.Equal(new[] { "USD/JPY", "USD/IDR", "SGD/IDR" }, service.Pairs);
+            Assert.Equal("SGD/IDR", service.SelectedPair);   // JPY/IDR was selected and is gone
+            for (int i = 0; i < 100 && !service.Markets.ContainsKey("SGD/IDR"); i++) await Task.Delay(50);
+            Assert.DoesNotContain(service.Markets.Keys, k => k.StartsWith("JPY/IDR"));
+            Assert.Contains("USD/JPY", service.Markets.Keys);
+        }
+        finally
+        {
+            await service.StopAsync();
+            if (Directory.Exists(directory)) Directory.Delete(directory, true);
+        }
     }
 
     [Fact]

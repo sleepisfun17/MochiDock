@@ -1,6 +1,7 @@
 using System.Net.Http;
 using System.IO;
 using System.Text.Json;
+using MochiDock.Core;
 namespace MochiDock.Services;
 
 public sealed record MarketBar(DateTimeOffset At, decimal Value);
@@ -11,7 +12,7 @@ public sealed class KeylessFxProvider(HttpClient http, Func<DateTimeOffset>? clo
 {
     readonly Dictionary<string, (int Failures, DateTimeOffset Until)> failures = new();
     DateTimeOffset Now => clock?.Invoke() ?? DateTimeOffset.UtcNow;
-    public static string Symbol(string pair) => pair switch { "USD/JPY" => "USDJPY=X", "USD/IDR" => "USDIDR=X", "JPY/IDR" => "JPYIDR=X", _ => throw new ArgumentException("Unknown pair") };
+    public static string Symbol(string pair) => FxPairPolicy.YahooSymbol(pair);
     async Task<JsonDocument> Get(string provider, string url, CancellationToken token)
     {
         if (failures.TryGetValue(provider, out var prior) && Now < prior.Until) throw new HttpRequestException("Provider cooling down.");
@@ -103,8 +104,12 @@ public sealed class KeylessFxProvider(HttpClient http, Func<DateTimeOffset>? clo
         return new(pair, "Yahoo Finance", value, source, now,
             finalBars, interval, previousClose, changePercent);
     }
-    public async Task<MarketQuote[]> Fallback(CancellationToken token)
+    public Task<MarketQuote[]> Fallback(CancellationToken token) => Fallback(FxPairPolicy.Defaults, token);
+
+    /// <summary>Daily rates for the given pairs from one USD rate table (ER-API, then Fawaz); pairs it cannot compute are skipped.</summary>
+    public async Task<MarketQuote[]> Fallback(IEnumerable<string> pairs, CancellationToken token)
     {
+        var wanted = pairs.ToArray();
         foreach (var (provider, url) in new[] { ("ExchangeRate-API", "https://open.er-api.com/v6/latest/USD"), ("Fawaz", "https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/usd.json"), ("Fawaz mirror", "https://latest.currency-api.pages.dev/v1/currencies/usd.json") })
         {
             try
@@ -113,10 +118,17 @@ public sealed class KeylessFxProvider(HttpClient http, Func<DateTimeOffset>? clo
                 var er = provider == "ExchangeRate-API";
                 if (er && (root.GetProperty("result").GetString() != "success" || root.GetProperty("base_code").GetString() != "USD")) continue;
                 var rates = root.GetProperty(er ? "rates" : "usd");
-                var jpy = rates.GetProperty(er ? "JPY" : "jpy").GetDecimal(); var idr = rates.GetProperty(er ? "IDR" : "idr").GetDecimal();
+                var table = new Dictionary<string, decimal>(StringComparer.OrdinalIgnoreCase);
+                foreach (var entry in rates.EnumerateObject())
+                    if (entry.Value.ValueKind == JsonValueKind.Number && entry.Value.TryGetDecimal(out var rate) && rate > 0) table[entry.Name] = rate;
                 var source = er ? DateTimeOffset.FromUnixTimeSeconds(root.GetProperty("time_last_update_unix").GetInt64()) : new DateTimeOffset(DateOnly.ParseExact(root.GetProperty("date").GetString()!, "yyyy-MM-dd").ToDateTime(TimeOnly.MinValue), TimeSpan.Zero);
-                if (jpy <= 0 || idr <= 0 || source > Now.AddMinutes(5)) continue;
-                return new[] { new MarketQuote("USD/JPY", provider,jpy,source,Now,[],"daily fallback"),new MarketQuote("USD/IDR",provider,idr,source,Now,[],"daily fallback"),new MarketQuote("JPY/IDR",provider,idr/jpy,source,Now,[],"daily fallback") };
+                if (source > Now.AddMinutes(5)) continue;
+                var quotes = new List<MarketQuote>();
+                foreach (var pair in wanted)
+                    if (FxPairPolicy.CrossFromUsd(table, pair) is { } value)
+                        quotes.Add(new MarketQuote(pair, provider, value, source, Now, [], "daily fallback"));
+                if (quotes.Count == 0) continue;
+                return quotes.ToArray();
             }
             catch (OperationCanceledException) when (token.IsCancellationRequested) { throw; }
             catch { }

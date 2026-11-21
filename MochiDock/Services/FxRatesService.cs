@@ -24,7 +24,48 @@ public sealed record FxViewState(FxQuote? Latest, FxQuote[] Hourly, FxQuote[] Da
 public sealed class FxRatesService : IDisposable
 {
     readonly KeylessFxProvider? keyless;
-    public string SelectedPair { get; private set; } = "JPY/IDR";
+    string[] pairs = FxPairPolicy.Normalize(null);
+    /// <summary>The three pairs the card shows (always normalized, always three).</summary>
+    public IReadOnlyList<string> Pairs => pairs;
+    public string SelectedPair { get; private set; } = FxPairPolicy.Defaults[2];
+
+    /// <summary>
+    /// Replaces the shown pairs: keeps the selection on a selected pair, drops cached quotes and history of pairs
+    /// that are no longer shown, and refreshes.
+    /// </summary>
+    public void SetPairs(IEnumerable<string>? requested)
+    {
+        var next = FxPairPolicy.Normalize(requested);
+        if (next.SequenceEqual(pairs)) return;
+        CancellationToken token;
+        lock (configurationLock)
+        {
+            if (disposed) return;
+            pairs = next;
+            if (!next.Contains(SelectedPair)) SelectedPair = next[2];
+            Invalidate();   // an in-flight refresh was for the old pairs
+            token = configuration.Token;
+        }
+        _ = ApplyPairsAsync(next, token);
+    }
+
+    async Task ApplyPairsAsync(string[] next, CancellationToken token)
+    {
+        try
+        {
+            await gate.WaitAsync(token).ConfigureAwait(false);
+            try
+            {
+                if (token.IsCancellationRequested) return;   // a newer change or shutdown took over
+                foreach (var key in cache.Markets.Keys.Where(k => !next.Contains(k.Split(':')[0])).ToList()) cache.Markets.Remove(key);
+                cache.NextCheck = default;
+                Publish(State.Status);   // Changed handlers marshal to their own dispatcher
+            }
+            finally { gate.Release(); }
+            await RefreshAsync().ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) { }
+    }
     public string SelectedSpan { get; private set; } = "7D";
     public bool Hourly => SelectedSpan == "7D";
     bool visible;
@@ -48,8 +89,13 @@ public sealed class FxRatesService : IDisposable
         return FxMath.Calculate24hDelta(currentValue, bars.Select(b => (b.At, b.Value)), now);
     }
     public void SetVisible(bool value) { visible = value; if (value) { cache.NextCheck = default; _ = RefreshAsync(); } }
-    public FxRatesService(KeylessFxProvider provider, string? directory = null, Func<DateTimeOffset>? clock = null)
-        : this(null!, null!, directory, clock) { keyless = provider; }
+    public FxRatesService(KeylessFxProvider provider, string? directory = null, Func<DateTimeOffset>? clock = null, IEnumerable<string>? initialPairs = null)
+        : this(null!, null!, directory, clock)
+    {
+        keyless = provider;
+        pairs = FxPairPolicy.Normalize(initialPairs);
+        SelectedPair = pairs[2];
+    }
     readonly IFxRateProvider provider;
     readonly IFxCredentialStore credentials;
     readonly string path;
@@ -91,7 +137,7 @@ public sealed class FxRatesService : IDisposable
             var loaded = await Task.Run(() => AtomicJsonStore.Load(path, () => new FxCache()), lifetime.Token).ConfigureAwait(false);
             cache = loaded.Value;
             cache.Markets ??= new();
-            cache.Markets = cache.Markets.Where(p => p.Value is { Value: > 0 } q && q.SourceAt > DateTimeOffset.UnixEpoch && q.SourceAt <= clock().AddMinutes(5) && q.Bars is not null).ToDictionary(p => p.Key, p => p.Value);
+            cache.Markets = cache.Markets.Where(p => p.Value is { Value: > 0 } q && q.SourceAt > DateTimeOffset.UnixEpoch && q.SourceAt <= clock().AddMinutes(5) && q.Bars is not null && (keyless is null || pairs.Contains(p.Key.Split(':')[0]))).ToDictionary(p => p.Key, p => p.Value);
             if (keyless is not null && cache.Version < 2)
             {
                 if (System.IO.File.Exists(path) && !System.IO.File.Exists(path + ".v1.bak")) System.IO.File.Copy(path, path + ".v1.bak");
@@ -349,7 +395,8 @@ public sealed class FxRatesService : IDisposable
             if (latestDue)
             {
                 cache.NextCheck = now + (visible ? TimeSpan.FromMinutes(5) : TimeSpan.FromMinutes(30));
-                foreach (var pair in new[] { "USD/JPY", "USD/IDR", "JPY/IDR" })
+                var shown = pairs;
+                foreach (var pair in shown)
                 {
                     try
                     {
@@ -366,7 +413,7 @@ public sealed class FxRatesService : IDisposable
                 if (failed)
                 {
                     using var timeout = CancellationTokenSource.CreateLinkedTokenSource(token); timeout.CancelAfter(TimeSpan.FromSeconds(24));
-                    try { foreach (var quote in await keyless!.Fallback(timeout.Token)) { if (!Current()) return; if (!cache.Markets.TryGetValue(quote.Pair, out var old) || (old.Provider == "Yahoo Finance" ? now - old.SourceAt > TimeSpan.FromHours(2) : quote.SourceAt >= old.SourceAt)) cache.Markets[quote.Pair] = quote; } }
+                    try { foreach (var quote in await keyless!.Fallback(shown, timeout.Token)) { if (!Current()) return; if (!cache.Markets.TryGetValue(quote.Pair, out var old) || (old.Provider == "Yahoo Finance" ? now - old.SourceAt > TimeSpan.FromHours(2) : quote.SourceAt >= old.SourceAt)) cache.Markets[quote.Pair] = quote; } }
                     catch (OperationCanceledException) when (token.IsCancellationRequested) { throw; }
                     catch { }
                 }

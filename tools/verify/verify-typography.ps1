@@ -352,7 +352,7 @@ foreach($case in $cases){
   [Windows.Media.VisualTreeHelper]::SetRootDpi($surface,[Windows.DpiScale]::new($scale,$scale));$surface.Measure([Windows.Size]::new(592,300));$surface.Arrange([Windows.Rect]::new(0,0,592,300));$surface.UpdateLayout()
    $view.GetType().GetMethod("RenderMarkets").Invoke($view,@($markets,$case.Pair,$case.Status,[Nullable[DateTimeOffset]]$now));$surface.UpdateLayout()
    if($case.Name -ne "Empty" -and $view.FindName("Chart").Children.Count -ne 3){throw "FX must contain one continuous fill, line and endpoint even with irregular timestamps"}
-   foreach($controlName in @("UsdJpy","UsdIdr","JpyIdr","Chart","SourceText","RefreshButton")){
+   foreach($controlName in @("Pair1","Pair2","Pair3","Chart","SourceText","RefreshButton")){
     $control=$view.FindName($controlName);$point=$control.TranslatePoint([Windows.Point]::new(0,0),$view)
     $tolerance=1/$scale
     if($control.ActualWidth -le 0 -or $control.ActualHeight -le 0 -or $point.X -lt -$tolerance -or $point.Y -lt -$tolerance -or $point.X+$control.ActualWidth -gt 592+$tolerance -or $point.Y+$control.ActualHeight -gt 300+$tolerance){throw "FX bounds failed: $($case.Name) $controlName $theme $scale"}

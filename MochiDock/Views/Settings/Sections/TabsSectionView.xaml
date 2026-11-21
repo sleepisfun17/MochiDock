@@ -5,5 +5,30 @@
     <StackPanel>
         <TextBlock Style="{StaticResource SettingsRowDescription}" Text="Choose which tabs appear in the dock's header. Media is always shown; WhatsApp, Email and Discord appear when they have something to show. The same switches are in the dock's Settings tab." Margin="0,0,0,10"/>
         <s:TabToggleList/>
+        <TextBlock Style="{StaticResource SettingsGroupHeader}" Text="FX rates" Margin="0,18,0,2"/>
+        <s:SettingRow x:Name="FxRow1" Label="Pair 1" Description="Shown in the first tile of the FX card.">
+            <StackPanel Orientation="Horizontal">
+                <ComboBox x:Name="FxBase1" Style="{StaticResource ModernDarkComboBox}" Width="110" SelectionChanged="FxPair_Changed" AutomationProperties.Name="Pair 1 base currency"/>
+                <TextBlock Text="&#x2192;" Style="{StaticResource CardBodyText}" Margin="10,0" VerticalAlignment="Center"/>
+                <ComboBox x:Name="FxQuote1" Style="{StaticResource ModernDarkComboBox}" Width="110" SelectionChanged="FxPair_Changed" AutomationProperties.Name="Pair 1 quote currency"/>
+            </StackPanel>
+        </s:SettingRow>
+        <s:SettingRow x:Name="FxRow2" Label="Pair 2" Description="Shown in the second tile.">
+            <StackPanel Orientation="Horizontal">
+                <ComboBox x:Name="FxBase2" Style="{StaticResource ModernDarkComboBox}" Width="110" SelectionChanged="FxPair_Changed" AutomationProperties.Name="Pair 2 base currency"/>
+                <TextBlock Text="&#x2192;" Style="{StaticResource CardBodyText}" Margin="10,0" VerticalAlignment="Center"/>
+                <ComboBox x:Name="FxQuote2" Style="{StaticResource ModernDarkComboBox}" Width="110" SelectionChanged="FxPair_Changed" AutomationProperties.Name="Pair 2 quote currency"/>
+            </StackPanel>
+        </s:SettingRow>
+        <s:SettingRow x:Name="FxRow3" Label="Pair 3" Description="Shown in the third tile. The card opens on this pair.">
+            <StackPanel Orientation="Horizontal">
+                <ComboBox x:Name="FxBase3" Style="{StaticResource ModernDarkComboBox}" Width="110" SelectionChanged="FxPair_Changed" AutomationProperties.Name="Pair 3 base currency"/>
+                <TextBlock Text="&#x2192;" Style="{StaticResource CardBodyText}" Margin="10,0" VerticalAlignment="Center"/>
+                <ComboBox x:Name="FxQuote3" Style="{StaticResource ModernDarkComboBox}" Width="110" SelectionChanged="FxPair_Changed" AutomationProperties.Name="Pair 3 quote currency"/>
+            </StackPanel>
+        </s:SettingRow>
+        <s:SettingRow Label="Defaults" Description="Go back to USD/JPY, USD/IDR and JPY/IDR.">
+            <Button Style="{StaticResource ActionButton}" Content="Reset to defaults" Click="FxReset_Click" Margin="0"/>
+        </s:SettingRow>
     </StackPanel>
 </UserControl>

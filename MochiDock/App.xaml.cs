@@ -141,7 +141,7 @@ public partial class App : System.Windows.Application
 
             var viewModel = new MainViewModel(_mediaService, _mailService, _gowaService, _discordService, _weatherService, _pomodoroService, _prayerTimesService, _lrclibService, _tasksService, _fileShelfService, _clipboardService);
             _fxHttp=new System.Net.Http.HttpClient{Timeout=TimeSpan.FromSeconds(8)};
-            _fxRates=new FxRatesService(new KeylessFxProvider(_fxHttp));viewModel.ConfigureFx(_fxRates);_ = _fxRates.StartAsync(settings.ShowFxRatesTab);
+            _fxRates=new FxRatesService(new KeylessFxProvider(_fxHttp), initialPairs: settings.FxPairs);viewModel.ConfigureFx(_fxRates);_ = _fxRates.StartAsync(settings.ShowFxRatesTab);
             _deviceBatteries = new DeviceBatteryService();viewModel.ConfigureDeviceBatteries(_deviceBatteries);
             _powerLog = new PowerLogService();_powerLog.PersistenceError += message => System.Diagnostics.Debug.WriteLine(message);viewModel.ConfigurePowerLog(_powerLog);
             _statsHistory = new StatsHistoryService();_statsHistory.PersistenceError += message => MochiDock.Services.AppLog.Warn("StatsHistory", message);viewModel.ConfigureStatsHistory(_statsHistory);

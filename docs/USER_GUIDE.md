@@ -29,7 +29,7 @@ A new install shows three tabs: **Media**, **Stats** and **Weather**. Everything
 | AI usage | Remaining usage for Claude, Codex, Antigravity, Cursor, Gemini and GitHub Copilot. | You signed in to those tools. |
 | Script | A teleprompter-style script reader (Alt+Shift+S). | Nothing. |
 | Downloads | A media downloader. | `yt-dlp` and `ffmpeg` (the installer can include them; ffmpeg is found in `Tools\`, `%LocalAppData%\MochiDock\Tools` or PATH). |
-| FX rates | USD/JPY, USD/IDR and JPY/IDR with a trajectory chart (7 days and 1 month in hourly steps, 1 year in daily steps). Indicative prices only. | Internet. |
+| FX rates | Three currency pairs of your choice (default USD/JPY, USD/IDR and JPY/IDR; change them in Settings, Tabs, FX rates) with a trajectory chart (7 days and 1 month in hourly steps, 1 year in daily steps). Indicative prices only. | Internet. |
 
 ## Advanced Settings sections
 

@@ -3,6 +3,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Shapes;
+using MochiDock.Core;
 using MochiDock.Services;
 using MochiDock.ViewModels;
 using Border = System.Windows.Controls.Border;
@@ -19,9 +20,10 @@ namespace MochiDock.Views.Cards;
 
 public partial class FxRatesCardView : UserControl
 {
-    static readonly string[] Pairs = ["USD/JPY", "USD/IDR", "JPY/IDR"];
+    string[] pairs = FxPairPolicy.Normalize(null);
+    RadioButton[] Tiles => [Pair1, Pair2, Pair3];
     FxRatesService? owner;
-    string pair = "JPY/IDR";
+    string pair = FxPairPolicy.Defaults[2];
     string span = "7D";
     IReadOnlyDictionary<string, MarketQuote>? marketFixture;
     string fixtureStatus = "Ready";
@@ -31,7 +33,8 @@ public partial class FxRatesCardView : UserControl
     public FxRatesCardView()
     {
         InitializeComponent();
-        JpyIdr.IsChecked = true;
+        ApplyPairs(FxPairPolicy.Defaults);
+        Pair3.IsChecked = true;
         Loaded += (_, _) => Attach();
         Unloaded += (_, _) => Detach();
         DataContextChanged += (_, _) => { if (IsLoaded) Attach(); };
@@ -50,6 +53,32 @@ public partial class FxRatesCardView : UserControl
         Render();
     }
 
+    /// <summary>Fixtures only: the three pairs the tiles show when no service is attached. Call before <see cref="RenderMarkets"/>.</summary>
+    public void SetFixturePairs(IEnumerable<string> fixturePairs) => ApplyPairs(fixturePairs);
+
+    // Points the three tiles at the given (normalized) pairs and keeps the selection on one of them.
+    void ApplyPairs(IEnumerable<string>? requested)
+    {
+        pairs = FxPairPolicy.Normalize(requested);
+        if (Pair1 is null) return;
+        var tiles = Tiles;
+        for (int i = 0; i < tiles.Length; i++)
+        {
+            tiles[i].Tag = pairs[i];
+            tiles[i].ToolTip = $"Select the {pairs[i]} trajectory";
+            var (symbols, label) = TileParts(i);
+            FxPairPolicy.TryParse(pairs[i], out var baseCode, out var quoteCode);
+            symbols.Text = FxPairPolicy.Direction(pairs[i]);
+            label.Text = $"{baseCode} / {quoteCode}";
+        }
+        if (!pairs.Contains(pair)) pair = pairs[2];
+    }
+
+    (TextBlock Symbols, TextBlock Label) TileParts(int index) => index switch
+    {
+        0 => (Pair1Symbols, Pair1Label), 1 => (Pair2Symbols, Pair2Label), _ => (Pair3Symbols, Pair3Label)
+    };
+
     void Attach()
     {
         Detach();
@@ -57,6 +86,7 @@ public partial class FxRatesCardView : UserControl
         if (owner is not null)
         {
             owner.Changed += Changed;
+            ApplyPairs(owner.Pairs);
             pair = owner.SelectedPair;
             span = owner.SelectedSpan;
         }
@@ -104,7 +134,17 @@ public partial class FxRatesCardView : UserControl
     void Changed()
     {
         if (!Dispatcher.HasShutdownStarted)
-            Dispatcher.BeginInvoke(() => { if (IsLoaded) Render(); });
+            Dispatcher.BeginInvoke(() =>
+            {
+                if (!IsLoaded) return;
+                // The pairs were changed in Settings: re-point the tiles and keep the selection valid.
+                if (owner is not null && !owner.Pairs.SequenceEqual(pairs))
+                {
+                    ApplyPairs(owner.Pairs);
+                    SelectPair(owner.SelectedPair, false);
+                }
+                Render();
+            });
     }
 
     void Pair_Checked(object sender, RoutedEventArgs e)
@@ -115,11 +155,10 @@ public partial class FxRatesCardView : UserControl
 
     void SelectPair(string selected, bool request)
     {
-        if (!Pairs.Contains(selected)) selected = "JPY/IDR";
+        if (!pairs.Contains(selected)) selected = pairs[2];
         pair = selected;
-        if (UsdJpy is not null) UsdJpy.IsChecked = pair == "USD/JPY";
-        if (UsdIdr is not null) UsdIdr.IsChecked = pair == "USD/IDR";
-        if (JpyIdr is not null) JpyIdr.IsChecked = pair == "JPY/IDR";
+        if (Pair1 is not null)
+            foreach (var tile in Tiles) tile.IsChecked = (string)tile.Tag == pair;
         if (request)
         {
             owner?.SelectMarket(pair, span == "7D");
@@ -145,43 +184,35 @@ public partial class FxRatesCardView : UserControl
 
     void Render()
     {
-        if (UsdJpy is null) return;
+        if (Pair1 is null) return;
         UpdateSpanRadios();
         var markets = CurrentMarkets();
-        UpdateTile("USD/JPY", UsdJpyValue, UsdJpyBadge, UsdJpyChange, markets);
-        UpdateTile("USD/IDR", UsdIdrValue, UsdIdrBadge, UsdIdrChange, markets);
-        UpdateTile("JPY/IDR", JpyIdrValue, JpyIdrBadge, JpyIdrChange, markets);
+        UpdateTile(pairs[0], Pair1Value, Pair1Badge, Pair1Change, markets);
+        UpdateTile(pairs[1], Pair2Value, Pair2Badge, Pair2Change, markets);
+        UpdateTile(pairs[2], Pair3Value, Pair3Badge, Pair3Change, markets);
 
         markets.TryGetValue(pair, out var selected);
         var headerChange = selected?.ChangePercent ?? (selected != null ? Calculate24hDelta(selected.Value, pair, markets) : null);
         ApplyChange(HeaderTrendBadge, HeaderTrend, headerChange, true);
         string spanLabel = span switch { "1M" => "1-Month", "1Y" => "1-Year", _ => "7-Day" };
-        ChartTitle.Text = $"{spanLabel} Trajectory: {pair.Replace("/", " / ")} ({PairDirection(pair)})";
+        ChartTitle.Text = $"{spanLabel} Trajectory: {pair.Replace("/", " / ")} ({FxPairPolicy.Direction(pair)})";
         DrawChart(markets);
         DrawFooter(markets, selected);
     }
-
-    static string PairDirection(string p) => p switch
-    {
-        "USD/JPY" => "$ → ¥",
-        "USD/IDR" => "$ → Rp",
-        "JPY/IDR" => "¥ → Rp",
-        _ => p
-    };
 
     void UpdateTile(string name, TextBlock valueText, Border badge, TextBlock changeText,
         IReadOnlyDictionary<string, MarketQuote> markets)
     {
         if (markets.TryGetValue(name, out var quote))
         {
-            valueText.Text = FormatRate(quote.Value, name);
+            valueText.Text = FxPairPolicy.Format(quote.Value, name);
             var change = quote.ChangePercent ?? Calculate24hDelta(quote.Value, name, markets);
             ApplyChange(badge, changeText, change, false);
             valueText.ToolTip = $"1 {name[..3]} = {quote.Value.ToString(CultureInfo.InvariantCulture)} {name[4..]} · {quote.Provider}";
         }
         else
         {
-            valueText.Text = name == "USD/JPY" ? "¥—" : "Rp —";
+            valueText.Text = FxPairPolicy.Placeholder(name);
             ApplyChange(badge, changeText, null, false);
             valueText.ToolTip = "Rate unavailable";
         }
@@ -190,14 +221,7 @@ public partial class FxRatesCardView : UserControl
     static decimal? Calculate24hDelta(decimal currentValue, string pairName, IReadOnlyDictionary<string, MarketQuote> markets) =>
         FxRatesService.Delta24h(currentValue, pairName, markets);
 
-    static string FormatRate(decimal value, string name) => name switch
-    {
-        "USD/JPY" => "¥" + value.ToString("N2", CultureInfo.InvariantCulture),
-        "USD/IDR" => "Rp " + value.ToString("N0", CultureInfo.InvariantCulture),
-        _ => "Rp " + value.ToString("N2", CultureInfo.InvariantCulture)
-    };
-
-    static string FormatRange(decimal value, string name) => FormatRate(value, name);
+    static string FormatRange(decimal value, string name) => FxPairPolicy.Format(value, name);
 
     void ApplyChange(Border badge, TextBlock text, decimal? percent, bool header)
     {
@@ -381,7 +405,7 @@ public partial class FxRatesCardView : UserControl
                 ShadowDepth = 0,
                 Opacity = 0.85
             },
-            ToolTip = $"{bars[^1].At:yyyy-MM-dd HH:mm zzz} · {FormatRate(bars[^1].Value, pair)} · Yahoo Finance"
+            ToolTip = $"{bars[^1].At:yyyy-MM-dd HH:mm zzz} · {FxPairPolicy.Format(bars[^1].Value, pair)} · Yahoo Finance"
         };
         Canvas.SetLeft(dot, finalPoint.X - 3.5);
         Canvas.SetTop(dot, finalPoint.Y - 3.5);
@@ -439,7 +463,7 @@ public partial class FxRatesCardView : UserControl
         {
             string dateFmt = (span == "1M" || span == "1Y") ? "yyyy/MM/dd" : "yyyy/MM/dd HH:mm";
             HoverDate.Text = bar.At.ToLocalTime().ToString(dateFmt, CultureInfo.InvariantCulture);
-            HoverValue.Text = FormatRate(bar.Value, pair);
+            HoverValue.Text = FxPairPolicy.Format(bar.Value, pair);
             HoverTooltip.Visibility = Visibility.Visible;
 
             HoverTooltip.Measure(new System.Windows.Size(double.PositiveInfinity, double.PositiveInfinity));
