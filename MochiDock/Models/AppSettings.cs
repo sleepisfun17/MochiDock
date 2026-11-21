@@ -107,6 +107,8 @@ public class AppSettings
     public bool CheckForUpdates { get; set; } = true;
     /// <summary>When the last update check finished (UTC), for display only.</summary>
     public DateTime? LastUpdateCheckUtc { get; set; }
+    /// <summary>The newest version the "update available" capsule notice has shown for, so each version is announced once.</summary>
+    public string LastAnnouncedUpdate { get; set; } = "";
     public bool EnableWhatsApp { get; set; }
     /// <summary>Set once the opt-in switch was introduced; fresh installs start with it set (and WhatsApp off).</summary>
     public bool WhatsAppOptInMigrated { get; set; }

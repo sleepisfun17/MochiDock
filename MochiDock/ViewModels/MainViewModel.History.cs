@@ -83,7 +83,7 @@ public partial class MainViewModel
 
         AppLog.Warn("Hardware", $"Sustained heat: {fired} at {threshold:0} °C or more for {hold.TotalMinutes:0} min.");
         if (_hardwarePresentationSuppressed || _wasGaming || IsNotificationInMainPill || IsPrayerReminderVisible || !ShouldShowNotification("Hardware")) return;
-        _noticeIsAi = false; _noticeIsAgenda = false; _noticeIsGame = false; _noticeIsDevice = false; _noticeIsWeather = false;
+        _noticeIsAi = false; _noticeIsAgenda = false; _noticeIsGame = false; _noticeIsDevice = false; _noticeIsWeather = false; _noticeIsUpdate = false;
         _noticeHeatModule = fired;
         _hardwareNoticeText = $"{fired} at {threshold:0} °C+ for {hold.TotalMinutes:0} min";
         _hardwareNoticeUntil = DateTimeOffset.UtcNow.AddSeconds(8);

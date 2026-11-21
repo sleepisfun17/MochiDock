@@ -40,7 +40,7 @@ public partial class MainViewModel
         if (_hardwarePresentationSuppressed || _wasGaming || _isWorkstationLocked || !_displayAwake ||
             IsNotificationInMainPill || IsPrayerArrivalVisible || IsPrayerReminderVisible || !ShouldShowNotification("Hardware")) return;
         AppLog.Warn("Weather", $"Rain soon notice: {rain.Text}.");
-        _noticeIsAi = false; _noticeIsAgenda = false; _noticeIsGame = false; _noticeIsDevice = false; _noticeIsWeather = true;
+        _noticeIsAi = false; _noticeIsAgenda = false; _noticeIsGame = false; _noticeIsDevice = false; _noticeIsWeather = true; _noticeIsUpdate = false;
         _hardwareNoticeText = rain.Text;
         _hardwareNoticeUntil = DateTimeOffset.UtcNow.AddSeconds(8);
         _hardwareNoticeTimer.Stop(); _hardwareNoticeTimer.Start();

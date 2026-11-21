@@ -31,7 +31,7 @@ public partial class DataSectionView : UserControl
     {
         if (!IsLoaded || _loadingUpdate) return;
         bool on = AutoUpdateCheck.IsChecked == true;
-        ViewModel?.UpdateSettings(x => x.CheckForUpdates = on);
+        if (ViewModel is { } vm) vm.CheckForUpdates = on;   // through the property, so the quick settings checkbox follows
     }
 
     private async void CheckUpdates_Click(object sender, RoutedEventArgs e)

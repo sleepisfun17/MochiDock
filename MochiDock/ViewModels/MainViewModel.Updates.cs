@@ -20,6 +20,10 @@ public partial class MainViewModel
     private CancellationTokenSource? _downloadCts;
     private bool _installing;
     private bool? _installedCopy;
+    // The "update available" capsule notice: shown once per version after an automatic check, retried while something else holds it back.
+    private bool _noticeIsUpdate;
+    private string? _pendingUpdateNotice;
+    private System.Windows.Threading.DispatcherTimer? _updateNoticeRetry;
 
     /// <summary>True when this copy runs from the setup's install folder (only that copy updates itself).</summary>
     public bool IsInstalledCopy => _installedCopy ??= UpdateInstaller.IsInstalledCopy();
@@ -79,6 +83,8 @@ public partial class MainViewModel
     {
         _updateTimer?.Stop();
         _updateTimer = null;
+        _updateNoticeRetry?.Stop();
+        _pendingUpdateNotice = null;
         try { _updateCts?.Cancel(); } catch (Exception ex) { AppLog.Warn("Update", ex); }
     }
 
@@ -96,6 +102,11 @@ public partial class MainViewModel
             _availableUpdate = result.Offer;
             _updateStatus = result.State == UpdateCheckState.Available ? "" : result.Message;
             if (result.State != UpdateCheckState.Failed) UpdateSettings(x => x.LastUpdateCheckUtc = DateTime.UtcNow);
+            if (UpdateAnnouncePolicy.ShouldAnnounce(result.Offer?.Version, _settings.LastAnnouncedUpdate, manual))
+            {
+                _pendingUpdateNotice = result.Offer!.Version;
+                TryShowUpdateNotice();
+            }
         }
         catch (OperationCanceledException) { _updateStatus = ""; }
         finally
@@ -103,6 +114,49 @@ public partial class MainViewModel
             _updateBusy = false;
             NotifyUpdateState();
         }
+    }
+
+    public bool CheckForUpdates
+    {
+        get => _settings?.CheckForUpdates ?? true;
+        set
+        {
+            if (_settings == null || _settings.CheckForUpdates == value) return;
+            UpdateSettings(s => s.CheckForUpdates = value, SettingsApply.None);
+            OnPropertyChanged();
+        }
+    }
+
+    /// <summary>
+    /// Shows the pending "update available" notice when nothing else holds the capsule (gaming, lock, screen off, a message,
+    /// prayer or reminder, snooze or quiet hours); otherwise tries again every five minutes. The version counts as announced only
+    /// once the notice was shown. Tapping it opens the quick settings, where the Updates box has Update now.
+    /// </summary>
+    private void TryShowUpdateNotice()
+    {
+        if (_pendingUpdateNotice is not { } version || _availableUpdate?.Version != version) { _pendingUpdateNotice = null; _updateNoticeRetry?.Stop(); return; }
+        bool blocked = _hardwarePresentationSuppressed || _wasGaming || _isWorkstationLocked || !_displayAwake || IsNotificationInMainPill ||
+                       IsPrayerArrivalVisible || IsPrayerReminderVisible || IsHardwareNoticeVisible || !ShouldShowNotification("Updates");
+        if (blocked)
+        {
+            if (_updateNoticeRetry == null)
+            {
+                _updateNoticeRetry = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMinutes(5) };
+                _updateNoticeRetry.Tick += (_, _) => TryShowUpdateNotice();
+            }
+            if (!_updateNoticeRetry.IsEnabled) _updateNoticeRetry.Start();
+            return;
+        }
+        _updateNoticeRetry?.Stop();
+        _pendingUpdateNotice = null;
+        UpdateSettings(x => x.LastAnnouncedUpdate = version, SettingsApply.None);
+        AppLog.Warn("Update", $"Update notice: {version}.");
+        _noticeIsAi = false; _noticeIsAgenda = false; _noticeIsGame = false; _noticeIsDevice = false; _noticeIsWeather = false; _noticeHeatModule = null;
+        _noticeIsUpdate = true;
+        _hardwareNoticeText = CanInstallUpdate ? $"MochiDock {version} is available: tap to update" : $"MochiDock {version} is available: tap for details";
+        _hardwareNoticeUntil = DateTimeOffset.UtcNow.AddSeconds(8);
+        _hardwareNoticeTimer.Stop(); _hardwareNoticeTimer.Start();
+        NotifyHardwareNotice();
     }
 
     /// <summary>

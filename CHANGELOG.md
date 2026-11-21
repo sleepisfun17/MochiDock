@@ -2,6 +2,12 @@
 
 All notable changes to MochiDock are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Added
+
+- **Updates in quick settings**: the dock's settings card starts with an Updates box (version, **Check now**, **Update now**, the release page and the automatic check), outlined when an update is waiting. When the automatic check finds a new version, a capsule notice says so once; tap it to open that box.
+
 ## [0.1.2-beta]
 
 ### Added

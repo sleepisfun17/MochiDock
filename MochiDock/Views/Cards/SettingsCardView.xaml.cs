@@ -130,6 +130,21 @@ public partial class SettingsCardView : UserControl
         QuickScaleText.ToolTip = vm.IsInterfaceScaleLimited ? $"Limited to {vm.EffectiveInterfaceScalePercent}% on this display." : null;
     }
 
+    private async void CheckUpdates_Click(object sender, RoutedEventArgs e)
+    {
+        if (ViewModel is { } vm && sender is System.Windows.Controls.Button button)
+            await MochiDock.Controls.RefreshFeedback.RunAsync(button, () => vm.CheckForUpdatesAsync(manual: true));
+    }
+
+    private async void InstallUpdate_Click(object sender, RoutedEventArgs e)
+    {
+        if (ViewModel is { } vm) await vm.InstallUpdateAsync();
+    }
+
+    private void CancelUpdate_Click(object sender, RoutedEventArgs e) => ViewModel?.CancelUpdateDownload();
+
+    private void ViewRelease_Click(object sender, RoutedEventArgs e) => ViewModel?.OpenUpdatePage();
+
     private void ScaleDown_Click(object sender, RoutedEventArgs e) => ViewModel?.StepInterfaceScale(-1);
     private void ScaleUp_Click(object sender, RoutedEventArgs e) => ViewModel?.StepInterfaceScale(1);
 
