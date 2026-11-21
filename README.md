@@ -45,7 +45,7 @@ A new install starts small: the **Media**, **Stats** and **Weather** tabs, plus 
 | **Downloads** | A media downloader (yt-dlp and ffmpeg). | Off | Tabs |
 | **Sounds** | Short notification and Mochi sounds. | On | Notifications |
 | **Mochi** | The mascot's faces follow what is going on (music, messages, games, the weather, a hot GPU, overdue tasks…) and the card you open (Electric on the Battery page, Money on FX, the sky on Weather, Studying during a Pomodoro). He spins round in a little whirlwind when his face changes. [Every face and its trigger](docs/USER_GUIDE.md#mochis-faces). | On | Appearance & Dock (Expressive Mochi) |
-| **Updates** | Checks GitHub for a new version; **Update now** downloads it, verifies its checksum, installs it silently and restarts MochiDock. Nothing installs without your click. | Check on | Data & diagnostics |
+| **Updates** | Checks GitHub for a new version and shows a one-time notice when one is out. The version button at the top of the dock's quick settings checks on click and turns into **Update to x** when an update is waiting; it downloads the update, verifies its checksum, installs it silently and restarts MochiDock. Nothing installs without your click. | Check on | Quick settings button; automatic checks in Data & diagnostics |
 
 Three themes, `Default` (dark), `Hojicha` (warm roasted-tea brown with a caramel accent) and `Matcha` (warm oat and green), are in Appearance & Dock, along with the dock style, date format, monitor and interface size. MochiDock is multi-monitor and high-DPI aware. The [user guide](docs/USER_GUIDE.md) explains every tab and setting.
 
@@ -91,7 +91,7 @@ Mochi's faces, in both themes ([what makes each one appear](docs/USER_GUIDE.md#m
 - Nothing else is required for the basics. Optional, each for its own feature:
   - **GPU stats:** GPU name, driver and usage come from Windows itself (WMI and the GPU Engine counters), so they work with NVIDIA, AMD and Intel graphics. An NVIDIA driver adds more detail (temperature, memory, clock and power through NVML); on AMD and Intel those extra values are read from hardware sensors when available and show as `-` otherwise. Only NVIDIA has been checked on real hardware so far.
   - **PawnIO:** a real CPU temperature (a separate third-party driver; the setup can install it for you with winget if you tick the option, or see Settings > Hardware & power > CPU sensors). Without it the CPU temperature is an estimate, marked with `~`. It is not needed for the power total on the Battery page: CPU power is read from Windows' own Energy Meter counters when PawnIO is missing (on Intel CPUs with integrated graphics that figure already includes the graphics). GPU power needs an NVIDIA card or a sensor that provides it; the total is always marked as an estimate.
-  - **Email:** a Gmail, Yahoo, iCloud or other IMAP account (app password), or classic Outlook or Mailspring.
+  - **Email:** a Gmail, Yahoo, iCloud or other IMAP account with an app password (Gmail only offers app passwords once 2-step verification is on; see [setting up email](docs/USER_GUIDE.md#setting-up-email-gmail-and-other-imap-accounts)), or classic Outlook or Mailspring.
   - **Calendar:** a Google Calendar (or other `.ics`) link, see the [user guide](docs/USER_GUIDE.md#connecting-google-calendar).
   - **`ffmpeg.exe`** (MP3 in Downloads).
 
@@ -100,6 +100,10 @@ Mochi's faces, in both themes ([what makes each one appear](docs/USER_GUIDE.md#m
 1. Download `MochiDock-Setup-<version>.exe` from the [GitHub Releases](https://github.com/sleepisfun17/MochiDock/releases) page and run it. The installer is self-contained and needs no .NET runtime.
 2. The installer is an **unsigned beta**, so Windows SmartScreen may warn. Choose "More info", then "Run anyway".
 3. MochiDock needs **Administrator rights** (FPS capture uses ETW), so Windows asks for approval each time it starts. The optional "Start with Windows" task launches it elevated without a prompt.
+
+**Updating:** you only download the setup once. Later versions install from inside MochiDock (the version button in the dock's quick settings, the tray menu, or Settings > Data & diagnostics), keeping your settings.
+
+**Uninstalling:** use Windows Settings > Apps. The uninstaller asks whether to keep your settings and data, always deletes saved passwords, and reminds you to revoke a mail app password at your provider. See [updating and uninstalling](docs/USER_GUIDE.md#updating-and-uninstalling).
 
 ## Build from source
 
@@ -121,6 +125,8 @@ To build the installer (Inno Setup 6 required, output `installer\Output\MochiDoc
 ## Data and privacy
 
 Settings and tasks live in `%AppData%\MochiDock`. Caches and the WhatsApp (GOWA) session live in `%LocalAppData%\MochiDock`. Phone drop and a shared GOWA server use plain HTTP on your local network, which is not encrypted. Update checks and **Update now** only contact this project's GitHub releases, and a downloaded update is checked against GitHub's SHA-256 checksum before it runs.
+
+**Saved passwords.** Mail app passwords, the shared WhatsApp server login and the calendar link are stored encrypted for your Windows user (Windows DPAPI) in `%LocalAppData%\MochiDock`, and never in settings, exports or logs. A program running as your Windows user could still read them, as with browser cookies. A mail app password can open the whole mailbox, because IMAP cannot be limited to read-only: MochiDock only reads the sender, subject and a short preview, stores no mail, and changes nothing unless you turn on "Mark as read on the server". Create an app password just for MochiDock. Removing an account deletes its password from this PC and reminds you to revoke it at your provider, since no provider lets an app revoke its own app password; uninstalling always deletes every saved password, even when you keep your settings.
 
 ## Issues and ideas
 
