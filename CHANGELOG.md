@@ -11,6 +11,7 @@ All notable changes to MochiDock are documented here. The format follows [Keep a
 ### Fixed
 
 - **Wireless batteries**: Arbiter Studio Akitsu mice (Akitsu, Akitsu 3950, Akitsu Medium) are now named as such instead of "LAMZU wireless mouse", and the cable and receiver show as one device.
+- **Email**: **Open Mail** on the game-session and welcome-back summary opens the newest mail where it came from (Mailspring, the account's web inbox or Outlook), like the Email card's Open. It used to start a `mailto:` link, which made Mailspring and other mail apps open an empty new message.
 
 ## [0.1.4-beta]
 

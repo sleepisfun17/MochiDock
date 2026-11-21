@@ -2933,6 +2933,17 @@ public partial class MainViewModel : INotifyPropertyChanged
         }
     }
 
+    /// <summary>
+    /// The summary card's Open Mail: opens the newest mail where it came from (Mailspring, the account's web inbox or Outlook),
+    /// like the Email card's Open. Never mailto:, which every mail client treats as "write a new message".
+    /// </summary>
+    public void OpenSummaryEmail()
+    {
+        var newest = RecentEmailMessages.Count > 0 ? RecentEmailMessages[0] : null;
+        if (newest != null) _mailService.OpenEmail(newest);
+        else ShowEmail(false);
+    }
+
     public void CopyEmailVerificationCode()
     {
         if (CurrentEmail != null && !string.IsNullOrWhiteSpace(CurrentEmail.ExtractedVerificationCode))

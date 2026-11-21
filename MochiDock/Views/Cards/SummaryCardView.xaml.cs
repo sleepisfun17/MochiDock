@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
 using MochiDock.ViewModels;
@@ -32,11 +31,7 @@ public partial class SummaryCardView : System.Windows.Controls.UserControl
 
     private void OpenMail_Click(object sender, RoutedEventArgs e)
     {
-        try
-        {
-            Process.Start(new ProcessStartInfo("mailto:") { UseShellExecute = true });
-        }
-        catch { }
+        ViewModel?.OpenSummaryEmail();
         ViewModel?.DismissSummary();
     }
 }
