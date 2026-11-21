@@ -83,7 +83,7 @@ Captures and reports are written under `MochiDock/obj/`. Capturing the README sc
 | Stats 24-hour history and sustained-heat alert | Not runtime-verified | History, chart series and heat policy unit-tested; the 24 h chart is rendered by `verify-card-design.ps1` with synthetic lines; the light sampler's cost is unmeasured |
 | Mochi day faces (meeting, birthday, all tasks done, up late) and hover glance | Not runtime-verified | Rules unit-tested; faces rendered by `verify-mascot.ps1` |
 | Stats (CPU, GPU, memory, drives, network, processes) | Partial | CPU temperature is an estimate (real value needs PawnIO); some fallbacks remain |
-| Battery page and wireless device batteries | Not runtime-verified | One mouse verified on hardware; Logitech HID++ untested |
+| Battery page and wireless device batteries | Not runtime-verified | One mouse verified on hardware; LAMZU small dongle (Areson 25A7:FA7C) read by a probe, not in the running app; Logitech HID++ untested |
 | Gaming readout, profiles, summaries, ping | Not runtime-verified | Needs admin for ETW FPS; PUBG API and League local API untested in real games |
 | Display resolution hotkey (default Ctrl+Alt+R) | Not runtime-verified | Conflicts with other programs are reported in Settings |
 | Window-size shortcuts (Ctrl+Alt+1-4, flip Ctrl+Alt+F) | Not runtime-verified | Core rules unit-tested; Settings rows not rendered by a harness |

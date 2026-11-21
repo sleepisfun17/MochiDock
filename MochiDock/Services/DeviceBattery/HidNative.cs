@@ -174,6 +174,40 @@ public static class HidNative
         catch (UnauthorizedAccessException) { return null; }
     }
 
+    /// <summary>
+    /// Sends a feature report on <paramref name="commandPath"/> and reads input reports from <paramref name="replyPath"/> (another collection
+    /// of the same device) until <paramref name="accept"/> takes one or <paramref name="timeoutMs"/> passes. The reply handle is opened
+    /// first, so its fresh input queue holds only reports that arrive after the request.
+    /// </summary>
+    public static byte[]? ExchangeFeatureToInput(string commandPath, string replyPath, byte[] request, int inputLength, Func<byte[], bool> accept, int timeoutMs)
+    {
+        if (inputLength <= 0) return null;
+        using var replyHandle = OpenOverlapped(replyPath);
+        if (replyHandle.IsInvalid) return null;
+        try
+        {
+            using var stream = new FileStream(replyHandle, FileAccess.Read, 0, true);
+            using (var command = Open(commandPath, GenericReadWrite))
+                if (command.IsInvalid || !HidD_SetFeature(command, request, (uint)request.Length)) return null;
+            var deadline = Environment.TickCount64 + timeoutMs;
+            var buffer = new byte[inputLength];
+            while (true)
+            {
+                var left = deadline - Environment.TickCount64;
+                if (left <= 0) return null;
+                using var timeout = new CancellationTokenSource((int)left);
+                int read;
+                try { read = stream.ReadAsync(buffer, 0, buffer.Length, timeout.Token).GetAwaiter().GetResult(); }
+                catch (OperationCanceledException) { return null; }
+                if (read <= 0) return null;
+                var frame = buffer.AsSpan(0, read).ToArray();
+                if (accept(frame)) return frame;
+            }
+        }
+        catch (IOException) { return null; }
+        catch (UnauthorizedAccessException) { return null; }
+    }
+
     /// <summary>Reads a standard HID Battery Strength value (usage page 0x06/0x20 or 0x85/0x65) from a collection, feature reports first.</summary>
     public static (int Value, int Min, int Max)? ReadStandardBattery(HidCollection collection)
     {

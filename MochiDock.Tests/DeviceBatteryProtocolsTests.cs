@@ -493,6 +493,69 @@ public sealed class DeviceBatterySettingsTests
         Assert.True(MochiDock.Core.CompxProtocol.IsOnline(reply));
     }
 
+    static byte[] Frame(string hex) => hex.Split(' ').Select(h => Convert.ToByte(h, 16)).ToArray();
+
+    // Replies captured from the 25A7:FA7C receiver with a LAMZU Maya linked (LAMZU's software showed about 25%).
+    const string ArOnline = "09 03 00 00 00 01 01 00 00 00 00 00 00 00 00 00 47";
+    const string ArBattery = "09 04 00 00 00 02 19 00 00 00 00 00 00 00 00 00 2D";
+
+    [Fact]
+    public void AresonRequestsAreTheCompxFrames()
+    {
+        Assert.Equal(Frame("08 03 00 00 00 00 00 00 00 00 00 00 00 00 00 00 4A"), AresonProtocol.Request(CompxProtocol.OnlineCommand));
+        Assert.Equal(Frame("08 04 00 00 00 00 00 00 00 00 00 00 00 00 00 00 49"), AresonProtocol.Request(CompxProtocol.BatteryCommand));
+    }
+
+    [Fact]
+    public void AresonParsesTheCapturedReplies()
+    {
+        Assert.True(AresonProtocol.IsOnline(Frame(ArOnline)));
+        Assert.True(AresonProtocol.TryParseBattery(Frame(ArBattery), out var percent, out var charging));
+        Assert.Equal(25, percent);
+        Assert.False(charging);
+    }
+
+    [Fact]
+    public void AresonReadsChargingAndOffline()
+    {
+        var battery = Frame(ArBattery);
+        battery[7] = 1;
+        battery[16] -= 1; // keep the frame sum at 0x55
+        Assert.True(AresonProtocol.TryParseBattery(battery, out _, out var charging));
+        Assert.True(charging);
+
+        var online = Frame(ArOnline);
+        online[6] = 0;
+        online[16] += 1;
+        Assert.True(AresonProtocol.IsReply(online, CompxProtocol.OnlineCommand));
+        Assert.False(AresonProtocol.IsOnline(online));
+    }
+
+    [Fact]
+    public void AresonRejectsBadReplies()
+    {
+        var bad = Frame(ArBattery);
+        bad[16] ^= 1;                                                       // checksum
+        Assert.False(AresonProtocol.TryParseBattery(bad, out _, out _));
+        Assert.False(AresonProtocol.TryParseBattery(Frame(ArOnline), out _, out _)); // other command
+        Assert.False(AresonProtocol.TryParseBattery(Frame(ArBattery)[..16], out _, out _)); // short
+        Assert.False(AresonProtocol.IsOnline(AresonProtocol.Request(CompxProtocol.OnlineCommand))); // the echoed request has no payload
+
+        var over = Frame(ArBattery);
+        over[6] = 101;
+        over[16] = (byte)(over[16] - 101 + 0x19);
+        Assert.True(AresonProtocol.IsReply(over, CompxProtocol.BatteryCommand));
+        Assert.False(AresonProtocol.TryParseBattery(over, out _, out _));
+    }
+
+    [Theory]
+    [InlineData(0x25A7, 0xFA7C, true)]
+    [InlineData(0x25A7, 0xFA07, false)] // Areson receiver with a 10% scale, not handled
+    [InlineData(0x25A7, 0xFA7E, false)]
+    [InlineData(0x37B0, 0xFA7C, false)]
+    public void AresonMatchesOnlyTheMeasuredReceiver(int vid, int pid, bool expected) =>
+        Assert.Equal(expected, AresonProtocol.IsReceiver((ushort)vid, (ushort)pid));
+
     [Fact]
     public void SonixRequestAndReplyUseTheByteSumChecksum()
     {

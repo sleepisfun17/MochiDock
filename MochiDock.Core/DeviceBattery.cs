@@ -590,6 +590,49 @@ public static class CompxProtocol
 }
 
 /// <summary>
+/// Generic Areson / SinoWealth 2.4 GHz receiver 25A7:FA7C ("2.4G Wireless Receiver"; ships as the small/default dongle of LAMZU mice and
+/// with the Fantech Helios Go XD5). The request is the Compx frame <c>[08][cmd][0 x14][checksum]</c> sent as a 17-byte feature report on
+/// the FF02:0002 collection; the answer arrives as a 17-byte input report on FF01:0000:
+/// <c>[09][cmd][00][00][00][payload length][payload ...][checksum]</c>, the whole frame summing to 0x55. Command 03 (online) has a one-byte
+/// payload, 1 = the mouse is linked; command 04 (battery) has a two-byte payload: whole percent, then 1 = charging. Measured on a LAMZU Maya
+/// (25% matched LAMZU's software). The receiver does not name the mouse. Both queries are read-only.
+/// </summary>
+public static class AresonProtocol
+{
+    public const ushort Vid = 0x25A7, ReceiverPid = 0xFA7C;
+    public const ushort CommandUsagePage = 0xFF02, CommandUsage = 0x0002, ReplyUsagePage = 0xFF01;
+    public const int FrameLength = 17;
+    public const string MouseName = "Wireless mouse";
+
+    public static bool IsReceiver(ushort vid, ushort pid) => vid == Vid && pid == ReceiverPid;
+
+    /// <summary>The request frame (same layout and checksum as <see cref="CompxProtocol"/>).</summary>
+    public static byte[] Request(byte command) => CompxProtocol.Request(command);
+
+    /// <summary>A reply to <paramref name="command"/>: report ID 08 or 09, the command echoed, a payload that fits, and a frame summing to 0x55.</summary>
+    public static bool IsReply(byte[] frame, byte command)
+    {
+        if (frame.Length < FrameLength || frame[0] is not (0x08 or 0x09) || frame[1] != command) return false;
+        if (frame[5] is 0 or > FrameLength - 7) return false;
+        var sum = 0;
+        for (var i = 0; i < FrameLength; i++) sum += frame[i];
+        return (byte)sum == 0x55;
+    }
+
+    public static bool IsOnline(byte[] reply) => IsReply(reply, CompxProtocol.OnlineCommand) && reply[6] != 0;
+
+    public static bool TryParseBattery(byte[] reply, out int percent, out bool charging)
+    {
+        percent = 0;
+        charging = false;
+        if (!IsReply(reply, CompxProtocol.BatteryCommand) || reply[5] < 2 || reply[6] > 100 || reply[7] > 1) return false;
+        percent = reply[6];
+        charging = reply[7] == 1;
+        return true;
+    }
+}
+
+/// <summary>
 /// 2.4 GHz dongles of SONiX-based keyboards (AJAZZ AK820 MAX, AULA F108 Pro, Epomaker Galaxy100 Lite ...): usage page FF60 / usage 61,
 /// 33-byte input and output reports (report ID 0 + 32 bytes). Request <c>[00][20][01][0 ...][sum]</c> where sum is the byte sum of
 /// bytes 1..31; the reply has the same layout with the level in byte 4 (<c>[00][20][01][00][level] ... [sum]</c>). A level of 0 means the

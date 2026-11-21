@@ -4,7 +4,7 @@ using MochiDock.Core;
 namespace MochiDock.Services.DeviceBattery;
 
 /// <summary>
-/// One blocking scan of every supported wireless battery source. Order: Rongyuan receivers, LAMZU mice, Logitech HID++, SONiX keyboards, generic HID, Bluetooth.
+/// One blocking scan of every supported wireless battery source. Order: Rongyuan receivers, LAMZU mice (own, Compx and Areson receivers), Logitech HID++, SONiX keyboards, generic HID, Bluetooth.
 /// Only read-only status queries are sent, and only to devices a driver recognises. Call from a background thread.
 /// </summary>
 public static class DeviceBatteryScanner
@@ -21,6 +21,7 @@ public static class DeviceBatteryScanner
         Run("Rongyuan", () => readings.AddRange(Rongyuan(collections, claimed, now)));
         Run("LAMZU", () => readings.AddRange(Lamzu(collections, claimed, now)));
         Run("Compx", () => readings.AddRange(CompxLamzu(collections, claimed, now)));
+        Run("Areson", () => readings.AddRange(Areson(collections, claimed, now)));
         Run("Logitech", () => readings.AddRange(LogitechDriver.Poll(collections, claimed, now)));
         Run("Sonix", () => readings.AddRange(SonixKeyboard(collections, claimed, now)));
         Run("HID", () => readings.AddRange(GenericHid(collections, claimed, now)));
@@ -116,6 +117,28 @@ public static class DeviceBatteryScanner
                 yield return new DeviceBatteryReading($"compx:{c.Vid:X4}:{c.Pid:X4}", name, BatteryDeviceKind.Mouse, cable ? "USB cable" : "2.4 GHz receiver", percent, charging, true, now);
                 break;
             }
+        }
+    }
+
+    // Mice on the generic Areson receiver 25A7:FA7C (LAMZU's small/default dongle): the Compx frame goes out as a feature report on FF02:0002
+    // and the answer comes back as an input report on FF01:0000. Read-only online + battery queries, sent only to this measured receiver.
+    static IEnumerable<DeviceBatteryReading> Areson(List<HidCollection> collections, HashSet<(ushort, ushort)> claimed, DateTimeOffset now)
+    {
+        foreach (var group in collections.Where(c => AresonProtocol.IsReceiver(c.Vid, c.Pid)).GroupBy(c => (c.Vid, c.Pid)))
+        {
+            claimed.Add(group.Key);
+            var command = group.FirstOrDefault(c => c.UsagePage == AresonProtocol.CommandUsagePage && c.Usage == AresonProtocol.CommandUsage
+                                                    && c.FeatureLength == AresonProtocol.FrameLength);
+            var reply = group.FirstOrDefault(c => c.UsagePage == AresonProtocol.ReplyUsagePage && c.InputLength == AresonProtocol.FrameLength);
+            if (command is null || reply is null) continue;
+            var online = HidNative.ExchangeFeatureToInput(command.Path, reply.Path, AresonProtocol.Request(CompxProtocol.OnlineCommand), reply.InputLength,
+                f => AresonProtocol.IsReply(f, CompxProtocol.OnlineCommand), 500);
+            if (online is null || !AresonProtocol.IsOnline(online)) continue; // mouse off, asleep or out of range: the merge keeps the last value as stale
+            var battery = HidNative.ExchangeFeatureToInput(command.Path, reply.Path, AresonProtocol.Request(CompxProtocol.BatteryCommand), reply.InputLength,
+                f => AresonProtocol.IsReply(f, CompxProtocol.BatteryCommand), 500);
+            if (battery is null || !AresonProtocol.TryParseBattery(battery, out var percent, out var charging)) continue;
+            yield return new DeviceBatteryReading($"areson:{group.Key.Vid:X4}:{group.Key.Pid:X4}", AresonProtocol.MouseName, BatteryDeviceKind.Mouse,
+                "2.4 GHz receiver", percent, charging, true, now);
         }
     }
 

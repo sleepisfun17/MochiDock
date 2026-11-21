@@ -238,8 +238,15 @@ The code is MochiDock's own. Device facts come from:
 - Wireless-Device-Battery-Monitor by krisgfx9 (GPL-3.0), consulted for
   protocol facts only (no code or lists included): report layouts, the Phone
   Link Start-menu companion card layout, and the Windows 11 Widgets-button /
-  right-to-left taskbar placement behaviour.
+  right-to-left taskbar placement behaviour, and that the generic Areson
+  receiver 25A7:FA7C takes the Compx frame as a feature report and answers
+  on an input report.
   Source: https://github.com/krisgfx9/Wireless-Device-Battery-Monitor
+- xd5-go-web by jarjut, named by Wireless-Device-Battery-Monitor as its
+  protocol source (no code included): the Fantech Helios Go XD5 / Areson
+  25A7:FA7C battery command (report 08, command 04, sum-to-0x55 checksum).
+  The reply layout used by MochiDock was measured on a LAMZU mouse.
+  Source: https://github.com/jarjut/xd5-go-web
 - Solaar (GPL-2.0): the Li-ion voltage-to-percent table used for Logitech
   HID++ voltage readings. Source: https://github.com/pwr-Solaar/Solaar
 
