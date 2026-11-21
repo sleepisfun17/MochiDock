@@ -22,7 +22,7 @@ public static class ImapAccountPolicy
 {
     public static IReadOnlyList<ImapPreset> Presets { get; } = new[]
     {
-        new ImapPreset("Gmail", "imap.gmail.com", 993, "https://myaccount.google.com/apppasswords", "https://mail.google.com/mail/u/{0}/#inbox"),
+        new ImapPreset("Gmail", "imap.gmail.com", 993, "https://myaccount.google.com/apppasswords", "https://mail.google.com/mail/?authuser={0}#inbox"),
         new ImapPreset("Yahoo Mail", "imap.mail.yahoo.com", 993, "https://login.yahoo.com/account/security", "https://mail.yahoo.com/"),
         new ImapPreset("iCloud Mail", "imap.mail.me.com", 993, "https://account.apple.com/account/manage", "https://www.icloud.com/mail"),
         new ImapPreset("Fastmail", "imap.fastmail.com", 993, "https://app.fastmail.com/settings/security/integrations", "https://app.fastmail.com/mail/"),
@@ -53,7 +53,11 @@ public static class ImapAccountPolicy
     public static IReadOnlyList<uint> NewUids(IEnumerable<uint> uids, uint baseline, int max = 5) =>
         uids.Where(u => u > baseline).OrderBy(u => u).TakeLast(max).ToList();
 
-    /// <summary>Webmail address to open for a mail: Gmail goes to the right account, others to their inbox, unknown hosts to nothing.</summary>
+    /// <summary>
+    /// Webmail address to open for a mail: Gmail goes to the right account, others to their inbox, unknown hosts to nothing.
+    /// Gmail gets the address as the authuser query value: in the /mail/u/{x}/ path an escaped "@" (%40) is not decoded, and
+    /// Gmail answers with "Temporary Error (404)".
+    /// </summary>
     public static string? WebmailUrl(ImapAccount account)
     {
         var preset = PresetFor(account.Host);

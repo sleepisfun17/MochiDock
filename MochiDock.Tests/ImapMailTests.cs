@@ -28,7 +28,8 @@ public class ImapAccountPolicyTests
     public void GmailOpensTheRightAccountAndUnknownHostsOpenNothing()
     {
         string? gmail = ImapAccountPolicy.WebmailUrl(new ImapAccount { Address = "me+x@gmail.com", Host = "IMAP.gmail.com" });
-        Assert.Equal("https://mail.google.com/mail/u/me%2Bx%40gmail.com/#inbox", gmail);
+        Assert.Equal("https://mail.google.com/mail/?authuser=me%2Bx%40gmail.com#inbox", gmail);
+        Assert.DoesNotContain("/mail/u/", gmail);   // an escaped address in the path gives Gmail's "Temporary Error (404)"
         Assert.Null(ImapAccountPolicy.WebmailUrl(new ImapAccount { Address = "me@example.org", Host = "mail.example.org" }));
     }
 
