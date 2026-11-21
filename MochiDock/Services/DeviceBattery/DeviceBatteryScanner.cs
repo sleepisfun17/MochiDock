@@ -90,7 +90,7 @@ public static class DeviceBatteryScanner
                 }
                 if (reply is null || !LamzuProtocol.TryParse(reply, out var charging, out var percent)) continue;
                 var cable = LamzuProtocol.IsCable(vid, pid);
-                yield return new DeviceBatteryReading($"lamzu:{vid:X4}:{pid:X4}", LamzuProtocol.ModelName(vid, pid), BatteryDeviceKind.Mouse,
+                yield return new DeviceBatteryReading(LamzuProtocol.ReadingKey(vid, pid), LamzuProtocol.ModelName(vid, pid), BatteryDeviceKind.Mouse,
                     cable ? "USB cable" : "2.4 GHz receiver", percent, charging, LamzuProtocol.IsConnected(vid, pid, percent), now);
                 break;
             }

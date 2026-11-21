@@ -4,7 +4,7 @@ namespace MochiDock.Tests;
 
 public sealed class DeviceBatteryProtocolsTests
 {
-    static byte[] Reply(int length, params (int Index, byte Value)[] bytes)
+    internal static byte[] Reply(int length, params (int Index, byte Value)[] bytes)
     {
         var b = new byte[length];
         foreach (var (i, v) in bytes) b[i] = v;
@@ -493,6 +493,29 @@ public sealed class DeviceBatterySettingsTests
         Assert.True(MochiDock.Core.CompxProtocol.IsOnline(reply));
     }
 
+    [Fact]
+    public void ArbiterCableAndReceiverShareOneKey()
+    {
+        Assert.Equal("arbiter:373E:000A", LamzuProtocol.ReadingKey(0x373E, 0x0009));
+        Assert.Equal("arbiter:373E:000A", LamzuProtocol.ReadingKey(0x373E, 0x000A));
+        Assert.Equal("arbiter:373E:0067", LamzuProtocol.ReadingKey(0x373E, 0x0066));
+        Assert.Equal("lamzu:373E:001D", LamzuProtocol.ReadingKey(0x373E, 0x001D));
+        Assert.Equal("lamzu:37B0:0015", LamzuProtocol.ReadingKey(0x37B0, 0x0015));
+        Assert.True(LamzuProtocol.IsArbiter(0x373E, 0x0039));
+        Assert.False(LamzuProtocol.IsArbiter(0x37B0, 0x0039));
+    }
+
+    [Fact]
+    public void LamzuAcceptsTheA2AnsweredStatus()
+    {
+        Assert.True(LamzuProtocol.TryParse(DeviceBatteryProtocolsTests.Reply(65, (1, 0xA2), (4, 2), (6, 0x83), (7, 1), (8, 55)), out var charging, out var pct));
+        Assert.True(charging);
+        Assert.Equal(55, pct);
+        Assert.True(LamzuProtocol.TryParse(DeviceBatteryProtocolsTests.Reply(65, (0, 0xA2), (3, 2), (5, 0x83), (7, 40)), out _, out pct));
+        Assert.Equal(40, pct);
+        Assert.False(LamzuProtocol.TryParse(DeviceBatteryProtocolsTests.Reply(65, (1, 0xA3), (4, 2), (6, 0x83), (8, 55)), out _, out _));
+    }
+
     static byte[] Frame(string hex) => hex.Split(' ').Select(h => Convert.ToByte(h, 16)).ToArray();
 
     // Replies captured from the 25A7:FA7C receiver with a LAMZU Maya linked (LAMZU's software showed about 25%).
@@ -604,6 +627,13 @@ public class DeviceBatteryTableTests
     [InlineData(0x37B0, 0x0048, "LAMZU wireless mouse", false)] // 8K receiver shared by six models
     [InlineData(0x37B0, 0x0036, "LAMZU wireless mouse", false)]
     [InlineData(0x373E, 0x0016, "LAMZU Maya X V2", false)]
+    [InlineData(0x373E, 0x0009, "Arbiter Studio Akitsu", true)]
+    [InlineData(0x373E, 0x000A, "Arbiter Studio Akitsu", false)]
+    [InlineData(0x373E, 0x0038, "Arbiter Studio Akitsu 3950", true)]
+    [InlineData(0x373E, 0x0039, "Arbiter Studio Akitsu 3950", false)]
+    [InlineData(0x373E, 0x0066, "Arbiter Studio Akitsu Medium", true)]
+    [InlineData(0x373E, 0x0067, "Arbiter Studio Akitsu Medium", false)]
+    [InlineData(0x37B0, 0x0009, "LAMZU Inca", true)]          // same PID on LAMZU's other vendor ID stays LAMZU
     public void LamzuProductsFollowTheVendorList(int vid, int pid, string name, bool cable)
     {
         Assert.Equal(name, MochiDock.Core.LamzuProtocol.ModelName((ushort)vid, (ushort)pid));

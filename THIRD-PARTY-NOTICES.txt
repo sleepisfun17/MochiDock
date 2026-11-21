@@ -240,7 +240,9 @@ The code is MochiDock's own. Device facts come from:
   Link Start-menu companion card layout, and the Windows 11 Widgets-button /
   right-to-left taskbar placement behaviour, and that the generic Areson
   receiver 25A7:FA7C takes the Compx frame as a feature report and answers
-  on an input report.
+  on an input report, plus the Arbiter Studio Akitsu product IDs on 373E
+  and the A2 answered status (from Arbiter's web hub config, as that project
+  lists them).
   Source: https://github.com/krisgfx9/Wireless-Device-Battery-Monitor
 - xd5-go-web by jarjut, named by Wireless-Device-Battery-Monitor as its
   protocol source (no code included): the Fantech Helios Go XD5 / Areson

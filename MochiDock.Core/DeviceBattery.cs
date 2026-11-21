@@ -82,7 +82,7 @@ public static class RongyuanProtocol
         string.IsNullOrWhiteSpace(product) || product.Contains("Receiver", StringComparison.OrdinalIgnoreCase) || product.Contains("2.4G", StringComparison.OrdinalIgnoreCase);
 }
 
-/// <summary>LAMZU mice (vendors 0x373E and 0x37B0): a 65-byte feature report exchange.</summary>
+/// <summary>LAMZU mice (vendors 0x373E and 0x37B0) and Arbiter Studio Akitsu mice (which share 0x373E): a 65-byte feature report exchange.</summary>
 public static class LamzuProtocol
 {
     public const int FeatureLength = 65;
@@ -153,13 +153,36 @@ public static class LamzuProtocol
         new(0x37B0, 0x005A, "LAMZU Inca V2", true),
     };
 
+    // Arbiter Studio Akitsu mice on the same DriverCore vendor ID 0x373E and the same battery query (model IDs from Arbiter's web hub
+    // config, as listed by Wireless-Device-Battery-Monitor). Without them an Akitsu would be named "LAMZU wireless mouse". A cable lists its
+    // receiver's PID so both connections share one key.
+    readonly record struct ArbiterModel(ushort Pid, string Name, bool IsCable, ushort ReceiverPid);
+
+    static readonly ArbiterModel[] ArbiterModels =
+    {
+        new(0x0009, "Arbiter Studio Akitsu", true, 0x000A),
+        new(0x000A, "Arbiter Studio Akitsu", false, 0x000A),
+        new(0x0038, "Arbiter Studio Akitsu 3950", true, 0x0039),
+        new(0x0039, "Arbiter Studio Akitsu 3950", false, 0x0039),
+        new(0x0066, "Arbiter Studio Akitsu Medium", true, 0x0067),
+        new(0x0067, "Arbiter Studio Akitsu Medium", false, 0x0067),
+    };
+
+    static ArbiterModel? FindArbiter(ushort vid, ushort pid) => vid == 0x373E && ArbiterModels.FirstOrDefault(m => m.Pid == pid) is { Name: not null } m ? m : null;
+
     static readonly Dictionary<uint, Product> ByKey = Products.ToDictionary(p => ((uint)p.Vid << 16) | p.Pid);
 
     static Product? Find(ushort vid, ushort pid) => ByKey.TryGetValue(((uint)vid << 16) | pid, out var p) ? p : null;
 
-    public static string ModelName(ushort vid, ushort pid) => Find(vid, pid)?.Name ?? SharedReceiver;
+    public static bool IsArbiter(ushort vid, ushort pid) => FindArbiter(vid, pid) is not null;
 
-    public static bool IsCable(ushort vid, ushort pid) => Find(vid, pid)?.IsCable ?? false;
+    public static string ModelName(ushort vid, ushort pid) => FindArbiter(vid, pid)?.Name ?? Find(vid, pid)?.Name ?? SharedReceiver;
+
+    public static bool IsCable(ushort vid, ushort pid) => FindArbiter(vid, pid)?.IsCable ?? Find(vid, pid)?.IsCable ?? false;
+
+    /// <summary>The reading key: "arbiter:373E:receiver" for an Akitsu (cable and receiver share it), else "lamzu:vid:pid".</summary>
+    public static string ReadingKey(ushort vid, ushort pid) =>
+        FindArbiter(vid, pid) is { } a ? $"arbiter:{vid:X4}:{a.ReceiverPid:X4}" : $"lamzu:{vid:X4}:{pid:X4}";
 
     /// <summary>Every known LAMZU product ID (for tests and diagnostics).</summary>
     public static IReadOnlyList<(ushort Vid, ushort Pid, string Name, bool IsCable)> KnownProducts =>
@@ -178,15 +201,15 @@ public static class LamzuProtocol
     public static bool IsWaking(ReadOnlySpan<byte> reply) =>
         reply.Length >= 10 && reply[1] == 0xA0 && reply[4] == 0x02 && reply[6] == 0x83;
 
-    /// <summary>Accepts both reply layouts (with and without the leading report ID byte).</summary>
+    /// <summary>Accepts both reply layouts (with and without the leading report ID byte) and the answered statuses A1 and A2.</summary>
     public static bool TryParse(ReadOnlySpan<byte> reply, out bool charging, out int percent)
     {
         charging = false;
         percent = 0;
         if (reply.Length < 10) return false;
         int p;
-        if (reply[1] == 0xA1 && reply[4] == 0x02 && reply[6] == 0x83) { charging = reply[7] == 1; p = reply[8]; }
-        else if (reply[0] == 0xA1 && reply[3] == 0x02 && reply[5] == 0x83) { charging = reply[6] == 1; p = reply[7]; }
+        if (reply[1] is 0xA1 or 0xA2 && reply[4] == 0x02 && reply[6] == 0x83) { charging = reply[7] == 1; p = reply[8]; }
+        else if (reply[0] is 0xA1 or 0xA2 && reply[3] == 0x02 && reply[5] == 0x83) { charging = reply[6] == 1; p = reply[7]; }
         else return false;
         if (p > 100) { charging = false; return false; }
         percent = p;
