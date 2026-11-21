@@ -6,7 +6,8 @@ All notable changes to MochiDock are documented here. The format follows [Keep a
 
 ### Added
 
-- **Updates in quick settings**: the dock's settings card starts with an Updates box (version, **Check now**, **Update now**, the release page and the automatic check), outlined when an update is waiting. When the automatic check finds a new version, a capsule notice says so once; tap it to open that box.
+- **Updates in quick settings**: a version button in the top-right of the dock's settings card, next to Reconnect. Click it to check for updates; when a new version is waiting it turns accent and reads "Update to x", and it shows the download progress (click to cancel). When the automatic check finds a new version, a capsule notice says so once; tap it to open the quick settings.
+- **Email settings**: a connected mail account now lines up with the rows below it (the address no longer floats in the middle of the row).
 
 ## [0.1.2-beta]
 

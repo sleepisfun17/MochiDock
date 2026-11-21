@@ -9,17 +9,21 @@
         <ItemsControl x:Name="ImapList" MinWidth="320">
             <ItemsControl.ItemTemplate>
                 <DataTemplate>
-                    <Grid Margin="0,0,0,6">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
-                        <StackPanel VerticalAlignment="Center">
-                            <TextBlock Text="{Binding Address}" Style="{StaticResource CardBodyText}" TextTrimming="CharacterEllipsis" MaxWidth="320"/>
-                            <TextBlock Text="{Binding Status}" Style="{StaticResource CardCaptionText}" Opacity="0.8"/>
-                        </StackPanel>
-                        <Button Grid.Column="1" Style="{StaticResource ActionButton}" Content="Remove" Tag="{Binding Address}" Click="RemoveImap_Click" Margin="8,0,0,0" Padding="8,3"/>
-                    </Grid>
+                    <!-- Same divider and padding as a SettingRow, so the account lines up with the rows below it. -->
+                    <Border BorderBrush="{DynamicResource IslandSubCardBorderBrush}" BorderThickness="0,0,0,1" Padding="0,10">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Left">
+                                <TextBlock Text="{Binding Address}" Style="{StaticResource CardBodyText}" TextTrimming="CharacterEllipsis" HorizontalAlignment="Left"/>
+                                <TextBlock Text="{Binding Status}" Style="{StaticResource CardCaptionText}" Foreground="{DynamicResource IslandMutedInkBrush}" HorizontalAlignment="Left" Margin="0,2,0,0"/>
+                            </StackPanel>
+                            <Button Grid.Column="1" Style="{StaticResource ActionButton}" Content="Remove" Tag="{Binding Address}" Click="RemoveImap_Click" Margin="8,0,0,0" Padding="8,3" VerticalAlignment="Center"
+                                    AutomationProperties.Name="Remove this mail account"/>
+                        </Grid>
+                    </Border>
                 </DataTemplate>
             </ItemsControl.ItemTemplate>
         </ItemsControl>

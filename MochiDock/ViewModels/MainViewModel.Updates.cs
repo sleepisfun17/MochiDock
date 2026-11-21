@@ -24,6 +24,7 @@ public partial class MainViewModel
     private bool _noticeIsUpdate;
     private string? _pendingUpdateNotice;
     private System.Windows.Threading.DispatcherTimer? _updateNoticeRetry;
+    private int? _downloadPercent;
 
     /// <summary>True when this copy runs from the setup's install folder (only that copy updates itself).</summary>
     public bool IsInstalledCopy => _installedCopy ??= UpdateInstaller.IsInstalledCopy();
@@ -52,8 +53,44 @@ public partial class MainViewModel
         }
     }
 
+    /// <summary>The update button in the quick settings header: the version, "Checking…", "Update to x", or the download progress.</summary>
+    public UpdateChipState UpdateChipState =>
+        UpdateChipPolicy.State(_updateBusy, _availableUpdate != null, CanInstallUpdate, IsUpdateDownloading, _installing);
+    public string UpdateChipText => UpdateChipPolicy.Text(UpdateChipState, CurrentVersionText, _availableUpdate?.Version, _downloadPercent);
+    public bool IsUpdateChipHighlighted => UpdateChipPolicy.IsHighlighted(UpdateChipState);
+    public string UpdateChipToolTip => UpdateChipState switch
+    {
+        UpdateChipState.Current => UpdateStatusText + " Click to check now.",
+        UpdateChipState.Install => UpdateStatusText + " Click to update.",
+        UpdateChipState.Available => UpdateStatusText + " " + UpdateInstallHint + " Click to open the release page.",
+        UpdateChipState.Downloading => UpdateStatusText + " Click to cancel.",
+        _ => UpdateStatusText,
+    };
+
+    private void NotifyUpdateChip()
+    {
+        OnPropertyChanged(nameof(UpdateChipState));
+        OnPropertyChanged(nameof(UpdateChipText));
+        OnPropertyChanged(nameof(IsUpdateChipHighlighted));
+        OnPropertyChanged(nameof(UpdateChipToolTip));
+    }
+
+    /// <summary>A click on the header's update button: check, install (after its confirmation), open the release page, or cancel.</summary>
+    public Task UpdateChipClickAsync()
+    {
+        switch (UpdateChipState)
+        {
+            case UpdateChipState.Current: return CheckForUpdatesAsync(manual: true);
+            case UpdateChipState.Install: return InstallUpdateAsync();
+            case UpdateChipState.Available: OpenUpdatePage(); break;
+            case UpdateChipState.Downloading: CancelUpdateDownload(); break;
+        }
+        return Task.CompletedTask;
+    }
+
     private void NotifyUpdateState()
     {
+        NotifyUpdateChip();
         OnPropertyChanged(nameof(AvailableUpdate));
         OnPropertyChanged(nameof(HasUpdate));
         OnPropertyChanged(nameof(TrayUpdateText));
@@ -98,6 +135,7 @@ public partial class MainViewModel
         {
             _updateStatus = "Checking...";
             OnPropertyChanged(nameof(UpdateStatusText));
+            NotifyUpdateChip();
             var result = await _updateCheck.CheckAsync(UpdateCheckService.CurrentVersion, cts.Token);
             _availableUpdate = result.Offer;
             _updateStatus = result.State == UpdateCheckState.Available ? "" : result.Message;
@@ -130,7 +168,7 @@ public partial class MainViewModel
     /// <summary>
     /// Shows the pending "update available" notice when nothing else holds the capsule (gaming, lock, screen off, a message,
     /// prayer or reminder, snooze or quiet hours); otherwise tries again every five minutes. The version counts as announced only
-    /// once the notice was shown. Tapping it opens the quick settings, where the Updates box has Update now.
+    /// once the notice was shown. Tapping it opens the quick settings, whose header button then reads "Update to x".
     /// </summary>
     private void TryShowUpdateNotice()
     {
@@ -178,6 +216,7 @@ public partial class MainViewModel
 
         _installing = true;
         _downloadCts = new CancellationTokenSource();
+        _downloadPercent = null;
         _updateStatus = "Starting the download…";
         NotifyUpdateState();
         bool launched = false;
@@ -186,10 +225,13 @@ public partial class MainViewModel
             var progress = new Progress<(long Done, long Total)>(p =>
             {
                 _updateStatus = $"Downloading {p.Done / 1048576.0:0.0} of {p.Total / 1048576.0:0.0} MB…";
+                _downloadPercent = p.Total > 0 ? (int)(p.Done * 100 / p.Total) : null;
                 OnPropertyChanged(nameof(UpdateStatusText));
+                NotifyUpdateChip();
             });
             string setup = await _updateInstaller.DownloadAsync(asset, progress, _downloadCts.Token);
             _downloadCts = null;
+            _downloadPercent = null;
             _updateStatus = "Installing, MochiDock will restart in a moment…";
             NotifyUpdateState();
             UpdateInstaller.Launch(setup);

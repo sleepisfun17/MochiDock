@@ -130,7 +130,7 @@ Record date, build/commit, Windows version, monitor layout/DPI, hardware, prereq
 | Wireless batteries | Taskbar readout, tooltip, one silent low notice, survives an Explorer restart |
 | Shutdown | No owned listeners, processes or ETW sessions remain; persistence flushed |
 | Face changes | Opening Stats Battery, FX or Weather spins Mochi three times into the card's face; idle thoughts do not spin him; with Windows animations off faces switch without a spin |
-| One-click update | Installed copy on an older version: Update now downloads, verifies, installs silently and restarts on the new version with settings and the logon task kept; a portable copy only links to the release; quick settings Updates box and the one-time "update available" notice are render- and unit-tested only |
+| One-click update | Installed copy on an older version: Update now downloads, verifies, installs silently and restarts on the new version with settings and the logon task kept; a portable copy only links to the release; quick settings update button and the one-time "update available" notice are render- and unit-tested only |
 
 ## Storage and ports
 

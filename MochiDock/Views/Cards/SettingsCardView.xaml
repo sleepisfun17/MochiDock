@@ -25,44 +25,21 @@
                     </Grid.ColumnDefinitions>
                     <StackPanel Grid.Column="0">
                         <TextBlock Text="MochiDock Preferences" Style="{StaticResource CardHeadingText}" />
-                        <TextBlock Text="{Binding IntegrationStatus}" Style="{StaticResource CardCaptionText}" Foreground="{DynamicResource IslandMutedInkBrush}" Margin="0,2,0,0" />
+                        <TextBlock Text="{Binding IntegrationStatus}" Style="{StaticResource CardCaptionText}" Foreground="{DynamicResource IslandMutedInkBrush}" Margin="0,2,0,0"
+                                   TextTrimming="CharacterEllipsis" ToolTip="{Binding IntegrationStatus}" />
                     </StackPanel>
                     <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                        <!-- Update button: the running version (click checks now), or in accent "Update to x" when a new version waits.
+                             Two buttons so each keeps its own style's hover; only one is visible. The full update options are in Settings > Data. -->
+                        <Button x:Name="UpdateChip" Style="{StaticResource IslandSecondaryButtonStyle}" Content="{Binding UpdateChipText}" Click="UpdateChip_Click" Margin="0,0,8,0"
+                                ToolTip="{Binding UpdateChipToolTip}" AutomationProperties.Name="{Binding UpdateChipToolTip}"
+                                Visibility="{Binding IsUpdateChipHighlighted, Converter={StaticResource InverseBoolToVisibility}}"/>
+                        <Button x:Name="UpdateChipAccent" Style="{StaticResource IslandPrimaryButtonStyle}" Content="{Binding UpdateChipText}" Click="UpdateChip_Click" Margin="0,0,8,0"
+                                ToolTip="{Binding UpdateChipToolTip}" AutomationProperties.Name="{Binding UpdateChipToolTip}"
+                                Visibility="{Binding IsUpdateChipHighlighted, Converter={StaticResource BoolToVisibility}}"/>
                         <Button Style="{StaticResource IslandSecondaryButtonStyle}" Content="↻ Reconnect" Click="RetryIntegrations_Click" ToolTip="Test &amp; Reconnect WhatsApp / Outlook" />
                     </StackPanel>
                 </Grid>
-
-                <!-- Updates: the same check and one-click update as Settings > Data & diagnostics; first, so a waiting update is seen. -->
-                <Border x:Name="UpdatesBox" CornerRadius="10" Padding="10,8" Margin="0,0,0,8" BorderThickness="1">
-                    <Border.Style>
-                        <Style TargetType="Border">
-                            <Setter Property="Background" Value="{DynamicResource IslandSubCardBackgroundBrush}"/>
-                            <Setter Property="BorderBrush" Value="{DynamicResource IslandSubCardBorderBrush}"/>
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding HasUpdate}" Value="True">
-                                    <Setter Property="BorderBrush" Value="{DynamicResource IslandAccentBrush}"/>
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </Border.Style>
-                    <StackPanel>
-                        <TextBlock Text="Updates" Style="{StaticResource CardSectionLabel}" Margin="0,0,0,4" />
-                        <TextBlock Text="{Binding UpdateStatusText}" Style="{StaticResource CardCaptionText}" TextWrapping="Wrap" Margin="0,0,0,4"/>
-                        <TextBlock Text="{Binding UpdateInstallHint}" Style="{StaticResource CardCaptionText}" Foreground="{DynamicResource IslandMutedInkBrush}" TextWrapping="Wrap" Margin="0,0,0,4"
-                                   Visibility="{Binding HasUpdateInstallHint, Converter={StaticResource BoolToVisibility}}"/>
-                        <WrapPanel VerticalAlignment="Center">
-                            <Button Style="{StaticResource IslandPrimaryButtonStyle}" Content="Update now" Click="InstallUpdate_Click" Margin="0,2,8,2"
-                                    Visibility="{Binding CanInstallUpdate, Converter={StaticResource BoolToVisibility}}" AutomationProperties.Name="Install the update now"/>
-                            <Button Style="{StaticResource IslandSecondaryButtonStyle}" Content="Check now" Click="CheckUpdates_Click" Margin="0,2,8,2" ToolTip="Ask GitHub for a newer release"/>
-                            <Button Style="{StaticResource IslandSecondaryButtonStyle}" Content="Cancel" Click="CancelUpdate_Click" Margin="0,2,8,2"
-                                    Visibility="{Binding IsUpdateDownloading, Converter={StaticResource BoolToVisibility}}"/>
-                            <Button Style="{StaticResource IslandSecondaryButtonStyle}" Content="Release page" Click="ViewRelease_Click" Margin="0,2,8,2"
-                                    Visibility="{Binding HasUpdate, Converter={StaticResource BoolToVisibility}}" ToolTip="What's new, on GitHub"/>
-                            <CheckBox Style="{StaticResource ModernDarkCheckBox}" Content="Check automatically" IsChecked="{Binding CheckForUpdates, Mode=TwoWay}" Margin="4,2,0,2" VerticalAlignment="Center"
-                                      ToolTip="At startup and every 12 hours, with a notice when a new version is out. Only a generic request to GitHub is sent."/>
-                        </WrapPanel>
-                    </StackPanel>
-                </Border>
 
                 <!-- Quick settings. Everything else lives in the Advanced Settings window (Open all settings). -->
                 <Border Background="{DynamicResource IslandSubCardBackgroundBrush}" CornerRadius="10" Padding="10,8" Margin="0,0,0,8" BorderBrush="{DynamicResource IslandSubCardBorderBrush}" BorderThickness="1">
