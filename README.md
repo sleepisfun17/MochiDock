@@ -9,7 +9,7 @@ A native .NET 8 WPF overlay that sits at the top of your screen (or at the botto
 
 <p align="center"><a href="https://github.com/sleepisfun17/MochiDock/actions/workflows/ci.yml"><img src="https://github.com/sleepisfun17/MochiDock/actions/workflows/ci.yml/badge.svg" alt="Build and tests"></a> <a href="https://github.com/sleepisfun17/MochiDock/releases/latest"><img src="https://img.shields.io/github/v/release/sleepisfun17/MochiDock?include_prereleases&amp;label=release" alt="Latest release"></a></p>
 
-> **Beta (0.1.3-beta).** Many features have been built and unit-tested but not yet verified on a wide range of machines. See the [known limitations](CHANGELOG.md).
+> **Beta (0.1.4-beta).** Many features have been built and unit-tested but not yet verified on a wide range of machines. See the [known limitations](CHANGELOG.md).
 
 <p align="center">
   <img src="docs/media/hover-expand.gif" alt="The capsule expanding on hover and collapsing again" width="660">

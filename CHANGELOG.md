@@ -2,6 +2,16 @@
 
 All notable changes to MochiDock are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.1.4-beta]
+
+### Added
+
+- **LAMZU small dongle**: wireless batteries now read LAMZU mice on their small/default 2.4 GHz dongle (a generic "2.4G Wireless Receiver", 25A7:FA7C), with the charging state. The dongle does not say which model is paired, so the mouse shows as "Wireless mouse". Read on a LAMZU Maya; charging not yet seen on hardware.
+
+### Fixed
+
+- **Settings window**: each section keeps its own scroll position when you switch between sections.
+
 ## [0.1.3-beta]
 
 ### Added
