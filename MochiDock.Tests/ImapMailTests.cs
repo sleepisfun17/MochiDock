@@ -34,6 +34,36 @@ public class ImapAccountPolicyTests
     }
 
     [Fact]
+    public void RemovingAnAccountPointsToWhereItsAppPasswordIsRevoked()
+    {
+        var gmail = new ImapAccount { Address = " me@gmail.com ", Host = "imap.gmail.com" };
+        Assert.Equal("https://myaccount.google.com/apppasswords", ImapAccountPolicy.RevokeUrl(gmail));
+        Assert.Equal("me@gmail.com was removed from this PC. Its app password still works for your Gmail account until you revoke it there.",
+            ImapAccountPolicy.RemovedNotice(gmail));
+
+        var custom = new ImapAccount { Address = "me@example.org", Host = "mail.example.org" };
+        Assert.Null(ImapAccountPolicy.RevokeUrl(custom));
+        Assert.Contains("until you revoke it with your provider", ImapAccountPolicy.RemovedNotice(custom));
+        Assert.All(ImapAccountPolicy.Presets, p => Assert.Equal(p.HelpUrl, ImapAccountPolicy.RevokeUrl(new ImapAccount { Address = "a@b.c", Host = p.Host })));
+    }
+
+    [Fact]
+    public void UninstallAlwaysDeletesSavedSecrets()
+    {
+        var dir = new DirectoryInfo(AppContext.BaseDirectory);
+        while (dir != null && !File.Exists(Path.Combine(dir.FullName, "installer", "MochiDock.iss"))) dir = dir.Parent;
+        string iss = File.ReadAllText(Path.Combine(dir!.FullName, "installer", "MochiDock.iss"));
+        int question = iss.IndexOf("Also delete your MochiDock settings and data?", StringComparison.Ordinal);
+        Assert.True(question > 0);
+        // Each secret file is deleted unconditionally, before (so not inside) the "keep settings?" question.
+        foreach (string file in new[] { "mail-imap.dat", "gowa-remote.dat", "gcal.dat" })
+        {
+            int delete = iss.IndexOf($"DeleteFile(ExpandConstant('{{localappdata}}\\MochiDock\\{file}'));", StringComparison.Ordinal);
+            Assert.True(delete > 0 && delete < question, file);
+        }
+    }
+
+    [Fact]
     public void PresetHelpLinksAreHttps() =>
         Assert.All(ImapAccountPolicy.Presets, p => { Assert.StartsWith("https://", p.HelpUrl); Assert.StartsWith("https://", p.WebmailUrl); Assert.Equal(993, p.Port); });
 }

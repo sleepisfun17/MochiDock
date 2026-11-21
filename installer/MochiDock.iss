@@ -167,6 +167,7 @@ procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
 var
   ResultCode: Integer;
   Script: String;
+  HadMailPasswords: Boolean;
 begin
   if CurUninstallStep = usUninstall then
   begin
@@ -178,6 +179,18 @@ begin
   end
   else if CurUninstallStep = usPostUninstall then
   begin
+    { Saved passwords and secrets always go, even when the settings are kept (and on a silent uninstall): mail app passwords,
+      the WhatsApp server login and the calendar feed secret. They only open for this Windows user, but nothing should be left
+      behind that can still sign in. A reinstall asks for them again. The settings question below is unchanged. }
+    HadMailPasswords := FileExists(ExpandConstant('{localappdata}\MochiDock\mail-imap.dat'));
+    DeleteFile(ExpandConstant('{localappdata}\MochiDock\mail-imap.dat'));
+    DeleteFile(ExpandConstant('{localappdata}\MochiDock\gowa-remote.dat'));
+    DeleteFile(ExpandConstant('{localappdata}\MochiDock\gcal.dat'));
+    if HadMailPasswords and not UninstallSilent then
+      MsgBox('Saved mail app passwords were deleted from this PC.' + #13#10#13#10 +
+             'If you added a Gmail, Yahoo, iCloud or other mail account, the app password itself still works until you revoke it ' +
+             'in that account''s security settings (for Gmail: myaccount.google.com/apppasswords).',
+             mbInformation, MB_OK);
     if not UninstallSilent then
       if MsgBox('Also delete your MochiDock settings and data?' + #13#10#13#10 +
                 ExpandConstant('{userappdata}\MochiDock') + #13#10 +

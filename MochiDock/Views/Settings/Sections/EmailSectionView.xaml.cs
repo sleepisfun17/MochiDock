@@ -118,9 +118,32 @@ public partial class EmailSectionView : UserControl
         }
     }
 
+    private string? _revokeUrl;
+
     private void RemoveImap_Click(object sender, RoutedEventArgs e)
     {
-        if (sender is FrameworkElement { Tag: string address }) ViewModel?.RemoveImapAccount(address);
+        if (sender is not FrameworkElement { Tag: string address } || ViewModel is not { } vm) return;
+        // Read the account first: after removal its host (and so its provider) is gone.
+        var account = vm.Settings.ImapAccounts.FirstOrDefault(a => ImapAccountPolicy.SameAccount(a, address));
+        vm.RemoveImapAccount(address);
+        if (account == null) return;
+        _revokeUrl = ImapAccountPolicy.RevokeUrl(account);
+        RevokeText.Text = ImapAccountPolicy.RemovedNotice(account);
+        RevokeButton.Visibility = _revokeUrl == null ? Visibility.Collapsed : Visibility.Visible;
+        RevokePanel.Visibility = Visibility.Visible;
+    }
+
+    private void Revoke_Click(object sender, RoutedEventArgs e)
+    {
+        if (_revokeUrl == null) return;
+        try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(_revokeUrl) { UseShellExecute = true }); }
+        catch (Exception ex) { MochiDock.Services.AppLog.Warn("Mail", ex); }
+    }
+
+    private void RevokeDone_Click(object sender, RoutedEventArgs e)
+    {
+        RevokePanel.Visibility = Visibility.Collapsed;
+        _revokeUrl = null;
     }
 
     private void FilterAds_Changed(object sender, RoutedEventArgs e)

@@ -54,6 +54,18 @@ public static class ImapAccountPolicy
         uids.Where(u => u > baseline).OrderBy(u => u).TakeLast(max).ToList();
 
     /// <summary>
+    /// Where the account's app password is revoked: the provider's app-password or security page (the same page that creates one),
+    /// or null for a server MochiDock does not know. Removing an account only deletes the copy on this PC; no provider lets an app
+    /// revoke its own app password, so the user has to do it there.
+    /// </summary>
+    public static string? RevokeUrl(ImapAccount account) => PresetFor(account.Host)?.HelpUrl;
+
+    /// <summary>The note shown after an account is removed, reminding that the app password itself still works until revoked.</summary>
+    public static string RemovedNotice(ImapAccount account) => PresetFor(account.Host) is { } preset
+        ? $"{account.Address.Trim()} was removed from this PC. Its app password still works for your {preset.Name} account until you revoke it there."
+        : $"{account.Address.Trim()} was removed from this PC. Its app password still works on your mail server until you revoke it with your provider.";
+
+    /// <summary>
     /// Webmail address to open for a mail: Gmail goes to the right account, others to their inbox, unknown hosts to nothing.
     /// Gmail gets the address as the authuser query value: in the /mail/u/{x}/ path an escaped "@" (%40) is not decoded, and
     /// Gmail answers with "Temporary Error (404)".

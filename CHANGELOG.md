@@ -7,6 +7,7 @@ All notable changes to MochiDock are documented here. The format follows [Keep a
 ### Added
 
 - **Updates in quick settings**: a version button in the top-right of the dock's settings card, next to Reconnect. Click it to check for updates; when a new version is waiting it turns accent and reads "Update to x", and it shows the download progress (click to cancel). When the automatic check finds a new version, a capsule notice says so once; tap it to open the quick settings.
+- **Mail passwords**: removing a mail account now reminds you that its app password still works until you revoke it, with a button to the provider's app password page. Uninstalling always deletes saved passwords and secrets (mail app passwords, the WhatsApp server login, the calendar link), even when you keep your settings.
 - **Gmail link**: opening a Gmail notice in the browser no longer ends on Gmail's "Temporary Error (404)" page; the account is now passed in a form Gmail reads.
 - **Email settings**: a connected mail account now lines up with the rows below it (the address no longer floats in the middle of the row).
 

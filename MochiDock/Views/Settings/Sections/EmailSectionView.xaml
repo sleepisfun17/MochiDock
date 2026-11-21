@@ -28,6 +28,22 @@
             </ItemsControl.ItemTemplate>
         </ItemsControl>
         <TextBlock x:Name="NoImapText" Style="{StaticResource CardCaptionText}" Text="No mail account yet. Add one below to get new-mail notifications." Margin="0,0,0,6"/>
+        <!-- After Remove: the app password still works at the provider, and only the user can revoke it there. -->
+        <Border x:Name="RevokePanel" Visibility="Collapsed" Background="{DynamicResource IslandSubCardBackgroundBrush}" BorderBrush="{DynamicResource IslandWarningBrush}"
+                BorderThickness="1" CornerRadius="8" Padding="10,8" Margin="0,6,0,6">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock x:Name="RevokeText" Style="{StaticResource CardCaptionText}" TextWrapping="Wrap" VerticalAlignment="Center"/>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="8,0,0,0">
+                    <Button x:Name="RevokeButton" Style="{StaticResource ActionButton}" Content="Revoke it now" Click="Revoke_Click"
+                            ToolTip="Open the provider's app password page in the browser"/>
+                    <Button Style="{StaticResource ActionButton}" Content="Done" Click="RevokeDone_Click" Margin="8,0,0,0"/>
+                </StackPanel>
+            </Grid>
+        </Border>
         <s:SettingRow Label="Provider" Description="Pick your provider, or Other for any IMAP server.">
             <ComboBox x:Name="ProviderCombo" Style="{StaticResource ModernDarkComboBox}" Width="200" SelectionChanged="Provider_Changed" AutomationProperties.Name="Mail provider"/>
         </s:SettingRow>
