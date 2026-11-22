@@ -21,6 +21,7 @@ public sealed class OutlookHelperHost : IDisposable
 
     CancellationTokenSource? _cts;
     StreamWriter? _writer;
+    int _activeHelperPid;
     readonly object _writeGate = new();
 
     public event Action<OutlookMailDto>? MailArrived;
@@ -52,8 +53,11 @@ public sealed class OutlookHelperHost : IDisposable
         var cts = _cts;
         _cts = null;
         if (cts is null) return;
+        int pid = Volatile.Read(ref _activeHelperPid);
         Send(OutlookPipeMessage.Stop());
-        cts.Cancel();
+        try { cts.Cancel(); } catch (ObjectDisposedException) { }
+        cts.Dispose();
+        WaitOrKillHelper(pid, 2000);
     }
 
     /// <summary>Sends a new folder list to a running helper (it rebuilds its watched folders).</summary>
@@ -89,6 +93,7 @@ public sealed class OutlookHelperHost : IDisposable
                 using var server = CreateServer(pipeName);
 
                 helperPid = LaunchDeElevated(HelperPath, $"{pipeName} {secret}");
+                Volatile.Write(ref _activeHelperPid, helperPid);
                 AppLog.Warn("Outlook", "Started the non-elevated Outlook helper.");
 
                 using (var connectCts = CancellationTokenSource.CreateLinkedTokenSource(token))
@@ -126,6 +131,7 @@ public sealed class OutlookHelperHost : IDisposable
             catch (Exception ex) { AppLog.Warn("Outlook", "Outlook helper: " + ex.Message); }
             finally
             {
+                Volatile.Write(ref _activeHelperPid, 0);
                 lock (_writeGate) _writer = null;
                 KillHelper(helperPid);
             }
@@ -148,7 +154,30 @@ public sealed class OutlookHelperHost : IDisposable
     static void KillHelper(int pid)
     {
         if (pid <= 0) return;
-        try { using var process = Process.GetProcessById(pid); if (!process.HasExited) process.Kill(); }
+        try
+        {
+            using var process = Process.GetProcessById(pid);
+            if (!process.HasExited)
+            {
+                process.Kill();
+                process.WaitForExit(2000);
+            }
+        }
+        catch { /* already gone */ }
+    }
+
+    static void WaitOrKillHelper(int pid, int timeoutMs)
+    {
+        if (pid <= 0) return;
+        try
+        {
+            using var process = Process.GetProcessById(pid);
+            if (!process.HasExited && !process.WaitForExit(timeoutMs))
+            {
+                process.Kill();
+                process.WaitForExit(timeoutMs);
+            }
+        }
         catch { /* already gone */ }
     }
 

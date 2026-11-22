@@ -56,7 +56,7 @@ public class MediaService : IDisposable
             {
                 _sessionManager.CurrentSessionChanged += SessionManager_CurrentSessionChanged;
                 _sessionManager.SessionsChanged += SessionManager_SessionsChanged;
-                UpdateCurrentSession(_sessionManager.GetCurrentSession());
+                OnUI(() => UpdateCurrentSession(_sessionManager.GetCurrentSession()));
             }
 
             var uiDispatcher = System.Windows.Application.Current?.Dispatcher ?? Dispatcher.CurrentDispatcher;
@@ -105,7 +105,7 @@ public class MediaService : IDisposable
         GlobalSystemMediaTransportControlsSessionManager sender,
         SessionsChangedEventArgs args)
     {
-        UpdateCurrentSession(sender.GetCurrentSession());
+        OnUI(() => UpdateCurrentSession(sender.GetCurrentSession()));
     }
 
     private void CheckSessionValidity()
@@ -159,6 +159,7 @@ public class MediaService : IDisposable
 
     private void UpdateCurrentSession(GlobalSystemMediaTransportControlsSession? session)
     {
+        if (_disposed) return;
         if (_currentSession != null)
         {
             try
@@ -213,13 +214,14 @@ public class MediaService : IDisposable
 
     private void UpdateTimelineFromSession()
     {
-        if (_currentSession == null) return;
+        if (_disposed || _currentSession == null) return;
         try
         {
             var timeline = _currentSession.GetTimelineProperties();
             if (timeline != null)
             {
-                var playback=_currentSession.GetPlaybackInfo();
+                var playback = _currentSession.GetPlaybackInfo();
+                if (playback == null) return;
                 var duration=timeline.EndTime-timeline.StartTime;
                 var position=timeline.Position-timeline.StartTime;
                 var rate=playback.PlaybackRate??1;
@@ -233,7 +235,7 @@ public class MediaService : IDisposable
 
                 _lastMediaInfo.Position = _basePosition;
                 _lastMediaInfo.Duration = _totalDuration;
-                _lastMediaInfo.CanSeek = _totalDuration > TimeSpan.Zero && playback.Controls.IsPlaybackPositionEnabled;
+                _lastMediaInfo.CanSeek = _totalDuration > TimeSpan.Zero && (playback.Controls?.IsPlaybackPositionEnabled ?? false);
                 OnTimelineTick();
             }
         }
@@ -272,7 +274,7 @@ public class MediaService : IDisposable
         if(_disposed)return;
         if(!_dispatcher.CheckAccess()){OnUI(ScheduleRefresh);return;}
         var captured=_currentSession;var generation=_generation;var version=++_refreshVersion;
-        if (_currentSession == null)
+        if (captured == null)
         {
             EmitIdleMedia();
             return;
@@ -280,7 +282,7 @@ public class MediaService : IDisposable
 
         try
         {
-            var playback = _currentSession.GetPlaybackInfo();
+            var playback = captured.GetPlaybackInfo();
 
             if (playback == null ||
                 playback.PlaybackStatus == GlobalSystemMediaTransportControlsSessionPlaybackStatus.Closed ||
@@ -290,7 +292,7 @@ public class MediaService : IDisposable
                 return;
             }
 
-            var props = await captured!.TryGetMediaPropertiesAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(2));
+            var props = await captured.TryGetMediaPropertiesAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(2));
             if(_disposed||generation!=_generation||version!=_refreshVersion)return;
             if (props == null || string.IsNullOrWhiteSpace(props.Title))
             {
@@ -307,25 +309,26 @@ public class MediaService : IDisposable
             }
 
             _isPlaying = playback.PlaybackStatus == GlobalSystemMediaTransportControlsSessionPlaybackStatus.Playing;
+            var controls = playback.Controls;
 
             var info = new MediaInfo
             {
                 Title = props.Title,
                 Album = props.AlbumTitle ?? "",
-                SessionIdentity = _currentSession.SourceAppUserModelId,
+                SessionIdentity = captured.SourceAppUserModelId,
                 Artist = props.Artist ?? "",
-                AppSource = CleanAppSource(_currentSession.SourceAppUserModelId),
+                AppSource = CleanAppSource(captured.SourceAppUserModelId),
                 IsPlaying = _isPlaying,
-                CanPlay = playback.Controls.IsPlayEnabled,
-                CanPause = playback.Controls.IsPauseEnabled,
-                CanSkipNext = playback.Controls.IsNextEnabled,
-                CanSkipPrev = playback.Controls.IsPreviousEnabled
+                CanPlay = controls?.IsPlayEnabled ?? false,
+                CanPause = controls?.IsPauseEnabled ?? false,
+                CanSkipNext = controls?.IsNextEnabled ?? false,
+                CanSkipPrev = controls?.IsPreviousEnabled ?? false
             };
 
             // Pull Timeline
             try
             {
-                var timeline = _currentSession.GetTimelineProperties();
+                var timeline = captured.GetTimelineProperties();
                 if (timeline != null)
                 {
                     _basePosition = timeline.Position;
@@ -334,7 +337,7 @@ public class MediaService : IDisposable
 
                     info.Position = _basePosition;
                     info.Duration = _totalDuration;
-                    info.CanSeek = _totalDuration > TimeSpan.Zero && playback.Controls.IsPlaybackPositionEnabled;
+                    info.CanSeek = _totalDuration > TimeSpan.Zero && (controls?.IsPlaybackPositionEnabled ?? false);
                 }
             }
             catch (System.Exception logEx) { MochiDock.Services.AppLog.Warn("Media", logEx); }

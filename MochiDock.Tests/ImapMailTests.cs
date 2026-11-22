@@ -112,6 +112,35 @@ public class MailCredentialStoreTests : IDisposable
         Assert.DoesNotContain("assword", json);
         Assert.Empty(JsonSerializer.Deserialize<AppSettings>("{}")!.ImapAccounts);
     }
+
+    [Fact]
+    public void SaveThrowsAndPreservesExistingEntriesWhenStoreIsLocked()
+    {
+        string path = Path.Combine(_dir, "mail.dat");
+        var store = new MailCredentialStore(path, new PlainProtector());
+        store.Save("first@gmail.com", "pass-one");
+
+        using (new FileStream(path, FileMode.Open, FileAccess.ReadWrite, FileShare.None))
+        {
+            Assert.ThrowsAny<IOException>(() => store.Save("second@gmail.com", "pass-two"));
+        }
+
+        Assert.Equal("pass-one", store.Load("first@gmail.com"));
+        Assert.Null(store.Load("second@gmail.com"));
+    }
+
+    [Fact]
+    public void SaveThrowsAndDoesNotOverwriteCorruptStore()
+    {
+        string path = Path.Combine(_dir, "mail.dat");
+        Directory.CreateDirectory(_dir);
+        byte[] garbage = [1, 2, 3, 4];
+        File.WriteAllBytes(path, garbage);
+        var store = new MailCredentialStore(path, new PlainProtector());
+
+        Assert.ThrowsAny<JsonException>(() => store.Save("second@gmail.com", "pass-two"));
+        Assert.Equal(garbage, File.ReadAllBytes(path));
+    }
 }
 
 public class ImapMailServiceTests : IDisposable

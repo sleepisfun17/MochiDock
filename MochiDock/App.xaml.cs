@@ -9,6 +9,8 @@ namespace MochiDock;
 public partial class App : System.Windows.Application
 {
     private static Mutex? _singleInstanceMutex;
+    private EventWaitHandle? _exitSignal;
+    private RegisteredWaitHandle? _exitSignalWait;
     private MediaService? _mediaService;
     private IMailService? _mailService;
     private GowaService? _gowaService;
@@ -113,6 +115,16 @@ public partial class App : System.Windows.Application
         }
 
         base.OnStartup(e);
+        try
+        {
+            _exitSignal = new EventWaitHandle(false, EventResetMode.ManualReset, "Global\\MochiDockExitSignal");
+            _exitSignalWait = ThreadPool.RegisterWaitForSingleObject(_exitSignal, (_, timedOut) =>
+            {
+                if (!timedOut && !Dispatcher.HasShutdownStarted)
+                    Dispatcher.BeginInvoke(() => Shutdown());
+            }, null, -1, executeOnlyOnce: true);
+        }
+        catch (Exception ex) { MochiDock.Services.AppLog.Warn("App", ex); }
         SettingsService.PersistenceError += ReportPersistenceError;
         AtomicJsonStore.Error += message => System.Diagnostics.Debug.WriteLine(message);
 
@@ -204,6 +216,8 @@ public partial class App : System.Windows.Application
 
         try
         {
+            _exitSignalWait?.Unregister(null);
+            _exitSignal?.Dispose();
             _singleInstanceMutex?.ReleaseMutex();
             _singleInstanceMutex?.Dispose();
         }

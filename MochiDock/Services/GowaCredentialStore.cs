@@ -35,8 +35,7 @@ public static class GowaCredentialStore
         try
         {
             if (string.IsNullOrWhiteSpace(user)) { Clear(); return; }
-            Directory.CreateDirectory(Path.GetDirectoryName(FilePath)!);
-            File.WriteAllBytes(FilePath, Protector.Protect(Encoding.UTF8.GetBytes(user.Trim() + "\n" + password)));
+            DpapiProtector.WriteAtomicBytes(FilePath, Protector.Protect(Encoding.UTF8.GetBytes(user.Trim() + "\n" + password)));
         }
         catch (Exception ex)
         {

@@ -26,30 +26,25 @@ public sealed class MailCredentialStore
 
     private Dictionary<string, string> ReadAll()
     {
-        try
-        {
-            if (!File.Exists(_path)) return new(StringComparer.OrdinalIgnoreCase);
-            var json = Encoding.UTF8.GetString(_protector.Unprotect(File.ReadAllBytes(_path)));
-            var map = JsonSerializer.Deserialize<Dictionary<string, string>>(json) ?? new();
-            return new Dictionary<string, string>(map, StringComparer.OrdinalIgnoreCase);
-        }
-        catch (Exception ex)
-        {
-            AppLog.Warn("Mail", ex);
-            return new(StringComparer.OrdinalIgnoreCase);
-        }
+        if (!File.Exists(_path)) return new(StringComparer.OrdinalIgnoreCase);
+        var json = Encoding.UTF8.GetString(_protector.Unprotect(File.ReadAllBytes(_path)));
+        var map = JsonSerializer.Deserialize<Dictionary<string, string>>(json) ?? throw new JsonException("Credential store root cannot be null.");
+        return new Dictionary<string, string>(map, StringComparer.OrdinalIgnoreCase);
     }
 
     private void WriteAll(Dictionary<string, string> map)
     {
         if (map.Count == 0) { if (File.Exists(_path)) File.Delete(_path); return; }
-        Directory.CreateDirectory(Path.GetDirectoryName(_path)!);
-        File.WriteAllBytes(_path, _protector.Protect(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(map))));
+        DpapiProtector.WriteAtomicBytes(_path, _protector.Protect(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(map))));
     }
 
     public string? Load(string address)
     {
-        lock (_gate) return ReadAll().TryGetValue(address.Trim(), out var p) ? p : null;
+        lock (_gate)
+        {
+            try { return ReadAll().TryGetValue(address.Trim(), out var p) ? p : null; }
+            catch (Exception ex) { AppLog.Warn("Mail", ex); return null; }
+        }
     }
 
     public void Save(string address, string password)
@@ -62,7 +57,11 @@ public sealed class MailCredentialStore
                 map[address.Trim()] = password;
                 WriteAll(map);
             }
-            catch (Exception ex) { AppLog.Warn("Mail", ex); }
+            catch (Exception ex)
+            {
+                AppLog.Warn("Mail", ex);
+                throw;
+            }
         }
     }
 

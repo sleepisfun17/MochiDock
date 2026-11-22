@@ -94,7 +94,7 @@ public sealed class CalendarFeedService : IDisposable
         {
             Directory.CreateDirectory(_folder);
             var protectedBytes = _protector.Protect(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(new Secret { Url = uri.ToString() })));
-            File.WriteAllBytes(_secretPath, protectedBytes);
+            DpapiProtector.WriteAtomicBytes(_secretPath, protectedBytes);
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException or CryptographicException)
         {

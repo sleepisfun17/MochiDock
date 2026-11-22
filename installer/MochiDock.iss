@@ -92,19 +92,30 @@ begin
       Result := True;
 end;
 
+function EscapePsSingleQuoted(const S: String): String;
+begin
+  Result := S;
+  StringChange(Result, '''', '''''');
+end;
+
 procedure StopRunningApp(const AppDir: String);
 var
   ResultCode: Integer;
+  EscapedDir: String;
   Script: String;
 begin
-  { Close gracefully (10 s), then kill; only the copy running from AppDir. }
+  { Signal hidden/visible MochiDock to exit gracefully (10 s), then kill; also stop GOWA and OutlookHelper under AppDir. }
+  EscapedDir := EscapePsSingleQuoted(AddBackslash(AppDir));
   Script :=
-    '$p=''' + AddBackslash(AppDir) + '{#MyAppExe}''; ' +
+    'try { $ev=[System.Threading.EventWaitHandle]::OpenExisting(''Global\MochiDockExitSignal''); $null=$ev.Set(); $ev.Dispose() } catch {}; ' +
+    '$p=''' + EscapedDir + '{#MyAppExe}''; ' +
     'Get-Process MochiDock -ErrorAction SilentlyContinue | Where-Object { $_.Path -eq $p } | ForEach-Object { ' +
     '[void]$_.CloseMainWindow(); if (-not $_.WaitForExit(10000)) { $_.Kill(); [void]$_.WaitForExit(10000) } }; ' +
-    { The GOWA engine is a child process; a killed or crashed app leaves it running and locks GOWA\windows-amd64.exe. }
-    '$g=''' + AddBackslash(AppDir) + 'GOWA\windows-amd64.exe''; ' +
-    'Get-Process windows-amd64 -ErrorAction SilentlyContinue | Where-Object { $_.Path -eq $g } | ForEach-Object { $_.Kill(); [void]$_.WaitForExit(10000) }';
+    { The GOWA engine and OutlookHelper are child processes; a killed or crashed app leaves them running and locks files. }
+    '$g=''' + EscapedDir + 'GOWA\windows-amd64.exe''; ' +
+    'Get-Process windows-amd64 -ErrorAction SilentlyContinue | Where-Object { $_.Path -eq $g } | ForEach-Object { $_.Kill(); [void]$_.WaitForExit(10000) }; ' +
+    '$o=''' + EscapedDir + 'OutlookHelper\MochiDock.OutlookHelper.exe''; ' +
+    'Get-Process ''MochiDock.OutlookHelper'' -ErrorAction SilentlyContinue | Where-Object { $_.Path -eq $o } | ForEach-Object { $_.Kill(); [void]$_.WaitForExit(10000) }';
   Exec(ExpandConstant('{sys}\WindowsPowerShell\v1.0\powershell.exe'),
     '-NoProfile -ExecutionPolicy Bypass -Command "' + Script + '"', '',
     SW_HIDE, ewWaitUntilTerminated, ResultCode);

@@ -60,6 +60,7 @@ try {
         if ($instance.Path -ne $executable) { continue }
         $matchingInstances++
         Write-PublishMessage "Requesting normal exit from MochiDock PID $($instance.Id); waiting up to 10 seconds..."
+        try { $ev = [System.Threading.EventWaitHandle]::OpenExisting('Global\MochiDockExitSignal'); $null = $ev.Set(); $ev.Dispose() } catch {}
         $null = $instance.CloseMainWindow()
         if (-not $instance.WaitForExit(10000)) {
             $instance.Refresh()
@@ -68,6 +69,20 @@ try {
                 $instance.Kill()
                 if (-not $instance.WaitForExit(10000)) { throw "MochiDock did not stop after forced termination." }
             }
+        }
+    }
+    if (-not $Installer) {
+        $gowaExe = Join-Path $destination 'GOWA\windows-amd64.exe'
+        foreach ($proc in @(Get-Process -Name windows-amd64 -ErrorAction SilentlyContinue | Where-Object { $_.Path -eq $gowaExe })) {
+            Write-PublishMessage "Stopping lingering GOWA process PID $($proc.Id)..."
+            $proc.Kill()
+            [void]$proc.WaitForExit(10000)
+        }
+        $helperExe = Join-Path $destination 'OutlookHelper\MochiDock.OutlookHelper.exe'
+        foreach ($proc in @(Get-Process -Name 'MochiDock.OutlookHelper' -ErrorAction SilentlyContinue | Where-Object { $_.Path -eq $helperExe })) {
+            Write-PublishMessage "Stopping lingering OutlookHelper process PID $($proc.Id)..."
+            $proc.Kill()
+            [void]$proc.WaitForExit(10000)
         }
     }
     if ($Installer) {

@@ -132,7 +132,8 @@ public partial class MainViewModel
         account.Host = account.Host.Trim();
         string failure = await imap.TestAsync(account, password.Trim(), CancellationToken.None);
         if (failure.Length > 0) return failure;
-        MailCredentialStore.Default.Save(account.Address, password.Trim());
+        try { MailCredentialStore.Default.Save(account.Address, password.Trim()); }
+        catch (Exception ex) { return "Could not save the app password: " + ex.Message; }
         UpdateSettings(x =>
         {
             x.ImapAccounts.RemoveAll(a => MochiDock.Core.ImapAccountPolicy.SameAccount(a, account.Address));
