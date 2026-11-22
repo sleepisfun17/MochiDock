@@ -15,6 +15,17 @@ public static class HardwareChartMath
         while (queue.Count > maxSamples) queue.Dequeue();
     }
 
+    /// <summary>
+    /// X of sample <paramref name="index"/> of <paramref name="count"/> in a chart that holds <paramref name="capacity"/> samples:
+    /// slots are a fixed width apart and the newest sample sits at the right edge, so a buffer that is still filling grows in
+    /// from the right instead of stretching its first two samples across the whole chart. A full buffer spans 0..width as before.
+    /// </summary>
+    public static double SlotX(int index, int count, double width, int capacity = DefaultHistoryCapacity)
+    {
+        double step = width / Math.Max(1, Math.Max(capacity, count) - 1);
+        return width - (count - 1 - index) * step;
+    }
+
     public static float PickFpsCeiling(double peakFps)
     {
         foreach (float candidate in FpsCeilings)
@@ -23,20 +34,21 @@ public static class HardwareChartMath
     }
 
     public static (IReadOnlyList<ChartPoint> Line, IReadOnlyList<ChartPoint> Fill) BuildAreaSeries(
-        IReadOnlyCollection<double> samples, double width, double height, double maxVal)
+        IReadOnlyCollection<double> samples, double width, double height, double maxVal, int capacity = DefaultHistoryCapacity)
     {
         if (samples.Count == 0)
             return (Array.Empty<ChartPoint>(), Array.Empty<ChartPoint>());
 
-        var line = new List<ChartPoint>(samples.Count);
-        var fill = new List<ChartPoint>(samples.Count + 2) { new(0, height) };
-        double wStep = width / Math.Max(1, samples.Count - 1);
+        int count = samples.Count;
+        var line = new List<ChartPoint>(count);
+        // The area starts under the oldest sample, not at the left edge, while the buffer is still filling.
+        var fill = new List<ChartPoint>(count + 2) { new(SlotX(0, count, width, capacity), height) };
         double clampedMax = Math.Max(1.0, maxVal);
         int idx = 0;
 
         foreach (double val in samples)
         {
-            double x = idx * wStep;
+            double x = SlotX(idx, count, width, capacity);
             double frac = Math.Clamp(val / clampedMax, 0.0, 1.0);
             double y = height - (frac * (height - 3.0));
             var pt = new ChartPoint(x, y);
@@ -50,7 +62,7 @@ public static class HardwareChartMath
     }
 
     public static (IReadOnlyList<ChartPoint> UpLine, IReadOnlyList<ChartPoint> UpFill, IReadOnlyList<ChartPoint> DownLine, IReadOnlyList<ChartPoint> DownFill, double NiceCeiling) BuildMirroredSeries(
-        IReadOnlyCollection<double> upSamples, IReadOnlyCollection<double> downSamples, double width, double height)
+        IReadOnlyCollection<double> upSamples, IReadOnlyCollection<double> downSamples, double width, double height, int capacity = DefaultHistoryCapacity)
     {
         double maxUp = upSamples.Count > 0 ? upSamples.Max() : 0.0;
         double maxDown = downSamples.Count > 0 ? downSamples.Max() : 0.0;
@@ -62,14 +74,15 @@ public static class HardwareChartMath
 
         double mid = Math.Round(height / 2.0);
         double halfH = mid - 4.0;
-        double wStep = width / Math.Max(1, count - 1);
 
-        var upLine = new List<ChartPoint>(upSamples.Count);
-        var upFill = new List<ChartPoint>(upSamples.Count + 2) { new(0, mid) };
+        // Each half is right-anchored on its own count, so both end at the newest sample.
+        int upCount = upSamples.Count;
+        var upLine = new List<ChartPoint>(upCount);
+        var upFill = new List<ChartPoint>(upCount + 2) { new(upCount > 0 ? SlotX(0, upCount, width, capacity) : width, mid) };
         int i = 0;
         foreach (double val in upSamples)
         {
-            double x = i++ * wStep;
+            double x = SlotX(i++, upCount, width, capacity);
             double frac = Math.Clamp(val / niceCeil, 0.0, 1.0);
             var pt = new ChartPoint(x, mid - (frac * halfH));
             upLine.Add(pt);
@@ -77,12 +90,13 @@ public static class HardwareChartMath
         }
         upFill.Add(new(width, mid));
 
-        var downLine = new List<ChartPoint>(downSamples.Count);
-        var downFill = new List<ChartPoint>(downSamples.Count + 2) { new(0, mid) };
+        int downCount = downSamples.Count;
+        var downLine = new List<ChartPoint>(downCount);
+        var downFill = new List<ChartPoint>(downCount + 2) { new(downCount > 0 ? SlotX(0, downCount, width, capacity) : width, mid) };
         i = 0;
         foreach (double val in downSamples)
         {
-            double x = i++ * wStep;
+            double x = SlotX(i++, downCount, width, capacity);
             double frac = Math.Clamp(val / niceCeil, 0.0, 1.0);
             var pt = new ChartPoint(x, mid + (frac * halfH));
             downLine.Add(pt);
@@ -93,16 +107,16 @@ public static class HardwareChartMath
         return (upLine, upFill, downLine, downFill, niceCeil);
     }
 
-    public static IReadOnlyList<ChartPoint> BuildChipSparkline(IReadOnlyCollection<double> samples, double ceiling)
+    public static IReadOnlyList<ChartPoint> BuildChipSparkline(IReadOnlyCollection<double> samples, double ceiling, int capacity = DefaultHistoryCapacity)
     {
         if (samples.Count == 0) return Array.Empty<ChartPoint>();
-        var result = new List<ChartPoint>(samples.Count);
-        double wStep = 78.5 / Math.Max(1, samples.Count - 1);
+        int count = samples.Count;
+        var result = new List<ChartPoint>(count);
         double denom = Math.Max(1.0, ceiling);
         int index = 0;
         foreach (double value in samples)
         {
-            double x = 0.75 + index++ * wStep;
+            double x = 0.75 + SlotX(index++, count, 78.5, capacity);
             double fraction = Math.Clamp(value / denom, 0.0, 1.0);
             result.Add(new(x, 0.75 + (1.0 - fraction) * 2.5));
         }
