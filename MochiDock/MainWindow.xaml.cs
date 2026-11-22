@@ -81,10 +81,8 @@ public partial class MainWindow : Window
 
     private readonly DispatcherTimer _mouseLeaveTimer;
     private readonly DispatcherTimer _volumeOverlayTimer;
-    private readonly DispatcherTimer _volumeWatcherTimer;
     private bool _isAdjustingVolume;
     private readonly DispatcherTimer _topmostWatchdogTimer;
-    private readonly AudioEndpointService _audioService = new();
     private readonly DisplayResolutionService _resolutionService = new();
     private DispatcherTimer? _resolutionNoticeTimer;
     private HwndSource? _hwndSource;
@@ -206,29 +204,7 @@ public partial class MainWindow : Window
             UpdateCompactPillWidth();
         };
 
-        // System-wide volume changes watcher (keyboard knob, taskbar scroll, external devices)
-        _volumeWatcherTimer = new DispatcherTimer(DispatcherPriority.Background)
-        {
-            Interval = TimeSpan.FromMilliseconds(65)
-        };
-        _audioService.MasterVolumeChanged += (vol, muted) =>
-        {
-            if (_policyHidden || _viewModel.IsExpanded) return;
-            _hoverExpandTimer.Stop();
-            _isHoverNudged = false;
-            _isAdjustingVolume = true;
-            CompactPillBorder.BeginAnimation(HeightProperty, null);
-            CompactPillBorder.Height = GetCurrentCompactTargetHeight();
-            ShowCapsuleVolume(vol, muted);
-        };
-        _volumeWatcherTimer.Tick += (s, e) =>
-        {
-            if (!_policyHidden && !_viewModel.IsExpanded)
-            {
-                _audioService.CheckVolumeState();
-            }
-        };
-        _volumeWatcherTimer.Start();
+        _viewModel.AudioService.MasterVolumeChanged += OnMasterVolumeChanged;
 
         // Load authentic Mochi Icon for System Tray
         Icon trayAppIcon = SystemIcons.Application;
@@ -256,7 +232,7 @@ public partial class MainWindow : Window
 
         Loaded += MainWindow_Loaded;
         Loaded += (_,_)=>{if(_powerNotifications!=null)return;_powerNotifications=new(new WindowInteropHelper(this).Handle);_powerNotifications.DisplayChanged+=OnConsoleDisplayChanged;_powerNotifications.PowerChanged+=OnSystemPowerChanged;_viewModel.PowerNoticeRequested+=ShowPowerNotice;_viewModel.OnPowerState(MochiDock.Services.BatteryStatus.Read());_policyTimer.Tick+=PolicyTick;_policyTimer.Start();};
-        Closed += (_,_)=>{_batteryWidget?.Dispose();_batteryWidget=null;_powerNoticeTimer?.Stop();_viewModel.PowerNoticeRequested-=ShowPowerNotice;HeaderPillOverlay.Cancel();_viewModel.StopPresentationTimers();_windowClosed=true;_expansionTransition.Invalidate();_hoverExpandTimer.Stop();_mouseLeaveTimer.Stop();_takeoverTimeoutTimer.Stop();_volumeOverlayTimer?.Stop();_volumeWatcherTimer?.Stop();_topmostWatchdogTimer?.Stop();SystemEvents.SessionSwitch-=SystemEvents_SessionSwitch;SystemEvents.DisplaySettingsChanged-=SystemEvents_DisplaySettingsChanged;if(_hwndSource!=null){try{var h=new WindowInteropHelper(this);if(h.Handle!=IntPtr.Zero){UnregisterHotKey(h.Handle,HOTKEY_ID_RESOLUTION);UnregisterHotKey(h.Handle,HOTKEY_ID_SCRIPT);UnregisterWindowSizeShortcuts(h.Handle);}_hwndSource.RemoveHook(HwndMessageHook);}catch (System.Exception logEx) { MochiDock.Services.AppLog.Warn("Window", logEx); }}_resolutionNoticeTimer?.Stop();_viewModel.IsDockInteractionActive=null;_viewModel.StopHardwareCapture();_policyTimer.Stop();_policyTimer.Tick-=PolicyTick;if(_powerNotifications!=null){_powerNotifications.DisplayChanged-=OnConsoleDisplayChanged;_powerNotifications.PowerChanged-=OnSystemPowerChanged;_powerNotifications.Dispose();_powerNotifications=null;}};
+        Closed += (_,_)=>{_batteryWidget?.Dispose();_batteryWidget=null;_powerNoticeTimer?.Stop();_viewModel.PowerNoticeRequested-=ShowPowerNotice;_viewModel.AudioService.MasterVolumeChanged-=OnMasterVolumeChanged;_viewModel.AudioService.Dispose();HeaderPillOverlay.Cancel();_viewModel.StopPresentationTimers();_windowClosed=true;_expansionTransition.Invalidate();_hoverExpandTimer.Stop();_mouseLeaveTimer.Stop();_takeoverTimeoutTimer.Stop();_volumeOverlayTimer?.Stop();_topmostWatchdogTimer?.Stop();SystemEvents.SessionSwitch-=SystemEvents_SessionSwitch;SystemEvents.DisplaySettingsChanged-=SystemEvents_DisplaySettingsChanged;if(_hwndSource!=null){try{var h=new WindowInteropHelper(this);if(h.Handle!=IntPtr.Zero){UnregisterHotKey(h.Handle,HOTKEY_ID_RESOLUTION);UnregisterHotKey(h.Handle,HOTKEY_ID_SCRIPT);UnregisterWindowSizeShortcuts(h.Handle);}_hwndSource.RemoveHook(HwndMessageHook);}catch (System.Exception logEx) { MochiDock.Services.AppLog.Warn("Window", logEx); }}_resolutionNoticeTimer?.Stop();_viewModel.IsDockInteractionActive=null;_viewModel.StopHardwareCapture();_policyTimer.Stop();_policyTimer.Tick-=PolicyTick;if(_powerNotifications!=null){_powerNotifications.DisplayChanged-=OnConsoleDisplayChanged;_powerNotifications.PowerChanged-=OnSystemPowerChanged;_powerNotifications.Dispose();_powerNotifications=null;}};
 
         Closing += MainWindow_Closing;
 
@@ -386,17 +362,25 @@ public partial class MainWindow : Window
 
     private async void ShowModernTrayMenu()
     {
-        try { _settings.StartWithWindows = await StartupService.RefreshAsync(); }
-        catch (Exception ex) { System.Diagnostics.Debug.WriteLine("Startup status: " + ex.Message); }
-        _trayContextMenu = CreateModernTrayMenu();
-        _trayContextMenu.Placement = System.Windows.Controls.Primitives.PlacementMode.MousePoint;
-        _trayContextMenu.PlacementTarget = this;
+        try
+        {
+            try { _settings.StartWithWindows = await StartupService.RefreshAsync(); }
+            catch (Exception ex) { MochiDock.Services.AppLog.Warn("Window", ex); }
+            if (_windowClosed) return;
+            _trayContextMenu = CreateModernTrayMenu();
+            _trayContextMenu.Placement = System.Windows.Controls.Primitives.PlacementMode.MousePoint;
+            _trayContextMenu.PlacementTarget = this;
 
-        // Bring main window handle to foreground so clicking outside smoothly dismisses popup
-        var helper = new WindowInteropHelper(this);
-        SetForegroundWindow(helper.Handle);
+            // Bring main window handle to foreground so clicking outside smoothly dismisses popup
+            var helper = new WindowInteropHelper(this);
+            SetForegroundWindow(helper.Handle);
 
-        _trayContextMenu.IsOpen = true;
+            _trayContextMenu.IsOpen = true;
+        }
+        catch (Exception ex)
+        {
+            MochiDock.Services.AppLog.Warn("Window", ex);
+        }
     }
 
     // Right-click on the taskbar battery widget: refresh, open the Battery page, hide the widget. Raised on the UI thread by the widget.
@@ -792,14 +776,18 @@ public partial class MainWindow : Window
             try
             {
                 bool startWithWindows = await StartupService.InitializeAsync();
-                Dispatcher.Invoke(() =>
+                if (!_windowClosed && !Dispatcher.HasShutdownStarted)
                 {
-                    if (_settings.StartWithWindows != startWithWindows)
+                    _ = Dispatcher.BeginInvoke(() =>
                     {
-                        _settings.StartWithWindows = startWithWindows;
-                        SettingsService.Save(_settings);
-                    }
-                });
+                        if (_windowClosed) return;
+                        if (_settings.StartWithWindows != startWithWindows)
+                        {
+                            _settings.StartWithWindows = startWithWindows;
+                            SettingsService.Save(_settings);
+                        }
+                    });
+                }
             }
             catch (Exception ex) { System.Diagnostics.Debug.WriteLine("Startup initialization: " + ex.Message); }
         });
@@ -1646,6 +1634,21 @@ public partial class MainWindow : Window
         ExpandedBorder.BeginAnimation(HeightProperty, hAnim);
     }
 
+    private void OnMasterVolumeChanged(float vol, bool muted)
+    {
+        if (_windowClosed || Dispatcher.HasShutdownStarted) return;
+        Dispatcher.BeginInvoke(() =>
+        {
+            if (_windowClosed || _policyHidden || _viewModel.IsExpanded) return;
+            _hoverExpandTimer.Stop();
+            _isHoverNudged = false;
+            _isAdjustingVolume = true;
+            CompactPillBorder.BeginAnimation(HeightProperty, null);
+            CompactPillBorder.Height = GetCurrentCompactTargetHeight();
+            ShowCapsuleVolume(vol, muted);
+        });
+    }
+
     private void CompactPill_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
     {
         e.Handled = true;
@@ -1656,8 +1659,8 @@ public partial class MainWindow : Window
         CompactPillBorder.Height = GetCurrentCompactTargetHeight();
 
         float delta = e.Delta > 0 ? 2f : -2f;
-        float newVol = _audioService.AdjustMasterVolume(delta);
-        ShowCapsuleVolume(newVol, _audioService.IsMuted());
+        float newVol = _viewModel.AudioService.AdjustMasterVolume(delta);
+        ShowCapsuleVolume(newVol, _viewModel.AudioService.IsMuted());
     }
 
     private void CompactPill_MouseDown(object sender, MouseButtonEventArgs e)
@@ -1671,8 +1674,8 @@ public partial class MainWindow : Window
             CompactPillBorder.BeginAnimation(HeightProperty, null);
             CompactPillBorder.Height = GetCurrentCompactTargetHeight();
 
-            bool isMuted = _audioService.ToggleMute();
-            float vol = _audioService.GetMasterVolume();
+            bool isMuted = _viewModel.AudioService.ToggleMute();
+            float vol = _viewModel.AudioService.GetMasterVolume();
             ShowCapsuleVolume(vol, isMuted);
         }
         else if (e.ChangedButton == MouseButton.Left)

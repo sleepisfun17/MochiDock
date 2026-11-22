@@ -105,9 +105,17 @@ try {
         if ($Installer) { $publishArgs += @('-r','win-x64','--self-contained','true') }
         & dotnet publish (Join-Path $repo 'MochiDock\MochiDock.csproj') @publishArgs 2>&1 | ForEach-Object { Write-PublishMessage $_.ToString() }
         if ($LASTEXITCODE -eq 0 -and $Installer) {
-            # The app project skips its framework-dependent helper copy when self-contained; publish the helper with the same runtime.
-            Write-PublishMessage 'Publishing the self-contained Outlook helper...'
-            & dotnet publish (Join-Path $repo 'MochiDock.OutlookHelper\MochiDock.OutlookHelper.csproj') -c Release -r win-x64 --self-contained true -o (Join-Path $destination 'OutlookHelper') --source https://api.nuget.org/v3/index.json --verbosity minimal --nologo 2>&1 | ForEach-Object { Write-PublishMessage $_.ToString() }
+            # Publish the helper self-contained to a temp folder, then colocate only its 4 apphost/metadata files in the app root
+            # so it shares the single root .NET 8 runtime (~71 MB saved) while keeping its non-elevated asInvoker manifest.
+            Write-PublishMessage 'Publishing the Outlook helper (sharing root .NET 8 runtime)...'
+            $helperStage = Join-Path $destination '_helper_stage'
+            & dotnet publish (Join-Path $repo 'MochiDock.OutlookHelper\MochiDock.OutlookHelper.csproj') -c Release -r win-x64 --self-contained true -o $helperStage --source https://api.nuget.org/v3/index.json --verbosity minimal --nologo 2>&1 | ForEach-Object { Write-PublishMessage $_.ToString() }
+            if ($LASTEXITCODE -eq 0) {
+                foreach ($name in @('MochiDock.OutlookHelper.exe','MochiDock.OutlookHelper.dll','MochiDock.OutlookHelper.deps.json','MochiDock.OutlookHelper.runtimeconfig.json')) {
+                    Copy-Item -LiteralPath (Join-Path $helperStage $name) -Destination (Join-Path $destination $name) -Force
+                }
+                Remove-Item -LiteralPath $helperStage -Recurse -Force
+            }
         }
         $publishCode = $LASTEXITCODE
     } finally { $ErrorActionPreference = $previousErrorPreference }
@@ -123,17 +131,18 @@ try {
     if ($LASTEXITCODE -ne 0) { throw "Relay publish failed with exit code $LASTEXITCODE." }
     $stage = 'validating published assets'
     Write-PublishMessage '[4/5] Validating required files and runtime configuration...'
-    $required = @('MochiDock.exe','MochiDock.dll','MochiDock.deps.json','MochiDock.runtimeconfig.json','icon.ico','GOWA\windows-amd64.exe','GOWA\readme.md','install-startup.ps1','uninstall-startup.ps1','OutlookHelper\MochiDock.OutlookHelper.exe','OutlookHelper\MochiDock.OutlookHelper.dll','OutlookHelper\MochiDock.OutlookHelper.runtimeconfig.json')
+    $helperRel = if ($Installer) { @('MochiDock.OutlookHelper.exe','MochiDock.OutlookHelper.dll','MochiDock.OutlookHelper.deps.json','MochiDock.OutlookHelper.runtimeconfig.json') } else { @('OutlookHelper\MochiDock.OutlookHelper.exe','OutlookHelper\MochiDock.OutlookHelper.dll','OutlookHelper\MochiDock.OutlookHelper.runtimeconfig.json') }
+    $required = @('MochiDock.exe','MochiDock.dll','MochiDock.deps.json','MochiDock.runtimeconfig.json','icon.ico','GOWA\windows-amd64.exe','GOWA\readme.md','install-startup.ps1','uninstall-startup.ps1') + $helperRel
     foreach ($relative in $required) {
         $file = Get-Item -LiteralPath (Join-Path $destination $relative)
         if ($file.Length -eq 0) { throw "Empty published file: $relative" }
     }
     $null = Get-Content -LiteralPath (Join-Path $destination 'MochiDock.runtimeconfig.json') -Raw | ConvertFrom-Json
     if ($Installer) {
-        foreach ($relative in @('hostfxr.dll','coreclr.dll','OutlookHelper\hostfxr.dll','OutlookHelper\coreclr.dll')) {
+        foreach ($relative in @('hostfxr.dll','coreclr.dll')) {
             if (-not (Test-Path -LiteralPath (Join-Path $destination $relative))) { throw "Self-contained runtime file missing: $relative" }
         }
-        foreach ($relative in @('MochiDock.runtimeconfig.json','OutlookHelper\MochiDock.OutlookHelper.runtimeconfig.json')) {
+        foreach ($relative in @('MochiDock.runtimeconfig.json','MochiDock.OutlookHelper.runtimeconfig.json')) {
             $runtime = (Get-Content -LiteralPath (Join-Path $destination $relative) -Raw | ConvertFrom-Json).runtimeOptions
             if ($runtime.framework -or $runtime.frameworks) { throw "$relative still references a shared framework." }
         }

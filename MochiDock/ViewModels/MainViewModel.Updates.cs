@@ -260,7 +260,7 @@ public partial class MainViewModel
         }
         catch (OperationCanceledException) { _updateStatus = "Update cancelled."; }
         catch (UpdateVerificationException ex) { _updateStatus = ex.Message; AppLog.Warn("Update", ex); }
-        catch (Exception ex) when (ex is System.Net.Http.HttpRequestException or System.IO.IOException or UnauthorizedAccessException or System.ComponentModel.Win32Exception or TaskCanceledException)
+        catch (Exception ex)
         {
             _updateStatus = "The update could not be downloaded or started. Try again, or install it from the release page.";
             AppLog.Warn("Update", ex);

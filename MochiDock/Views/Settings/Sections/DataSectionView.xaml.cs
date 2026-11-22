@@ -66,7 +66,7 @@ public partial class DataSectionView : UserControl
         catch (Exception ex) { System.Windows.MessageBox.Show(ex.Message, "MochiDock settings"); }
     }
 
-    private void Import_Click(object sender, RoutedEventArgs e)
+    private async void Import_Click(object sender, RoutedEventArgs e)
     {
         ImportRow.Validation = "";
         var dialog = new Microsoft.Win32.OpenFileDialog { Filter = "MochiDock settings (*.json)|*.json" };
@@ -77,7 +77,7 @@ public partial class DataSectionView : UserControl
             var import = SettingsService.ReadImport(dialog.FileName);
             var tasks = import.Tasks is { } list ? TasksService.ParseTasks(list) : null;
             SettingsService.CommitImport(import.Settings);
-            ViewModel.ApplyImportedSettings(import.Settings);
+            await ViewModel.ApplyImportedSettings(import.Settings);
             if (tasks != null) TasksService.Current?.ImportTasks(tasks);
             string what = tasks == null ? "Settings imported" : $"Settings and {tasks.Count} {(tasks.Count == 1 ? "task" : "tasks")} imported";
             // Passwords live in Windows-protected stores that only open on the PC that saved them.

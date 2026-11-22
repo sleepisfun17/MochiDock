@@ -114,8 +114,9 @@ begin
     { The GOWA engine and OutlookHelper are child processes; a killed or crashed app leaves them running and locks files. }
     '$g=''' + EscapedDir + 'GOWA\windows-amd64.exe''; ' +
     'Get-Process windows-amd64 -ErrorAction SilentlyContinue | Where-Object { $_.Path -eq $g } | ForEach-Object { $_.Kill(); [void]$_.WaitForExit(10000) }; ' +
-    '$o=''' + EscapedDir + 'OutlookHelper\MochiDock.OutlookHelper.exe''; ' +
-    'Get-Process ''MochiDock.OutlookHelper'' -ErrorAction SilentlyContinue | Where-Object { $_.Path -eq $o } | ForEach-Object { $_.Kill(); [void]$_.WaitForExit(10000) }';
+    '$o1=''' + EscapedDir + 'MochiDock.OutlookHelper.exe''; ' +
+    '$o2=''' + EscapedDir + 'OutlookHelper\MochiDock.OutlookHelper.exe''; ' +
+    'Get-Process ''MochiDock.OutlookHelper'' -ErrorAction SilentlyContinue | Where-Object { $_.Path -eq $o1 -or $_.Path -eq $o2 } | ForEach-Object { $_.Kill(); [void]$_.WaitForExit(10000) }';
   Exec(ExpandConstant('{sys}\WindowsPowerShell\v1.0\powershell.exe'),
     '-NoProfile -ExecutionPolicy Bypass -Command "' + Script + '"', '',
     SW_HIDE, ewWaitUntilTerminated, ResultCode);

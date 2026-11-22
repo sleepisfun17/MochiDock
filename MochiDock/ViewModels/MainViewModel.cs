@@ -250,6 +250,7 @@ public partial class MainViewModel : INotifyPropertyChanged
 
     private readonly HardwareMonitorService _hardwareService = new();
     private readonly AudioEndpointService _audioService = new();
+    public AudioEndpointService AudioService => _audioService;
     private readonly DispatcherTimer _autoCollapseTimer;
     private readonly DispatcherTimer _hardwarePollTimer;
 
@@ -374,7 +375,7 @@ public partial class MainViewModel : INotifyPropertyChanged
 
     private string _currentWeatherCity = "";
 
-    public async void ApplyImportedSettings(AppSettings settings)
+    public async Task ApplyImportedSettings(AppSettings settings)
     {
         bool gowaChanged = _gowaService.Enabled != settings.EnableWhatsApp ||
                            _gowaService.UseRemoteServer != string.Equals(settings.GowaMode, "Remote", StringComparison.OrdinalIgnoreCase) ||
@@ -617,7 +618,11 @@ public partial class MainViewModel : INotifyPropertyChanged
         {
             Interval = TimeSpan.FromMinutes(20)
         };
-        _weatherPollTimer.Tick += async (s, e) => await PollWeatherAsync();
+        _weatherPollTimer.Tick += async (s, e) =>
+        {
+            try { await PollWeatherAsync(); }
+            catch (Exception ex) { AppLog.Warn("Weather", ex); }
+        };
         _weatherPollTimer.Start();
         _ = PollWeatherAsync();
 
@@ -632,7 +637,7 @@ public partial class MainViewModel : INotifyPropertyChanged
 
         _pomodoroService.Tick += () =>
         {
-            App.Current.Dispatcher.Invoke(() =>
+            App.BeginOnUI(() =>
             {
                 OnPropertyChanged(nameof(PomodoroTimeDisplay));
                 OnPropertyChanged(nameof(PomodoroProgress));
@@ -643,7 +648,7 @@ public partial class MainViewModel : INotifyPropertyChanged
 
         _pomodoroService.StateChanged += () =>
         {
-            App.Current.Dispatcher.Invoke(() =>
+            App.BeginOnUI(() =>
             {
                 OnPropertyChanged(nameof(PomodoroTimeDisplay));
                 OnPropertyChanged(nameof(PomodoroProgress));
@@ -659,7 +664,7 @@ public partial class MainViewModel : INotifyPropertyChanged
 
         _pomodoroService.Completed += (finishedState) =>
         {
-            App.Current.Dispatcher.Invoke(() =>
+            App.BeginOnUI(() =>
             {
                 SoundService.PlayNotificationSound();
                 MascotMood = MascotMood.Happy;
@@ -676,7 +681,7 @@ public partial class MainViewModel : INotifyPropertyChanged
         {
             await Task.Delay(2000);
             await _gowaService.CheckConnectionAsync();
-            App.Current.Dispatcher.Invoke(() => OnPropertyChanged(nameof(IntegrationStatus)));
+            App.BeginOnUI(() => OnPropertyChanged(nameof(IntegrationStatus)));
         });
 
         // Restore persisted states
@@ -1294,7 +1299,7 @@ public partial class MainViewModel : INotifyPropertyChanged
     public async Task ReloadSettingsAsync()
     {
         await SettingsService.FlushAsync();
-        ApplyImportedSettings(SettingsService.Load());
+        await ApplyImportedSettings(SettingsService.Load());
     }
 
     /// <summary>Lyric timing shift in ms; positive = lines appear earlier. Persisted, clamped to +/-5 s.</summary>
@@ -1917,7 +1922,7 @@ public partial class MainViewModel : INotifyPropertyChanged
 
     private void OnMediaUpdated(MediaInfo info)
     {
-        App.Current.Dispatcher.Invoke(() =>
+        App.BeginOnUI(() =>
         {
             CurrentMedia = info;
             OnPropertyChanged(nameof(IsAudioWaveformVisible));
@@ -1945,7 +1950,7 @@ public partial class MainViewModel : INotifyPropertyChanged
                     try {
                         var displayWatch = System.Diagnostics.Stopwatch.StartNew();
                         var lyrics = await _lrclibService.FetchLyricsAsync(info.Title, info.Artist, album: info.Album, durationSeconds: info.Duration.TotalSeconds, cancellationToken: lyricToken, sessionIdentity: info.SessionIdentity, forceRefresh: forceLyrics);
-                        App.Current.Dispatcher.Invoke(() => {
+                        App.BeginOnUI(() => {
                             if (lyricToken.IsCancellationRequested || !_lyricRequests.IsCurrent(lyricGeneration)) return;
                             _lyricsLoading=false;_lyricLookupFailed=_lrclibService.LastLookupFailed;
                             _currentLyrics = lyrics;RefreshLyricsStatus();
@@ -2003,7 +2008,7 @@ public partial class MainViewModel : INotifyPropertyChanged
 
     private void OnEmailReceived(EmailNotification notif)
     {
-        App.Current.Dispatcher.Invoke(() =>
+        App.BeginOnUI(() =>
         {
             // Maintain multi-email history (most recent first, capped at 10)
             RecentEmailMessages.Insert(0, notif);
@@ -2137,7 +2142,7 @@ public partial class MainViewModel : INotifyPropertyChanged
 
     private void OnGowaMessageReceived(WhatsAppNotification notif)
     {
-        App.Current.Dispatcher.Invoke(() =>
+        App.BeginOnUI(() =>
         {
             // Maintain multi-message history (most recent first, capped at 10)
             RecentWhatsAppMessages.Insert(0, notif);
@@ -2253,7 +2258,7 @@ public partial class MainViewModel : INotifyPropertyChanged
 
     private void OnGowaMessageReadOrDismissed(string chatJid, List<string>? readIds, string deviceId)
     {
-        App.Current.Dispatcher.Invoke(() =>
+        App.BeginOnUI(() =>
         {
             // Normalize targets: strip @s.whatsapp.net, @c.us, @lid, @g.us
             string cleanTarget = chatJid
@@ -2342,7 +2347,7 @@ public partial class MainViewModel : INotifyPropertyChanged
 
     private void OnDiscordMessageReceived(DiscordNotification notif)
     {
-        App.Current.Dispatcher.Invoke(() =>
+        App.BeginOnUI(() =>
         {
             // Maintain multi-message history (most recent first, capped at 10)
             RecentDiscordMessages.Insert(0, notif);
@@ -2513,7 +2518,7 @@ public partial class MainViewModel : INotifyPropertyChanged
     private void ClearVisibleLyrics(){_displayedLyricSnapshot=null;_displayedLyricIndex=-2;CurrentLyricLine="";CurrentLyricRomaji="";PreviousLyricLine="";NextLyricLine="";if(CurrentLyricPieces.Count>0)CurrentLyricPieces.Clear();if(PreviousLyricPieces.Count>0)PreviousLyricPieces.Clear();if(NextLyricPieces.Count>0)NextLyricPieces.Clear();OnPropertyChanged(nameof(HasCurrentLyricRuby));OnPropertyChanged(nameof(HasPreviousLyricRuby));OnPropertyChanged(nameof(HasNextLyricRuby));}
     private void OnTimelineUpdated(TimeSpan pos, TimeSpan dur)
     {
-        App.Current.Dispatcher.Invoke(() =>
+        App.BeginOnUI(() =>
         {
             if (_currentMedia != null)
             {
@@ -2612,7 +2617,7 @@ public partial class MainViewModel : INotifyPropertyChanged
     public async Task PollWeatherAsync()
     {
         if (IsWeatherLoading) return;
-        App.Current.Dispatcher.Invoke(() =>
+        App.BeginOnUI(() =>
         {
             IsWeatherLoading = true;
             OnPropertyChanged(nameof(WeatherDisplayText));
@@ -2621,20 +2626,33 @@ public partial class MainViewModel : INotifyPropertyChanged
         });
 
         string city = _settings?.WeatherCity ?? "Tokyo";
-        var weather = await _weatherService.GetWeatherAsync(city);
-
-        App.Current.Dispatcher.Invoke(() =>
+        WeatherInfo? weather = null;
+        try
         {
-            IsWeatherLoading = false;
-            WeatherInfo = weather;
-            _currentWeatherCity = city;
-            OnPropertyChanged(nameof(WeatherDisplayText));
-            OnPropertyChanged(nameof(WeatherConditionText));
-            OnPropertyChanged(nameof(WeatherIconText));
-            OnPropertyChanged(nameof(WeatherCityDisplay));
-            OnPropertyChanged(nameof(CompactCapsuleText));
-            CheckRainSoon(weather);
-        });
+            weather = await _weatherService.GetWeatherAsync(city);
+        }
+        catch (Exception ex)
+        {
+            AppLog.Warn("Weather", ex);
+        }
+        finally
+        {
+            App.BeginOnUI(() =>
+            {
+                IsWeatherLoading = false;
+                if (weather != null)
+                {
+                    WeatherInfo = weather;
+                    _currentWeatherCity = city;
+                    CheckRainSoon(weather);
+                }
+                OnPropertyChanged(nameof(WeatherDisplayText));
+                OnPropertyChanged(nameof(WeatherConditionText));
+                OnPropertyChanged(nameof(WeatherIconText));
+                OnPropertyChanged(nameof(WeatherCityDisplay));
+                OnPropertyChanged(nameof(CompactCapsuleText));
+            });
+        }
     }
 
     public async Task RefreshWeatherAsync()

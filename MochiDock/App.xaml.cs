@@ -33,6 +33,16 @@ public partial class App : System.Windows.Application
 
     /// <summary>Closes the Advanced Settings window, committing pending edits, before settings are flushed.</summary>
     public static void CloseSettingsWindow() => (Current as App)?._settingsWindows?.CloseForExit();
+
+    /// <summary>Posts <paramref name="action"/> to the UI dispatcher if the application is still running.</summary>
+    public static void BeginOnUI(Action action)
+    {
+        var d = Current?.Dispatcher;
+        if (d == null || d.HasShutdownStarted || d.HasShutdownFinished) return;
+        if (d.CheckAccess()) action();
+        else d.BeginInvoke(action);
+    }
+    private DateTime _lastPersistenceWarningUtc = DateTime.MinValue;
     private FxRatesService? _fxRates;
     private DeviceBatteryService? _deviceBatteries;
     private PowerLogService? _powerLog;
@@ -126,7 +136,7 @@ public partial class App : System.Windows.Application
         }
         catch (Exception ex) { MochiDock.Services.AppLog.Warn("App", ex); }
         SettingsService.PersistenceError += ReportPersistenceError;
-        AtomicJsonStore.Error += message => System.Diagnostics.Debug.WriteLine(message);
+        AtomicJsonStore.Error += message => MochiDock.Services.AppLog.Warn("Persistence", message);
 
         try
         {
@@ -155,7 +165,7 @@ public partial class App : System.Windows.Application
             _fxHttp=new System.Net.Http.HttpClient{Timeout=TimeSpan.FromSeconds(8)};
             _fxRates=new FxRatesService(new KeylessFxProvider(_fxHttp), initialPairs: settings.FxPairs);viewModel.ConfigureFx(_fxRates);_ = _fxRates.StartAsync(settings.ShowFxRatesTab);
             _deviceBatteries = new DeviceBatteryService();viewModel.ConfigureDeviceBatteries(_deviceBatteries);
-            _powerLog = new PowerLogService();_powerLog.PersistenceError += message => System.Diagnostics.Debug.WriteLine(message);viewModel.ConfigurePowerLog(_powerLog);
+            _powerLog = new PowerLogService();_powerLog.PersistenceError += message => MochiDock.Services.AppLog.Warn("PowerLog", message);viewModel.ConfigurePowerLog(_powerLog);
             _statsHistory = new StatsHistoryService();_statsHistory.PersistenceError += message => MochiDock.Services.AppLog.Warn("StatsHistory", message);viewModel.ConfigureStatsHistory(_statsHistory);
             // A suspend leaves a gap the log ignores; save what we have first in case the PC never comes back (battery runs out).
             Microsoft.Win32.SystemEvents.PowerModeChanged += OnPowerModeChanged;
@@ -185,14 +195,17 @@ public partial class App : System.Windows.Application
                     MessageBoxImage.Error);
             }
             catch (System.Exception logEx) { MochiDock.Services.AppLog.Warn("App", logEx); }
+            Shutdown(1);
         }
     }
 
     private void ReportPersistenceError(string message)
     {
-        System.Diagnostics.Debug.WriteLine(message);
-        if (!Dispatcher.HasShutdownStarted)
-            Dispatcher.BeginInvoke(() => System.Windows.MessageBox.Show(message, "MochiDock could not save data", MessageBoxButton.OK, MessageBoxImage.Warning));
+        MochiDock.Services.AppLog.Warn("Persistence", message);
+        var now = DateTime.UtcNow;
+        if ((now - _lastPersistenceWarningUtc).TotalMinutes < 5) return;
+        _lastPersistenceWarningUtc = now;
+        BeginOnUI(() => System.Windows.MessageBox.Show(message, "MochiDock could not save data", MessageBoxButton.OK, MessageBoxImage.Warning));
     }
 
     protected override void OnExit(ExitEventArgs e)
@@ -201,18 +214,18 @@ public partial class App : System.Windows.Application
         catch (Exception ex) { MochiDock.Services.AppLog.Warn("App", ex); }
         try { _settingsWindows?.CloseForExit(); }
         catch (Exception ex) { MochiDock.Services.AppLog.Warn("App", ex); }
-        try
-        {
-            Task.WhenAll(_fxRates?.StopAsync() ?? Task.CompletedTask, _deviceBatteries?.StopAsync() ?? Task.CompletedTask, _powerLog?.StopAsync() ?? Task.CompletedTask, _statsHistory?.FlushAsync() ?? Task.CompletedTask, SettingsService.FlushAsync(), _tasksService?.FlushAsync() ?? Task.CompletedTask, _fileShelfService?.StopServerAsync() ?? Task.CompletedTask).Wait(TimeSpan.FromSeconds(5));
-        }
-        catch (Exception ex) { System.Diagnostics.Debug.WriteLine("Persistence flush: " + ex.Message); }
-        _fxRates?.Dispose();_fxHttp?.Dispose();_deviceBatteries?.Dispose();
-        Microsoft.Win32.SystemEvents.PowerModeChanged -= OnPowerModeChanged;_powerLog?.Dispose();
-        _calendarFeed?.Dispose();
         PrayerAudio.Stop();
         _mailService?.Stop();
         _gowaService?.Stop();
         _discordService?.Stop();
+        try
+        {
+            Task.WhenAll(_fxRates?.StopAsync() ?? Task.CompletedTask, _deviceBatteries?.StopAsync() ?? Task.CompletedTask, _powerLog?.StopAsync() ?? Task.CompletedTask, _statsHistory?.FlushAsync() ?? Task.CompletedTask, SettingsService.FlushAsync(), _tasksService?.FlushAsync() ?? Task.CompletedTask, _fileShelfService?.StopServerAsync() ?? Task.CompletedTask).Wait(TimeSpan.FromSeconds(5));
+        }
+        catch (Exception ex) { MochiDock.Services.AppLog.Warn("App", ex); }
+        _fxRates?.Dispose();_fxHttp?.Dispose();_deviceBatteries?.Dispose();
+        Microsoft.Win32.SystemEvents.PowerModeChanged -= OnPowerModeChanged;_powerLog?.Dispose();
+        _calendarFeed?.Dispose();
 
         try
         {

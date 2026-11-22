@@ -69,7 +69,7 @@ public partial class MainViewModel
 
     private void OnAppMessageReceived(AppNotification notif)
     {
-        App.Current.Dispatcher.Invoke(() =>
+        App.BeginOnUI(() =>
         {
             RecentAppMessages.Insert(0, notif);
             while (RecentAppMessages.Count > 10) RecentAppMessages.RemoveAt(RecentAppMessages.Count - 1);

@@ -30,7 +30,14 @@ public sealed class OutlookHelperHost : IDisposable
     public IReadOnlyList<string> TrackedFolders { get; set; } = OutlookFolderPolicy.DefaultTrackedFolders;
     public bool OnlyListedFolders { get; set; }
 
-    public static string HelperPath => Path.Combine(AppContext.BaseDirectory, "OutlookHelper", "MochiDock.OutlookHelper.exe");
+    public static string HelperPath
+    {
+        get
+        {
+            string root = Path.Combine(AppContext.BaseDirectory, "MochiDock.OutlookHelper.exe");
+            return File.Exists(root) ? root : Path.Combine(AppContext.BaseDirectory, "OutlookHelper", "MochiDock.OutlookHelper.exe");
+        }
+    }
     public static bool IsHelperAvailable => File.Exists(HelperPath);
 
     /// <summary>True when this process runs with an elevated (administrator) token.</summary>
