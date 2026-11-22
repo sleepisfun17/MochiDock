@@ -69,6 +69,7 @@ public partial class DataSectionView : UserControl
     private async void Import_Click(object sender, RoutedEventArgs e)
     {
         ImportRow.Validation = "";
+        ImportRow.Note = "";
         var dialog = new Microsoft.Win32.OpenFileDialog { Filter = "MochiDock settings (*.json)|*.json" };
         if (dialog.ShowDialog() != true || ViewModel == null) return;
         try
@@ -80,8 +81,9 @@ public partial class DataSectionView : UserControl
             await ViewModel.ApplyImportedSettings(import.Settings);
             if (tasks != null) TasksService.Current?.ImportTasks(tasks);
             string what = tasks == null ? "Settings imported" : $"Settings and {tasks.Count} {(tasks.Count == 1 ? "task" : "tasks")} imported";
-            // Passwords live in Windows-protected stores that only open on the PC that saved them.
-            ImportRow.Validation = what + ". Enter mail account passwords and the WhatsApp server login again in their sections.";
+            // A success, so a normal note, not the red error line. Passwords live in Windows-protected stores that only open on the
+            // PC that saved them, so an export never carries them.
+            ImportRow.Note = what + ". Passwords and the WhatsApp server login stay on the PC that exported them: enter them again in Email and WhatsApp.";
         }
         catch (Exception ex)
         {

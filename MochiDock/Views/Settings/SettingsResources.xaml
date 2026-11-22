@@ -23,6 +23,17 @@
         <Setter Property="Margin" Value="0,2,0,0"/>
     </Style>
 
+    <Style x:Key="SettingsRowNote" TargetType="TextBlock" BasedOn="{StaticResource CardCaptionText}">
+        <Setter Property="Foreground" Value="{DynamicResource IslandSecondaryInkBrush}"/>
+        <Setter Property="TextWrapping" Value="Wrap"/>
+        <Setter Property="Margin" Value="0,4,0,0"/>
+        <Style.Triggers>
+            <Trigger Property="Text" Value="">
+                <Setter Property="Visibility" Value="Collapsed"/>
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
     <Style x:Key="SettingsRowValidation" TargetType="TextBlock" BasedOn="{StaticResource CardCaptionText}">
         <Setter Property="Foreground" Value="{DynamicResource IslandNegativeBrush}"/>
         <Setter Property="TextWrapping" Value="Wrap"/>
@@ -49,6 +60,7 @@
                             <StackPanel Grid.Column="0" Margin="0,0,24,0" VerticalAlignment="Center">
                                 <TextBlock Text="{TemplateBinding Label}" Style="{StaticResource SettingsRowLabel}"/>
                                 <TextBlock Text="{TemplateBinding Description}" Style="{StaticResource SettingsRowDescription}"/>
+                                <TextBlock Text="{TemplateBinding Note}" Style="{StaticResource SettingsRowNote}"/>
                                 <TextBlock Text="{TemplateBinding Validation}" Style="{StaticResource SettingsRowValidation}"/>
                             </StackPanel>
                             <ContentPresenter Grid.Column="1" VerticalAlignment="Center" HorizontalAlignment="Right"/>

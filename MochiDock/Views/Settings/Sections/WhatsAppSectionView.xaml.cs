@@ -240,14 +240,12 @@ public partial class WhatsAppSectionView : SettingsSectionBase
         bool remote = IsRemoteMode;
         var info = GowaInstaller.Inspect();
         bool inUse = vm.Settings.EnableWhatsApp && !remote && info.Source == GowaEngineSource.Downloaded;
-        // Remote mode needs no engine; the row stays only while a downloaded copy is left to remove.
-        var visibility = !remote || info.HasDownloadedCopy ? Visibility.Visible : Visibility.Collapsed;
-        EngineFileRow.Visibility = visibility;
-        EngineStatusText.Visibility = visibility;
-        DownloadEngineButton.Visibility = remote ? Visibility.Collapsed : Visibility.Visible;
+        // Always shown, so the engine can be found (and fetched ahead of a switch to Local PC) in Remote mode too.
         DownloadEngineButton.IsEnabled = !_engineBusy && info.Source == GowaEngineSource.Missing;
         RemoveEngineButton.IsEnabled = !_engineBusy && info.HasDownloadedCopy && !inUse;
-        if (!_engineBusy) EngineStatusText.Text = GowaInstaller.Describe(info, inUse);
+        if (!_engineBusy)
+            EngineStatusText.Text = GowaInstaller.Describe(info, inUse)
+                + (remote ? " Not used now: WhatsApp runs on the remote server (Engine below)." : "");
     }
 
     private async void DownloadEngine_Click(object sender, RoutedEventArgs e)

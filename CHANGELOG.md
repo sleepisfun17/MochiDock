@@ -7,7 +7,7 @@ All notable changes to MochiDock are documented here. The format follows [Keep a
 ### Added
 
 - **Power chart**: the Battery page's top row is now one full-width **This PC** panel. A chart starts at 0 W under a round scale (for example 200 W), fills in from the right and, on a desktop, stacks the power into CPU, GPU and the rest of the PC, so a game spike shows as GPU; a laptop on battery shows its measured draw as one area. A dashed line marks the average and a dot the latest peak, with the latest watts, average, peak and this session's energy beside it.
-- **WhatsApp engine in Settings**: Settings > WhatsApp has a **Local engine** row that shows whether the engine is bundled, downloaded (with its version) or missing, with **Download** (with progress) and **Remove** for the downloaded copy while it is not running. Your WhatsApp login is kept.
+- **WhatsApp engine in Settings**: Settings > WhatsApp has a **Local engine** row that shows whether the engine is bundled, downloaded (with its version) or missing, with **Download** (with progress) and **Remove** for the downloaded copy while it is not running. It shows in Remote server mode too, where the engine is not used. Your WhatsApp login is kept.
 - **First-run welcome**: a short onboarding cue on first start, and a **Change city** link on the Weather card.
 - **Keyboard and screen readers**: **Escape** closes the dock and menus, every control shows a focus outline, and controls across the dock and Settings have accessible names.
 
@@ -23,6 +23,7 @@ All notable changes to MochiDock are documented here. The format follows [Keep a
 
 ### Fixed
 
+- **Import settings**: a successful import is now a normal note instead of red error text. As before, passwords and the WhatsApp server login are not part of an export and have to be entered again on the new PC.
 - **Crash when switching tabs**: the dock could close a few seconds after start when you switched tabs, because chart data read in the background was handed to the Stats card.
 - **Settings recovery**: a corrupt `settings.json` is restored from its backup again instead of being reset to defaults at startup.
 - **Saved mail passwords**: a failed read could wipe every saved IMAP app password; credential files are now written atomically.
