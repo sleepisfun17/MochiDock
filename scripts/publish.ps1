@@ -122,7 +122,10 @@ try {
     if ($publishCode -ne 0) { throw "Publish failed with exit code $publishCode." }
     if ($Installer) {
         # Trim unused native debugger/DIA/Linux-POSIX binaries (keep amd64\KernelTraceControl.dll for ETW).
-        Get-ChildItem -LiteralPath $destination -Recurse -File -Include 'msdia140.dll','Microsoft.DiaSymReader.Native.amd64.dll','libMonoPosixHelper.dll','mscordac*','mscordbi.dll','*.pdb' | Remove-Item -Force
+        # Match names explicitly: Windows PowerShell 5.1 (what the .bat scripts run) ignores -Include together with -LiteralPath
+        # and would return, and delete, every published file.
+        $trim = @('msdia140.dll','Microsoft.DiaSymReader.Native.amd64.dll','libMonoPosixHelper.dll','mscordac*','mscordbi.dll','*.pdb')
+        Get-ChildItem -LiteralPath $destination -Recurse -File | Where-Object { $name = $_.Name; @($trim | Where-Object { $name -like $_ }).Count -gt 0 } | Remove-Item -Force
     }
     # The shared GOWA server's webhook relay (tools\gowa-relay) is published next to its installer, which copies it to the server PC.
     $stage = 'publishing the GOWA webhook relay'
