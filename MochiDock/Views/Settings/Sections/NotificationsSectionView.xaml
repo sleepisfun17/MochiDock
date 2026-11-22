@@ -1,4 +1,4 @@
-<UserControl x:Class="MochiDock.Views.Settings.Sections.NotificationsSectionView"
+<s:SettingsSectionBase x:Class="MochiDock.Views.Settings.Sections.NotificationsSectionView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:s="clr-namespace:MochiDock.Views.Settings"
@@ -134,4 +134,4 @@
             <CheckBox x:Name="MuteWhatsAppCheck" Style="{StaticResource ModernDarkCheckBox}" Checked="Option_Changed" Unchecked="Option_Changed"/>
         </s:SettingRow>
     </StackPanel>
-</UserControl>
+</s:SettingsSectionBase>

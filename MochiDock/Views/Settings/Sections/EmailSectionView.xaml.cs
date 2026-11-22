@@ -10,10 +10,8 @@ using UserControl = System.Windows.Controls.UserControl;
 namespace MochiDock.Views.Settings.Sections;
 
 /// <summary>Email settings: ad filter and the extra Outlook folders to watch. DataContext is the view model.</summary>
-public partial class EmailSectionView : UserControl
+public partial class EmailSectionView : SettingsSectionBase
 {
-    private bool _loading;
-    private MainViewModel? _subscribed;
     private readonly System.Windows.Threading.DispatcherTimer _statusTimer = new() { Interval = TimeSpan.FromSeconds(3) };
     private const string OtherProvider = "Other";
     private sealed record ImapRow(string Address, string Status);
@@ -23,36 +21,15 @@ public partial class EmailSectionView : UserControl
         InitializeComponent();
         ProviderCombo.ItemsSource = ImapAccountPolicy.Presets.Select(p => p.Name).Append(OtherProvider).ToList();
         ProviderCombo.SelectedIndex = 0;
-        Loaded += (s, e) => { Subscribe(); LoadFromSettings(); _statusTimer.Start(); };
-        Unloaded += (s, e) => { Unsubscribe(); _statusTimer.Stop(); };
+        Loaded += (s, e) => _statusTimer.Start();
+        Unloaded += (s, e) => _statusTimer.Stop();
         _statusTimer.Tick += (s, e) => LoadImapList();
-        IsVisibleChanged += (s, e) => { if (IsVisible) LoadFromSettings(); };
     }
 
-    private MainViewModel? ViewModel => DataContext as MainViewModel;
-
-    private void Subscribe()
-    {
-        if (ReferenceEquals(_subscribed, ViewModel)) return;
-        Unsubscribe();
-        _subscribed = ViewModel;
-        if (_subscribed != null) _subscribed.SettingsChanged += OnSettingsChanged;
-    }
-
-    private void Unsubscribe()
-    {
-        if (_subscribed != null) _subscribed.SettingsChanged -= OnSettingsChanged;
-        _subscribed = null;
-    }
-
-    private void OnSettingsChanged(SettingsApply effects) => Dispatcher.BeginInvoke(LoadFromSettings);
-
-    private void LoadFromSettings()
+    protected override void LoadFromSettings()
     {
         var vm = ViewModel;
         if (vm == null) return;
-        _loading = true;
-        try
         {
             FilterAdsCheck.IsChecked = vm.Settings.FilterAds;
             OnlyListedCheck.IsChecked = vm.Settings.OutlookOnlyListedFolders;
@@ -63,7 +40,6 @@ public partial class EmailSectionView : UserControl
             LoadImapList();
             NoFoldersText.Visibility = folders.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
         }
-        finally { _loading = false; }
     }
 
     private void LoadImapList()
@@ -148,14 +124,14 @@ public partial class EmailSectionView : UserControl
 
     private void FilterAds_Changed(object sender, RoutedEventArgs e)
     {
-        if (!IsLoaded || _loading) return;
+        if (!IsLoaded || Loading) return;
         bool filter = FilterAdsCheck.IsChecked == true;
         ViewModel?.UpdateSettings(x => x.FilterAds = filter, SettingsApply.MailFilter);
     }
 
     private void OnlyListed_Changed(object sender, RoutedEventArgs e)
     {
-        if (!IsLoaded || _loading) return;
+        if (!IsLoaded || Loading) return;
         bool only = OnlyListedCheck.IsChecked == true;
         ViewModel?.UpdateSettings(x => x.OutlookOnlyListedFolders = only, SettingsApply.OutlookFolders);
     }

@@ -879,8 +879,7 @@ public partial class MainViewModel : INotifyPropertyChanged
             if (_isPinned != value)
             {
                 _isPinned = value;
-                _settings.IsExpandedPinned = value;
-                SettingsService.Save(_settings);
+                UpdateSettings(x => x.IsExpandedPinned = value);
 
                 OnPropertyChanged();
                 OnPropertyChanged(nameof(PinButtonBackground));
@@ -968,13 +967,13 @@ public partial class MainViewModel : INotifyPropertyChanged
     }
 
 
-    public bool ShowTodayTab { get=>_settings.ShowTodayTab; set { _settings.ShowTodayTab=value; SettingsService.Save(_settings); OnPropertyChanged(); if(!value&&ActiveCardType==IslandCardType.Today) ActiveCardType=IslandCardType.Media; } }
-    public bool ShowJapanHolidays { get => _settings.ShowJapanHolidays; set { _settings.ShowJapanHolidays = value; SettingsService.Save(_settings); OnPropertyChanged(); } }
-    public bool DownloadAudioFormat { get => _settings.DownloadAudioFormat; set { if (_settings.DownloadAudioFormat == value) return; _settings.DownloadAudioFormat = value; SettingsService.Save(_settings); OnPropertyChanged(); } }
-    public bool WeekStartsOnMonday { get => _settings.WeekStartsOnMonday; set { _settings.WeekStartsOnMonday = value; SettingsService.Save(_settings); OnPropertyChanged(); } }
-    public bool ShowIndonesiaHolidays { get => _settings.ShowIndonesiaHolidays; set { _settings.ShowIndonesiaHolidays = value; SettingsService.Save(_settings); OnPropertyChanged(); } }
-    public bool HideInFullscreen { get=>_settings.HideInFullscreen; set { _settings.HideInFullscreen=value; SettingsService.Save(_settings); OnPropertyChanged(); } }
-    public bool EnablePowerAlerts { get=>_settings.EnablePowerAlerts; set { if(_settings.EnablePowerAlerts==value) return; _settings.EnablePowerAlerts=value; SettingsService.Save(_settings); OnPropertyChanged(); } }
+    public bool ShowTodayTab { get=>_settings.ShowTodayTab; set { UpdateSettings(x => x.ShowTodayTab = value); OnPropertyChanged(); if(!value&&ActiveCardType==IslandCardType.Today) ActiveCardType=IslandCardType.Media; } }
+    public bool ShowJapanHolidays { get => _settings.ShowJapanHolidays; set { UpdateSettings(x => x.ShowJapanHolidays = value); OnPropertyChanged(); } }
+    public bool DownloadAudioFormat { get => _settings.DownloadAudioFormat; set { if (_settings.DownloadAudioFormat == value) return; UpdateSettings(x => x.DownloadAudioFormat = value); OnPropertyChanged(); } }
+    public bool WeekStartsOnMonday { get => _settings.WeekStartsOnMonday; set { UpdateSettings(x => x.WeekStartsOnMonday = value); OnPropertyChanged(); } }
+    public bool ShowIndonesiaHolidays { get => _settings.ShowIndonesiaHolidays; set { UpdateSettings(x => x.ShowIndonesiaHolidays = value); OnPropertyChanged(); } }
+    public bool HideInFullscreen { get=>_settings.HideInFullscreen; set { UpdateSettings(x => x.HideInFullscreen = value); OnPropertyChanged(); } }
+    public bool EnablePowerAlerts { get=>_settings.EnablePowerAlerts; set { if(_settings.EnablePowerAlerts==value) return; UpdateSettings(x => x.EnablePowerAlerts = value); OnPropertyChanged(); } }
 
     // Charger / low-battery notices: the policy decides when, this gate decides whether the capsule may show one right now.
     private readonly MochiDock.Core.PowerNoticePolicy _powerPolicy=new();
@@ -991,7 +990,7 @@ public partial class MainViewModel : INotifyPropertyChanged
     }
     private bool CanShowPowerNotice()=>EnablePowerAlerts&&!_hardwarePresentationSuppressed&&!_isWorkstationLocked&&_displayAwake&&!_wasGaming&&!IsNotificationInMainPill&&!IsPrayerArrivalVisible&&!IsPrayerReminderVisible&&ShouldShowNotification("Power");
 
-    public bool EnableHardwareAlerts { get=>_settings.EnableHardwareAlerts; set { _settings.EnableHardwareAlerts=value; SettingsService.Save(_settings); OnPropertyChanged();_hardwareNoticeUntil=default;_hardwareAlerts.ResetContinuity();NotifyHardwareNotice(); } }
+    public bool EnableHardwareAlerts { get=>_settings.EnableHardwareAlerts; set { UpdateSettings(x => x.EnableHardwareAlerts = value, SettingsApply.HardwareAlerts); OnPropertyChanged();_hardwareNoticeUntil=default;NotifyHardwareNotice(); } }
     private bool _displayAwake=true;
     public void StopHardwareCapture(){EndPlaytimeSession();EndGameProfile();_lol.Stop();StopPubgFetch();_hardwareService.SetGameCapture(false);_hardwareService.Dispose();}
     public void SetDisplayAwake(bool awake){Fx?.Configure(ShowFxRatesTab,_isWorkstationLocked||!awake);_deviceBatteries?.Configure(EnableDeviceBatteries,_isWorkstationLocked||!awake);if(!awake){_hardwareNoticeUntil=default;_hardwareAlerts.ResetContinuity();NotifyHardwareNotice();DismissPrayerArrival();}_displayAwake=awake;_hardwareService.ResetSamplingBaseline();if(!awake)_hardwareService.SetGameCapture(false);}
@@ -1011,7 +1010,7 @@ public partial class MainViewModel : INotifyPropertyChanged
     /// <summary>Read-only calendar feed behind the Today agenda (null until the app wires it up).</summary>
     public CalendarFeedService? CalendarFeed {get;private set;}
     public void ConfigureCalendar(CalendarFeedService service){CalendarFeed=service;OnPropertyChanged(nameof(CalendarFeed));ApplyReminderSettings();}
-    public bool ShowFxRatesTab {get=>_settings.ShowFxRatesTab;set{_settings.ShowFxRatesTab=value;SettingsService.Save(_settings);OnPropertyChanged();Fx?.Configure(value,_isWorkstationLocked||!_displayAwake);if(!value&&ActiveCardType==IslandCardType.FxRates)ActiveCardType=IslandCardType.Media;}}
+    public bool ShowFxRatesTab {get=>_settings.ShowFxRatesTab;set{UpdateSettings(x => x.ShowFxRatesTab = value);OnPropertyChanged();Fx?.Configure(value,_isWorkstationLocked||!_displayAwake);if(!value&&ActiveCardType==IslandCardType.FxRates)ActiveCardType=IslandCardType.Media;}}
     public bool IsFxRatesActive=>ActiveCardType==IslandCardType.FxRates;
     public bool IsTodayActive => ActiveCardType==IslandCardType.Today;
     public bool IsMediaActive => _activeCardType == IslandCardType.Media;
@@ -1033,7 +1032,7 @@ public partial class MainViewModel : INotifyPropertyChanged
     public bool AiUsageAlertsEnabled
     {
         get => _settings.EnableAiUsageAlerts;
-        set { _settings.EnableAiUsageAlerts = value; _aiUsageService.AlertsEnabled = value; SettingsService.Save(_settings); OnPropertyChanged(); }
+        set { _aiUsageService.AlertsEnabled = value; UpdateSettings(x => x.EnableAiUsageAlerts = value); OnPropertyChanged(); }
     }
 
     public bool IsAiProviderEnabled(string id) =>
@@ -1041,11 +1040,13 @@ public partial class MainViewModel : INotifyPropertyChanged
 
     public void SetAiProviderEnabled(string id, bool enabled)
     {
-        var hidden = _settings.HiddenAiProviders ??= new();
-        hidden.RemoveAll(x => string.Equals(x, id, StringComparison.OrdinalIgnoreCase));
-        if (!enabled) hidden.Add(id);
-        _aiUsageService.HiddenProviders = hidden;
-        SettingsService.Save(_settings);
+        UpdateSettings(x =>
+        {
+            var hidden = x.HiddenAiProviders ??= new();
+            hidden.RemoveAll(p => string.Equals(p, id, StringComparison.OrdinalIgnoreCase));
+            if (!enabled) hidden.Add(id);
+            _aiUsageService.HiddenProviders = hidden;
+        });
         _ = _aiUsageService.RefreshAllAsync(force: false);
     }
 
@@ -1070,14 +1071,14 @@ public partial class MainViewModel : INotifyPropertyChanged
         });
     }
 
-    public bool ShowAiUsageTab { get => _settings.ShowAiUsageTab; set { _settings.ShowAiUsageTab = value; SettingsService.Save(_settings); OnPropertyChanged(); if (!value && ActiveCardType == IslandCardType.AiUsage) ActiveCardType = IslandCardType.Media; } }
-    public bool ShowScriptTab { get => _settings.ShowScriptTab; set { _settings.ShowScriptTab = value; SettingsService.Save(_settings); OnPropertyChanged(); if (!value && ActiveCardType == IslandCardType.Script) ActiveCardType = IslandCardType.Media; } }
-    public bool ShowDownloadsTab { get => _settings.ShowDownloadsTab; set { _settings.ShowDownloadsTab = value; SettingsService.Save(_settings); OnPropertyChanged(); if (!value && ActiveCardType == IslandCardType.Downloads) ActiveCardType = IslandCardType.Media; } }
+    public bool ShowAiUsageTab { get => _settings.ShowAiUsageTab; set { UpdateSettings(x => x.ShowAiUsageTab = value); OnPropertyChanged(); if (!value && ActiveCardType == IslandCardType.AiUsage) ActiveCardType = IslandCardType.Media; } }
+    public bool ShowScriptTab { get => _settings.ShowScriptTab; set { UpdateSettings(x => x.ShowScriptTab = value); OnPropertyChanged(); if (!value && ActiveCardType == IslandCardType.Script) ActiveCardType = IslandCardType.Media; } }
+    public bool ShowDownloadsTab { get => _settings.ShowDownloadsTab; set { UpdateSettings(x => x.ShowDownloadsTab = value); OnPropertyChanged(); if (!value && ActiveCardType == IslandCardType.Downloads) ActiveCardType = IslandCardType.Media; } }
 
-    public double? IslandHorizontalRatio { get => _settings.IslandHorizontalRatio; set { _settings.IslandHorizontalRatio = value; SettingsService.Save(_settings); OnPropertyChanged(); } }
-    public bool ExcludeFromScreenCapture { get => _settings.ExcludeFromScreenCapture; set { _settings.ExcludeFromScreenCapture = value; SettingsService.Save(_settings); OnPropertyChanged(); ExcludeFromScreenCaptureChanged?.Invoke(value); } }
+    public double? IslandHorizontalRatio { get => _settings.IslandHorizontalRatio; set { UpdateSettings(x => x.IslandHorizontalRatio = value); OnPropertyChanged(); } }
+    public bool ExcludeFromScreenCapture { get => _settings.ExcludeFromScreenCapture; set { UpdateSettings(x => x.ExcludeFromScreenCapture = value); OnPropertyChanged(); ExcludeFromScreenCaptureChanged?.Invoke(value); } }
     public event Action<bool>? ExcludeFromScreenCaptureChanged;
-    public int ScriptWpm { get => _settings.ScriptWpm; set { _settings.ScriptWpm = value; SettingsService.Save(_settings); OnPropertyChanged(); } }
+    public int ScriptWpm { get => _settings.ScriptWpm; set { UpdateSettings(x => x.ScriptWpm = value); OnPropertyChanged(); } }
 
     public ObservableCollection<TodoTaskItem> Tasks => _tasksService.Tasks;
     public ObservableCollection<ShelfFileItem> ShelfFiles => _fileShelfService.ShelfFiles;
@@ -1176,8 +1177,7 @@ public partial class MainViewModel : INotifyPropertyChanged
         {
             if (_settings != null && _settings.ShowStatsTab != value)
             {
-                _settings.ShowStatsTab = value;
-                SettingsService.Save(_settings);
+                UpdateSettings(x => x.ShowStatsTab = value);
                 OnPropertyChanged();
                 if (!value && ActiveCardType == IslandCardType.Hardware) ActiveCardType = IslandCardType.Media;
             }
@@ -1191,8 +1191,7 @@ public partial class MainViewModel : INotifyPropertyChanged
         {
             if (_settings != null && _settings.ShowWeatherTab != value)
             {
-                _settings.ShowWeatherTab = value;
-                SettingsService.Save(_settings);
+                UpdateSettings(x => x.ShowWeatherTab = value);
                 OnPropertyChanged();
                 if (!value && ActiveCardType == IslandCardType.Weather) ActiveCardType = IslandCardType.Media;
             }
@@ -1206,8 +1205,7 @@ public partial class MainViewModel : INotifyPropertyChanged
         {
             if (_settings != null && _settings.ShowPomodoroTab != value)
             {
-                _settings.ShowPomodoroTab = value;
-                SettingsService.Save(_settings);
+                UpdateSettings(x => x.ShowPomodoroTab = value);
                 OnPropertyChanged();
                 if (!value && ActiveCardType == IslandCardType.Pomodoro) ActiveCardType = IslandCardType.Media;
             }
@@ -1221,9 +1219,8 @@ public partial class MainViewModel : INotifyPropertyChanged
         {
             if (_settings != null && _settings.EnablePrayerTimes != value)
             {
-                _settings.EnablePrayerTimes = value;
                 if(!value){PrayerAudio.Stop();_prayerCancellation?.Cancel();} else { _ = UpdatePrayerLocationAndScheduleAsync(); }
-                SettingsService.Save(_settings);
+                UpdateSettings(x => x.EnablePrayerTimes = value);
                 OnPropertyChanged();
                 OnPropertyChanged(nameof(IsPrayerInMainPill));
                 NotifyPrayerPresentation();
@@ -1239,8 +1236,7 @@ public partial class MainViewModel : INotifyPropertyChanged
         {
             if (_settings != null && _settings.EnablePrayerPreNotification != value)
             {
-                _settings.EnablePrayerPreNotification = value;
-                SettingsService.Save(_settings);
+                UpdateSettings(x => x.EnablePrayerPreNotification = value);
                 OnPropertyChanged();
                 NotifyPrayerPresentation();
             }
@@ -1274,8 +1270,7 @@ public partial class MainViewModel : INotifyPropertyChanged
         {
             if (_settings != null && _settings.ShowFileShelfTab != value)
             {
-                _settings.ShowFileShelfTab = value;
-                SettingsService.Save(_settings);
+                UpdateSettings(x => x.ShowFileShelfTab = value);
                 OnPropertyChanged();
                 if (!value && ActiveCardType == IslandCardType.FileShelf) ActiveCardType = IslandCardType.Media;
             }
@@ -1289,8 +1284,7 @@ public partial class MainViewModel : INotifyPropertyChanged
         {
             if (_settings != null && _settings.ShowClipboardTab != value)
             {
-                _settings.ShowClipboardTab = value;
-                SettingsService.Save(_settings);
+                UpdateSettings(x => x.ShowClipboardTab = value);
                 OnPropertyChanged();
                 if (!value && ActiveCardType == IslandCardType.Clipboard) ActiveCardType = IslandCardType.Media;
             }
@@ -1303,8 +1297,7 @@ public partial class MainViewModel : INotifyPropertyChanged
         set
         {
             if (_settings == null || _settings.EnableSyncedLyrics == value) return;
-            _settings.EnableSyncedLyrics = value;
-            SettingsService.Save(_settings);
+            UpdateSettings(x => x.EnableSyncedLyrics = value);
             OnPropertyChanged();
             // Off: drop what is showing and stop looking up. On: look the current track up again.
             _lyricCancellation?.Cancel();
@@ -1324,9 +1317,8 @@ public partial class MainViewModel : INotifyPropertyChanged
         set
         {
             if (_settings == null || _settings.EnableSounds == value) return;
-            _settings.EnableSounds = value;
             SoundService.Enabled = value;
-            SettingsService.Save(_settings);
+            UpdateSettings(x => x.EnableSounds = value);
             OnPropertyChanged();
         }
     }
@@ -1346,8 +1338,7 @@ public partial class MainViewModel : INotifyPropertyChanged
         {
             int clamped = MochiDock.Core.LyricOffset.Clamp(value);
             if (_settings == null || _settings.LyricsOffsetMs == clamped) return;
-            _settings.LyricsOffsetMs = clamped;
-            SettingsService.Save(_settings);
+            UpdateSettings(x => x.LyricsOffsetMs = clamped);
             OnPropertyChanged();
             OnPropertyChanged(nameof(LyricsOffsetText));
             // The tick timer is stopped while paused, so re-evaluate the active line immediately.
@@ -1366,8 +1357,7 @@ public partial class MainViewModel : INotifyPropertyChanged
         {
             if (_settings != null && _settings.ShowLyricsPronunciation != value)
             {
-                _settings.ShowLyricsPronunciation = value;
-                SettingsService.Save(_settings);
+                UpdateSettings(x => x.ShowLyricsPronunciation = value);
                 OnPropertyChanged();
                 OnPropertyChanged(nameof(HasCurrentLyricRomaji));
             }
@@ -1381,8 +1371,7 @@ public partial class MainViewModel : INotifyPropertyChanged
         {
             if (_settings != null && _settings.ShowLyricsFurigana != value)
             {
-                _settings.ShowLyricsFurigana = value;
-                SettingsService.Save(_settings);
+                UpdateSettings(x => x.ShowLyricsFurigana = value);
                 OnPropertyChanged();
                 OnPropertyChanged(nameof(HasCurrentLyricRuby));
             }
@@ -1543,8 +1532,7 @@ public partial class MainViewModel : INotifyPropertyChanged
             if (_isStatsPinnedToCapsule != value)
             {
                 _isStatsPinnedToCapsule = value;
-                _settings.IsStatsPinnedToCapsule = value;
-                SettingsService.Save(_settings);
+                UpdateSettings(x => x.IsStatsPinnedToCapsule = value);
 
                 OnPropertyChanged();
                 OnPropertyChanged(nameof(IsStatsShownInCapsule));
@@ -2118,8 +2106,7 @@ public partial class MainViewModel : INotifyPropertyChanged
     public void SnoozeNotifications(TimeSpan duration)
     {
         _snoozedUntil = DateTime.Now.Add(duration);
-        _settings.SnoozeUntilTicks = _snoozedUntil.Ticks;
-        SettingsService.Save(_settings);
+        UpdateSettings(x => x.SnoozeUntilTicks = _snoozedUntil.Ticks);
     }
 
     private readonly MochiDock.Core.HardwareAlertPolicy _hardwareAlerts=new();
@@ -2179,8 +2166,7 @@ public partial class MainViewModel : INotifyPropertyChanged
     public void SetCapsuleScrollSpeed(double speed)
     {
         CapsuleScrollSpeed = Math.Clamp(speed, 10, 100);
-        _settings.CapsuleScrollSpeed = CapsuleScrollSpeed;
-        SettingsService.Save(_settings);
+        UpdateSettings(x => x.CapsuleScrollSpeed = CapsuleScrollSpeed);
     }
 
     public void ApplyCapsuleTheme(string theme)
@@ -2190,8 +2176,7 @@ public partial class MainViewModel : INotifyPropertyChanged
         CapsuleTheme = theme;
         if (changed)
         {
-            _settings.CapsuleTheme = theme;
-            SettingsService.Save(_settings);
+            UpdateSettings(x => x.CapsuleTheme = theme, SettingsApply.None);
         }
 
         if (System.Windows.Application.Current?.MainWindow != null)
@@ -2467,8 +2452,7 @@ public partial class MainViewModel : INotifyPropertyChanged
     public void ToggleHardwareMode()
     {
         _hardwareService.IsGamingMode = !_hardwareService.IsGamingMode;
-        _settings.IsHardwareGamingMode = _hardwareService.IsGamingMode;
-        SettingsService.Save(_settings);
+        UpdateSettings(x => x.IsHardwareGamingMode = _hardwareService.IsGamingMode);
 
         HardwareStats = _hardwareService.GetCurrentStats();
     }
@@ -2675,9 +2659,20 @@ public partial class MainViewModel : INotifyPropertyChanged
         return result;
     }
 
+    private int _weatherPollGeneration;
+    private CancellationTokenSource? _weatherPollCts;
+
+    public Task<LocationGeocodeResult> ResolveLocationAsync(string query, CancellationToken cancellationToken = default) =>
+        _weatherService.ResolveLocationAsync(query, cancellationToken);
+
     public async Task PollWeatherAsync()
     {
-        if (IsWeatherLoading) return;
+        int generation = ++_weatherPollGeneration;
+        _weatherPollCts?.Cancel();
+        _weatherPollCts?.Dispose();
+        var cts = new CancellationTokenSource();
+        _weatherPollCts = cts;
+
         App.BeginOnUI(() =>
         {
             IsWeatherLoading = true;
@@ -2690,7 +2685,11 @@ public partial class MainViewModel : INotifyPropertyChanged
         WeatherInfo? weather = null;
         try
         {
-            weather = await _weatherService.GetWeatherAsync(city);
+            weather = await _weatherService.GetWeatherAsync(city, cts.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
         }
         catch (Exception ex)
         {
@@ -2700,6 +2699,7 @@ public partial class MainViewModel : INotifyPropertyChanged
         {
             App.BeginOnUI(() =>
             {
+                if (generation != _weatherPollGeneration) return;
                 IsWeatherLoading = false;
                 if (weather != null)
                 {
@@ -3273,11 +3273,12 @@ public partial class MainViewModel : INotifyPropertyChanged
         string key = _gowaService.MuteKeyFor(current.FromJid, current.DeviceId);
         if (!_settings.WhatsAppAllowedGroups.Contains(key, StringComparer.OrdinalIgnoreCase))
         {
-            _settings.WhatsAppAllowedGroups.Add(key);
-            _settings.WhatsAppChatNames[current.FromJid] = !string.IsNullOrWhiteSpace(current.GroupName) ? current.GroupName : current.SenderName;
             _gowaService.AddAllowedGroup(key);
-            SettingsService.Save(_settings);
-            SettingsChanged?.Invoke(SettingsApply.None);
+            UpdateSettings(x =>
+            {
+                x.WhatsAppAllowedGroups.Add(key);
+                x.WhatsAppChatNames[current.FromJid] = !string.IsNullOrWhiteSpace(current.GroupName) ? current.GroupName : current.SenderName;
+            });
         }
         OnPropertyChanged(nameof(CanAllowCurrentWhatsAppGroup));
     }
@@ -3293,11 +3294,12 @@ public partial class MainViewModel : INotifyPropertyChanged
         string muteKey = _gowaService.MuteKeyFor(chatJid, device);
         if (!_settings.MutedWhatsAppChatJids.Contains(muteKey, StringComparer.OrdinalIgnoreCase))
         {
-            _settings.MutedWhatsAppChatJids.Add(muteKey);
-            _settings.WhatsAppChatNames[chatJid] = CurrentWhatsApp.IsGroup && !string.IsNullOrWhiteSpace(CurrentWhatsApp.GroupName) ? CurrentWhatsApp.GroupName : CurrentWhatsApp.SenderName;
             _gowaService.AddMutedChat(muteKey);
-            SettingsService.Save(_settings);
-            SettingsChanged?.Invoke(SettingsApply.None);
+            UpdateSettings(x =>
+            {
+                x.MutedWhatsAppChatJids.Add(muteKey);
+                x.WhatsAppChatNames[chatJid] = CurrentWhatsApp.IsGroup && !string.IsNullOrWhiteSpace(CurrentWhatsApp.GroupName) ? CurrentWhatsApp.GroupName : CurrentWhatsApp.SenderName;
+            });
         }
 
         // Dismiss this chat immediately

@@ -7,43 +7,18 @@ using UserControl = System.Windows.Controls.UserControl;
 namespace MochiDock.Views.Settings.Sections;
 
 /// <summary>Hardware alert thresholds. Alerts and the battery module bind to the view model; thresholds write through <see cref="MainViewModel.UpdateSettings"/>.</summary>
-public partial class HardwareSectionView : UserControl
+public partial class HardwareSectionView : SettingsSectionBase
 {
-    private bool _loading;
-    private MainViewModel? _subscribed;
-
     public HardwareSectionView()
     {
         InitializeComponent();
-        Loaded += (s, e) => { Subscribe(); LoadFromSettings(); FillComponentKinds(); };
-        Unloaded += (s, e) => Unsubscribe();
-        IsVisibleChanged += (s, e) => { if (IsVisible) LoadFromSettings(); };
+        Loaded += (s, e) => FillComponentKinds();
     }
 
-    private MainViewModel? ViewModel => DataContext as MainViewModel;
-
-    private void Subscribe()
-    {
-        if (ReferenceEquals(_subscribed, ViewModel)) return;
-        Unsubscribe();
-        _subscribed = ViewModel;
-        if (_subscribed != null) _subscribed.SettingsChanged += OnSettingsChanged;
-    }
-
-    private void Unsubscribe()
-    {
-        if (_subscribed != null) _subscribed.SettingsChanged -= OnSettingsChanged;
-        _subscribed = null;
-    }
-
-    private void OnSettingsChanged(SettingsApply effects) => Dispatcher.BeginInvoke(LoadFromSettings);
-
-    private void LoadFromSettings()
+    protected override void LoadFromSettings()
     {
         var vm = ViewModel;
         if (vm == null) return;
-        _loading = true;
-        try
         {
             if (!CpuSlider.IsMouseCaptureWithin) CpuSlider.Value = vm.Settings.CpuAlertThreshold;
             if (!GpuSlider.IsMouseCaptureWithin) GpuSlider.Value = vm.Settings.GpuAlertThreshold;
@@ -54,7 +29,6 @@ public partial class HardwareSectionView : UserControl
                                             ?? HeatMinutesCombo.Items[1];
             UpdatePawnIoStatus();
         }
-        finally { _loading = false; }
     }
 
     private void UpdatePawnIoStatus()
@@ -125,7 +99,7 @@ public partial class HardwareSectionView : UserControl
 
     private void Heat_Changed(object sender, RoutedEventArgs e)
     {
-        if (!IsLoaded || _loading) return;
+        if (!IsLoaded || Loading) return;
         double heat = Math.Round(Math.Clamp(HeatSlider.Value, 60, 95));
         int minutes = int.TryParse((HeatMinutesCombo.SelectedItem as ComboBoxItem)?.Tag as string, out int m) ? m : 10;
         ViewModel?.UpdateSettings(x => { x.SustainedHeatThreshold = heat; x.SustainedHeatMinutes = minutes; });
@@ -139,7 +113,7 @@ public partial class HardwareSectionView : UserControl
 
     private void Threshold_Changed(object sender, RoutedPropertyChangedEventArgs<double> e)
     {
-        if (!IsLoaded || _loading) return;
+        if (!IsLoaded || Loading) return;
         double cpu = SettingsValidation.ClampCpuGpuThreshold(CpuSlider.Value);
         double gpu = SettingsValidation.ClampCpuGpuThreshold(GpuSlider.Value);
         double temp = SettingsValidation.ClampTemperatureThreshold(TempSlider.Value);

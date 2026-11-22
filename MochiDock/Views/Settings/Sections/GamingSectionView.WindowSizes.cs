@@ -83,7 +83,7 @@ public partial class GamingSectionView
     // Works on copies so a half-applied change never reaches the live settings; SettingsApply.Hotkey re-registers the shortcuts.
     private void EditPresets(Action<List<WindowSizePreset>> change)
     {
-        if (_loading || ViewModel == null) return;
+        if (Loading || ViewModel == null) return;
         var copy = (ViewModel.Settings.WindowSizePresets ?? new List<WindowSizePreset>()).Select(p => p.Clone()).ToList();
         change(copy);
         ViewModel.UpdateSettings(x => x.WindowSizePresets = copy, SettingsApply.Hotkey);
@@ -99,7 +99,7 @@ public partial class GamingSectionView
 
     private void WindowSizes_Changed(object sender, RoutedEventArgs e)
     {
-        if (_loading || ViewModel == null) return;
+        if (Loading || ViewModel == null) return;
         bool on = WindowSizesCheck.IsChecked == true, flip = WindowFlipCheck.IsChecked == true;
         ViewModel.UpdateSettings(x => { x.EnableWindowSizeShortcuts = on; x.EnableWindowFlip = flip; }, SettingsApply.Hotkey);
     }

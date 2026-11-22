@@ -80,7 +80,7 @@ public class MailspringMailService : IMailService
     {
         try
         {
-            using var con = new SqliteConnection($"Data Source={_dbPath};Mode=ReadOnly");
+            using var con = new SqliteConnection($"Data Source={_dbPath};Mode=ReadOnly;Pooling=False;");
             con.Open();
             using var cmd = con.CreateCommand();
             cmd.CommandText = "SELECT MAX(date) FROM Message WHERE unread = 1 AND draft = 0;";
@@ -111,7 +111,7 @@ public class MailspringMailService : IMailService
 
         try
         {
-            using var con = new SqliteConnection($"Data Source={_dbPath};Mode=ReadOnly");
+            using var con = new SqliteConnection($"Data Source={_dbPath};Mode=ReadOnly;Pooling=False;");
             con.Open();
             using var cmd = con.CreateCommand();
             cmd.CommandText = @"

@@ -55,6 +55,7 @@ public class AiUsageService : IDisposable
     }
 
     private readonly HttpClient _http;
+    private readonly bool _ownsHttp;
     private readonly IReadOnlyList<Provider> _providers;
     private readonly Dictionary<string, Memory> _memory = new(StringComparer.OrdinalIgnoreCase);
     private readonly CancellationTokenSource _shutdown = new();
@@ -96,6 +97,7 @@ public class AiUsageService : IDisposable
 
     public AiUsageService(HttpClient? client = null)
     {
+        _ownsHttp = client == null;
         _http = client ?? new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
         _http.DefaultRequestHeaders.UserAgent.ParseAdd(AppUserAgent.Value);
         _providers = new Provider[]
@@ -149,6 +151,8 @@ public class AiUsageService : IDisposable
             _ticker = null;
         }
         _shutdown.Cancel();
+        _shutdown.Dispose();
+        if (_ownsHttp) _http.Dispose();
         GC.SuppressFinalize(this);
     }
 
@@ -160,13 +164,14 @@ public class AiUsageService : IDisposable
     /// </summary>
     public async Task RefreshAllAsync(List<string>? hiddenProviders = null, bool force = true)
     {
+        CancellationToken token;
         lock (_gate)
         {
             if (_disposed || IsRefreshing) return;
             IsRefreshing = true;
+            token = _shutdown.Token;
         }
         var hidden = new HashSet<string>(hiddenProviders ?? HiddenProviders ?? new(), StringComparer.OrdinalIgnoreCase);
-        var token = _shutdown.Token;
         bool publish = false;
         try
         {
@@ -583,7 +588,7 @@ public class AiUsageService : IDisposable
         try
         {
             // Large and held open by Cursor: three keys are read in place, never copied.
-            using var connection = new SqliteConnection($"Data Source={databasePath};Mode=ReadOnly;");
+            using var connection = new SqliteConnection($"Data Source={databasePath};Mode=ReadOnly;Pooling=False;");
             await connection.OpenAsync(token);
             accessToken = await StoredValueAsync(connection, "cursorAuth/accessToken", token);
             email = await StoredValueAsync(connection, "cursorAuth/cachedEmail", token);
@@ -782,7 +787,7 @@ public class AiUsageService : IDisposable
         {
             try
             {
-                using var connection = new SqliteConnection($"Data Source={statePath};Mode=ReadOnly;");
+                using var connection = new SqliteConnection($"Data Source={statePath};Mode=ReadOnly;Pooling=False;");
                 await connection.OpenAsync(token);
                 var stored = await StoredValueAsync(connection, "antigravityUnifiedStateSync.userStatus", token);
                 saved = AiUsageParsing.ReadAntigravityStoredStatus(stored, DateTimeOffset.UtcNow, ShowAntigravityPartnerPool);

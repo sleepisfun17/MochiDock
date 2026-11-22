@@ -13,48 +13,25 @@ using ComboBox = System.Windows.Controls.ComboBox;
 namespace MochiDock.Views.Settings.Sections;
 
 /// <summary>Notification settings. Writes go through <see cref="MainViewModel.UpdateSettings"/>; sounds and power alerts bind to the view model.</summary>
-public partial class NotificationsSectionView : UserControl
+public partial class NotificationsSectionView : SettingsSectionBase
 {
-    private bool _loading;
-    private MainViewModel? _subscribed;
     private readonly DispatcherTimer _snoozeTimer = new() { Interval = TimeSpan.FromSeconds(5) };
 
     public NotificationsSectionView()
     {
         InitializeComponent();
         _snoozeTimer.Tick += (s, e) => UpdateSnoozeText();
-        Loaded += (s, e) => { Subscribe(); LoadFromSettings(); _snoozeTimer.Start(); };
-        Unloaded += (s, e) => { Unsubscribe(); _snoozeTimer.Stop(); };
-        IsVisibleChanged += (s, e) => { if (IsVisible) LoadFromSettings(); };
+        Loaded += (s, e) => _snoozeTimer.Start();
+        Unloaded += (s, e) => _snoozeTimer.Stop();
     }
-
-    private MainViewModel? ViewModel => DataContext as MainViewModel;
-
-    private void Subscribe()
-    {
-        if (ReferenceEquals(_subscribed, ViewModel)) return;
-        Unsubscribe();
-        _subscribed = ViewModel;
-        if (_subscribed != null) _subscribed.SettingsChanged += OnSettingsChanged;
-    }
-
-    private void Unsubscribe()
-    {
-        if (_subscribed != null) _subscribed.SettingsChanged -= OnSettingsChanged;
-        _subscribed = null;
-    }
-
-    private void OnSettingsChanged(SettingsApply effects) => Dispatcher.BeginInvoke(LoadFromSettings);
 
     private static void SetText(TextBox box, string text) { if (!box.IsKeyboardFocused) box.Text = text; }
 
-    private void LoadFromSettings()
+    protected override void LoadFromSettings()
     {
         var vm = ViewModel;
         if (vm == null) return;
         var settings = vm.Settings;
-        _loading = true;
-        try
         {
             MuteEmailCheck.IsChecked = settings.MuteEmail;
             MuteDiscordCheck.IsChecked = settings.MuteDiscord;
@@ -80,13 +57,12 @@ public partial class NotificationsSectionView : UserControl
                 if ((item.Tag as string) == ReminderFallbackPolicy.NormalizeMode(settings.HiddenReminderFallback)) { HiddenFallbackCombo.SelectedItem = item; break; }
             AllowList.ItemsSource = settings.GamingAllowList.ToList();
         }
-        finally { _loading = false; }
         UpdateSnoozeText();
     }
 
     private void Option_Changed(object sender, RoutedEventArgs e)
     {
-        if (!IsLoaded || _loading) return;
+        if (!IsLoaded || Loading) return;
         bool muteEmail = MuteEmailCheck.IsChecked == true, muteDiscord = MuteDiscordCheck.IsChecked == true, muteApps = MuteAppsCheck.IsChecked == true, muteWhatsApp = MuteWhatsAppCheck.IsChecked == true;
         bool quiet = QuietHoursCheck.IsChecked == true, autoExpand = MinimalNoticeCheck.IsChecked != true;
         bool dnd = GamingDndCheck.IsChecked == true, greeting = OvernightGreetingCheck.IsChecked == true;
@@ -112,7 +88,7 @@ public partial class NotificationsSectionView : UserControl
 
     private void Reminders_Changed(object sender, RoutedEventArgs e)
     {
-        if (!IsLoaded || _loading) return;
+        if (!IsLoaded || Loading) return;
         bool on = RemindersCheck.IsChecked == true;
         LeadCombo.IsEnabled = on;
         HiddenFallbackCombo.IsEnabled = on;
@@ -122,7 +98,7 @@ public partial class NotificationsSectionView : UserControl
 
     private void Lead_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        if (!IsLoaded || _loading || ViewModel == null) return;
+        if (!IsLoaded || Loading || ViewModel == null) return;
         if (LeadCombo.SelectedItem is ComboBoxItem { Tag: string tag } && int.TryParse(tag, out int minutes))
         {
             int lead = AgendaReminderPolicy.NormalizeLead(minutes);
@@ -133,14 +109,14 @@ public partial class NotificationsSectionView : UserControl
 
     private void Overdue_Changed(object sender, RoutedEventArgs e)
     {
-        if (!IsLoaded || _loading) return;
+        if (!IsLoaded || Loading) return;
         bool on = OverdueCheck.IsChecked == true;
         ViewModel?.UpdateSettings(x => x.RemindOverdueTasks = on);
     }
 
     private void HiddenFallback_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        if (!IsLoaded || _loading || ViewModel == null) return;
+        if (!IsLoaded || Loading || ViewModel == null) return;
         if (HiddenFallbackCombo.SelectedItem is ComboBoxItem { Tag: string tag })
         {
             string mode = ReminderFallbackPolicy.NormalizeMode(tag);
@@ -217,7 +193,7 @@ public partial class NotificationsSectionView : UserControl
     // Each time is committed on its own so one bad value never blocks the other; an invalid one keeps its last good value.
     private void CommitQuietHours()
     {
-        if (!IsLoaded || _loading || ViewModel == null) return;
+        if (!IsLoaded || Loading || ViewModel == null) return;
         var settings = ViewModel.Settings;
         string start = settings.QuietHoursStart, end = settings.QuietHoursEnd;
         QuietStartRow.Validation = Normalize(QuietStartBox, QuietStartRow, ref start, settings.QuietHoursStart);

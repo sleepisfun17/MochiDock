@@ -14,44 +14,18 @@ using UserControl = System.Windows.Controls.UserControl;
 namespace MochiDock.Views.Settings.Sections;
 
 /// <summary>Gaming and display settings. Writes go through <see cref="MainViewModel.UpdateSettings"/>; resolution changes go through the view model to the dock window.</summary>
-public partial class GamingSectionView : UserControl
+public partial class GamingSectionView : SettingsSectionBase
 {
-    private bool _loading;
-    private MainViewModel? _subscribed;
-
     public GamingSectionView()
     {
         InitializeComponent();
-        Loaded += (s, e) => { Subscribe(); LoadFromSettings(); };
-        Unloaded += (s, e) => Unsubscribe();
-        IsVisibleChanged += (s, e) => { if (IsVisible) LoadFromSettings(); };
     }
 
-    private MainViewModel? ViewModel => DataContext as MainViewModel;
-
-    private void Subscribe()
-    {
-        if (ReferenceEquals(_subscribed, ViewModel)) return;
-        Unsubscribe();
-        _subscribed = ViewModel;
-        if (_subscribed != null) _subscribed.SettingsChanged += OnSettingsChanged;
-    }
-
-    private void Unsubscribe()
-    {
-        if (_subscribed != null) _subscribed.SettingsChanged -= OnSettingsChanged;
-        _subscribed = null;
-    }
-
-    private void OnSettingsChanged(SettingsApply effects) => Dispatcher.BeginInvoke(LoadFromSettings);
-
-    private void LoadFromSettings()
+    protected override void LoadFromSettings()
     {
         var vm = ViewModel;
         if (vm == null) return;
         var settings = vm.Settings;
-        _loading = true;
-        try
         {
             if (!PreferredBox.IsKeyboardFocused) PreferredBox.Text = settings.PreferredGamingResolution ?? "";
             RefreshDisplay(settings);
@@ -76,7 +50,6 @@ public partial class GamingSectionView : UserControl
             OffsetRow.IsEnabled = !string.Equals(settings.DockStyle, "Notch", StringComparison.OrdinalIgnoreCase);
             if (!ProfilesPanel.IsKeyboardFocusWithin) RebuildProfiles();
         }
-        finally { _loading = false; }
     }
 
     // ---- Detected display and the size / shape pickers. Everything comes from the modes the dock's monitor reports, so a new
@@ -131,15 +104,15 @@ public partial class GamingSectionView : UserControl
 
     private void SyncPickers(GamingResolutionOption? option)
     {
-        bool wasLoading = _loading;
-        _loading = true;
+        bool wasLoading = Loading;
+        Loading = true;
         try
         {
             SizeCombo.SelectedItem = option == null ? null : SizeCombo.Items.Cast<ComboBoxItem>().FirstOrDefault(i => (int)i.Tag == option.TierHeight);
             FillAspects(option?.TierHeight);
             AspectCombo.SelectedItem = option == null ? null : AspectCombo.Items.Cast<ComboBoxItem>().FirstOrDefault(i => i.Tag is GamingResolutionOption o && o.Value == option.Value);
         }
-        finally { _loading = wasLoading; }
+        finally { Loading = wasLoading; }
     }
 
     private void FillAspects(int? tierHeight)
@@ -152,7 +125,7 @@ public partial class GamingSectionView : UserControl
 
     private void Size_Changed(object sender, SelectionChangedEventArgs e)
     {
-        if (_loading || SizeCombo.SelectedItem is not ComboBoxItem { Tag: int tier }) return;
+        if (Loading || SizeCombo.SelectedItem is not ComboBoxItem { Tag: int tier }) return;
         FillAspects(tier);
         // Keep the current shape when the new size offers it, otherwise the first one (16:9 first).
         var parsed = ParsedPreferred();
@@ -164,7 +137,7 @@ public partial class GamingSectionView : UserControl
 
     private void Aspect_Changed(object sender, SelectionChangedEventArgs e)
     {
-        if (_loading || AspectCombo.SelectedItem is not ComboBoxItem { Tag: GamingResolutionOption option }) return;
+        if (Loading || AspectCombo.SelectedItem is not ComboBoxItem { Tag: GamingResolutionOption option }) return;
         PreferredBox.Text = option.Value;
         CommitPreferred();
     }
@@ -185,7 +158,7 @@ public partial class GamingSectionView : UserControl
 
     private void Option_Changed(object sender, RoutedEventArgs e)
     {
-        if (!IsLoaded || _loading) return;
+        if (!IsLoaded || Loading) return;
         bool hotkey = HotkeyCheck.IsChecked == true, clickThrough = ClickThroughCheck.IsChecked == true, sessions = SessionSummaryCheck.IsChecked == true, pingCapsule = PingCapsuleCheck.IsChecked == true, lolStats = LolStatsCheck.IsChecked == true, pubg = PubgCheck.IsChecked == true;
         ViewModel?.UpdateSettings(x => { x.EnableResolutionHotkey = hotkey; x.EnableGamingClickThrough = clickThrough; x.EnableGameSessionSummary = sessions; x.ShowPingInGameCapsule = pingCapsule; x.EnableLolMatchStats = lolStats; x.EnablePubgStats = pubg; },
             SettingsApply.Hotkey | SettingsApply.Reposition | SettingsApply.CapsuleRefresh);
@@ -245,7 +218,7 @@ public partial class GamingSectionView : UserControl
 
     private void CommitPingHost()
     {
-        if (!IsLoaded || _loading || ViewModel == null) return;
+        if (!IsLoaded || Loading || ViewModel == null) return;
         PingHostRow.Validation = "";
         if (!SettingsValidation.TryNormalizePingHost(PingHostBox.Text, out string host))
         {
@@ -259,7 +232,7 @@ public partial class GamingSectionView : UserControl
 
     private void Break_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        if (!IsLoaded || _loading || ViewModel == null) return;
+        if (!IsLoaded || Loading || ViewModel == null) return;
         if (BreakCombo.SelectedItem is ComboBoxItem { Tag: string tag } && int.TryParse(tag, out int minutes))
         {
             int interval = BreakReminder.NormalizeInterval(minutes);
@@ -278,7 +251,7 @@ public partial class GamingSectionView : UserControl
 
     private void CommitPubgName()
     {
-        if (!IsLoaded || _loading || ViewModel == null) return;
+        if (!IsLoaded || Loading || ViewModel == null) return;
         string name = PubgNameBox.Text.Trim();
         if (name.Length > 64) { PubgNameRow.Validation = "A PUBG name has at most 64 characters."; return; }
         PubgNameRow.Validation = "";
@@ -288,7 +261,7 @@ public partial class GamingSectionView : UserControl
 
     private void PubgPlatform_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        if (!IsLoaded || _loading || ViewModel == null) return;
+        if (!IsLoaded || Loading || ViewModel == null) return;
         if (PubgPlatformCombo.SelectedItem is ComboBoxItem { Tag: string tag } && tag != ViewModel.Settings.PubgPlatform)
             ViewModel.UpdateSettings(x => x.PubgPlatform = PubgStatsService.NormalizePlatform(tag));
     }
@@ -327,7 +300,7 @@ public partial class GamingSectionView : UserControl
 
     private void Offset_Changed(object sender, RoutedPropertyChangedEventArgs<double> e)
     {
-        if (!IsLoaded || _loading) return;
+        if (!IsLoaded || Loading) return;
         double offset = SettingsValidation.ClampGamingOffset(OffsetSlider.Value);
         ViewModel?.UpdateSettings(x => x.GamingTopOffset = offset, SettingsApply.Reposition);
     }
@@ -343,7 +316,7 @@ public partial class GamingSectionView : UserControl
 
     private void CommitPreferred()
     {
-        if (!IsLoaded || _loading || ViewModel == null) return;
+        if (!IsLoaded || Loading || ViewModel == null) return;
         var settings = ViewModel.Settings;
         PreferredRow.Validation = "";
         if (string.IsNullOrWhiteSpace(PreferredBox.Text))
@@ -414,7 +387,7 @@ public partial class GamingSectionView : UserControl
 
             void Commit()
             {
-                if (_loading) return;
+                if (Loading) return;
                 string text = ((resolution.SelectedItem as ComboBoxItem)?.Tag as string ?? "").Trim(), normalized = "", problem = "";
                 message.Visibility = Visibility.Collapsed;
                 if (text.Length > 0 && !ResolutionIsUsable(text, out normalized, out problem))

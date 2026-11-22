@@ -64,11 +64,12 @@ public partial class LocationSectionView : SettingsSectionBase
             Show("Type a city, district or ward name first.", "IslandNegativeBrush");
             return;
         }
+        if (ViewModel == null) return;
         int request = ++_checkRequest;
         Show($"Searching for '{query}'…", "IslandStatusBrush");
         try
         {
-            var result = await new WeatherService().ResolveLocationAsync(query);
+            var result = await ViewModel.ResolveLocationAsync(query);
             if (request != _checkRequest) return;
             if (result.Success)
             {

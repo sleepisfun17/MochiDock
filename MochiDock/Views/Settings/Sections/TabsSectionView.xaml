@@ -1,4 +1,4 @@
-<UserControl x:Class="MochiDock.Views.Settings.Sections.TabsSectionView"
+<s:SettingsSectionBase x:Class="MochiDock.Views.Settings.Sections.TabsSectionView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:s="clr-namespace:MochiDock.Views.Settings">
@@ -31,4 +31,4 @@
             <Button Style="{StaticResource ActionButton}" Content="Reset to defaults" Click="FxReset_Click" Margin="0"/>
         </s:SettingRow>
     </StackPanel>
-</UserControl>
+</s:SettingsSectionBase>

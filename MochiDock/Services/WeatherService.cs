@@ -28,7 +28,7 @@ public class WeatherService
         _httpClient.DefaultRequestHeaders.Add("User-Agent", AppUserAgent.Value);
     }
 
-    public async Task<LocationGeocodeResult> ResolveLocationAsync(string query)
+    public async Task<LocationGeocodeResult> ResolveLocationAsync(string query, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(query))
         {
@@ -43,10 +43,10 @@ public class WeatherService
             var nominatimUrl = $"https://nominatim.openstreetmap.org/search?q={Uri.EscapeDataString(trimmed)}&format=json&addressdetails=1&limit=1";
             using var request = new HttpRequestMessage(HttpMethod.Get, nominatimUrl);
             request.Headers.Add("User-Agent", AppUserAgent.Value);
-            var response = await _httpClient.SendAsync(request);
+            using var response = await _httpClient.SendAsync(request, cancellationToken);
             if (response.IsSuccessStatusCode)
             {
-                var content = await response.Content.ReadAsStringAsync();
+                var content = await response.Content.ReadAsStringAsync(cancellationToken);
                 using var doc = JsonDocument.Parse(content);
                 if (doc.RootElement.ValueKind == JsonValueKind.Array && doc.RootElement.GetArrayLength() > 0)
                 {
@@ -100,7 +100,7 @@ public class WeatherService
             {
                 if (string.IsNullOrWhiteSpace(cand)) continue;
                 var geoUrl = $"https://geocoding-api.open-meteo.com/v1/search?name={Uri.EscapeDataString(cand)}&count=1";
-                var geoResponse = await _httpClient.GetStringAsync(geoUrl);
+                var geoResponse = await _httpClient.GetStringAsync(geoUrl, cancellationToken);
                 using var geoDoc = JsonDocument.Parse(geoResponse);
                 if (geoDoc.RootElement.TryGetProperty("results", out var results) && results.GetArrayLength() > 0)
                 {
@@ -129,14 +129,14 @@ public class WeatherService
         return new LocationGeocodeResult { Success = false };
     }
 
-    public async Task<WeatherInfo?> GetWeatherAsync(string city)
+    public async Task<WeatherInfo?> GetWeatherAsync(string city, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(city))
         {
             city = "Tokyo";
         }
 
-        var geo = await ResolveLocationAsync(city);
+        var geo = await ResolveLocationAsync(city, cancellationToken);
         if (geo.Success)
         {
             try
@@ -145,116 +145,19 @@ public class WeatherService
                 string lonStr = geo.Longitude.ToString("F4", CultureInfo.InvariantCulture);
 
                 var weatherUrl = $"https://api.open-meteo.com/v1/forecast?latitude={latStr}&longitude={lonStr}&current=temperature_2m,wind_speed_10m,weather_code&hourly=temperature_2m,weather_code,precipitation_probability&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max&minutely_15=precipitation,weather_code&forecast_minutely_15=8&forecast_days=3&wind_speed_unit=ms&timezone=auto";
-                var weatherResponse = await _httpClient.GetStringAsync(weatherUrl);
-                using var weatherDoc = JsonDocument.Parse(weatherResponse);
-                var root = weatherDoc.RootElement;
-                var current = root.GetProperty("current");
-                // timezone=auto: times are the city's local time (so "Today" is the city's day); this offset turns them into instants.
-                int utcOffset = root.TryGetProperty("utc_offset_seconds", out var offsetEl) ? offsetEl.GetInt32() : 0;
-
-                int weatherCode = current.TryGetProperty("weather_code", out var codeEl) ? codeEl.GetInt32() : 0;
-                var (condition, icon, kind) = DecodeWmoWeatherCode(weatherCode);
-
-                var weatherInfo = new WeatherInfo
-                {
-                    Temperature = (float)current.GetProperty("temperature_2m").GetDouble(),
-                    WindSpeed = (float)current.GetProperty("wind_speed_10m").GetDouble(),
-                    Condition = condition,
-                    WeatherIcon = icon,
-                    IconKind = kind,
-                    ResolvedCityName = !string.IsNullOrEmpty(geo.ShortName) ? geo.ShortName : city,
-                    Latitude = geo.Latitude,
-                    Longitude = geo.Longitude
-                };
-
-                // Parse Hourly (Next 12 hours)
-                if (root.TryGetProperty("hourly", out var hourly))
-                {
-                    var times = hourly.GetProperty("time");
-                    var temps = hourly.GetProperty("temperature_2m");
-                    var codes = hourly.GetProperty("weather_code");
-                    var rainProbs = hourly.TryGetProperty("precipitation_probability", out var rp) ? rp : default;
-
-                    var now = DateTime.Now;
-                    int count = times.GetArrayLength();
-                    int added = 0;
-
-                    for (int i = 0; i < count && added < 12; i++)
-                    {
-                        // Shown in this PC's time (the forecast hours used to be read as local while Open-Meteo sent GMT).
-                        if (MochiDock.Core.RainSoonPolicy.ParseTime(times[i].GetString(), utcOffset) is { } at)
-                        {
-                            var dt = at.LocalDateTime;
-                            if (dt >= now.AddHours(-0.5))
-                            {
-                                int hCode = codes[i].GetInt32();
-                                var (_, _, hKind) = DecodeWmoWeatherCode(hCode);
-                                int rainP = rainProbs.ValueKind == JsonValueKind.Array ? rainProbs[i].GetInt32() : 0;
-
-                                weatherInfo.HourlyList.Add(new HourlyForecast
-                                {
-                                    Time = dt,
-                                    Temp = (float)temps[i].GetDouble(),
-                                    IconKind = hKind,
-                                    RainProbability = rainP
-                                });
-                                added++;
-                            }
-                        }
-                    }
-                }
-
-                // The next two hours in 15-minute steps, for the "rain soon" notice.
-                if (root.TryGetProperty("minutely_15", out var quarter) && quarter.TryGetProperty("time", out var qTimes))
-                {
-                    var qRain = quarter.TryGetProperty("precipitation", out var qp) ? qp : default;
-                    var qCodes = quarter.TryGetProperty("weather_code", out var qc) ? qc : default;
-                    for (int i = 0; i < qTimes.GetArrayLength(); i++)
-                    {
-                        if (MochiDock.Core.RainSoonPolicy.ParseTime(qTimes[i].GetString(), utcOffset) is not { } start) continue;
-                        double mm = qRain.ValueKind == JsonValueKind.Array && qRain[i].ValueKind == JsonValueKind.Number ? qRain[i].GetDouble() : 0;
-                        int qCode = qCodes.ValueKind == JsonValueKind.Array && qCodes[i].ValueKind == JsonValueKind.Number ? qCodes[i].GetInt32() : 0;
-                        weatherInfo.Next15.Add(new MochiDock.Core.PrecipitationSlot(start, mm, qCode));
-                    }
-                }
-
-                // Parse Daily (3 Days)
-                if (root.TryGetProperty("daily", out var daily))
-                {
-                    var dates = daily.GetProperty("time");
-                    var maxTemps = daily.GetProperty("temperature_2m_max");
-                    var minTemps = daily.GetProperty("temperature_2m_min");
-                    var dCodes = daily.GetProperty("weather_code");
-                    var dRain = daily.TryGetProperty("precipitation_probability_max", out var dr) ? dr : default;
-
-                    int dCount = Math.Min(3, dates.GetArrayLength());
-                    for (int i = 0; i < dCount; i++)
-                    {
-                        string dayName = i == 0 ? "Today" : (i == 1 ? "Tomorrow" : (DateTime.TryParse(dates[i].GetString(), CultureInfo.InvariantCulture, DateTimeStyles.None, out var dt) ? dt.ToString("ddd", CultureInfo.InvariantCulture) : $"Day {i+1}"));
-                        int dCode = dCodes[i].GetInt32();
-                        var (_, _, dKind) = DecodeWmoWeatherCode(dCode);
-                        int rainP = dRain.ValueKind == JsonValueKind.Array ? dRain[i].GetInt32() : 0;
-
-                        weatherInfo.DailyList.Add(new DailyForecast
-                        {
-                            DayName = dayName,
-                            MaxTemp = (float)maxTemps[i].GetDouble(),
-                            MinTemp = (float)minTemps[i].GetDouble(),
-                            IconKind = dKind,
-                            RainProbability = rainP
-                        });
-                    }
-                }
-
-                return weatherInfo;
+                var weatherResponse = await _httpClient.GetStringAsync(weatherUrl, cancellationToken);
+                string resolvedName = !string.IsNullOrEmpty(geo.ShortName) ? geo.ShortName : city;
+                if (OpenMeteoForecastParser.Parse(weatherResponse, resolvedName, geo.Latitude, geo.Longitude) is { } parsed)
+                    return parsed;
             }
+            catch (OperationCanceledException) { throw; }
             catch (System.Exception logEx) { MochiDock.Services.AppLog.Warn("Weather", logEx); }
         }
 
         // 3. Fallback to wttr.in
         try
         {
-            var response = await _httpClient.GetStringAsync($"https://wttr.in/{Uri.EscapeDataString(city)}?format=j1");
+            var response = await _httpClient.GetStringAsync($"https://wttr.in/{Uri.EscapeDataString(city)}?format=j1", cancellationToken);
             using var doc = JsonDocument.Parse(response);
             var root = doc.RootElement;
             var current = root.GetProperty("current_condition")[0];
@@ -297,30 +200,11 @@ public class WeatherService
 
             return weatherInfo;
         }
+        catch (OperationCanceledException) { throw; }
         catch (System.Exception logEx) { MochiDock.Services.AppLog.Warn("Weather", logEx); }
 
         return null;
     }
-
-    private static (string Condition, string Icon, string Kind) DecodeWmoWeatherCode(int code) => code switch
-    {
-        0 => ("Clear Sky", "☀️", "Clear"),
-        1 => ("Mainly Clear", "🌤️", "PartlyCloudy"),
-        2 => ("Partly Cloudy", "⛅", "PartlyCloudy"),
-        3 => ("Overcast", "☁️", "Cloudy"),
-        45 or 48 => ("Foggy", "🌫️", "Fog"),
-        51 or 53 or 55 => ("Drizzle", "🌦️", "Drizzle"),
-        56 or 57 => ("Freezing Drizzle", "🌧️", "Rain"),
-        61 or 63 or 65 => ("Rain", "🌧️", "Rain"),
-        66 or 67 => ("Freezing Rain", "🌧️", "Rain"),
-        71 or 73 or 75 => ("Snowfall", "🌨️", "Snow"),
-        77 => ("Snow Grains", "🌨️", "Snow"),
-        80 or 81 or 82 => ("Rain Showers", "🌦️", "Drizzle"),
-        85 or 86 => ("Snow Showers", "🌨️", "Snow"),
-        95 => ("Thunderstorm", "⛈️", "Thunder"),
-        96 or 99 => ("Thunderstorm w/ Hail", "⛈️", "Thunder"),
-        _ => ("Clear", "☀️", "Clear")
-    };
 
     private static (string Icon, string Kind) MapConditionToIconAndKind(string desc)
     {

@@ -22,7 +22,7 @@ public abstract class SettingsSectionBase : UserControl
     protected MainViewModel? ViewModel => DataContext as MainViewModel;
 
     /// <summary>True while the section is being filled from the settings.</summary>
-    protected bool Loading { get; private set; }
+    protected bool Loading { get; set; }
 
     /// <summary>Fills the controls from <c>ViewModel.Settings</c>. A box the user is typing in should keep its text.</summary>
     protected virtual void LoadFromSettings() { }

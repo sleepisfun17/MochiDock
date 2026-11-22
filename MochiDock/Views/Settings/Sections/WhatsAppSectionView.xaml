@@ -1,4 +1,4 @@
-<UserControl x:Class="MochiDock.Views.Settings.Sections.WhatsAppSectionView"
+<s:SettingsSectionBase x:Class="MochiDock.Views.Settings.Sections.WhatsAppSectionView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:s="clr-namespace:MochiDock.Views.Settings">
@@ -138,4 +138,4 @@
         <TextBlock x:Name="AllowedWarning" Style="{StaticResource CardCaptionText}" Foreground="{DynamicResource IslandWarningBrush}" TextWrapping="Wrap" Text="Nothing is listed, so nothing of that kind will notify." Margin="0,6,0,0" Visibility="Collapsed"/>
         </StackPanel>
     </StackPanel>
-</UserControl>
+</s:SettingsSectionBase>

@@ -11,46 +11,20 @@ using UserControl = System.Windows.Controls.UserControl;
 namespace MochiDock.Views.Settings.Sections;
 
 /// <summary>Theme, dock style, monitor and capsule content. Writes go through <see cref="MainViewModel.UpdateSettings"/>; fullscreen and capture options bind to the view model.</summary>
-public partial class AppearanceSectionView : UserControl
+public partial class AppearanceSectionView : SettingsSectionBase
 {
-    private bool _loading;
-    private MainViewModel? _subscribed;
-
     public AppearanceSectionView()
     {
         InitializeComponent();
         foreach (var preset in InterfaceScale.Presets)
             ScaleCombo.Items.Add(new ComboBoxItem { Content = preset == InterfaceScale.Default ? $"{preset}% (default)" : $"{preset}%", Tag = preset });
-        Loaded += (s, e) => { Subscribe(); LoadFromSettings(); };
-        Unloaded += (s, e) => Unsubscribe();
-        IsVisibleChanged += (s, e) => { if (IsVisible) LoadFromSettings(); };
     }
 
-    private MainViewModel? ViewModel => DataContext as MainViewModel;
-
-    private void Subscribe()
-    {
-        if (ReferenceEquals(_subscribed, ViewModel)) return;
-        Unsubscribe();
-        _subscribed = ViewModel;
-        if (_subscribed != null) _subscribed.SettingsChanged += OnSettingsChanged;
-    }
-
-    private void Unsubscribe()
-    {
-        if (_subscribed != null) _subscribed.SettingsChanged -= OnSettingsChanged;
-        _subscribed = null;
-    }
-
-    private void OnSettingsChanged(SettingsApply effects) => Dispatcher.BeginInvoke(LoadFromSettings);
-
-    private void LoadFromSettings()
+    protected override void LoadFromSettings()
     {
         var vm = ViewModel;
         if (vm == null) return;
         var settings = vm.Settings;
-        _loading = true;
-        try
         {
             string theme = MochiDock.Core.ThemePolicy.Normalize(settings.CapsuleTheme);
             ThemeMatchaRadio.IsChecked = theme == MochiDock.Core.ThemePolicy.Matcha;
@@ -77,18 +51,17 @@ public partial class AppearanceSectionView : UserControl
                 DateFormatCombo.Items.Add(new ComboBoxItem { Content = DateDisplay.Label(style, DateTime.Today), Tag = style });
             DateFormatCombo.SelectedItem = DateFormatCombo.Items.OfType<ComboBoxItem>().FirstOrDefault(i => i.Tag is DateStyle s && s == chosenDate);
         }
-        finally { _loading = false; }
     }
 
     private void DateFormat_Changed(object sender, SelectionChangedEventArgs e)
     {
-        if (!IsLoaded || _loading) return;
+        if (!IsLoaded || Loading) return;
         if (DateFormatCombo.SelectedItem is ComboBoxItem { Tag: DateStyle style }) ViewModel?.UpdateSettings(x => x.DateFormat = style.ToString());
     }
 
     private void Scale_Changed(object sender, SelectionChangedEventArgs e)
     {
-        if (!IsLoaded || _loading) return;
+        if (!IsLoaded || Loading) return;
         if (ScaleCombo.SelectedItem is ComboBoxItem { Tag: int percent } && ViewModel != null) ViewModel.InterfaceScalePercent = percent;
     }
 
@@ -97,7 +70,7 @@ public partial class AppearanceSectionView : UserControl
 
     private void Theme_Checked(object sender, RoutedEventArgs e)
     {
-        if (!IsLoaded || _loading) return;
+        if (!IsLoaded || Loading) return;
         string theme = ThemeMatchaRadio.IsChecked == true ? MochiDock.Core.ThemePolicy.Matcha
                      : ThemeHojichaRadio.IsChecked == true ? MochiDock.Core.ThemePolicy.Hojicha
                      : MochiDock.Core.ThemePolicy.Default;
@@ -106,7 +79,7 @@ public partial class AppearanceSectionView : UserControl
 
     private void DockStyle_Checked(object sender, RoutedEventArgs e)
     {
-        if (!IsLoaded || _loading) return;
+        if (!IsLoaded || Loading) return;
         string style = DockNotchRadio.IsChecked == true ? "Notch" : "Floating";
         ViewModel?.UpdateSettings(x => x.DockStyle = style, SettingsApply.Reposition);
     }
@@ -122,7 +95,7 @@ public partial class AppearanceSectionView : UserControl
 
     private void CommitTopMargin()
     {
-        if (!IsLoaded || _loading || ViewModel == null) return;
+        if (!IsLoaded || Loading || ViewModel == null) return;
         TopMarginRow.Validation = "";
         if (!SettingsValidation.TryParseTopMargin(TopMarginBox.Text, out double margin))
         {
@@ -138,7 +111,7 @@ public partial class AppearanceSectionView : UserControl
 
     private void ScrollSpeed_Changed(object sender, RoutedPropertyChangedEventArgs<double> e)
     {
-        if (!IsLoaded || _loading) return;
+        if (!IsLoaded || Loading) return;
         ViewModel?.SetCapsuleScrollSpeed(ScrollSpeedSlider.Value);
     }
 
@@ -160,7 +133,7 @@ public partial class AppearanceSectionView : UserControl
 
     private void Birthday_Changed(object sender, SelectionChangedEventArgs e)
     {
-        if (!IsLoaded || _loading) return;
+        if (!IsLoaded || Loading) return;
         int month = (BirthdayMonthCombo.SelectedItem as ComboBoxItem)?.Tag is int m ? m : 0;
         int day = (BirthdayDayCombo.SelectedItem as ComboBoxItem)?.Tag is int d ? d : 0;
         if (month == 0 || day == 0)
@@ -178,21 +151,21 @@ public partial class AppearanceSectionView : UserControl
 
     private void Expressive_Changed(object sender, RoutedEventArgs e)
     {
-        if (!IsLoaded || _loading) return;
+        if (!IsLoaded || Loading) return;
         bool on = ExpressiveCheck.IsChecked == true;
         ViewModel?.UpdateSettings(x => x.ExpressiveMochi = on);
     }
 
     private void ClockLayout_Checked(object sender, RoutedEventArgs e)
     {
-        if (!IsLoaded || _loading) return;
+        if (!IsLoaded || Loading) return;
         string value = ClockEvenRadio.IsChecked == true ? nameof(MochiDock.Core.CapsuleClockAlignment.EvenSpacing) : nameof(MochiDock.Core.CapsuleClockAlignment.EqualEdges);
         ViewModel?.UpdateSettings(x => x.CapsuleClockLayout = value, SettingsApply.CapsuleRefresh);
     }
 
     private void Weather_Changed(object sender, RoutedEventArgs e)
     {
-        if (!IsLoaded || _loading) return;
+        if (!IsLoaded || Loading) return;
         bool show = WeatherCheck.IsChecked == true;
         ViewModel?.UpdateSettings(x => x.ShowWeatherInCapsule = show, SettingsApply.CapsuleRefresh);
     }

@@ -7,10 +7,8 @@ using UserControl = System.Windows.Controls.UserControl;
 namespace MochiDock.Views.Settings.Sections;
 
 /// <summary>Which tabs the dock shows, and the three currency pairs of the FX card. Every switch binds two-way to the view model, which saves and updates the dock.</summary>
-public partial class TabsSectionView : UserControl
+public partial class TabsSectionView : SettingsSectionBase
 {
-    private bool _loading;
-    private MainViewModel? _subscribed;
     private readonly ComboBox[] _bases;
     private readonly ComboBox[] _quotes;
     private readonly SettingRow[] _rows;
@@ -24,40 +22,17 @@ public partial class TabsSectionView : UserControl
         foreach (var combo in _bases.Concat(_quotes))
             foreach (var currency in FxPairPolicy.Currencies)
                 combo.Items.Add(new ComboBoxItem { Content = currency.Label, Tag = currency.Code });
-        Loaded += (_, _) => { Subscribe(); LoadFromSettings(); };
-        Unloaded += (_, _) => Unsubscribe();
-        IsVisibleChanged += (_, _) => { if (IsVisible) LoadFromSettings(); };
     }
-
-    private MainViewModel? ViewModel => DataContext as MainViewModel;
-
-    private void Subscribe()
-    {
-        if (ReferenceEquals(_subscribed, ViewModel)) return;
-        Unsubscribe();
-        _subscribed = ViewModel;
-        if (_subscribed != null) _subscribed.SettingsChanged += OnSettingsChanged;
-    }
-
-    private void Unsubscribe()
-    {
-        if (_subscribed != null) _subscribed.SettingsChanged -= OnSettingsChanged;
-        _subscribed = null;
-    }
-
-    private void OnSettingsChanged(SettingsApply effects) => Dispatcher.BeginInvoke(LoadFromSettings);
 
     private static void Select(ComboBox combo, string code) =>
         combo.SelectedItem = combo.Items.OfType<ComboBoxItem>().FirstOrDefault(i => (string)i.Tag == code);
 
     private static string? Code(ComboBox combo) => (combo.SelectedItem as ComboBoxItem)?.Tag as string;
 
-    private void LoadFromSettings()
+    protected override void LoadFromSettings()
     {
         var vm = ViewModel;
         if (vm == null) return;
-        _loading = true;
-        try
         {
             var pairs = vm.FxPairs;
             for (int i = 0; i < pairs.Length; i++)
@@ -67,12 +42,11 @@ public partial class TabsSectionView : UserControl
                 Select(_quotes[i], quoteCode);
             }
         }
-        finally { _loading = false; }
     }
 
     private void FxPair_Changed(object sender, SelectionChangedEventArgs e)
     {
-        if (!IsLoaded || _loading || ViewModel is not { } vm) return;
+        if (!IsLoaded || Loading || ViewModel is not { } vm) return;
         var pairs = vm.FxPairs;
         int row = Array.FindIndex(_bases, c => ReferenceEquals(c, sender));
         if (row < 0) row = Array.FindIndex(_quotes, c => ReferenceEquals(c, sender));

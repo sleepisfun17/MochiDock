@@ -56,4 +56,39 @@ public class SettingsXamlTokenTests
         string header = File.ReadAllText(Path.Combine(app, "MainWindow.xaml"));
         Assert.All(listed, name => Assert.Contains("Binding " + name + ",", header));
     }
+
+    [Fact]
+    public void MainViewModelRoutesSettingMutationsThroughUpdateSettings()
+    {
+        string app = Path.GetFullPath(Path.Combine(FindSettingsViews(), "..", ".."));
+        string vmPath = Path.Combine(app, "ViewModels", "MainViewModel.cs");
+        var bypasses = File.ReadLines(vmPath)
+            .Select((line, i) => (line, n: i + 1))
+            .Where(x => x.line.Contains("SettingsService.Save(", StringComparison.Ordinal))
+            .Select(x => $"{x.n}: {x.line.Trim()}")
+            .ToList();
+        Assert.True(bypasses.Count == 0, "Direct SettingsService.Save bypasses in MainViewModel.cs: " + string.Join("; ", bypasses));
+    }
+
+    [Fact]
+    public void AllSettingsSectionsInheritSettingsSectionBase()
+    {
+        string sectionsDir = Path.Combine(FindSettingsViews(), "Sections");
+        var offenders = Directory.GetFiles(sectionsDir, "*SectionView.xaml.cs")
+            .Where(file =>
+            {
+                string text = File.ReadAllText(file);
+                return text.Contains("SettingsChanged +=", StringComparison.Ordinal) &&
+                       !Regex.IsMatch(text, @"class\s+\w+SectionView\s*:\s*SettingsSectionBase\b");
+            })
+            .Select(Path.GetFileName)
+            .ToList();
+        Assert.True(offenders.Count == 0, "Sections duplicating SettingsChanged boilerplate instead of inheriting SettingsSectionBase: " + string.Join(", ", offenders));
+
+        foreach (string name in new[] { "Appearance", "Email", "Gaming", "Hardware", "Notifications", "Tabs", "WhatsApp" })
+        {
+            string path = Path.Combine(sectionsDir, $"{name}SectionView.xaml.cs");
+            Assert.Matches(@"class\s+\w+SectionView\s*:\s*SettingsSectionBase\b", File.ReadAllText(path));
+        }
+    }
 }

@@ -27,9 +27,8 @@ public sealed class ChatPickRow
 }
 
 /// <summary>WhatsApp (GOWA) settings. All writes go through <see cref="MainViewModel.UpdateSettings"/>; DataContext is the view model.</summary>
-public partial class WhatsAppSectionView : UserControl
+public partial class WhatsAppSectionView : SettingsSectionBase
 {
-    private bool _loading;
     private int _readSyncRequest;
     // The read-sync line ("Last read receipt: 14:05 (3 min ago)") is refreshed every 15 s while the page is open.
     private readonly System.Windows.Threading.DispatcherTimer _statusTimer = new() { Interval = TimeSpan.FromSeconds(15) };
@@ -41,7 +40,6 @@ public partial class WhatsAppSectionView : UserControl
         LinkStatusText.Text = vm.WhatsAppLinkStatus;
         LinkStepsText.Visibility = vm.Settings.EnableWhatsApp && !vm.WhatsAppIsLinked ? Visibility.Visible : Visibility.Collapsed;
     }
-    private MainViewModel? _subscribed;
     private IReadOnlyList<WhatsAppChatEntry> _pickerChats = Array.Empty<WhatsAppChatEntry>();
     private string _pickerMode = "";
     private int _pickerRequest;
@@ -49,41 +47,20 @@ public partial class WhatsAppSectionView : UserControl
     public WhatsAppSectionView()
     {
         InitializeComponent();
-        Loaded += (s, e) => { Subscribe(); LoadFromSettings(); _statusTimer.Start(); _linkTimer.Start(); UpdateReadSyncStatus(); UpdateLinkStatus(); };
-        Unloaded += (s, e) => { Unsubscribe(); _statusTimer.Stop(); _linkTimer.Stop(); };
+        Loaded += (s, e) => { _statusTimer.Start(); _linkTimer.Start(); UpdateReadSyncStatus(); UpdateLinkStatus(); };
+        Unloaded += (s, e) => { _statusTimer.Stop(); _linkTimer.Stop(); };
         _linkTimer.Tick += (s, e) => UpdateLinkStatus();
         _statusTimer.Tick += (s, e) => UpdateReadSyncStatus();
-        IsVisibleChanged += (s, e) => { if (IsVisible) LoadFromSettings(); };
     }
-
-    private MainViewModel? ViewModel => DataContext as MainViewModel;
-
-    private void Subscribe()
-    {
-        if (ReferenceEquals(_subscribed, ViewModel)) return;
-        Unsubscribe();
-        _subscribed = ViewModel;
-        if (_subscribed != null) _subscribed.SettingsChanged += OnSettingsChanged;
-    }
-
-    private void Unsubscribe()
-    {
-        if (_subscribed != null) _subscribed.SettingsChanged -= OnSettingsChanged;
-        _subscribed = null;
-    }
-
-    private void OnSettingsChanged(SettingsApply effects) => Dispatcher.BeginInvoke(LoadFromSettings);
 
     // A box being edited keeps its text; everything else follows the settings.
     private static void SetText(TextBox box, string text) { if (!box.IsKeyboardFocused) box.Text = text; }
 
-    private void LoadFromSettings()
+    protected override void LoadFromSettings()
     {
         var vm = ViewModel;
         if (vm == null) return;
         var settings = vm.Settings;
-        _loading = true;
-        try
         {
             EnableWhatsAppCheck.IsChecked = settings.EnableWhatsApp;
             WhatsAppBody.IsEnabled = settings.EnableWhatsApp;
@@ -120,7 +97,6 @@ public partial class WhatsAppSectionView : UserControl
             UpdateRemoteWarning();
             UpdateLinkStatus();
         }
-        finally { _loading = false; }
         _ = RefreshReadSyncUrlAsync();
     }
 
@@ -137,7 +113,7 @@ public partial class WhatsAppSectionView : UserControl
 
     private void ModeChosen(string mode)
     {
-        if (!IsLoaded || _loading) return;
+        if (!IsLoaded || Loading) return;
         UpdateModeVisibility(mode == "Remote");
         CommitGowaConfig(mode);
     }
@@ -153,7 +129,7 @@ public partial class WhatsAppSectionView : UserControl
 
     private void CommitGowaConfig(string? mode = null)
     {
-        if (!IsLoaded || _loading || ViewModel == null) return;
+        if (!IsLoaded || Loading || ViewModel == null) return;
         var settings = ViewModel.Settings;
         bool changed = false;
 
@@ -239,14 +215,14 @@ public partial class WhatsAppSectionView : UserControl
 
     private void EnableWhatsApp_Changed(object sender, RoutedEventArgs e)
     {
-        if (!IsLoaded || _loading) return;
+        if (!IsLoaded || Loading) return;
         bool on = EnableWhatsAppCheck.IsChecked == true;
         ViewModel?.UpdateSettings(x => x.EnableWhatsApp = on, SettingsApply.Gowa);
     }
 
     private void Option_Changed(object sender, RoutedEventArgs e)
     {
-        if (!IsLoaded || _loading) return;
+        if (!IsLoaded || Loading) return;
         bool ignoreArchived = IgnoreArchivedCheck.IsChecked == true;
         bool muteGroups = MuteGroupsCheck.IsChecked == true;
         bool onlyListed = OnlyListedCheck.IsChecked == true;

@@ -1,4 +1,4 @@
-<UserControl x:Class="MochiDock.Views.Settings.Sections.HardwareSectionView"
+<s:SettingsSectionBase x:Class="MochiDock.Views.Settings.Sections.HardwareSectionView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:s="clr-namespace:MochiDock.Views.Settings"
@@ -167,4 +167,4 @@
             </StackPanel>
         </Border>
     </StackPanel>
-</UserControl>
+</s:SettingsSectionBase>
