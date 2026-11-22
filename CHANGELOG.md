@@ -2,6 +2,12 @@
 
 All notable changes to MochiDock are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.2.1-beta]
+
+### Fixed
+
+- **Welcome banner**: the first-run welcome banner no longer cuts off the bottom of the open card. After importing or reloading settings the banner could stay on screen while the dock sized itself as if it were gone; the dock now leaves room for the banner that is actually shown and re-sizes when it appears, disappears or rewraps.
+
 ## [0.2.0-beta]
 
 ### Added
