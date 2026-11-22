@@ -19,7 +19,8 @@ public partial class MainViewModel
     private string _playtimeTooltip = "";
     /// <summary>The most played games this week, one per line, for the tooltip of the playtime row.</summary>
     public string PlaytimeTooltip { get => _playtimeTooltip; private set { _playtimeTooltip = value; OnPropertyChanged(); } }
-    private string _playtimeTodayText = "Today 0m", _playtimeWeekText = "This week 0m";
+    private string _playtimeTodayText = "0m", _playtimeWeekText = "0m";
+    /// <summary>Durations only ("1h 20m"); the Games page puts the "Today" and "This week" labels next to them.</summary>
     public string PlaytimeTodayText { get => _playtimeTodayText; private set { _playtimeTodayText = value; OnPropertyChanged(); } }
     public string PlaytimeWeekText { get => _playtimeWeekText; private set { _playtimeWeekText = value; OnPropertyChanged(); } }
     public bool HasPlaytime => _playtime.Ledger.Games.Count > 0;
@@ -30,8 +31,8 @@ public partial class MainViewModel
     {
         var now = DateTime.Now;
         var ledger = _playtime.Ledger;
-        PlaytimeTodayText = "Today " + PlaytimeFormat.Duration(ledger.Today(now));
-        PlaytimeWeekText = "This week " + PlaytimeFormat.Duration(ledger.ThisWeek(now, _settings.WeekStartsOnMonday));
+        PlaytimeTodayText = PlaytimeFormat.Duration(ledger.Today(now));
+        PlaytimeWeekText = PlaytimeFormat.Duration(ledger.ThisWeek(now, _settings.WeekStartsOnMonday));
         var top = ledger.Between(GamePlaytimeLedger.WeekStart(now, _settings.WeekStartsOnMonday), now).Take(PlaytimeRowsShown).ToList();
         PlaytimeTooltip = top.Count == 0 ? "" : "Most played this week" + string.Concat(top.Select(t => Environment.NewLine + t.Game + "  " + PlaytimeFormat.Duration(t.Seconds)));
         OnPropertyChanged(nameof(HasPlaytime));

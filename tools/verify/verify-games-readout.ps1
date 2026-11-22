@@ -8,6 +8,10 @@ $node=$source.SelectSingleNode('//*[local-name()="Style" and @*[local-name()="Ke
 [xml]$hardware=Get-Content (Join-Path $repo 'MochiDock/Views/Cards/HardwareCardView.xaml') -Raw
 $markup=$hardware.SelectSingleNode('//*[local-name()="Grid" and @Tag="Games"]').OuterXml
 if($markup -match 'Stays|Peeks|SegmentedPill|Alt\+Shift\+F|frame of delay'){throw 'Inactive gaming controls/claims remain'}
+# IsVisible needs a live window; off-screen, an element is shown when it and every ancestor up to the surface are Visible.
+function Test-Shown($element,$root){for($e=$element;$e -and $e -ne $root;$e=[Windows.Media.VisualTreeHelper]::GetParent($e)){if($e -is [Windows.UIElement] -and $e.Visibility -ne [Windows.Visibility]::Visible){return $false}};return $true}
+# The part of a TextBlock its text fills: a stretched block in a column-less Grid spans the row, but its text only takes its desired width.
+function Get-InkRect($text,$root){$w=[Math]::Min($text.ActualWidth,$text.DesiredSize.Width-$text.Margin.Left-$text.Margin.Right);$x=switch($text.TextAlignment){'Right'{$text.ActualWidth-$w}'Center'{($text.ActualWidth-$w)/2}default{0}};return $text.TransformToAncestor($root).TransformBounds([Windows.Rect]::new($x,0,$w,$text.ActualHeight))}
 function Luminance($color){$v=@($color.R,$color.G,$color.B)|ForEach-Object{$c=$_/255.0;if($c -le 0.04045){$c/12.92}else{[Math]::Pow(($c+0.055)/1.055,2.4)}};return .2126*$v[0]+.7152*$v[1]+.0722*$v[2]}
 foreach($theme in @('Dark','Matcha')){foreach($scale in @(1,1.25,1.5,2)){foreach($pin in @($false,$true)){
  $bootstrap=[Windows.Window]::new();$assembly.GetType('MochiDock.Services.ThemeService').GetMethod('ApplyTheme').Invoke($null,@($bootstrap,$theme))
@@ -43,6 +47,12 @@ foreach($game in 'Valorant','PUBG: BATTLEGROUNDS'){$record=[Activator]::CreateIn
   if(([Math]::Max($a,$b)+.05)/([Math]::Min($a,$b)+.05) -lt 4.5){throw "Games text contrast failed: $theme $($visual.Text) $($visual.Foreground) / $($surface.Background) a=$a b=$b"}
  }
  if(!$labelFound -or !$helpFound){throw 'Pin label/help missing'}
+ # No two texts may overlap (the old playtime row drew 'Today 1h 20m' and 'This week 1h 20m' on top of each other), and the
+ # right column must fit without scrolling.
+ $texts=@($visuals|Where-Object{$_ -is [Windows.Controls.TextBlock] -and $_.Text -and (Test-Shown $_ $surface)}|ForEach-Object{[pscustomobject]@{Text=$_.Text;Rect=(Get-InkRect $_ $surface)}})
+ for($i=0;$i -lt $texts.Count;$i++){for($j=$i+1;$j -lt $texts.Count;$j++){$overlap=[Windows.Rect]::Intersect($texts[$i].Rect,$texts[$j].Rect);if(!$overlap.IsEmpty -and $overlap.Width -gt 1 -and $overlap.Height -gt 1){throw "Games texts overlap: $theme/$scale '$($texts[$i].Text)' and '$($texts[$j].Text)'"}}}
+ foreach($scroller in $visuals|Where-Object{$_ -is [Windows.Controls.ScrollViewer]}){if($scroller.ExtentHeight -gt $scroller.ViewportHeight+0.5){throw "Games column scrolls: $theme/$scale extent=$($scroller.ExtentHeight) viewport=$($scroller.ViewportHeight)"}}
+ if(!($texts|Where-Object{$_.Text -eq 'This week'})){throw 'Playtime rows missing'}
  $checkbox=$visuals|Where-Object{$_ -is [Windows.Controls.CheckBox]}|Select-Object -First 1
  if($checkbox.IsChecked -ne $pin){throw 'Pin checkbox does not reflect saved state'}
  $bitmap=[Windows.Media.Imaging.RenderTargetBitmap]::new([int](620*$scale),[int](270*$scale),96*$scale,96*$scale,[Windows.Media.PixelFormats]::Pbgra32);$bitmap.Render($surface)
@@ -64,5 +74,5 @@ foreach($game in 'Valorant','PUBG: BATTLEGROUNDS'){$record=[Activator]::CreateIn
  $settings.EnablePrayerPreNotification=$true;$settings.ShowPrayerInCapsule=$true;Set-Field $vm '_wasGaming' $true
  if(!$vm.IsPrayerReminderVisible){throw 'Prayer reminder lost priority during gaming'}
 }}}
-Write-Output 'Verified Games panel pin states, contrast/bounds at four scales, legacy preference independence and automatic/pinned presentation states.'
+Write-Output 'Verified Games panel pin states, contrast/bounds/no overlap/no scrolling at four scales, legacy preference independence and automatic/pinned presentation states.'
 $app.Shutdown()

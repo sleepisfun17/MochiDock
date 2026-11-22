@@ -1125,7 +1125,7 @@
                 <ColumnDefinition Width="172" />
             </Grid.ColumnDefinitions>
 
-            <!-- COL 0: OVER GAMES & FPS Status -->
+            <!-- COL 0: readout pin, FPS status and playtime -->
             <StackPanel Grid.Column="0">
                 <!-- Hairline Centered Header: OVER GAMES -->
                 <Grid Margin="0,0,0,6">
@@ -1160,6 +1160,28 @@
                 </Grid>
 
                 <TextBlock Style="{StaticResource HardwareBody}" Text="Ready. Counted from Windows' own log of each frame; nothing loads into the game." Foreground="{DynamicResource IslandMutedInkBrush}" TextWrapping="Wrap" LineHeight="13" />
+
+                <!-- Hairline Centered Header: PLAYTIME (label and value on rows of their own, so the two totals never collide) -->
+                <StackPanel Visibility="{Binding HasPlaytime, Converter={StaticResource BoolToVisibility}}" ToolTip="{Binding PlaytimeTooltip}" Background="Transparent">
+                    <Grid Margin="0,10,0,4">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <Rectangle Grid.Column="0" Height="1" Fill="{DynamicResource IslandSubCardBorderBrush}" VerticalAlignment="Center" Margin="0,0,6,0" />
+                        <TextBlock Style="{StaticResource HardwareSection}" Grid.Column="1" Text="PLAYTIME" Foreground="{DynamicResource IslandMutedInkBrush}" />
+                        <Rectangle Grid.Column="2" Height="1" Fill="{DynamicResource IslandSubCardBorderBrush}" VerticalAlignment="Center" Margin="6,0,0,0" />
+                    </Grid>
+                    <Grid Margin="0,2">
+                        <TextBlock Style="{StaticResource HardwareBody}" Text="Today" Foreground="{DynamicResource IslandSecondaryInkBrush}" />
+                        <TextBlock Style="{StaticResource HardwareBody}" HorizontalAlignment="Right" Text="{Binding PlaytimeTodayText}" Foreground="{DynamicResource IslandInkBrush}" Typography.NumeralAlignment="Tabular" />
+                    </Grid>
+                    <Grid Margin="0,2">
+                        <TextBlock Style="{StaticResource HardwareBody}" Text="This week" Foreground="{DynamicResource IslandSecondaryInkBrush}" />
+                        <TextBlock Style="{StaticResource HardwareBody}" HorizontalAlignment="Right" Text="{Binding PlaytimeWeekText}" Foreground="{DynamicResource IslandInkBrush}" Typography.NumeralAlignment="Tabular" />
+                    </Grid>
+                </StackPanel>
             </StackPanel>
 
             <!-- COL 1: FRAMES PER SECOND & FRAME TIME -->
@@ -1224,8 +1246,8 @@
                 </Grid>
             </StackPanel>
 
-            <!-- COL 2: IN FRONT Game Telemetry -->
-            <ScrollViewer Grid.Column="4" Style="{DynamicResource ModernCardScrollViewer}">
+            <!-- COL 2: IN FRONT game telemetry and recent sessions -->
+            <ScrollViewer Grid.Column="4" Style="{DynamicResource ModernCardScrollViewer}" VerticalScrollBarVisibility="Auto">
             <StackPanel>
                 <!-- Hairline Centered Header: IN FRONT -->
                 <Grid Margin="0,0,0,6">
@@ -1295,22 +1317,6 @@
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
-
-                <!-- Hairline Centered Header: PLAYTIME -->
-                <Grid Margin="0,6,0,4" Visibility="{Binding HasPlaytime, Converter={StaticResource BoolToVisibility}}">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                        <ColumnDefinition Width="*" />
-                    </Grid.ColumnDefinitions>
-                    <Rectangle Grid.Column="0" Height="1" Fill="{DynamicResource IslandSubCardBorderBrush}" VerticalAlignment="Center" Margin="0,0,6,0" />
-                    <TextBlock Style="{StaticResource HardwareSection}" Grid.Column="1" Text="PLAYTIME" Foreground="{DynamicResource IslandMutedInkBrush}" />
-                    <Rectangle Grid.Column="2" Height="1" Fill="{DynamicResource IslandSubCardBorderBrush}" VerticalAlignment="Center" Margin="6,0,0,0" />
-                </Grid>
-                <Grid Margin="0,2" Visibility="{Binding HasPlaytime, Converter={StaticResource BoolToVisibility}}" ToolTip="{Binding PlaytimeTooltip}">
-                    <TextBlock Style="{StaticResource HardwareBody}" Text="{Binding PlaytimeTodayText}" Foreground="{DynamicResource IslandSecondaryInkBrush}" Typography.NumeralAlignment="Tabular" />
-                    <TextBlock Style="{StaticResource HardwareBody}" HorizontalAlignment="Right" Text="{Binding PlaytimeWeekText}" Foreground="{DynamicResource IslandInkBrush}" Typography.NumeralAlignment="Tabular" />
-                </Grid>
             </StackPanel>
             </ScrollViewer>
         </Grid>
