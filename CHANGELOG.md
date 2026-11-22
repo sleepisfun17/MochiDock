@@ -2,6 +2,14 @@
 
 All notable changes to MochiDock are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Fixed
+
+- **Outlook**: new mail from classic Outlook was not picked up in 0.2.0-beta and 0.2.1-beta. In the installed app the Outlook helper started but never finished connecting (it was built for a different version of a library it shares with MochiDock), so it was restarted every minute. The installer build now checks the helper's connection before it packages it.
+- **Outlook helper on PCs without Outlook**: when classic Outlook is not installed, MochiDock no longer starts the helper at all; it looks again every 10 minutes.
+- **Welcome banner**: **Got it** always hides the banner, also after settings were imported while it was showing.
+
 ## [0.2.1-beta]
 
 ### Fixed

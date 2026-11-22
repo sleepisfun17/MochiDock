@@ -126,6 +126,27 @@ try {
         # and would return, and delete, every published file.
         $trim = @('msdia140.dll','Microsoft.DiaSymReader.Native.amd64.dll','libMonoPosixHelper.dll','mscordac*','mscordbi.dll','*.pdb')
         Get-ChildItem -LiteralPath $destination -Recurse -File | Where-Object { $name = $_.Name; @($trim | Where-Object { $name -like $_ }).Count -gt 0 } | Remove-Item -Force
+
+        # The helper runs on the app folder's runtime and libraries, so a library the app brings in a different version (as when
+        # TraceEvent brought System.Text.Json 10 while the helper was built on .NET 8's copy) can break it silently: it starts,
+        # connects and never says hello. Start it here the way MochiDock does and require its hello. The pipe closes right after,
+        # before the helper gets its folder list, so it never contacts Outlook.
+        $stage = 'checking the Outlook helper handshake'
+        $pipeName = 'MochiDock.Outlook.publishcheck' + [Guid]::NewGuid().ToString('N')
+        $secret = [Guid]::NewGuid().ToString('N')
+        $server = New-Object System.IO.Pipes.NamedPipeServerStream($pipeName, [System.IO.Pipes.PipeDirection]::InOut, 1, [System.IO.Pipes.PipeTransmissionMode]::Byte, [System.IO.Pipes.PipeOptions]::Asynchronous)
+        $helperProcess = Start-Process -FilePath (Join-Path $destination 'MochiDock.OutlookHelper.exe') -ArgumentList "$pipeName $secret" -PassThru -WindowStyle Hidden
+        try {
+            if (-not $server.WaitForConnectionAsync().Wait(20000)) { throw 'The Outlook helper did not connect within 20 s.' }
+            $helloReader = New-Object System.IO.StreamReader($server, (New-Object System.Text.UTF8Encoding($false)))
+            $hello = $helloReader.ReadLineAsync()
+            if (-not $hello.Wait(10000)) { throw 'The Outlook helper connected but sent no hello within 10 s (a library in the app folder probably differs from the one it was built with).' }
+            if (-not $hello.Result -or $hello.Result -notlike "*$secret*") { throw "The Outlook helper sent an unexpected first message: [$($hello.Result)]" }
+            Write-PublishMessage 'Outlook helper handshake OK in the installer folder.'
+        } finally {
+            $server.Dispose()
+            if (-not $helperProcess.HasExited) { $helperProcess.Kill(); [void]$helperProcess.WaitForExit(5000) }
+        }
     }
     # The shared GOWA server's webhook relay (tools\gowa-relay) is published next to its installer, which copies it to the server PC.
     $stage = 'publishing the GOWA webhook relay'

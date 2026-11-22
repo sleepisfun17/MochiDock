@@ -87,11 +87,35 @@ public sealed class OutlookHelperHost : IDisposable
         }
     }
 
+    // Without classic Outlook the helper can never connect, so it is not started; installing Outlook later is noticed on the next look.
+    static readonly TimeSpan OutlookMissingRecheck = TimeSpan.FromMinutes(10);
+
     async Task RunAsync(CancellationToken token)
     {
         int retrySeconds = 5;
+        bool outlookMissingLogged = false;
         while (!token.IsCancellationRequested)
         {
+            // Same test as the helper (the Outlook.Application ProgID, which only classic desktop Outlook registers). Without it the
+            // helper never completed its handshake and was started and stopped every minute.
+            if (!OutlookComReader.IsInstalled)
+            {
+                if (!outlookMissingLogged)
+                {
+                    AppLog.Warn("Outlook", "Classic Outlook is not installed, so the Outlook helper is not started (checked again every 10 minutes).");
+                    outlookMissingLogged = true;
+                }
+                try { await Task.Delay(OutlookMissingRecheck, token); }
+                catch (OperationCanceledException) { break; }
+                continue;
+            }
+            if (outlookMissingLogged)
+            {
+                AppLog.Warn("Outlook", "Classic Outlook found; starting the Outlook helper.");
+                outlookMissingLogged = false;
+                retrySeconds = 5;
+            }
+
             int helperPid = 0;
             try
             {

@@ -12,4 +12,11 @@
   <ItemGroup>
     <ProjectReference Include="..\MochiDock.Core\MochiDock.Core.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <!-- The installer runs this helper on MochiDock's own runtime folder, where Microsoft.Diagnostics.Tracing.TraceEvent brings
+         System.Text.Json 10.0.3 (with System.IO.Pipelines and System.Text.Encodings.Web 10.0.3) in place of .NET 8's copies.
+         Built against .NET 8's 8.0 copy, the helper failed to encode its first pipe message there and never connected, so this
+         must stay the version MochiDock.csproj resolves. scripts/publish.ps1 fails the installer build on any mismatch. -->
+    <PackageReference Include="System.Text.Json" Version="10.0.3" />
+  </ItemGroup>
 </Project>
