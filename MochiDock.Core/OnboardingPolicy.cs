@@ -6,7 +6,7 @@ public static class OnboardingPolicy
     public static bool ShouldShowFirstRunWelcome(bool onboardingDismissed) => !onboardingDismissed;
 
     public static string WhatsAppTrayHeader(bool enableWhatsApp) =>
-        enableWhatsApp ? "WhatsApp Pairing (GOWA)" : "Set up WhatsApp…";
+        enableWhatsApp ? "WhatsApp Dashboard" : "Set up WhatsApp…";
 
     public static bool ShouldOpenWhatsAppSettings(bool enableWhatsApp) => !enableWhatsApp;
 }

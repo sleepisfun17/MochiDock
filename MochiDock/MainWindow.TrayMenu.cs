@@ -72,6 +72,7 @@ public partial class MainWindow
         {
             "music.png" => "NavMusic", "desktop.png" => "NavMonitor",
             "zap.png" => "NavGauge", "whatsapp.png" => "NavMessage", "pin.png" => "NavPin",
+            _ when assetName.StartsWith("Nav", StringComparison.Ordinal) => assetName,   // a theme icon key (NavGear, NavMoon, ...)
             _ => null
         };
         if (key is not null && Application.Current.TryFindResource(key) is FrameworkElement vector)
@@ -101,6 +102,8 @@ public partial class MainWindow
         return tb;
     }
 
+    // The tray menu, grouped by purpose (rebuilt on every right-click, so labels and checkmarks always show the current state):
+    // the update (only while one is known), open, quick toggles, display, settings, exit.
     private ContextMenu CreateModernTrayMenu()
     {
         var menu = new ContextMenu
@@ -110,31 +113,54 @@ public partial class MainWindow
 
         var itemStyle = (Style)FindResource("ModernTrayMenuItemStyle");
         var sepStyle = (Style)FindResource("ModernTraySeparatorStyle");
-
-        // 1. Show Dock
-        var showItem = new MenuItem
+        void Sep() => menu.Items.Add(new Separator { Style = sepStyle });
+        MenuItem Item(string header, string? icon, Action onClick)
         {
-            Header = "Show Dock",
-            Icon = CreateTrayIcon("dango.png"),
-            Style = itemStyle
-        };
-        showItem.Click += (s, e) => { _viewModel.PrepareHoverExpand(); _viewModel.IsExpanded = true; };
-        menu.Items.Add(showItem);
-
-        // 2. Music Controls
-        var musicItem = new MenuItem
+            var item = new MenuItem { Header = header, Style = itemStyle };
+            if (icon != null) item.Icon = CreateTrayIcon(icon);
+            item.Click += (s, e) => onClick();
+            return item;
+        }
+        MenuItem Check(string header, bool isOn, Action onClick)
         {
-            Header = "Music Controls",
-            Icon = CreateTrayIcon("music.png"),
-            Style = itemStyle
-        };
-        musicItem.Click += (s, e) => _viewModel.ShowMedia();
-        menu.Items.Add(musicItem);
+            var item = new MenuItem { Header = header, Icon = CreateTrayCheck(isOn), Style = itemStyle };
+            item.Click += (s, e) => onClick();
+            return item;
+        }
 
-        // 3. Select Monitor Submenu
+        // Update first, so a known release is never buried.
+        if (_viewModel.HasUpdate)
+        {
+            var updateItem = new MenuItem { Header = _viewModel.TrayUpdateText, Icon = CreateTrayIcon("NavDownload"), Style = itemStyle };
+            updateItem.Click += async (s, e) => await _viewModel.UpdateFromTrayAsync();
+            menu.Items.Add(updateItem);
+            Sep();
+        }
+
+        // Open
+        menu.Items.Add(Item("Show Dock", "dango.png", () => { _viewModel.PrepareHoverExpand(); _viewModel.IsExpanded = true; }));
+        menu.Items.Add(Item("Music", "music.png", () => _viewModel.ShowMedia()));
+        menu.Items.Add(Item("Stats", "zap.png", () => _viewModel.ShowHardware()));
+        bool waEnabled = _viewModel.Settings.EnableWhatsApp;
+        menu.Items.Add(Item(MochiDock.Core.OnboardingPolicy.WhatsAppTrayHeader(waEnabled), "whatsapp.png", () =>
+        {
+            if (MochiDock.Core.OnboardingPolicy.ShouldOpenWhatsAppSettings(waEnabled))
+                App.OpenSettings(MochiDock.Core.SettingsSections.WhatsApp);
+            else
+                _viewModel.OpenWhatsAppDashboard();
+        }));
+        Sep();
+
+        // Quick toggles: fixed labels with a checkmark, and the snooze shows when it ends.
+        menu.Items.Add(Check("Pin Dock Open", _viewModel.IsPinned, () => _viewModel.IsPinned = !_viewModel.IsPinned));
+        menu.Items.Add(Check("Pin Stats to Pill", _viewModel.IsStatsPinnedToCapsule, () => _viewModel.IsStatsPinnedToCapsule = !_viewModel.IsStatsPinnedToCapsule));
+        menu.Items.Add(CreateSnoozeMenu(itemStyle));
+        Sep();
+
+        // Display
         var monitorSubmenu = new MenuItem
         {
-            Header = "Select Monitor",
+            Header = "Monitor",
             Icon = CreateTrayIcon("desktop.png"),
             Style = itemStyle
         };
@@ -156,7 +182,6 @@ public partial class MainWindow
         }
         menu.Items.Add(monitorSubmenu);
 
-        // 3b. Display Resolution Submenu
         var resSubmenu = new MenuItem
         {
             Header = "Display Resolution",
@@ -196,131 +221,26 @@ public partial class MainWindow
             Style = itemStyle
         };
         toggleItem.Click += (s, e) => ToggleResolutionFromHotkey();
-        resSubmenu.Items.Add(new Separator { Style = (Style)FindResource("ModernTraySeparatorStyle") });
+        resSubmenu.Items.Add(new Separator { Style = sepStyle });
         resSubmenu.Items.Add(toggleItem);
-
         menu.Items.Add(resSubmenu);
 
-        // 4. System Stats
-        var statsItem = new MenuItem
-        {
-            Header = "System Performance",
-            Icon = CreateTrayIcon("zap.png"),
-            Style = itemStyle
-        };
-        statsItem.Click += (s, e) => _viewModel.ShowHardware();
-        menu.Items.Add(statsItem);
-
-        // 4a. Manual refresh of wireless device batteries (only while the feature is on)
-        if (_viewModel.EnableDeviceBatteries)
-        {
-            var refreshBatteries = new MenuItem
-            {
-                Header = "Refresh Device Batteries",
-                Icon = CreateTrayIcon("zap.png"),
-                Style = itemStyle
-            };
-            refreshBatteries.Click += (s, e) => _viewModel.RefreshDeviceBatteries();
-            menu.Items.Add(refreshBatteries);
-        }
-
-        // 4a. Update notice (only while a newer release is known)
-        if (_viewModel.HasUpdate)
-        {
-            var updateItem = new MenuItem { Header = _viewModel.TrayUpdateText, Icon = CreateTrayIcon("zap.png"), Style = itemStyle };
-            updateItem.Click += async (s, e) => await _viewModel.UpdateFromTrayAsync();
-            menu.Items.Add(updateItem);
-        }
-
-        // 4b. Advanced Settings window
-        var advancedItem = new MenuItem
-        {
-            Header = "Settings…",
-            Icon = CreateTrayIcon("desktop.png"),
-            Style = itemStyle
-        };
-        advancedItem.Click += (s, e) => App.OpenSettings();
-        menu.Items.Add(advancedItem);
-
-        // 5. WhatsApp Pairing / Setup
-        bool waEnabled = _viewModel.Settings.EnableWhatsApp;
-        var waItem = new MenuItem
-        {
-            Header = MochiDock.Core.OnboardingPolicy.WhatsAppTrayHeader(waEnabled),
-            Icon = CreateTrayIcon("whatsapp.png"),
-            Style = itemStyle
-        };
-        waItem.Click += (s, e) =>
-        {
-            if (MochiDock.Core.OnboardingPolicy.ShouldOpenWhatsAppSettings(waEnabled))
-                App.OpenSettings(MochiDock.Core.SettingsSections.WhatsApp);
-            else
-                _viewModel.OpenWhatsAppDashboard();
-        };
-        menu.Items.Add(waItem);
-
-        // 6. Toggle Pin
-        var pinItem = new MenuItem
-        {
-            Header = _viewModel.IsPinned ? "Unpin Dock" : "Pin Dock Open",
-            Icon = CreateTrayIcon("pin.png"),
-            Style = itemStyle
-        };
-        pinItem.Click += (s, e) => _viewModel.IsPinned = !_viewModel.IsPinned;
-        menu.Items.Add(pinItem);
-
-        // 7. Pin Stats to Capsule
-        var pinStatsItem = new MenuItem
-        {
-            Header = _viewModel.IsStatsPinnedToCapsule ? "Unpin Stats from Pill" : "Pin Stats to Pill",
-            Icon = CreateTrayIcon("zap.png"),
-            Style = itemStyle
-        };
-        pinStatsItem.Click += (s, e) => _viewModel.IsStatsPinnedToCapsule = !_viewModel.IsStatsPinnedToCapsule;
-        menu.Items.Add(pinStatsItem);
-
-        // 8. Start with Windows
-        var startupItem = new MenuItem
-        {
-            Header = "Start with Windows",
-            Icon = CreateTrayCheck(_settings.StartWithWindows),
-            Style = itemStyle
-        };
-        startupItem.Click += async (s, e) =>
-        {
-            startupItem.IsEnabled = false;
-            try
-            {
-                _settings.StartWithWindows = await StartupService.ToggleAsync();
-                SettingsService.Save(_settings);
-            }
-            catch (Exception ex) { System.Windows.MessageBox.Show(ex.Message, "MochiDock startup"); }
-            finally { startupItem.IsEnabled = true; }
-        };
-        menu.Items.Add(startupItem);
-
-        // 9. Reset Dock Position & Bring to Front
-        var resetPosItem = new MenuItem
-        {
-            Header = "Reset Dock Position (Top Center)",
-            Icon = CreateTrayIcon("desktop.png"),
-            Style = itemStyle
-        };
-        resetPosItem.Click += (s, e) =>
+        // Back to the top centre of the dock monitor, brought to the front and opened.
+        menu.Items.Add(Item("Reset Dock Position", "NavPin", () =>
         {
             _viewModel.UpdateSettings(x => x.IslandHorizontalRatio = null);
             PositionWindow();
             EnsureWindowTopmost();
             _viewModel.PrepareHoverExpand();
             _viewModel.IsExpanded = true;
-        };
-        menu.Items.Add(resetPosItem);
+        }));
+        Sep();
 
-        menu.Items.Add(new Separator { Style = sepStyle });
+        // Settings
+        menu.Items.Add(Item("Settings…", "NavGear", () => App.OpenSettings()));
         AddPreferencesMenus(menu, itemStyle);
-        menu.Items.Add(new Separator { Style = sepStyle });
+        Sep();
 
-        // 10. Exit
         var exitItem = new MenuItem
         {
             Header = "Exit",
@@ -331,6 +251,27 @@ public partial class MainWindow
         menu.Items.Add(exitItem);
 
         return menu;
+    }
+
+    // "Snooze Notifications", or "Notifications snoozed until 18:00" while a snooze runs (NotificationSnooze.TrayLabel).
+    private MenuItem CreateSnoozeMenu(Style itemStyle)
+    {
+        MenuItem Action(string header, Action act)
+        {
+            var item = new MenuItem { Header = header, Style = itemStyle };
+            item.Click += (s, e) => act();
+            return item;
+        }
+        var snooze = new MenuItem
+        {
+            Header = MochiDock.Core.NotificationSnooze.TrayLabel(_viewModel.NotificationsSnoozedUntil, DateTime.Now),
+            Icon = CreateTrayIcon("NavMoon"),
+            Style = itemStyle
+        };
+        snooze.Items.Add(Action("For 1 Hour", () => _viewModel.SnoozeNotifications(TimeSpan.FromHours(1))));
+        snooze.Items.Add(Action("For 8 Hours", () => _viewModel.SnoozeNotifications(TimeSpan.FromHours(8))));
+        snooze.Items.Add(Action("Resume Notifications", () => _viewModel.SnoozeNotifications(TimeSpan.Zero)));
+        return snooze;
     }
 
     // Tray: preferences and settings/data shortcuts. The menu is rebuilt on every right-click, so checkmarks always reflect the current state.
@@ -350,6 +291,23 @@ public partial class MainWindow
         }
 
         var prefs = new MenuItem { Header = "Preferences", Icon = CreateTrayIcon("zap.png"), Style = itemStyle };
+
+        // Start with Windows registers or removes the logon task, which takes a moment: the item is disabled meanwhile.
+        var startupItem = new MenuItem { Header = "Start with Windows", Icon = CreateTrayCheck(_settings.StartWithWindows), Style = itemStyle };
+        startupItem.Click += async (s, e) =>
+        {
+            startupItem.IsEnabled = false;
+            try
+            {
+                _settings.StartWithWindows = await StartupService.ToggleAsync();
+                SettingsService.Save(_settings);
+            }
+            catch (Exception ex) { System.Windows.MessageBox.Show(ex.Message, "MochiDock startup"); }
+            finally { startupItem.IsEnabled = true; }
+        };
+        prefs.Items.Add(startupItem);
+        prefs.Items.Add(new Separator { Style = (Style)FindResource("ModernTraySeparatorStyle") });
+
         prefs.Items.Add(Toggle("Synced Lyrics", _viewModel.EnableSyncedLyrics, () => _viewModel.EnableSyncedLyrics = !_viewModel.EnableSyncedLyrics));
         prefs.Items.Add(Toggle("Lyrics Pronunciation", _viewModel.ShowLyricsPronunciation, () => _viewModel.ShowLyricsPronunciation = !_viewModel.ShowLyricsPronunciation));
         prefs.Items.Add(Toggle("Furigana Readings", _viewModel.ShowLyricsFurigana, () => _viewModel.ShowLyricsFurigana = !_viewModel.ShowLyricsFurigana));
@@ -366,12 +324,6 @@ public partial class MainWindow
         prefs.Items.Add(Toggle("Hardware Alerts", _viewModel.EnableHardwareAlerts, () => _viewModel.EnableHardwareAlerts = !_viewModel.EnableHardwareAlerts));
         prefs.Items.Add(Toggle("Charger & Low-Battery Pop-ups", _viewModel.EnablePowerAlerts, () => _viewModel.EnablePowerAlerts = !_viewModel.EnablePowerAlerts));
         menu.Items.Add(prefs);
-
-        var snooze = new MenuItem { Header = "Snooze Notifications", Style = itemStyle };
-        snooze.Items.Add(Action("For 1 Hour", () => _viewModel.SnoozeNotifications(TimeSpan.FromHours(1))));
-        snooze.Items.Add(Action("For 8 Hours", () => _viewModel.SnoozeNotifications(TimeSpan.FromHours(8))));
-        snooze.Items.Add(Action("Resume Notifications", () => _viewModel.SnoozeNotifications(TimeSpan.Zero)));
-        menu.Items.Add(snooze);
 
         var files = new MenuItem { Header = "Settings & Data", Icon = CreateTrayIcon("desktop.png"), Style = itemStyle };
         files.Items.Add(Action("Reload Settings", async () =>

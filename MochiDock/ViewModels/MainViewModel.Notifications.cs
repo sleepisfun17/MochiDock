@@ -299,6 +299,9 @@ public partial class MainViewModel
         return true;
     }
 
+    /// <summary>When the active snooze ends; null when notifications are not snoozed (the tray menu shows it).</summary>
+    public DateTime? NotificationsSnoozedUntil => _snoozedUntil > DateTime.Now ? _snoozedUntil : null;
+
     public void SnoozeNotifications(TimeSpan duration)
     {
         _snoozedUntil = DateTime.Now.Add(duration);

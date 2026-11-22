@@ -23,7 +23,7 @@ public class OnboardingPolicyTests
         Assert.Equal("Set up WhatsApp…", OnboardingPolicy.WhatsAppTrayHeader(false));
         Assert.True(OnboardingPolicy.ShouldOpenWhatsAppSettings(false));
 
-        Assert.Equal("WhatsApp Pairing (GOWA)", OnboardingPolicy.WhatsAppTrayHeader(true));
+        Assert.Equal("WhatsApp Dashboard", OnboardingPolicy.WhatsAppTrayHeader(true));
         Assert.False(OnboardingPolicy.ShouldOpenWhatsAppSettings(true));
     }
 }
