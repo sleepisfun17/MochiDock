@@ -27,6 +27,72 @@ public class GowaInstallerTests
     public void NeedsDownloadOnlyForEnabledLocalModeWithoutEngine(bool enabled, bool remote, bool present, bool expected) =>
         Assert.Equal(expected, GowaInstaller.NeedsDownload(enabled, remote, present));
 
+    // Two separate folders standing in for <app dir>\GOWA and %LocalAppData%\MochiDock\GOWA\bin.
+    private static (string Root, string Bundled, string Downloaded) EngineFolders()
+    {
+        string root = Path.Combine(Path.GetTempPath(), "mochidock-gowaengine-" + Guid.NewGuid().ToString("N"));
+        string bundledDir = Path.Combine(root, "app", "GOWA"), downloadedDir = Path.Combine(root, "local", "bin");
+        Directory.CreateDirectory(bundledDir);
+        Directory.CreateDirectory(downloadedDir);
+        return (root, Path.Combine(bundledDir, GowaInstaller.ExeName), Path.Combine(downloadedDir, GowaInstaller.ExeName));
+    }
+
+    [Fact]
+    public void Inspect_ReportsMissingDownloadedAndBundledLikeTheLookupOrder()
+    {
+        var (root, bundled, downloaded) = EngineFolders();
+        try
+        {
+            var none = GowaInstaller.Inspect(bundled, downloaded);
+            Assert.Equal(GowaEngineSource.Missing, none.Source);
+            Assert.False(none.HasDownloadedCopy);
+
+            File.WriteAllBytes(downloaded, new byte[2 * 1024 * 1024]);
+            File.WriteAllText(Path.Combine(Path.GetDirectoryName(downloaded)!, GowaInstaller.VersionFileName), "v9.10.0");
+            var dl = GowaInstaller.Inspect(bundled, downloaded);
+            Assert.Equal(GowaEngineSource.Downloaded, dl.Source);
+            Assert.Equal("v9.10.0", dl.Version);
+            Assert.Equal(2 * 1024 * 1024, dl.SizeBytes);
+
+            // An upgraded install still has the bundled copy; it wins, and the downloaded one stays removable.
+            File.WriteAllBytes(bundled, new byte[16]);
+            var both = GowaInstaller.Inspect(bundled, downloaded);
+            Assert.Equal(GowaEngineSource.Bundled, both.Source);
+            Assert.True(both.HasDownloadedCopy);
+        }
+        finally { Directory.Delete(root, true); }
+    }
+
+    [Fact]
+    public void Describe_TellsWhereTheEngineIsAndWhenItCanBeRemoved()
+    {
+        var downloaded = new GowaEngineInfo(GowaEngineSource.Downloaded, 33L * 1024 * 1024, "v9.10.0", true);
+        Assert.Equal("Downloaded v9.10.0 (33 MB). Remove it to free the space; your WhatsApp login is kept.", GowaInstaller.Describe(downloaded, inUse: false));
+        Assert.Contains("Turn WhatsApp off or switch to Remote server", GowaInstaller.Describe(downloaded, inUse: true));
+        Assert.Contains("Uninstalling MochiDock removes it", GowaInstaller.Describe(new GowaEngineInfo(GowaEngineSource.Bundled, 33L * 1024 * 1024, null, false), false));
+        Assert.StartsWith("Not downloaded.", GowaInstaller.Describe(new GowaEngineInfo(GowaEngineSource.Missing, 0, null, false), false));
+    }
+
+    [Fact]
+    public async Task RemoveDownloadedAsync_DeletesOnlyTheDownloadedEngineAndItsVersionFile()
+    {
+        var (root, bundled, downloaded) = EngineFolders();
+        try
+        {
+            File.WriteAllBytes(bundled, new byte[16]);
+            File.WriteAllBytes(downloaded, new byte[16]);
+            string version = Path.Combine(Path.GetDirectoryName(downloaded)!, GowaInstaller.VersionFileName);
+            File.WriteAllText(version, "v9.10.0");
+
+            Assert.True(await GowaInstaller.RemoveDownloadedAsync(downloaded));
+            Assert.False(File.Exists(downloaded));
+            Assert.False(File.Exists(version));
+            Assert.True(File.Exists(bundled));
+            Assert.False(await GowaInstaller.RemoveDownloadedAsync(downloaded)); // nothing left to delete
+        }
+        finally { Directory.Delete(root, true); }
+    }
+
     [Fact]
     public void PinnedReleaseMetadata_IsValidHttpsAndSha256()
     {

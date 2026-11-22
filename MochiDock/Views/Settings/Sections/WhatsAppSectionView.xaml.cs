@@ -49,7 +49,8 @@ public partial class WhatsAppSectionView : SettingsSectionBase
         InitializeComponent();
         Loaded += (s, e) => { _statusTimer.Start(); _linkTimer.Start(); UpdateReadSyncStatus(); UpdateLinkStatus(); };
         Unloaded += (s, e) => { _statusTimer.Stop(); _linkTimer.Stop(); };
-        _linkTimer.Tick += (s, e) => UpdateLinkStatus();
+        // The engine row follows downloads started elsewhere (startup, a mode change) through the same 3 s tick.
+        _linkTimer.Tick += (s, e) => { UpdateLinkStatus(); UpdateEngineRow(); };
         _statusTimer.Tick += (s, e) => UpdateReadSyncStatus();
     }
 
@@ -96,6 +97,7 @@ public partial class WhatsAppSectionView : SettingsSectionBase
             UpdateModeVisibility(remote);
             UpdateRemoteWarning();
             UpdateLinkStatus();
+            UpdateEngineRow();
         }
         _ = RefreshReadSyncUrlAsync();
     }
@@ -116,6 +118,7 @@ public partial class WhatsAppSectionView : SettingsSectionBase
         if (!IsLoaded || Loading) return;
         UpdateModeVisibility(mode == "Remote");
         CommitGowaConfig(mode);
+        UpdateEngineRow();
     }
 
     private void GowaField_LostFocus(object sender, RoutedEventArgs e) => CommitGowaConfig();
@@ -225,24 +228,95 @@ public partial class WhatsAppSectionView : SettingsSectionBase
         ViewModel?.UpdateSettings(x => x.EnableWhatsApp = on, SettingsApply.Gowa);
     }
 
-    private async Task DownloadLocalEngineWithFeedbackAsync()
+    // True while this page downloads or removes the engine: both buttons stay disabled and the status line shows progress.
+    private bool _engineBusy;
+
+    private bool IsRemoteMode => string.Equals(ViewModel?.Settings.GowaMode, "Remote", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>Status and buttons of the "Local engine" row. Remove is offered only for a downloaded copy that is not running.</summary>
+    private void UpdateEngineRow()
     {
-        LinkStatusText.Text = "Downloading local WhatsApp engine… 0%";
+        if (ViewModel is not { } vm) return;
+        bool remote = IsRemoteMode;
+        var info = GowaInstaller.Inspect();
+        bool inUse = vm.Settings.EnableWhatsApp && !remote && info.Source == GowaEngineSource.Downloaded;
+        // Remote mode needs no engine; the row stays only while a downloaded copy is left to remove.
+        var visibility = !remote || info.HasDownloadedCopy ? Visibility.Visible : Visibility.Collapsed;
+        EngineFileRow.Visibility = visibility;
+        EngineStatusText.Visibility = visibility;
+        DownloadEngineButton.Visibility = remote ? Visibility.Collapsed : Visibility.Visible;
+        DownloadEngineButton.IsEnabled = !_engineBusy && info.Source == GowaEngineSource.Missing;
+        RemoveEngineButton.IsEnabled = !_engineBusy && info.HasDownloadedCopy && !inUse;
+        if (!_engineBusy) EngineStatusText.Text = GowaInstaller.Describe(info, inUse);
+    }
+
+    private async void DownloadEngine_Click(object sender, RoutedEventArgs e)
+    {
+        if (_engineBusy || ViewModel is not { } vm) return;
+        if (!await DownloadLocalEngineWithFeedbackAsync()) return;
+        // WhatsApp was waiting for the engine: start it now instead of at the next settings change or launch.
+        if (vm.Settings.EnableWhatsApp && !IsRemoteMode)
+        {
+            try { await vm.RestartWhatsAppAsync(); }
+            catch (Exception ex) { AppLog.Warn("Gowa", ex); }
+        }
+    }
+
+    private async void RemoveEngine_Click(object sender, RoutedEventArgs e)
+    {
+        if (_engineBusy) return;
+        _engineBusy = true;
+        UpdateEngineRow();
+        EngineStatusText.Text = "Removing the local WhatsApp engine…";
+        string? message = null;
+        try
+        {
+            await GowaInstaller.RemoveDownloadedAsync();
+        }
+        catch (Exception ex) when (ex is System.IO.IOException or UnauthorizedAccessException)
+        {
+            AppLog.Warn("Gowa", ex);
+            message = "Could not remove the engine: it is still in use. Restart MochiDock and try again.";
+        }
+        finally
+        {
+            _engineBusy = false;
+        }
+        UpdateEngineRow();
+        if (message != null) EngineStatusText.Text = message;
+    }
+
+    /// <summary>Downloads the engine with progress on the engine row. Returns true when an engine is in place afterwards.</summary>
+    private async Task<bool> DownloadLocalEngineWithFeedbackAsync()
+    {
+        if (_engineBusy) return false;
+        _engineBusy = true;
+        UpdateEngineRow();
+        EngineStatusText.Text = "Downloading the local WhatsApp engine… 0%";
+        // Progress<T> made on the UI thread reports back on it.
         var progress = new Progress<(long Done, long Total)>(p =>
         {
+            if (!_engineBusy) return; // a late report must not overwrite the final status
             int pct = p.Total > 0 ? (int)(p.Done * 100 / p.Total) : 0;
-            Dispatcher.BeginInvoke(() => LinkStatusText.Text = $"Downloading local WhatsApp engine… {pct}%");
+            EngineStatusText.Text = $"Downloading the local WhatsApp engine… {pct}%";
         });
+        string? failure = null;
         try
         {
             await GowaInstaller.EnsureInstalledAsync(progress);
-            LinkStatusText.Text = "Local WhatsApp engine downloaded. Starting…";
         }
         catch (Exception ex)
         {
             AppLog.Warn("Gowa", ex);
-            LinkStatusText.Text = $"Could not download WhatsApp engine: {ex.Message}";
+            failure = $"Could not download the WhatsApp engine: {ex.Message}";
         }
+        finally
+        {
+            _engineBusy = false;
+        }
+        UpdateEngineRow();
+        if (failure != null) EngineStatusText.Text = failure;
+        return failure == null;
     }
 
     private void Option_Changed(object sender, RoutedEventArgs e)

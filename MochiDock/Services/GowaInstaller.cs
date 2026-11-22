@@ -5,6 +5,11 @@ using System.Security.Cryptography;
 
 namespace MochiDock.Services;
 
+public enum GowaEngineSource { Missing, Bundled, Downloaded }
+
+/// <summary>What <see cref="GowaInstaller.Inspect"/> found. <see cref="HasDownloadedCopy"/> can be true next to a bundled engine.</summary>
+public sealed record GowaEngineInfo(GowaEngineSource Source, long SizeBytes, string? Version, bool HasDownloadedCopy);
+
 /// <summary>
 /// Downloads the optional GOWA local WhatsApp binary on demand into %LocalAppData%\MochiDock\GOWA\bin\,
 /// verified against a pinned HTTPS release URL, byte size, and SHA-256 digest.
@@ -26,14 +31,84 @@ public static class GowaInstaller
     public static bool NeedsDownload(bool whatsAppEnabled, bool remoteMode, bool enginePresent) =>
         whatsAppEnabled && !remoteMode && !enginePresent;
 
+    /// <summary>Copy shipped next to the app by builds before on-demand download; upgrades keep it, and it wins over a downloaded one.</summary>
+    public static string BundledExePath => Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "GOWA", ExeName);
+
+    /// <summary>Written next to a downloaded engine; holds the pinned release it came from.</summary>
+    public const string VersionFileName = "version.txt";
+
     public static string? ResolveLocalExecutable()
     {
-        string bundled = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "GOWA", ExeName);
+        string bundled = BundledExePath;
         if (File.Exists(bundled)) return bundled;
         string downloaded = InstalledExePath;
         if (File.Exists(downloaded)) return downloaded;
         return null;
     }
+
+    /// <summary>Which engine <see cref="ResolveLocalExecutable"/> would run, its size, and whether a downloaded copy exists (removable).</summary>
+    public static GowaEngineInfo Inspect(string? bundledExe = null, string? downloadedExe = null)
+    {
+        bundledExe ??= BundledExePath;
+        downloadedExe ??= InstalledExePath;
+        bool hasDownloaded = File.Exists(downloadedExe);
+        if (File.Exists(bundledExe)) return new(GowaEngineSource.Bundled, SizeOf(bundledExe), null, hasDownloaded);
+        if (hasDownloaded) return new(GowaEngineSource.Downloaded, SizeOf(downloadedExe), ReadVersion(downloadedExe), true);
+        return new(GowaEngineSource.Missing, 0, null, false);
+    }
+
+    /// <summary>Status line for the Settings "Local engine" row. <paramref name="inUse"/>: WhatsApp is on in Local mode.</summary>
+    public static string Describe(GowaEngineInfo info, bool inUse) => info.Source switch
+    {
+        GowaEngineSource.Bundled => $"Bundled with this install ({FormatSize(info.SizeBytes)}). Uninstalling MochiDock removes it."
+            + (info.HasDownloadedCopy ? " An unused downloaded copy can be removed." : ""),
+        GowaEngineSource.Downloaded => $"Downloaded{(info.Version is { } v ? " " + v : "")} ({FormatSize(info.SizeBytes)})."
+            + (inUse ? " Turn WhatsApp off or switch to Remote server to remove it." : " Remove it to free the space; your WhatsApp login is kept."),
+        _ => "Not downloaded. It downloads (about 13 MB) when WhatsApp runs on this PC, or now with Download.",
+    };
+
+    /// <summary>
+    /// Deletes the downloaded engine and its version file; never the bundled copy (the installer owns it).
+    /// Waits for a running download first. Returns false when there was nothing to delete; throws when the file is locked.
+    /// </summary>
+    public static async Task<bool> RemoveDownloadedAsync(string? downloadedExe = null)
+    {
+        downloadedExe ??= InstalledExePath;
+        await Gate.WaitAsync().ConfigureAwait(false);
+        try
+        {
+            if (!File.Exists(downloadedExe)) return false;
+            File.Delete(downloadedExe);
+            TryDelete(Path.Combine(Path.GetDirectoryName(downloadedExe)!, VersionFileName));
+            return true;
+        }
+        finally
+        {
+            Gate.Release();
+        }
+    }
+
+    private static long SizeOf(string path)
+    {
+        try { return new FileInfo(path).Length; }
+        catch (IOException) { return 0; }
+        catch (UnauthorizedAccessException) { return 0; }
+    }
+
+    private static string? ReadVersion(string exePath)
+    {
+        try
+        {
+            string file = Path.Combine(Path.GetDirectoryName(exePath)!, VersionFileName);
+            if (!File.Exists(file)) return null;
+            string text = File.ReadAllText(file).Trim();
+            return text.Length is > 0 and <= 32 ? text : null;
+        }
+        catch (IOException) { return null; }
+        catch (UnauthorizedAccessException) { return null; }
+    }
+
+    private static string FormatSize(long bytes) => bytes > 0 ? $"{bytes / (1024.0 * 1024.0):0} MB" : "size unknown";
 
     public static async Task<string> EnsureInstalledAsync(
         IProgress<(long Done, long Total)>? progress = null,
@@ -110,6 +185,12 @@ public static class GowaInstaller
                 }
 
                 File.Move(exePart, destExe, overwrite: true);
+                // Only the pinned asset is known to be ReleaseVersion; other sources (tests) leave no version file.
+                if (string.Equals(expectedSha256, ReleaseSha256, StringComparison.OrdinalIgnoreCase))
+                {
+                    try { File.WriteAllText(Path.Combine(destDir, VersionFileName), ReleaseVersion); }
+                    catch (Exception ex) { AppLog.Warn("Gowa", ex); }
+                }
                 return destExe;
             }
             finally

@@ -172,6 +172,16 @@ public partial class MainViewModel
         UpdateSettings(x => x.WhatsAppAllowedGroups.RemoveAll(j => string.Equals(j, entry, StringComparison.OrdinalIgnoreCase)), SettingsApply.Gowa);
 
     /// <summary>The chats of every linked WhatsApp account, for the settings chat picker. Empty when the server cannot be reached.</summary>
+    /// <summary>Restarts only WhatsApp with the current settings (after the local engine was downloaded from Settings).</summary>
+    public async Task RestartWhatsAppAsync()
+    {
+        _gowaService.ConfigureFromSettings(_settings);
+        await _gowaService.StartAsync();
+        await Task.Delay(1200);
+        await _gowaService.CheckConnectionAsync();
+        OnPropertyChanged(nameof(IntegrationStatus));
+    }
+
     public Task<IReadOnlyList<WhatsAppChatEntry>> LoadWhatsAppChatsAsync() => _gowaService.FetchChatListAsync();
 
     /// <summary>True when "only notify for listed" is on for this kind of chat, so the picker edits the notify list instead of the muted list.</summary>

@@ -6,6 +6,14 @@
         <s:SettingRow Label="Enable WhatsApp" Description="Off by default. Turning it on starts the WhatsApp engine; then open the dashboard and link your phone. While off, nothing runs and no port is opened.">
             <CheckBox x:Name="EnableWhatsAppCheck" Style="{StaticResource ModernDarkCheckBox}" Checked="EnableWhatsApp_Changed" Unchecked="EnableWhatsApp_Changed"/>
         </s:SettingRow>
+        <!-- Outside WhatsAppBody: the engine can be removed (or fetched ahead) while WhatsApp is off. -->
+        <s:SettingRow x:Name="EngineFileRow" Label="Local engine" Description="The GOWA program that runs WhatsApp on this PC. It downloads when needed; your WhatsApp login is stored separately and kept.">
+            <StackPanel Orientation="Horizontal">
+                <Button x:Name="DownloadEngineButton" Style="{StaticResource ActionButton}" Content="Download" Click="DownloadEngine_Click" Margin="0"/>
+                <Button x:Name="RemoveEngineButton" Style="{StaticResource ActionButton}" Content="Remove" Click="RemoveEngine_Click" Margin="8,0,0,0"/>
+            </StackPanel>
+        </s:SettingRow>
+        <TextBlock x:Name="EngineStatusText" Style="{StaticResource SettingsRowDescription}" TextWrapping="Wrap" Margin="0,0,0,8"/>
         <StackPanel x:Name="WhatsAppBody">
         <TextBlock Style="{StaticResource SettingsGroupHeader}" Text="Link your phone" Margin="0,0,0,2"/>
         <s:SettingRow Label="Connection" Description="Open the pairing dashboard to link a device, or test and reconnect WhatsApp.">
