@@ -9,24 +9,27 @@ namespace MochiDock.Services.DeviceBattery;
 /// </summary>
 public static class DeviceBatteryScanner
 {
-    public static IReadOnlyList<DeviceBatteryReading> PollOnce()
+    public static IReadOnlyList<DeviceBatteryReading> PollOnce() => PollOnce(CancellationToken.None);
+
+    public static IReadOnlyList<DeviceBatteryReading> PollOnce(CancellationToken cancellationToken)
     {
         var now = DateTimeOffset.UtcNow;
         var readings = new List<DeviceBatteryReading>();
+        if (cancellationToken.IsCancellationRequested) return readings;
         List<HidCollection> collections;
         try { collections = HidNative.Enumerate(); }
         catch (Exception ex) { AppLog.Warn("DeviceBattery", ex); collections = new(); }
 
         var claimed = new HashSet<(ushort, ushort)>();
-        Run("Rongyuan", () => readings.AddRange(Rongyuan(collections, claimed, now)));
-        Run("LAMZU", () => readings.AddRange(Lamzu(collections, claimed, now)));
-        Run("Compx", () => readings.AddRange(CompxLamzu(collections, claimed, now)));
-        Run("Areson", () => readings.AddRange(Areson(collections, claimed, now)));
-        Run("Logitech", () => readings.AddRange(LogitechDriver.Poll(collections, claimed, now)));
-        Run("Sonix", () => readings.AddRange(SonixKeyboard(collections, claimed, now)));
-        Run("HID", () => readings.AddRange(GenericHid(collections, claimed, now)));
-        Run("Bluetooth", () => readings.AddRange(Bluetooth(readings, now)));
-        Run("PhoneLink", () => readings.AddRange(PhoneLink(now)));
+        if (!cancellationToken.IsCancellationRequested) Run("Rongyuan", () => readings.AddRange(Rongyuan(collections, claimed, now)));
+        if (!cancellationToken.IsCancellationRequested) Run("LAMZU", () => readings.AddRange(Lamzu(collections, claimed, now)));
+        if (!cancellationToken.IsCancellationRequested) Run("Compx", () => readings.AddRange(CompxLamzu(collections, claimed, now)));
+        if (!cancellationToken.IsCancellationRequested) Run("Areson", () => readings.AddRange(Areson(collections, claimed, now)));
+        if (!cancellationToken.IsCancellationRequested) Run("Logitech", () => readings.AddRange(LogitechDriver.Poll(collections, claimed, now, cancellationToken)));
+        if (!cancellationToken.IsCancellationRequested) Run("Sonix", () => readings.AddRange(SonixKeyboard(collections, claimed, now)));
+        if (!cancellationToken.IsCancellationRequested) Run("HID", () => readings.AddRange(GenericHid(collections, claimed, now)));
+        if (!cancellationToken.IsCancellationRequested) Run("Bluetooth", () => readings.AddRange(Bluetooth(readings, now)));
+        if (!cancellationToken.IsCancellationRequested) Run("PhoneLink", () => readings.AddRange(PhoneLink(now)));
         return DeviceBatteryDedupe.Collapse(readings);
     }
 

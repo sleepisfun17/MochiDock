@@ -13,7 +13,7 @@ public sealed class DeviceBatteryService : IDisposable
     public static readonly TimeSpan PollInterval = TimeSpan.FromSeconds(60);
 
     readonly object gate = new();
-    readonly Func<IReadOnlyList<DeviceBatteryReading>> scan;
+    readonly Func<CancellationToken, IReadOnlyList<DeviceBatteryReading>> scan;
     readonly Func<DateTimeOffset> clock;
     readonly System.Threading.Timer timer;
     CancellationTokenSource? debounce;
@@ -30,7 +30,7 @@ public sealed class DeviceBatteryService : IDisposable
     readonly IReadOnlyList<TimeSpan> startupDelays;
     CancellationTokenSource? startup;
 
-    public DeviceBatteryService(Func<IReadOnlyList<DeviceBatteryReading>>? scan = null, Func<DateTimeOffset>? clock = null, IReadOnlyList<TimeSpan>? startupDelays = null)
+    public DeviceBatteryService(Func<CancellationToken, IReadOnlyList<DeviceBatteryReading>>? scan = null, Func<DateTimeOffset>? clock = null, IReadOnlyList<TimeSpan>? startupDelays = null)
     {
         this.scan = scan ?? DeviceBatteryScanner.PollOnce;
         this.clock = clock ?? (() => DateTimeOffset.UtcNow);
@@ -122,7 +122,7 @@ public sealed class DeviceBatteryService : IDisposable
     {
         try
         {
-            var polled = scan();
+            var polled = scan(token);
             bool changed;
             lock (gate)
             {

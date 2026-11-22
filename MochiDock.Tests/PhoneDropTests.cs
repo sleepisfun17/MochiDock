@@ -180,5 +180,50 @@ public sealed class PhoneDropTests : IAsyncLifetime
         }
         finally { cancellation.Cancel();try { using var ignored = await sending; } catch { } }
     }
+    [Fact] public async Task StopTimeoutStillCleansUpAndAllowsCleanRestart()
+    {
+        await _server.StopAsync();
+        _server = new PhoneDropServer(_root, () => _clock, TimeSpan.FromSeconds(60), stopDrainTimeout: TimeSpan.FromMilliseconds(120));
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        _server.WriteResponseOverride = async (_, _, _) => await release.Task;
+        await _server.StartAsync(IPAddress.Loopback, _port); SetToken();
+
+        var stalledGet = _client.GetAsync("/");
+        await Task.Delay(50);
+        await _server.StopAsync();
+
+        Assert.False(_server.IsRunning);
+        Assert.Equal("Phone drop stopped", _server.Status);
+
+        _server.WriteResponseOverride = null;
+        await _server.StartAsync(IPAddress.Loopback, _port);
+        Assert.True(_server.IsRunning);
+
+        release.TrySetResult();
+        try { using var ignored = await stalledGet; } catch { }
+    }
+    [Fact] public async Task ResponseWriteFailureAfterCommitKeepsBatchCompleted()
+    {
+        string id = await Propose(new DropFile("note.txt", 4));
+        _server.Answer(id, true);
+
+        _server.WriteResponseOverride = (response, bytes, token) =>
+        {
+            if (response.StatusCode == 200 && System.Text.Encoding.UTF8.GetString(bytes).Contains("success", StringComparison.Ordinal))
+                throw new IOException("Simulated client disconnect during ack");
+            return response.OutputStream.WriteAsync(bytes, token).AsTask();
+        };
+
+        try
+        {
+            using var upload = await _client.PostAsync($"uploads/{id}/0", new ByteArrayContent("hola"u8.ToArray()));
+        }
+        catch { }
+        finally { _server.WriteResponseOverride = null; }
+
+        Assert.True(File.Exists(Path.Combine(_root, "note.txt")));
+        var status = await _client.GetFromJsonAsync<JsonElement>($"requests/{id}");
+        Assert.Equal("completed", status.GetProperty("state").GetString());
+    }
     public async Task DisposeAsync() { await _server.StopAsync();_client.Dispose();if(Directory.Exists(_root))Directory.Delete(_root,true); }
 }

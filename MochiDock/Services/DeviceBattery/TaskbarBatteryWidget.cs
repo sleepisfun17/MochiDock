@@ -50,7 +50,7 @@ public sealed class TaskbarBatteryWidget : IDisposable
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
     struct ToolInfo { public uint Size, Flags; public IntPtr Hwnd; public UIntPtr Id; public Rect Rc; public IntPtr Instance; public IntPtr Text; }
 
-    [DllImport("user32.dll", CharSet = CharSet.Unicode)] static extern ushort RegisterClassExW(ref WndClassEx cls);
+    [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)] static extern ushort RegisterClassExW(ref WndClassEx cls);
     [DllImport("user32.dll", CharSet = CharSet.Unicode)] static extern bool UnregisterClassW(string name, IntPtr instance);
     [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)] static extern IntPtr CreateWindowExW(uint ex, string cls, string? title, uint style, int x, int y, int w, int h, IntPtr parent, IntPtr menu, IntPtr instance, IntPtr param);
     [DllImport("user32.dll")] static extern bool DestroyWindow(IntPtr hwnd);
@@ -404,7 +404,8 @@ public sealed class TaskbarBatteryWidget : IDisposable
 
     void Destroy()
     {
-        if (widget != IntPtr.Zero) { DestroyWindow(widget); widget = IntPtr.Zero; tooltip = IntPtr.Zero; }
+        if (tooltip != IntPtr.Zero) { DestroyWindow(tooltip); tooltip = IntPtr.Zero; }
+        if (widget != IntPtr.Zero) { DestroyWindow(widget); widget = IntPtr.Zero; }
         if (tooltipBuffer != IntPtr.Zero) { Marshal.FreeHGlobal(tooltipBuffer); tooltipBuffer = IntPtr.Zero; }
         parent = IntPtr.Zero;
         renderKey = "";

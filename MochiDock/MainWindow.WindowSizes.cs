@@ -59,19 +59,26 @@ public partial class MainWindow
     /// <summary>Handles a WM_HOTKEY id if it is one of the window-size shortcuts; returns false otherwise.</summary>
     private bool HandleWindowSizeHotkey(int id)
     {
-        WindowResizerService.Result? result = null;
-        IntPtr own = new WindowInteropHelper(this).Handle;
-        if (id == HOTKEY_ID_WINDOW_FLIP) result = WindowResizerService.Flip(own);
-        else if (id >= HOTKEY_ID_WINDOW_SIZE_BASE && id < HOTKEY_ID_WINDOW_SIZE_BASE + WindowSizing.MaxPresets)
-        {
-            var presets = _viewModel.Settings.WindowSizePresets;
-            int index = id - HOTKEY_ID_WINDOW_SIZE_BASE;
-            if (presets == null || index >= presets.Count) return true;
-            result = WindowResizerService.Resize(presets[index].Width, presets[index].Height, own);
-        }
-        else return false;
+        bool isFlip = id == HOTKEY_ID_WINDOW_FLIP;
+        bool isPreset = id >= HOTKEY_ID_WINDOW_SIZE_BASE && id < HOTKEY_ID_WINDOW_SIZE_BASE + WindowSizing.MaxPresets;
+        if (!isFlip && !isPreset) return false;
 
-        if (result != null) ShowResolutionNotice(result.Message);
+        IntPtr target = WindowResizerService.CaptureForegroundWindow();
+        IntPtr own = new WindowInteropHelper(this).Handle;
+        Dispatcher.BeginInvoke(() =>
+        {
+            if (_windowClosed) return;
+            WindowResizerService.Result? result = null;
+            if (isFlip) result = WindowResizerService.Flip(own, target);
+            else
+            {
+                var presets = _viewModel.Settings.WindowSizePresets;
+                int index = id - HOTKEY_ID_WINDOW_SIZE_BASE;
+                if (presets != null && index < presets.Count)
+                    result = WindowResizerService.Resize(presets[index].Width, presets[index].Height, own, target);
+            }
+            if (result != null) ShowResolutionNotice(result.Message);
+        });
         return true;
     }
 }

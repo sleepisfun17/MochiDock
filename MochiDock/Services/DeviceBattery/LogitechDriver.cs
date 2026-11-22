@@ -26,7 +26,7 @@ sealed class HidppChannel : IDisposable
     {
         try
         {
-            stream.Write(request, 0, request.Length);
+            if (!HidNative.WriteWithTimeout(stream, request, timeoutMs)) return null;
             var deadline = Environment.TickCount64 + timeoutMs;
             var buffer = new byte[inputLength];
             while (true)
@@ -60,9 +60,10 @@ static class LogitechDriver
     sealed record Known(string Name, BatteryDeviceKind Kind, ushort BatteryFeature, byte BatteryIndex, string Unit);
     static readonly ConcurrentDictionary<string, Known> Cache = new();
 
-    public static List<DeviceBatteryReading> Poll(List<HidCollection> collections, HashSet<(ushort, ushort)> claimed, DateTimeOffset now)
+    public static List<DeviceBatteryReading> Poll(List<HidCollection> collections, HashSet<(ushort, ushort)> claimed, DateTimeOffset now, CancellationToken cancellationToken = default)
     {
         var readings = new List<DeviceBatteryReading>();
+        if (cancellationToken.IsCancellationRequested) return readings;
         var candidates = collections.Where(c => c.Vid == LogitechProtocol.Vendor && c.UsagePage == 0xFF00
             && ((c.Usage == 1 && c.OutputLength == LogitechProtocol.ShortLength) || (c.Usage == 2 && c.OutputLength == LogitechProtocol.LongLength))
             && !c.Path.Contains("{00001812-", StringComparison.OrdinalIgnoreCase) && !c.Path.Contains("{00001124-", StringComparison.OrdinalIgnoreCase));

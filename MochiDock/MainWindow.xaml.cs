@@ -225,7 +225,7 @@ public partial class MainWindow : Window
 
         Loaded += MainWindow_Loaded;
         Loaded += (_,_)=>{if(_powerNotifications!=null)return;_powerNotifications=new(new WindowInteropHelper(this).Handle);_powerNotifications.DisplayChanged+=OnConsoleDisplayChanged;_powerNotifications.PowerChanged+=OnSystemPowerChanged;_viewModel.PowerNoticeRequested+=ShowPowerNotice;_viewModel.OnPowerState(MochiDock.Services.BatteryStatus.Read());_policyTimer.Tick+=PolicyTick;_policyTimer.Start();};
-        Closed += (_,_)=>{_batteryWidget?.Dispose();_batteryWidget=null;_powerNoticeTimer?.Stop();_viewModel.PowerNoticeRequested-=ShowPowerNotice;_viewModel.AudioService.MasterVolumeChanged-=OnMasterVolumeChanged;_viewModel.AudioService.Dispose();HeaderPillOverlay.Cancel();_viewModel.StopPresentationTimers();_windowClosed=true;_expansionTransition.Invalidate();_hoverExpandTimer.Stop();_mouseLeaveTimer.Stop();_takeoverTimeoutTimer.Stop();_volumeOverlayTimer?.Stop();_topmostWatchdogTimer?.Stop();SystemEvents.SessionSwitch-=SystemEvents_SessionSwitch;SystemEvents.DisplaySettingsChanged-=SystemEvents_DisplaySettingsChanged;if(_hwndSource!=null){try{var h=new WindowInteropHelper(this);if(h.Handle!=IntPtr.Zero){UnregisterHotKey(h.Handle,HOTKEY_ID_RESOLUTION);UnregisterHotKey(h.Handle,HOTKEY_ID_SCRIPT);UnregisterWindowSizeShortcuts(h.Handle);}_hwndSource.RemoveHook(HwndMessageHook);}catch (System.Exception logEx) { MochiDock.Services.AppLog.Warn("Window", logEx); }}_resolutionNoticeTimer?.Stop();_viewModel.IsDockInteractionActive=null;_viewModel.StopHardwareCapture();_policyTimer.Stop();_policyTimer.Tick-=PolicyTick;if(_powerNotifications!=null){_powerNotifications.DisplayChanged-=OnConsoleDisplayChanged;_powerNotifications.PowerChanged-=OnSystemPowerChanged;_powerNotifications.Dispose();_powerNotifications=null;}};
+        Closed += (_,_)=>{_batteryWidget?.Dispose();_batteryWidget=null;_powerNoticeTimer?.Stop();_viewModel.PowerNoticeRequested-=ShowPowerNotice;_viewModel.AudioService.MasterVolumeChanged-=OnMasterVolumeChanged;_viewModel.AudioService.Dispose();HeaderPillOverlay.Cancel();_viewModel.StopPresentationTimers();_windowClosed=true;_expansionTransition.Invalidate();_hoverExpandTimer.Stop();_mouseLeaveTimer.Stop();_takeoverTimeoutTimer.Stop();_volumeOverlayTimer?.Stop();_topmostWatchdogTimer?.Stop();SystemEvents.SessionSwitch-=SystemEvents_SessionSwitch;SystemEvents.DisplaySettingsChanged-=SystemEvents_DisplaySettingsChanged;_resolutionNoticeTimer?.Stop();_viewModel.IsDockInteractionActive=null;_viewModel.StopHardwareCapture();_policyTimer.Stop();_policyTimer.Tick-=PolicyTick;if(_powerNotifications!=null){_powerNotifications.DisplayChanged-=OnConsoleDisplayChanged;_powerNotifications.PowerChanged-=OnSystemPowerChanged;_powerNotifications.Dispose();_powerNotifications=null;}};
 
         Closing += MainWindow_Closing;
 
@@ -799,6 +799,21 @@ public partial class MainWindow : Window
     private void MainWindow_Closing(object? sender, System.ComponentModel.CancelEventArgs e)
     {
         App.CloseSettingsWindow(); // commit pending edits before the final flush below
+        if (_hwndSource != null)
+        {
+            try
+            {
+                var h = new WindowInteropHelper(this);
+                if (h.Handle != IntPtr.Zero)
+                {
+                    UnregisterHotKey(h.Handle, HOTKEY_ID_RESOLUTION);
+                    UnregisterHotKey(h.Handle, HOTKEY_ID_SCRIPT);
+                    UnregisterWindowSizeShortcuts(h.Handle);
+                }
+                _hwndSource.RemoveHook(HwndMessageHook);
+            }
+            catch (System.Exception logEx) { MochiDock.Services.AppLog.Warn("Window", logEx); }
+        }
         _trayIcon.Visible = false;
         _trayIcon.Dispose();
 
@@ -1200,7 +1215,17 @@ public partial class MainWindow : Window
 
     private void OnSettingsChanged(SettingsApply effects)
     {
-        if (effects.HasFlag(SettingsApply.Hotkey)) { ApplyResolutionHotkey(); ApplyWindowSizeShortcuts(); }
+        if (effects.HasFlag(SettingsApply.Hotkey))
+        {
+            IntPtr hwnd = new WindowInteropHelper(this).Handle;
+            if (hwnd != IntPtr.Zero)
+            {
+                UnregisterHotKey(hwnd, HOTKEY_ID_RESOLUTION);
+                UnregisterWindowSizeShortcuts(hwnd);
+            }
+            ApplyResolutionHotkey();
+            ApplyWindowSizeShortcuts();
+        }
         // A new interface size resizes the window around its centre-top; the dock keeps its state (expanded stays expanded on the same card).
         if (effects.HasFlag(SettingsApply.Scale)) PositionWindow();
     }

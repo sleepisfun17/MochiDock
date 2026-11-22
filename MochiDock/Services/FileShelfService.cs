@@ -39,7 +39,12 @@ public class FileShelfService
         LocalIpAddress = GetAddresses().FirstOrDefault() ?? "";
         _server.Changed += () => Changed?.Invoke();
         _server.ApprovalRequested += proposal => ApprovalRequested?.Invoke(proposal);
-        _server.FileReceived += path => App.Current.Dispatcher.BeginInvoke(() => { AddFile(path); PhoneFileReceived?.Invoke(); });
+        _server.FileReceived += path =>
+        {
+            var dispatcher = App.Current?.Dispatcher;
+            if (dispatcher != null && !dispatcher.HasShutdownStarted)
+                dispatcher.BeginInvoke(() => { AddFile(path); PhoneFileReceived?.Invoke(); });
+        };
     }
     public Task StartServerAsync()
     {

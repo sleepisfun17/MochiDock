@@ -14,9 +14,11 @@ public static class WindowResizerService
 {
     public sealed record Result(bool Success, string Message);
 
-    public static Result Resize(int width, int height, IntPtr ownWindow)
+    public static IntPtr CaptureForegroundWindow() => GetForegroundWindow();
+
+    public static Result Resize(int width, int height, IntPtr ownWindow, IntPtr? targetWindow = null)
     {
-        IntPtr hwnd = GetForegroundWindow();
+        IntPtr hwnd = targetWindow ?? GetForegroundWindow();
         if (!IsResizable(hwnd, ownWindow, out string? why)) return new Result(false, why!);
 
         if (IsZoomed(hwnd) || IsIconic(hwnd)) ShowWindow(hwnd, SW_RESTORE);
@@ -39,14 +41,15 @@ public static class WindowResizerService
     }
 
     /// <summary>Swaps the foreground window's width and height (landscape to portrait and back).</summary>
-    public static Result Flip(IntPtr ownWindow)
+    public static Result Flip(IntPtr ownWindow, IntPtr? targetWindow = null)
     {
-        IntPtr hwnd = GetForegroundWindow();
+        IntPtr hwnd = targetWindow ?? GetForegroundWindow();
         if (!IsResizable(hwnd, ownWindow, out string? why)) return new Result(false, why!);
         if (IsZoomed(hwnd) || IsIconic(hwnd)) ShowWindow(hwnd, SW_RESTORE);
         if (!GetWindowRect(hwnd, out var rect)) return new Result(false, "This window can't be resized");
         int w = rect.Right - rect.Left, h = rect.Bottom - rect.Top;
-        return Resize(h, w, ownWindow);
+        if (w < WindowSizing.MinSide || h < WindowSizing.MinSide) return new Result(false, "This window can't be resized");
+        return Resize(h, w, ownWindow, hwnd);
     }
 
     static bool IsResizable(IntPtr hwnd, IntPtr ownWindow, out string? why)

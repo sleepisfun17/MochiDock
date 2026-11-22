@@ -143,6 +143,18 @@ public static class HidNative
     public static SafeFileHandle OpenOverlapped(string path) =>
         CreateFileW(path, GenericReadWrite, FILE_SHARE_READ | FILE_SHARE_WRITE, IntPtr.Zero, OPEN_EXISTING, FileFlagOverlapped, IntPtr.Zero);
 
+    internal static bool WriteWithTimeout(FileStream stream, byte[] request, int timeoutMs, CancellationToken cancellationToken = default)
+    {
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        timeout.CancelAfter(timeoutMs);
+        try
+        {
+            stream.WriteAsync(request, 0, request.Length, timeout.Token).GetAwaiter().GetResult();
+            return true;
+        }
+        catch (OperationCanceledException) { return false; }
+    }
+
     /// <summary>
     /// Sends an output report (request[0] = report ID) and reads input reports until <paramref name="accept"/> takes one or
     /// <paramref name="timeoutMs"/> passes. Reports that do not match (other traffic on the collection) are skipped.
@@ -154,7 +166,7 @@ public static class HidNative
         try
         {
             using var stream = new FileStream(handle, FileAccess.ReadWrite, 0, true);
-            stream.Write(request, 0, request.Length);
+            if (!WriteWithTimeout(stream, request, timeoutMs)) return null;
             var deadline = Environment.TickCount64 + timeoutMs;
             var buffer = new byte[inputLength];
             while (true)

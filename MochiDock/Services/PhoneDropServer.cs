@@ -24,6 +24,9 @@ public sealed class PhoneDropServer
     private readonly string _folder;
     private readonly Func<DateTimeOffset> _now;
     private readonly TimeSpan _uploadIdleTimeout;
+    private readonly TimeSpan _stopDrainTimeout;
+    private static readonly TimeSpan ResponseWriteTimeout = TimeSpan.FromSeconds(10);
+    internal Func<HttpListenerResponse, byte[], CancellationToken, Task>? WriteResponseOverride { get; set; }
     private readonly object _gate = new();
     private readonly SemaphoreSlim _lifecycle = new(1);
     private readonly ConcurrentDictionary<long, Task> _requests = new();
@@ -42,7 +45,7 @@ public sealed class PhoneDropServer
     public event Action? Changed;
     public event Action<DropProposal>? ApprovalRequested;
     public event Action<string>? FileReceived;
-    public PhoneDropServer(string folder, Func<DateTimeOffset>? now = null, TimeSpan? uploadIdleTimeout = null) { _folder = Path.GetFullPath(folder); _now = now ?? (() => DateTimeOffset.UtcNow); _uploadIdleTimeout = uploadIdleTimeout ?? TimeSpan.FromSeconds(60); }
+    public PhoneDropServer(string folder, Func<DateTimeOffset>? now = null, TimeSpan? uploadIdleTimeout = null, TimeSpan? stopDrainTimeout = null) { _folder = Path.GetFullPath(folder); _now = now ?? (() => DateTimeOffset.UtcNow); _uploadIdleTimeout = uploadIdleTimeout ?? TimeSpan.FromSeconds(60); _stopDrainTimeout = stopDrainTimeout ?? TimeSpan.FromSeconds(5); }
 
     public async Task StartAsync(IPAddress address, int port)
     {
@@ -79,8 +82,11 @@ public sealed class PhoneDropServer
             if (expectedSession.HasValue && (_stop == null || expectedSession.Value != _stop.Token)) return;
             lock (_gate) { IsRunning = false; _secret = ""; Url = ""; _batches.Clear(); }
             _stop?.Cancel(); _listener?.Close();
-            if (_accept != null) await _accept.ConfigureAwait(false);
-            await Task.WhenAll(_requests.Values.ToArray()).WaitAsync(TimeSpan.FromSeconds(5)).ConfigureAwait(false);
+            if (_accept != null) try { await _accept.ConfigureAwait(false); } catch (Exception logEx) { MochiDock.Services.AppLog.Warn("PhoneDrop", logEx); }
+            try { await Task.WhenAll(_requests.Values.ToArray()).WaitAsync(_stopDrainTimeout).ConfigureAwait(false); }
+            catch (TimeoutException) { MochiDock.Services.AppLog.Warn("PhoneDrop", "Timed out waiting for in-flight requests during stop."); }
+            catch (Exception logEx) { MochiDock.Services.AppLog.Warn("PhoneDrop", logEx); }
+            _requests.Clear();
             _stop?.Dispose(); _stop = null; _listener = null;
             SetStatus("Phone drop stopped");
         }
@@ -142,11 +148,19 @@ public sealed class PhoneDropServer
             _lastActivity = _now(); return true;
         }
     }
-    private static async Task JsonAsync(HttpListenerResponse response, int status, object value)
+    private async Task WriteResponseAsync(HttpListenerResponse response, byte[] bytes, CancellationToken token)
+    {
+        if (WriteResponseOverride != null) { await WriteResponseOverride(response, bytes, token).ConfigureAwait(false); return; }
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(token);
+        timeout.CancelAfter(ResponseWriteTimeout);
+        using var abortOnTimeout = timeout.Token.Register(() => { try { response.Abort(); } catch (System.Exception logEx) { MochiDock.Services.AppLog.Warn("PhoneDrop", logEx); } });
+        await response.OutputStream.WriteAsync(bytes, timeout.Token).ConfigureAwait(false);
+    }
+    private Task JsonAsync(HttpListenerResponse response, int status, object value, CancellationToken token = default)
     {
         response.StatusCode = status; response.ContentType = "application/json";
         byte[] bytes = JsonSerializer.SerializeToUtf8Bytes(value, new JsonSerializerOptions(JsonSerializerDefaults.Web));
-        await response.OutputStream.WriteAsync(bytes).ConfigureAwait(false);
+        return WriteResponseAsync(response, bytes, token);
     }
     private async Task HandleAsync(HttpListenerContext context, CancellationToken token)
     {
@@ -160,14 +174,14 @@ public sealed class PhoneDropServer
             if (request.HttpMethod == "GET" && request.Url?.AbsolutePath == "/")
             {
                 response.ContentType = "text/html; charset=utf-8";
-                await response.OutputStream.WriteAsync(Encoding.UTF8.GetBytes(Page), token); return;
+                await WriteResponseAsync(response, Encoding.UTF8.GetBytes(Page), token); return;
             }
-            if (!Authorize(request)) { await JsonAsync(response, 403, new { error = "Session link expired or invalid. Start phone drop and copy a fresh link." }); return; }
+            if (!Authorize(request)) { await JsonAsync(response, 403, new { error = "Session link expired or invalid. Start phone drop and copy a fresh link." }, token); return; }
             string[] route = (request.Url?.AbsolutePath ?? "").Trim('/').Split('/');
             if (request.HttpMethod == "POST" && route.Length == 1 && route[0] == "requests")
             {
-                if (request.ContentLength64 < 0) { await JsonAsync(response, 411, new { error = "Content length required." }); return; }
-                if (request.ContentLength64 > 16384) { await JsonAsync(response, 413, new { error = "Request too large." }); return; }
+                if (request.ContentLength64 < 0) { await JsonAsync(response, 411, new { error = "Content length required." }, token); return; }
+                if (request.ContentLength64 > 16384) { await JsonAsync(response, 413, new { error = "Request too large." }, token); return; }
                 using var timeout = CancellationTokenSource.CreateLinkedTokenSource(token); timeout.CancelAfter(TimeSpan.FromSeconds(60));
                 using var metadataTimeout = timeout.Token.Register(() => { try { response.Abort(); } catch (System.Exception logEx) { MochiDock.Services.AppLog.Warn("PhoneDrop", logEx); } });
                 var files = await JsonSerializer.DeserializeAsync<DropFile[]>(request.InputStream, new JsonSerializerOptions(JsonSerializerDefaults.Web), timeout.Token) ?? throw new ArgumentException("Missing files.");
@@ -181,7 +195,7 @@ public sealed class PhoneDropServer
                     _batches[id] = new Batch(safe, _now());
                 }
                 ApprovalRequested?.Invoke(new(id, safe));
-                await JsonAsync(response, 202, new { id, state = "pending" }); return;
+                await JsonAsync(response, 202, new { id, state = "pending" }, token); return;
             }
             if (route.Length == 2 && route[0] == "requests" && request.HttpMethod == "GET")
             {
@@ -192,22 +206,22 @@ public sealed class PhoneDropServer
                     if (batch.State == "pending" && _now() - batch.Created >= TimeSpan.FromSeconds(60)) batch.State = "expired";
                     state = batch.State;
                 }
-                await JsonAsync(response, 200, new { state }); return;
+                await JsonAsync(response, 200, new { state }, token); return;
             }
             if (route.Length == 3 && route[0] == "uploads" && request.HttpMethod == "POST" && int.TryParse(route[2], out int index))
             { await UploadAsync(context, route[1], index, token); return; }
             response.StatusCode = 404;
         }
-        catch (ArgumentException ex) { await TryErrorAsync(response, 400, ex.Message); }
-        catch (JsonException) { await TryErrorAsync(response, 400, "Invalid file proposal."); }
-        catch (InvalidOperationException ex) { await TryErrorAsync(response, 409, ex.Message); }
-        catch (OperationCanceledException) { SetStatus("Transfer stopped or timed out; request approval again"); await TryErrorAsync(response, 408, "Transfer stopped or timed out."); }
+        catch (ArgumentException ex) { await TryErrorAsync(response, 400, ex.Message, token); }
+        catch (JsonException) { await TryErrorAsync(response, 400, "Invalid file proposal.", token); }
+        catch (InvalidOperationException ex) { await TryErrorAsync(response, 409, ex.Message, token); }
+        catch (OperationCanceledException) { SetStatus("Transfer stopped or timed out; request approval again"); await TryErrorAsync(response, 408, "Transfer stopped or timed out.", token); }
         catch (Exception ex) when (ex is IOException or HttpListenerException or UnauthorizedAccessException or ObjectDisposedException)
         { SetStatus("Transfer failed; no incomplete file was added"); await TryErrorAsync(response, 500, "Transfer could not be saved. Check available space and try again."); }
         finally { try { response.Close(); } catch (System.Exception logEx) { MochiDock.Services.AppLog.Warn("PhoneDrop", logEx); } }
     }
-    private static async Task TryErrorAsync(HttpListenerResponse response, int code, string error)
-    { try { await JsonAsync(response, code, new { error }); } catch (System.Exception logEx) { MochiDock.Services.AppLog.Warn("PhoneDrop", logEx); } }
+    private async Task TryErrorAsync(HttpListenerResponse response, int code, string error, CancellationToken token = default)
+    { try { await JsonAsync(response, code, new { error }, token); } catch (System.Exception logEx) { MochiDock.Services.AppLog.Warn("PhoneDrop", logEx); } }
     private async Task UploadAsync(HttpListenerContext context, string id, int index, CancellationToken token)
     {
         Batch batch; DropFile file;
@@ -222,6 +236,7 @@ public sealed class PhoneDropServer
             _uploads++;
         }
         string temporary = Path.Combine(_folder, ".partial-" + Guid.NewGuid().ToString("N"));
+        bool committed = false;
         try
         {
             await using (var output = new FileStream(temporary, FileMode.CreateNew, FileAccess.Write, FileShare.None, 65536, true))
@@ -254,13 +269,14 @@ public sealed class PhoneDropServer
                 destination = CommitFile(temporary, file.Name);
                 batch.Completed++;
                 if (batch.Completed == batch.Files.Length) batch.State = "completed";
+                committed = true;
             }
             FileReceived?.Invoke(destination);
             SetStatus("File received — " + batch.Completed + "/" + batch.Files.Length);
-            await JsonAsync(context.Response, 200, new { success = true });
         }
-        catch { lock (_gate) batch.State = "failed"; throw; }
+        catch when (!committed) { lock (_gate) batch.State = "failed"; throw; }
         finally { lock (_gate) _uploads--; if (File.Exists(temporary)) File.Delete(temporary); }
+        await JsonAsync(context.Response, 200, new { success = true }, token);
     }
     private string CommitFile(string temporary, string name)
     {
