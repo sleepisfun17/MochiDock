@@ -2,6 +2,37 @@
 
 All notable changes to MochiDock are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.2.0-beta]
+
+### Added
+
+- **Power chart**: the Battery page's top row is now one full-width **This PC** panel. A chart starts at 0 W under a round scale (for example 200 W), fills in from the right and, on a desktop, stacks the power into CPU, GPU and the rest of the PC, so a game spike shows as GPU; a laptop on battery shows its measured draw as one area. A dashed line marks the average and a dot the latest peak, with the latest watts, average, peak and this session's energy beside it.
+- **WhatsApp engine in Settings**: Settings > WhatsApp has a **Local engine** row that shows whether the engine is bundled, downloaded (with its version) or missing, with **Download** (with progress) and **Remove** for the downloaded copy while it is not running. Your WhatsApp login is kept.
+- **First-run welcome**: a short onboarding cue on first start, and a **Change city** link on the Weather card.
+- **Keyboard and screen readers**: **Escape** closes the dock and menus, every control shows a focus outline, and controls across the dock and Settings have accessible names.
+
+### Changed
+
+- **Smaller download and install**: the WhatsApp (GOWA) engine is no longer bundled. It downloads (about 13 MB, checked against a pinned SHA-256) when you turn on WhatsApp in Local mode, and also at startup when Local WhatsApp is on but the engine is missing (a clean reinstall or settings moved to a new PC). Remote mode never downloads it. Together with dropping Windows Forms, a duplicate .NET runtime under OutlookHelper and unused language files, the installer is much smaller. Upgrades keep the engine the old version installed.
+- **Stats charts**: the live charts fill in from the right while their history builds, instead of starting as a flat line across the chart, and they keep recording while the Stats card is closed (whenever hardware alerts are on, the readout is pinned or a game runs), so they are already filled when you open it.
+- **Games page**: Playtime moved to the left column as separate **Today** and **This week** rows, and the right column fits without a scrollbar.
+- **Tray menu**: grouped by purpose: the update (only while one is available), then Show Dock, Music, Stats and WhatsApp Dashboard; Pin Dock Open, Pin Stats to Pill and Snooze; Monitor, Display Resolution and Reset Dock Position; Settings…, Preferences and Settings & Data; Exit. Pins show a checkmark, Snooze shows when an active snooze ends, Start with Windows is in Preferences, and device-battery refresh lives in the battery widget's menu and on the Battery page.
+- **Faster and lighter**: dock cards load the first time you open them, hardware stats are read off the UI thread, and idle animations (equalizer, marquee, Mochi's eyes, clock) no longer redraw when nothing changes. The system volume is followed through Core Audio callbacks instead of polling.
+- **Matcha theme**: the Stats and Prayer cards follow the theme colours instead of fixed dark-mode colours.
+- **Clipboard and Media**: clipboard items show when they are pinned or copied; the Media card shows the active audio output, keeps seek errors from overlapping and offers **Retry lyrics** only when lyrics failed.
+
+### Fixed
+
+- **Crash when switching tabs**: the dock could close a few seconds after start when you switched tabs, because chart data read in the background was handed to the Stats card.
+- **Settings recovery**: a corrupt `settings.json` is restored from its backup again instead of being reset to defaults at startup.
+- **Saved mail passwords**: a failed read could wipe every saved IMAP app password; credential files are now written atomically.
+- **Email**: IMAP no longer re-announces the whole inbox after a reconnect or stalls 30 s when disconnecting, and Outlook no longer drops new mail past 30 unread.
+- **Fullscreen and dragging**: the dock no longer hides on an empty desktop or steals focus when it comes back, and dragging the compact pill no longer jitters.
+- **Prayer**: the old "Adzan" option, which could silently mute prayer alerts, is gone.
+- **Remote Desktop and monitors**: disconnecting Remote Desktop or turning every display off no longer crashes the dock, and positioning is correct on monitors with different scaling.
+- **Upgrades**: the installer stops OutlookHelper and the WhatsApp engine before replacing files.
+- **Stability**: fixes across the audio device reader, media sessions, the update download, lyrics fetching, FPS capture, the hardware sensors, WhatsApp message handling, Phone Drop, global hotkeys, wireless battery reads and weather parsing.
+
 ## [0.1.5-beta]
 
 ### Added
