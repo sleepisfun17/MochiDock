@@ -36,6 +36,7 @@ public partial class AdvancedSettingsWindow : Window
         sections.GroupDescriptions.Add(new System.Windows.Data.PropertyGroupDescription(nameof(SettingsSection.Group)));
         SidebarList.ItemsSource = sections;
         SourceInitialized += (s, e) => ApplyChrome(_viewModel.CapsuleTheme);
+        PreviewKeyDown += AdvancedSettingsWindow_PreviewKeyDown;
         ApplyInterfaceScale();
         _viewModel.PropertyChanged += ViewModelPropertyChanged;
         Closed += (s, e) => _viewModel.PropertyChanged -= ViewModelPropertyChanged;
@@ -45,6 +46,15 @@ public partial class AdvancedSettingsWindow : Window
     private const double BaseWidth = 900, BaseHeight = 620, BaseMinWidth = 760, BaseMinHeight = 520;
     private double _appliedScale = 1.0;
     private bool _scaleInitialised;
+
+    private void AdvancedSettingsWindow_PreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+    {
+        if (e.Key != Key.Escape || e.Handled) return;
+        if (Keyboard.FocusedElement is System.Windows.Controls.TextBox { IsReadOnly: true }) return;
+        if (Keyboard.FocusedElement is System.Windows.Controls.ComboBox { IsDropDownOpen: true }) return;
+        Close();
+        e.Handled = true;
+    }
 
     private void ViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {

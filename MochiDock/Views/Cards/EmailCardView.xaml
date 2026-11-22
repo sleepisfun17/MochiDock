@@ -70,7 +70,7 @@
 
                                     <!-- Dismiss Single Email Button -->
                                     <Button Grid.Column="1" VerticalAlignment="Top" Margin="6,0,0,0" Click="DismissItem_Click"
-                                            Background="Transparent" BorderThickness="0" Cursor="Hand" ToolTip="Dismiss email">
+                                            Background="Transparent" BorderThickness="0" Cursor="Hand" ToolTip="Dismiss email" AutomationProperties.Name="Dismiss email">
                                         <TextBlock Text="✕" Foreground="{DynamicResource IslandMutedInkBrush}" FontSize="11" FontWeight="{DynamicResource IslandSmallLabelWeight}" />
                                     </Button>
                                 </Grid>

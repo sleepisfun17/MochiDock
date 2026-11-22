@@ -12,6 +12,7 @@ public sealed class TabTransitionHost : Grid
     FrameworkElement? current;
     long generation;
     public string Order { get; set; } = "";
+    public Func<string, FrameworkElement?>? CardFactory { get; set; }
     public TabTransitionHost()
     {
         ClipToBounds = true;
@@ -23,8 +24,18 @@ public sealed class TabTransitionHost : Grid
     public void Settle() => Select(false);
     void Select(bool animate)
     {
+        string key = SelectedKey ?? "";
         var pages = Children.OfType<FrameworkElement>().ToList();
-        var next = pages.FirstOrDefault(c => Equals(c.Tag, SelectedKey));
+        var next = pages.FirstOrDefault(c => Equals(c.Tag, key));
+        if (next is null && !string.IsNullOrEmpty(key) && CardFactory?.Invoke(key) is { } created)
+        {
+            created.Tag = key;
+            created.Visibility = Visibility.Collapsed;
+            Children.Add(created);
+            MochiDock.Services.ThemeService.ApplyToElement(created);
+            pages.Add(created);
+            next = created;
+        }
         if (next is null)
         {
             ++generation;

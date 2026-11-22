@@ -82,7 +82,7 @@
                                 <Button Grid.Column="2" Style="{StaticResource IslandSecondaryButtonStyle}" Content="Open" Click="OpenFile_Click" Margin="4,0" VerticalAlignment="Center" />
 
                                 <!-- Remove -->
-                                <Button Grid.Column="3" Style="{StaticResource IslandIconButton}" Content="✕" Click="RemoveFile_Click" ToolTip="Remove from shelf" VerticalAlignment="Center" />
+                                <Button Grid.Column="3" Style="{StaticResource IslandIconButton}" Content="✕" Click="RemoveFile_Click" ToolTip="Remove from shelf" AutomationProperties.Name="Remove from shelf" VerticalAlignment="Center" />
                             </Grid>
                         </Border>
                     </DataTemplate>

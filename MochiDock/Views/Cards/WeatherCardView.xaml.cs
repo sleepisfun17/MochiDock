@@ -34,4 +34,7 @@ public partial class WeatherCardView : UserControl
             await MochiDock.Controls.RefreshFeedback.RunAsync(button, vm.RefreshWeatherAsync);
         }
     }
+
+    private void ChangeCity_Click(object sender, RoutedEventArgs e) =>
+        App.OpenSettings(MochiDock.Core.SettingsSections.Location);
 }

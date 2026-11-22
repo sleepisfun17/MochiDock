@@ -68,13 +68,13 @@
                 <!-- Playback Buttons + Audio Output Switcher -->
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                     <!-- Previous Track -->
-                    <Button Style="{StaticResource IslandIconButton}" Width="32" Height="28" Margin="0,0,4,0" Click="PrevButton_Click" ToolTip="Previous Track">
+                    <Button Style="{StaticResource IslandIconButton}" Width="32" Height="28" Margin="0,0,4,0" Click="PrevButton_Click" ToolTip="Previous Track" AutomationProperties.Name="Previous track">
                         <Path Width="11" Height="11" Stretch="Uniform" Fill="{DynamicResource IslandInkBrush}" 
                               Data="M2,3 L4.5,3 L4.5,13 L2,13 Z M14,3 L5.5,8 L14,13 Z" />
                     </Button>
 
                     <!-- Play / Pause Button with Dynamic Vector Icon -->
-                    <Button Style="{StaticResource IslandIconButton}" Width="38" Height="28" Margin="0,0,4,0" Background="{DynamicResource IslandAccentFillBrush}" Click="PlayPauseButton_Click" ToolTip="Play / Pause">
+                    <Button Style="{StaticResource IslandIconButton}" Width="38" Height="28" Margin="0,0,4,0" Background="{DynamicResource IslandAccentFillBrush}" Click="PlayPauseButton_Click" ToolTip="Play / Pause" AutomationProperties.Name="Play or pause">
                         <Grid Width="13" Height="13">
                             <!-- Pause Icon (Shown when playing) -->
                             <Path Stretch="Uniform" Fill="{DynamicResource IslandMediaGlyphBrush}"
@@ -88,7 +88,7 @@
                     </Button>
 
                     <!-- Next Track -->
-                    <Button Style="{StaticResource IslandIconButton}" Width="32" Height="28" Margin="0,0,8,0" Click="NextButton_Click" ToolTip="Next Track">
+                    <Button Style="{StaticResource IslandIconButton}" Width="32" Height="28" Margin="0,0,8,0" Click="NextButton_Click" ToolTip="Next Track" AutomationProperties.Name="Next track">
                         <Path Width="11" Height="11" Stretch="Uniform" Fill="{DynamicResource IslandInkBrush}" 
                               Data="M2,3 L10.5,8 L2,13 Z M11.5,3 L14,3 L14,13 L11.5,13 Z" />
                     </Button>
@@ -189,9 +189,9 @@
                         <Style.Triggers><Trigger Property="IsMouseOver" Value="True"><Setter Property="Opacity" Value="1"/></Trigger></Style.Triggers>
                     </Style>
                 </StackPanel.Style>
-                <Button Content="−" Click="LyricsOffsetLater_Click" Style="{StaticResource IslandIconButton}" Margin="0" ToolTip="Show lyrics later"/>
+                <Button Content="−" Click="LyricsOffsetLater_Click" Style="{StaticResource IslandIconButton}" Margin="0" ToolTip="Show lyrics later" AutomationProperties.Name="Show lyrics later"/>
                 <TextBlock Text="{Binding LyricsOffsetText}" MouseLeftButtonUp="LyricsOffsetReset_Click" Cursor="Hand" FontSize="11" Foreground="{DynamicResource IslandMutedInkBrush}" VerticalAlignment="Center" TextAlignment="Center" MinWidth="64" Margin="2,0"/>
-                <Button Content="+" Click="LyricsOffsetEarlier_Click" Style="{StaticResource IslandIconButton}" Margin="0" ToolTip="Show lyrics earlier"/>
+                <Button Content="+" Click="LyricsOffsetEarlier_Click" Style="{StaticResource IslandIconButton}" Margin="0" ToolTip="Show lyrics earlier" AutomationProperties.Name="Show lyrics earlier"/>
             </StackPanel>
         </Grid>
     </Grid>

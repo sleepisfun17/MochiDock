@@ -44,9 +44,27 @@ public static class ThemeService
     public static bool IsHojichaTheme(string? theme) =>
         string.Equals(theme, "Hojicha", StringComparison.OrdinalIgnoreCase);
 
+    private static SolidColorBrush FrozenBrush(MediaColor color)
+    {
+        var b = new SolidColorBrush(color);
+        b.Freeze();
+        return b;
+    }
+
+    /// <summary>Applies the current theme's visual-tree overrides to a lazily instantiated card.</summary>
+    public static void ApplyToElement(FrameworkElement element)
+    {
+        if (_appliedTheme == null) return;
+        bool isMatcha = IsMatchaTheme(_appliedTheme);
+        var mascotTheme = Controls.MascotControl.ToMascotTheme(_appliedTheme);
+        ApplyElementStyle(element, isMatcha);
+        UpdateVisualTree(element, isMatcha, mascotTheme);
+    }
+
     public static void ApplyTheme(Window window, string theme)
     {
         theme = MochiDock.Core.ThemePolicy.Normalize(theme);
+        if (_appliedTheme == theme) return;
         bool isMatcha = IsMatchaTheme(theme);
         bool isHojicha = IsHojichaTheme(theme);
         var app = WpfApplication.Current;
@@ -81,36 +99,36 @@ public static class ThemeService
             SetBrushes(app, "#283322", "IslandInkBrush", "IslandEmailBadgeInkBrush", "ActiveLyricBrush", "ActiveLyricRomajiBrush", "InactiveLyricBrush", "InactiveLyricRomajiBrush");
             SetBrushes(app, "#335226", "IslandAccentBrush", "IslandAccentFillBrush", "IslandVolumeBrush", "IslandPrayerBadgeStrokeBrush");
             SetBrushes(app, "#9A3F55", "IslandHighlightBrush", "IslandQiblaBrush");
-            app.Resources["IslandHighlightSubtleBrush"] = new SolidColorBrush(MediaColor.FromArgb(38, 154, 63, 85));
-            app.Resources["IslandTabHoverBrush"] = new SolidColorBrush(MediaColor.FromArgb(24, 78, 107, 54));
-            app.Resources["IslandStatusBrush"] = new SolidColorBrush(MediaColor.FromRgb(120, 82, 0));
+            app.Resources["IslandHighlightSubtleBrush"] = FrozenBrush(MediaColor.FromArgb(38, 154, 63, 85));
+            app.Resources["IslandTabHoverBrush"] = FrozenBrush(MediaColor.FromArgb(24, 78, 107, 54));
+            app.Resources["IslandStatusBrush"] = FrozenBrush(MediaColor.FromRgb(120, 82, 0));
             app.Resources["IslandAccentColor"] = MediaColor.FromRgb(51, 82, 38);
-            app.Resources["IslandAccentSubtleBrush"] = new SolidColorBrush(MediaColor.FromRgb(207, 218, 188));
-            app.Resources["IslandSaturdayBrush"] = new SolidColorBrush(MediaColor.FromRgb(38, 98, 140));
+            app.Resources["IslandAccentSubtleBrush"] = FrozenBrush(MediaColor.FromRgb(207, 218, 188));
+            app.Resources["IslandSaturdayBrush"] = FrozenBrush(MediaColor.FromRgb(38, 98, 140));
             // Text-safe accents (>= 4.5:1 on the Matcha cards) replacing dark-theme-only hardcoded hexes.
-            app.Resources["IslandGreenBrush"] = new SolidColorBrush(MediaColor.FromRgb(23, 105, 43));
-            app.Resources["IslandOrangeBrush"] = new SolidColorBrush(MediaColor.FromRgb(138, 80, 0));
-            app.Resources["IslandRedBrush"] = new SolidColorBrush(MediaColor.FromRgb(179, 38, 30));
-            app.Resources["IslandBlueBrush"] = new SolidColorBrush(MediaColor.FromRgb(26, 95, 180));
-            app.Resources["IslandInfoBrush"] = new SolidColorBrush(MediaColor.FromRgb(31, 95, 153));
-            app.Resources["IslandWhatsAppInkBrush"] = new SolidColorBrush(MediaColor.FromRgb(245, 240, 223));
-            app.Resources["IslandWhatsAppBrush"] = new SolidColorBrush(MediaColor.FromRgb(24, 107, 56));
-            app.Resources["IslandWhatsAppSubtleBrush"] = new SolidColorBrush(MediaColor.FromArgb(34, 37, 160, 80));
-            app.Resources["IslandWhatsAppBorderBrush"] = new SolidColorBrush(MediaColor.FromArgb(110, 24, 107, 56));
-            app.Resources["IslandPositiveBrush"] = new SolidColorBrush(MediaColor.FromRgb(35, 100, 52));
+            app.Resources["IslandGreenBrush"] = FrozenBrush(MediaColor.FromRgb(23, 105, 43));
+            app.Resources["IslandOrangeBrush"] = FrozenBrush(MediaColor.FromRgb(138, 80, 0));
+            app.Resources["IslandRedBrush"] = FrozenBrush(MediaColor.FromRgb(179, 38, 30));
+            app.Resources["IslandBlueBrush"] = FrozenBrush(MediaColor.FromRgb(26, 95, 180));
+            app.Resources["IslandInfoBrush"] = FrozenBrush(MediaColor.FromRgb(31, 95, 153));
+            app.Resources["IslandWhatsAppInkBrush"] = FrozenBrush(MediaColor.FromRgb(245, 240, 223));
+            app.Resources["IslandWhatsAppBrush"] = FrozenBrush(MediaColor.FromRgb(24, 107, 56));
+            app.Resources["IslandWhatsAppSubtleBrush"] = FrozenBrush(MediaColor.FromArgb(34, 37, 160, 80));
+            app.Resources["IslandWhatsAppBorderBrush"] = FrozenBrush(MediaColor.FromArgb(110, 24, 107, 56));
+            app.Resources["IslandPositiveBrush"] = FrozenBrush(MediaColor.FromRgb(35, 100, 52));
             SetBrushes(app, "#7A4A9E", "IslandPurpleBrush");
             SetBrushes(app, "#24283322", "IslandChartGridBrush");
             SetBrushes(app, "#40283322", "IslandChartGridStrongBrush");
             SetBrushes(app, "#4752C4", "IslandDiscordBrush");
             SetBrushes(app, "#FFFFFF", "IslandDiscordInkBrush");
             SetBrushes(app, "#1A8F44", "IslandSpotifyBrush");
-            app.Resources["IslandPositiveSubtleBrush"] = new SolidColorBrush(MediaColor.FromArgb(32, 47, 125, 70));
-            app.Resources["IslandNegativeBrush"] = new SolidColorBrush(MediaColor.FromRgb(156, 47, 68));
-            app.Resources["IslandNegativeSubtleBrush"] = new SolidColorBrush(MediaColor.FromArgb(32, 183, 72, 93));
-            app.Resources["IslandWarningBrush"] = new SolidColorBrush(MediaColor.FromRgb(138, 80, 0));
-            app.Resources["IslandWarningSubtleBrush"] = new SolidColorBrush(MediaColor.FromArgb(32, 184, 107, 17));
+            app.Resources["IslandPositiveSubtleBrush"] = FrozenBrush(MediaColor.FromArgb(32, 47, 125, 70));
+            app.Resources["IslandNegativeBrush"] = FrozenBrush(MediaColor.FromRgb(156, 47, 68));
+            app.Resources["IslandNegativeSubtleBrush"] = FrozenBrush(MediaColor.FromArgb(32, 183, 72, 93));
+            app.Resources["IslandWarningBrush"] = FrozenBrush(MediaColor.FromRgb(138, 80, 0));
+            app.Resources["IslandWarningSubtleBrush"] = FrozenBrush(MediaColor.FromArgb(32, 184, 107, 17));
             SetBrushes(app, "#B0B792", "IslandGaugeTrackBrush", "IslandTrackBrush");
-            app.Resources["IslandPrayerBadgeBackgroundBrush"] = new SolidColorBrush(MediaColor.FromRgb(207, 218, 188));
+            app.Resources["IslandPrayerBadgeBackgroundBrush"] = FrozenBrush(MediaColor.FromRgb(207, 218, 188));
 
 
             // Dynamic Media Lyric Brushes (Matcha: Espresso text on light foam ground)
@@ -128,77 +146,77 @@ public static class ThemeService
             // Default dark palette: pure black ground with silver and white accents
             SetBrushes(app, "#22222C", "IslandEmailBadgeBackgroundBrush");
             SetBrushes(app, "#E5E5EA", "IslandEmailBadgeInkBrush");
-            app.Resources["IslandGroundBrush"] = new SolidColorBrush(MediaColor.FromRgb(0, 0, 0));
-            app.Resources["IslandBorderBrush"] = new SolidColorBrush(MediaColor.FromRgb(44, 44, 58));
-            app.Resources["IslandSurfaceBrush"] = new SolidColorBrush(MediaColor.FromRgb(12, 12, 16));
-            app.Resources["IslandSubCardBackgroundBrush"] = new SolidColorBrush(MediaColor.FromRgb(16, 16, 22));
-            app.Resources["IslandSubCardBorderBrush"] = new SolidColorBrush(MediaColor.FromRgb(44, 44, 58));
-            app.Resources["IslandChipBackgroundBrush"] = new SolidColorBrush(MediaColor.FromRgb(16, 16, 22));
-            app.Resources["IslandChipActiveBrush"] = new SolidColorBrush(MediaColor.FromRgb(26, 26, 38));
-            app.Resources["IslandChipBorderBrush"] = new SolidColorBrush(MediaColor.FromRgb(50, 50, 74));
-            app.Resources["IslandIconButtonBackgroundBrush"] = new SolidColorBrush(MediaColor.FromRgb(30, 30, 38));
-            app.Resources["IslandIconButtonHoverBrush"] = new SolidColorBrush(MediaColor.FromRgb(48, 48, 60));
-            app.Resources["IslandActionButtonBackgroundBrush"] = new SolidColorBrush(MediaColor.FromRgb(32, 32, 42));
-            app.Resources["IslandActionButtonHoverBrush"] = new SolidColorBrush(MediaColor.FromRgb(52, 52, 66));
-            app.Resources["IslandActionButtonPressedBrush"] = new SolidColorBrush(MediaColor.FromRgb(68, 68, 88));
-            app.Resources["IslandIconButtonPressedBrush"] = new SolidColorBrush(MediaColor.FromRgb(62, 62, 78));
-            app.Resources["IslandControlBackgroundBrush"] = new SolidColorBrush(MediaColor.FromRgb(24, 24, 34));
-            app.Resources["IslandControlBorderBrush"] = new SolidColorBrush(MediaColor.FromRgb(62, 62, 82));
-            app.Resources["IslandScrollBarThumbBrush"] = new SolidColorBrush(MediaColor.FromRgb(74, 74, 94));
-            app.Resources["IslandScrollBarThumbHoverBrush"] = new SolidColorBrush(MediaColor.FromRgb(120, 120, 148));
-            app.Resources["IslandTabActiveBrush"] = new SolidColorBrush(MediaColor.FromRgb(36, 36, 48));
-            app.Resources["IslandTabHoverBrush"] = new SolidColorBrush(MediaColor.FromArgb(24, 255, 255, 255));
-            app.Resources["IslandInkBrush"] = new SolidColorBrush(MediaColor.FromRgb(245, 245, 245));
-            app.Resources["IslandSecondaryInkBrush"] = new SolidColorBrush(MediaColor.FromRgb(158, 158, 158));
-            app.Resources["IslandMutedInkBrush"] = new SolidColorBrush(MediaColor.FromRgb(128, 128, 128));
+            app.Resources["IslandGroundBrush"] = FrozenBrush(MediaColor.FromRgb(0, 0, 0));
+            app.Resources["IslandBorderBrush"] = FrozenBrush(MediaColor.FromRgb(44, 44, 58));
+            app.Resources["IslandSurfaceBrush"] = FrozenBrush(MediaColor.FromRgb(12, 12, 16));
+            app.Resources["IslandSubCardBackgroundBrush"] = FrozenBrush(MediaColor.FromRgb(16, 16, 22));
+            app.Resources["IslandSubCardBorderBrush"] = FrozenBrush(MediaColor.FromRgb(44, 44, 58));
+            app.Resources["IslandChipBackgroundBrush"] = FrozenBrush(MediaColor.FromRgb(16, 16, 22));
+            app.Resources["IslandChipActiveBrush"] = FrozenBrush(MediaColor.FromRgb(26, 26, 38));
+            app.Resources["IslandChipBorderBrush"] = FrozenBrush(MediaColor.FromRgb(50, 50, 74));
+            app.Resources["IslandIconButtonBackgroundBrush"] = FrozenBrush(MediaColor.FromRgb(30, 30, 38));
+            app.Resources["IslandIconButtonHoverBrush"] = FrozenBrush(MediaColor.FromRgb(48, 48, 60));
+            app.Resources["IslandActionButtonBackgroundBrush"] = FrozenBrush(MediaColor.FromRgb(32, 32, 42));
+            app.Resources["IslandActionButtonHoverBrush"] = FrozenBrush(MediaColor.FromRgb(52, 52, 66));
+            app.Resources["IslandActionButtonPressedBrush"] = FrozenBrush(MediaColor.FromRgb(68, 68, 88));
+            app.Resources["IslandIconButtonPressedBrush"] = FrozenBrush(MediaColor.FromRgb(62, 62, 78));
+            app.Resources["IslandControlBackgroundBrush"] = FrozenBrush(MediaColor.FromRgb(24, 24, 34));
+            app.Resources["IslandControlBorderBrush"] = FrozenBrush(MediaColor.FromRgb(62, 62, 82));
+            app.Resources["IslandScrollBarThumbBrush"] = FrozenBrush(MediaColor.FromRgb(74, 74, 94));
+            app.Resources["IslandScrollBarThumbHoverBrush"] = FrozenBrush(MediaColor.FromRgb(120, 120, 148));
+            app.Resources["IslandTabActiveBrush"] = FrozenBrush(MediaColor.FromRgb(36, 36, 48));
+            app.Resources["IslandTabHoverBrush"] = FrozenBrush(MediaColor.FromArgb(24, 255, 255, 255));
+            app.Resources["IslandInkBrush"] = FrozenBrush(MediaColor.FromRgb(245, 245, 245));
+            app.Resources["IslandSecondaryInkBrush"] = FrozenBrush(MediaColor.FromRgb(158, 158, 158));
+            app.Resources["IslandMutedInkBrush"] = FrozenBrush(MediaColor.FromRgb(128, 128, 128));
             SetBrushes(app, "#EBEBF0", "IslandAccentBrush", "IslandAccentFillBrush", "IslandVolumeBrush", "IslandPrayerBadgeStrokeBrush");
             SetBrushes(app, "#D4BC8E", "IslandHighlightBrush", "IslandQiblaBrush");
-            app.Resources["IslandHighlightSubtleBrush"] = new SolidColorBrush(MediaColor.FromArgb(38, 212, 188, 142));
+            app.Resources["IslandHighlightSubtleBrush"] = FrozenBrush(MediaColor.FromArgb(38, 212, 188, 142));
             SetBrushes(app, "#D4D4DF", "IslandSelectionBorderBrush");
             SetBrushes(app, "#24FFFFFF", "IslandSelectionFillBrush");
             SetBrushes(app, "#FFFFFF", "IslandSliderThumbBrush");
             SetBrushes(app, "#121216", "IslandMediaGlyphBrush", "IslandAccentButtonInkBrush");
             SetBrushes(app, "#00000000", "IslandHeaderSelectionBorderBrush");
             app.Resources["IslandSelectionColor"] = MediaColor.FromRgb(212, 212, 223);
-            app.Resources["IslandStatusBrush"] = new SolidColorBrush(MediaColor.FromRgb(255, 214, 10));
+            app.Resources["IslandStatusBrush"] = FrozenBrush(MediaColor.FromRgb(255, 214, 10));
             app.Resources["IslandAccentColor"] = MediaColor.FromRgb(235, 235, 240);
-            app.Resources["IslandAccentSubtleBrush"] = new SolidColorBrush(MediaColor.FromArgb(36, 255, 255, 255));
-            app.Resources["IslandSaturdayBrush"] = new SolidColorBrush(MediaColor.FromRgb(56, 189, 248));
-            app.Resources["IslandGreenBrush"] = new SolidColorBrush(MediaColor.FromRgb(48, 209, 88));
-            app.Resources["IslandOrangeBrush"] = new SolidColorBrush(MediaColor.FromRgb(255, 159, 10));
-            app.Resources["IslandRedBrush"] = new SolidColorBrush(MediaColor.FromRgb(255, 69, 58));
-            app.Resources["IslandBlueBrush"] = new SolidColorBrush(MediaColor.FromRgb(10, 132, 255));
-            app.Resources["IslandInfoBrush"] = new SolidColorBrush(MediaColor.FromRgb(100, 181, 246));
-            app.Resources["IslandWhatsAppInkBrush"] = new SolidColorBrush(MediaColor.FromRgb(6, 43, 20));
-            app.Resources["IslandWhatsAppBrush"] = new SolidColorBrush(MediaColor.FromRgb(37, 211, 102));
-            app.Resources["IslandWhatsAppSubtleBrush"] = new SolidColorBrush(MediaColor.FromArgb(26, 37, 211, 102));
-            app.Resources["IslandWhatsAppBorderBrush"] = new SolidColorBrush(MediaColor.FromArgb(51, 37, 211, 102));
-            app.Resources["IslandPositiveBrush"] = new SolidColorBrush(MediaColor.FromRgb(52, 211, 153));
+            app.Resources["IslandAccentSubtleBrush"] = FrozenBrush(MediaColor.FromArgb(36, 255, 255, 255));
+            app.Resources["IslandSaturdayBrush"] = FrozenBrush(MediaColor.FromRgb(56, 189, 248));
+            app.Resources["IslandGreenBrush"] = FrozenBrush(MediaColor.FromRgb(48, 209, 88));
+            app.Resources["IslandOrangeBrush"] = FrozenBrush(MediaColor.FromRgb(255, 159, 10));
+            app.Resources["IslandRedBrush"] = FrozenBrush(MediaColor.FromRgb(255, 69, 58));
+            app.Resources["IslandBlueBrush"] = FrozenBrush(MediaColor.FromRgb(10, 132, 255));
+            app.Resources["IslandInfoBrush"] = FrozenBrush(MediaColor.FromRgb(100, 181, 246));
+            app.Resources["IslandWhatsAppInkBrush"] = FrozenBrush(MediaColor.FromRgb(6, 43, 20));
+            app.Resources["IslandWhatsAppBrush"] = FrozenBrush(MediaColor.FromRgb(37, 211, 102));
+            app.Resources["IslandWhatsAppSubtleBrush"] = FrozenBrush(MediaColor.FromArgb(26, 37, 211, 102));
+            app.Resources["IslandWhatsAppBorderBrush"] = FrozenBrush(MediaColor.FromArgb(51, 37, 211, 102));
+            app.Resources["IslandPositiveBrush"] = FrozenBrush(MediaColor.FromRgb(52, 211, 153));
             SetBrushes(app, "#BF5AF2", "IslandPurpleBrush");
             SetBrushes(app, "#14FFFFFF", "IslandChartGridBrush");
             SetBrushes(app, "#25FFFFFF", "IslandChartGridStrongBrush");
             SetBrushes(app, "#5865F2", "IslandDiscordBrush");
             SetBrushes(app, "#FFFFFF", "IslandDiscordInkBrush");
             SetBrushes(app, "#1DB954", "IslandSpotifyBrush");
-            app.Resources["IslandPositiveSubtleBrush"] = new SolidColorBrush(MediaColor.FromArgb(38, 52, 211, 153));
-            app.Resources["IslandNegativeBrush"] = new SolidColorBrush(MediaColor.FromRgb(251, 113, 133));
-            app.Resources["IslandNegativeSubtleBrush"] = new SolidColorBrush(MediaColor.FromArgb(38, 251, 113, 133));
-            app.Resources["IslandWarningBrush"] = new SolidColorBrush(MediaColor.FromRgb(245, 158, 11));
-            app.Resources["IslandWarningSubtleBrush"] = new SolidColorBrush(MediaColor.FromArgb(38, 245, 158, 11));
-            app.Resources["IslandGaugeTrackBrush"] = new SolidColorBrush(MediaColor.FromRgb(44, 44, 64));
-            app.Resources["IslandTrackBrush"] = new SolidColorBrush(MediaColor.FromRgb(44, 44, 64));
-            app.Resources["IslandPrayerBadgeBackgroundBrush"] = new SolidColorBrush(MediaColor.FromRgb(34, 34, 44));
+            app.Resources["IslandPositiveSubtleBrush"] = FrozenBrush(MediaColor.FromArgb(38, 52, 211, 153));
+            app.Resources["IslandNegativeBrush"] = FrozenBrush(MediaColor.FromRgb(251, 113, 133));
+            app.Resources["IslandNegativeSubtleBrush"] = FrozenBrush(MediaColor.FromArgb(38, 251, 113, 133));
+            app.Resources["IslandWarningBrush"] = FrozenBrush(MediaColor.FromRgb(245, 158, 11));
+            app.Resources["IslandWarningSubtleBrush"] = FrozenBrush(MediaColor.FromArgb(38, 245, 158, 11));
+            app.Resources["IslandGaugeTrackBrush"] = FrozenBrush(MediaColor.FromRgb(44, 44, 64));
+            app.Resources["IslandTrackBrush"] = FrozenBrush(MediaColor.FromRgb(44, 44, 64));
+            app.Resources["IslandPrayerBadgeBackgroundBrush"] = FrozenBrush(MediaColor.FromRgb(34, 34, 44));
             SetBrushes(app, "#333336", "IslandVolumeTrackBrush");
 
             // Dynamic Media Lyric Brushes (Dark: Crisp White / Gray)
-            app.Resources["ActiveLyricBrush"] = new SolidColorBrush(MediaColor.FromRgb(255, 255, 255));
-            app.Resources["ActiveLyricRomajiBrush"] = new SolidColorBrush(MediaColor.FromArgb(208, 255, 255, 255));
-            app.Resources["InactiveLyricBrush"] = new SolidColorBrush(MediaColor.FromArgb(140, 255, 255, 255));
-            app.Resources["InactiveLyricRomajiBrush"] = new SolidColorBrush(MediaColor.FromArgb(110, 255, 255, 255));
+            app.Resources["ActiveLyricBrush"] = FrozenBrush(MediaColor.FromRgb(255, 255, 255));
+            app.Resources["ActiveLyricRomajiBrush"] = FrozenBrush(MediaColor.FromArgb(208, 255, 255, 255));
+            app.Resources["InactiveLyricBrush"] = FrozenBrush(MediaColor.FromArgb(140, 255, 255, 255));
+            app.Resources["InactiveLyricRomajiBrush"] = FrozenBrush(MediaColor.FromArgb(110, 255, 255, 255));
 
             // Dynamic Weather Brushes
-            app.Resources["WeatherCloudBrush"] = new SolidColorBrush(MediaColor.FromRgb(176, 176, 196));
-            app.Resources["WeatherCloudStroke"] = new SolidColorBrush(MediaColor.FromArgb(0, 0, 0, 0));
+            app.Resources["WeatherCloudBrush"] = FrozenBrush(MediaColor.FromRgb(176, 176, 196));
+            app.Resources["WeatherCloudStroke"] = FrozenBrush(MediaColor.FromArgb(0, 0, 0, 0));
             SetBrushes(app,"#FFFFFF","WeatherClearCloudBrush");
             SetBrushes(app,"#E0E0EA","WeatherPartlyCloudBrush");
             SetBrushes(app,"#FFAE00","WeatherSunBrush");
@@ -291,7 +309,7 @@ public static class ThemeService
 
     private static void SetBrushes(WpfApplication app, string color, params string[] keys)
     {
-        foreach (var key in keys) app.Resources[key] = new SolidColorBrush((MediaColor)System.Windows.Media.ColorConverter.ConvertFromString(color));
+        foreach (var key in keys) app.Resources[key] = FrozenBrush((MediaColor)System.Windows.Media.ColorConverter.ConvertFromString(color));
     }
 
     private static void UpdateVisualTree(DependencyObject parent, bool isMatcha, Controls.MascotControl.MascotTheme mascotTheme)
@@ -364,15 +382,15 @@ public static class ThemeService
                     // Map white / light grey to deep matcha ink, preserving alpha contrast
                     if (scb.Color.R > 200 && scb.Color.G > 200 && scb.Color.B > 200)
                     {
-                        tb.Foreground = new SolidColorBrush(MediaColor.FromRgb(40,51,34));
+                        tb.Foreground = FrozenBrush(MediaColor.FromRgb(40,51,34));
                     }
                     else if (scb.Color.R > 130 && scb.Color.G > 130 && scb.Color.B > 130)
                     {
-                        tb.Foreground = new SolidColorBrush(MediaColor.FromRgb(83,96,74));
+                        tb.Foreground = FrozenBrush(MediaColor.FromRgb(83,96,74));
                     }
                     else if (scb.Color.R > 90 && scb.Color.G > 90 && scb.Color.B > 90)
                     {
-                        tb.Foreground = new SolidColorBrush(MediaColor.FromRgb(83,96,74));
+                        tb.Foreground = FrozenBrush(MediaColor.FromRgb(83,96,74));
                     }
                 }
             }
@@ -405,11 +423,11 @@ public static class ThemeService
                     // Map dark container boxes (#101016, #12121A, #14141C, #181822, #1C1C26) to Matcha card surface
                     if (scbBg.Color.R < 35 && scbBg.Color.G < 35 && scbBg.Color.B < 45)
                     {
-                        border.Background = new SolidColorBrush(MediaColor.FromRgb(221,224,196));
+                        border.Background = FrozenBrush(MediaColor.FromRgb(221,224,196));
                     }
                     else if (scbBg.Color.R < 60 && scbBg.Color.G < 60 && scbBg.Color.B < 75)
                     {
-                        border.Background = new SolidColorBrush(MediaColor.FromRgb(241,215,181));
+                        border.Background = FrozenBrush(MediaColor.FromRgb(241,215,181));
                     }
                 }
 
@@ -417,7 +435,7 @@ public static class ThemeService
                 {
                     if (scbBorder.Color.R < 70 && scbBorder.Color.G < 70 && scbBorder.Color.B < 90)
                     {
-                        border.BorderBrush = new SolidColorBrush(MediaColor.FromRgb(165,175,137));
+                        border.BorderBrush = FrozenBrush(MediaColor.FromRgb(165,175,137));
                     }
                 }
             }
@@ -453,11 +471,11 @@ public static class ThemeService
                 {
                     if (scbFill.Color.R > 220 && scbFill.Color.G > 220 && scbFill.Color.B > 220)
                     {
-                        shape.Fill = new SolidColorBrush(MediaColor.FromArgb(scbFill.Color.A, 40, 51, 34));
+                        shape.Fill = FrozenBrush(MediaColor.FromArgb(scbFill.Color.A, 40, 51, 34));
                     }
                     else if (scbFill.Color.R < 40 && scbFill.Color.G < 40 && scbFill.Color.B < 50)
                     {
-                        shape.Fill = new SolidColorBrush(MediaColor.FromArgb(scbFill.Color.A, 195, 201, 166));
+                        shape.Fill = FrozenBrush(MediaColor.FromArgb(scbFill.Color.A, 195, 201, 166));
                     }
                 }
 
@@ -465,7 +483,7 @@ public static class ThemeService
                 {
                     if (scbStroke.Color.R > 200 && scbStroke.Color.G > 200 && scbStroke.Color.B > 200)
                     {
-                        shape.Stroke = new SolidColorBrush(MediaColor.FromArgb(scbStroke.Color.A, 40, 51, 34));
+                        shape.Stroke = FrozenBrush(MediaColor.FromArgb(scbStroke.Color.A, 40, 51, 34));
                     }
                 }
             }

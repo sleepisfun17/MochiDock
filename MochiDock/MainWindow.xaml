@@ -76,6 +76,7 @@
 
         <!-- Header tab button: borderless pill with a vector icon and label -->
         <Style x:Key="ActivityTabButton" TargetType="Button">
+            <Setter Property="FocusVisualStyle" Value="{StaticResource IslandFocusVisual}"/>
             <Setter Property="FontFamily" Value="{DynamicResource IslandUiFont}"/>
             <Setter Property="Background" Value="Transparent" />
             <Setter Property="Foreground" Value="{DynamicResource IslandInkBrush}" />
@@ -1268,6 +1269,8 @@
 
                     <RowDefinition Height="Auto" />
 
+                    <RowDefinition Height="Auto" />
+
                     <RowDefinition Height="*" />
 
                 </Grid.RowDefinitions>
@@ -1296,7 +1299,7 @@
                         <!-- Segmented Activity Tabs (Strict constrained width so right close/pin buttons never crop) -->
                         <ScrollViewer x:Name="HeaderTabsViewport" SizeChanged="HeaderTabsPanel_SizeChanged" Grid.Column="1" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Disabled" PanningMode="HorizontalOnly" Focusable="False" Margin="0,0,8,0">
                             <Grid x:Name="HeaderTabsLayer"><controls:HeaderSelectionOverlay x:Name="HeaderPillOverlay" IsSelectionEnabled="{Binding IsExpanded}" Tabs="{Binding ElementName=HeaderTabsPanel}"><Border x:Name="HeaderSelectionPill" IsHitTestVisible="False" HorizontalAlignment="Left" Height="28" VerticalAlignment="Center" CornerRadius="14" Background="{DynamicResource IslandTabActiveBrush}" BorderBrush="{DynamicResource IslandHeaderSelectionBorderBrush}" BorderThickness="1"/></controls:HeaderSelectionOverlay><StackPanel PreviewMouseWheel="HeaderTabs_Wheel" x:Name="HeaderTabsPanel" Orientation="Horizontal" VerticalAlignment="Center" SizeChanged="HeaderTabsPanel_SizeChanged">
-<Button Style="{StaticResource ActivityTabButton}" Tag="{Binding IsMediaActive, Converter={StaticResource BoolToActiveTag}}" Click="TabMedia_Click" ToolTip="Media Player">
+<Button Style="{StaticResource ActivityTabButton}" Tag="{Binding IsMediaActive, Converter={StaticResource BoolToActiveTag}}" Click="TabMedia_Click" ToolTip="Media Player" AutomationProperties.Name="Media">
                                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center"><ContentControl Content="{StaticResource NavMusic}" VerticalAlignment="Center"/><TextBlock Text="Media" Style="{StaticResource TabLabelBaseStyle}"
                                                    controls:TabLabelMotion.Active="{Binding IsMediaActive}" />
                                     </StackPanel>
@@ -1306,7 +1309,8 @@
                                         Tag="{Binding IsWhatsAppActive, Converter={StaticResource BoolToActiveTag}}"
                                         Visibility="{Binding HasActiveWhatsApp, Converter={StaticResource BoolToVisibility}}"
                                         Click="TabWhatsApp_Click"
-                                        ToolTip="WhatsApp message">
+                                        ToolTip="WhatsApp message"
+                                        AutomationProperties.Name="WhatsApp">
                                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center"><ContentControl Content="{StaticResource NavMessage}" VerticalAlignment="Center"/><TextBlock Text="WhatsApp" Style="{StaticResource TabLabelBaseStyle}"
                                                    controls:TabLabelMotion.Active="{Binding IsWhatsAppActive}" />
                                     </StackPanel>
@@ -1316,7 +1320,8 @@
                                         Tag="{Binding IsEmailActive, Converter={StaticResource BoolToActiveTag}}"
                                         Visibility="{Binding HasActiveEmail, Converter={StaticResource BoolToVisibility}}"
                                         Click="TabEmail_Click"
-                                        ToolTip="Email message">
+                                        ToolTip="Email message"
+                                        AutomationProperties.Name="Email">
                                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center"><ContentControl Content="{StaticResource NavMail}" VerticalAlignment="Center"/><TextBlock Text="Email" Style="{StaticResource TabLabelBaseStyle}"
                                                    controls:TabLabelMotion.Active="{Binding IsEmailActive}" />
                                     </StackPanel>
@@ -1326,7 +1331,8 @@
                                         Tag="{Binding IsDiscordActive, Converter={StaticResource BoolToActiveTag}}"
                                         Visibility="{Binding HasActiveDiscord, Converter={StaticResource BoolToVisibility}}"
                                         Click="TabDiscord_Click"
-                                        ToolTip="Discord message">
+                                        ToolTip="Discord message"
+                                        AutomationProperties.Name="Discord">
                                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center"><ContentControl Content="{StaticResource NavMessage}" VerticalAlignment="Center"/><TextBlock Text="Discord" Style="{StaticResource TabLabelBaseStyle}"
                                                    controls:TabLabelMotion.Active="{Binding IsDiscordActive}" />
                                     </StackPanel>
@@ -1336,57 +1342,58 @@
                                         Tag="{Binding IsAppsActive, Converter={StaticResource BoolToActiveTag}}"
                                         Visibility="{Binding HasActiveApps, Converter={StaticResource BoolToVisibility}}"
                                         Click="TabApps_Click"
-                                        ToolTip="App notifications">
+                                        ToolTip="App notifications"
+                                        AutomationProperties.Name="Apps">
                                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center"><ContentControl Content="{StaticResource NavBell}" VerticalAlignment="Center"/><TextBlock Text="Apps" Style="{StaticResource TabLabelBaseStyle}"
                                                    controls:TabLabelMotion.Active="{Binding IsAppsActive}" />
                                     </StackPanel>
                                 </Button>
 
-<Button Style="{StaticResource ActivityTabButton}" Tag="{Binding IsHardwareActive, Converter={StaticResource BoolToActiveTag}}" Click="TabHardware_Click" ToolTip="System Performance" Visibility="{Binding ShowStatsTab, Converter={StaticResource BoolToVisibility}}">
+<Button Style="{StaticResource ActivityTabButton}" Tag="{Binding IsHardwareActive, Converter={StaticResource BoolToActiveTag}}" Click="TabHardware_Click" ToolTip="System Performance" AutomationProperties.Name="Stats" Visibility="{Binding ShowStatsTab, Converter={StaticResource BoolToVisibility}}">
                                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center"><ContentControl Content="{StaticResource NavGauge}" VerticalAlignment="Center"/><TextBlock Text="Stats" Style="{StaticResource TabLabelBaseStyle}"
                                                    controls:TabLabelMotion.Active="{Binding IsHardwareActive}" />
                                     </StackPanel>
                                 </Button>
 
-<Button Style="{StaticResource ActivityTabButton}" Tag="{Binding IsWeatherActive, Converter={StaticResource BoolToActiveTag}}" Click="TabWeather_Click" ToolTip="Weather Forecast" Visibility="{Binding ShowWeatherTab, Converter={StaticResource BoolToVisibility}}">
+<Button Style="{StaticResource ActivityTabButton}" Tag="{Binding IsWeatherActive, Converter={StaticResource BoolToActiveTag}}" Click="TabWeather_Click" ToolTip="Weather Forecast" AutomationProperties.Name="Weather" Visibility="{Binding ShowWeatherTab, Converter={StaticResource BoolToVisibility}}">
                                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center"><ContentControl Content="{StaticResource NavWeather}" VerticalAlignment="Center"/><TextBlock Text="Weather" Style="{StaticResource TabLabelBaseStyle}"
                                                    controls:TabLabelMotion.Active="{Binding IsWeatherActive}" />
                                     </StackPanel>
                                 </Button>
 
-<Button Style="{StaticResource ActivityTabButton}" Tag="{Binding IsPomodoroActive, Converter={StaticResource BoolToActiveTag}}" Click="TabPomodoro_Click" ToolTip="Focus / Pomodoro Timer" Visibility="{Binding ShowPomodoroTab, Converter={StaticResource BoolToVisibility}}">
+<Button Style="{StaticResource ActivityTabButton}" Tag="{Binding IsPomodoroActive, Converter={StaticResource BoolToActiveTag}}" Click="TabPomodoro_Click" ToolTip="Focus / Pomodoro Timer" AutomationProperties.Name="Focus" Visibility="{Binding ShowPomodoroTab, Converter={StaticResource BoolToVisibility}}">
                                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center"><ContentControl Content="{StaticResource NavTimer}" VerticalAlignment="Center"/><TextBlock Text="Focus" Style="{StaticResource TabLabelBaseStyle}"
                                                    controls:TabLabelMotion.Active="{Binding IsPomodoroActive}" />
                                     </StackPanel>
                                 </Button>
 
-<Button Style="{StaticResource ActivityTabButton}" Tag="{Binding IsPrayerActive, Converter={StaticResource BoolToActiveTag}}" Click="TabPrayer_Click" ToolTip="Islamic Prayer Times" Visibility="{Binding EnablePrayerTimes, Converter={StaticResource BoolToVisibility}}">
+<Button Style="{StaticResource ActivityTabButton}" Tag="{Binding IsPrayerActive, Converter={StaticResource BoolToActiveTag}}" Click="TabPrayer_Click" ToolTip="Islamic Prayer Times" AutomationProperties.Name="Prayer" Visibility="{Binding EnablePrayerTimes, Converter={StaticResource BoolToVisibility}}">
                                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center"><ContentControl Content="{StaticResource NavMoon}" VerticalAlignment="Center"/><TextBlock Text="Prayer" Style="{StaticResource TabLabelBaseStyle}"
                                                    controls:TabLabelMotion.Active="{Binding IsPrayerActive}" />
                                     </StackPanel>
                                 </Button>
 
-<Button Style="{StaticResource ActivityTabButton}" Tag="{Binding IsFileShelfActive, Converter={StaticResource BoolToActiveTag}}" Click="TabFileShelf_Click" ToolTip="File Shelf &amp; Paired Drop" Visibility="{Binding ShowFileShelfTab, Converter={StaticResource BoolToVisibility}}">
+<Button Style="{StaticResource ActivityTabButton}" Tag="{Binding IsFileShelfActive, Converter={StaticResource BoolToActiveTag}}" Click="TabFileShelf_Click" ToolTip="File Shelf &amp; Paired Drop" AutomationProperties.Name="File Shelf" Visibility="{Binding ShowFileShelfTab, Converter={StaticResource BoolToVisibility}}">
                                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center"><ContentControl Content="{StaticResource NavTray}" VerticalAlignment="Center"/><TextBlock Text="Shelf" Style="{StaticResource TabLabelBaseStyle}"
                                                    controls:TabLabelMotion.Active="{Binding IsFileShelfActive}" />
                                     </StackPanel>
                                 </Button>
 
-<Button Style="{StaticResource ActivityTabButton}" Tag="{Binding IsClipboardActive, Converter={StaticResource BoolToActiveTag}}" Click="TabClipboard_Click" ToolTip="Clipboard History" Visibility="{Binding ShowClipboardTab, Converter={StaticResource BoolToVisibility}}">
+<Button Style="{StaticResource ActivityTabButton}" Tag="{Binding IsClipboardActive, Converter={StaticResource BoolToActiveTag}}" Click="TabClipboard_Click" ToolTip="Clipboard History" AutomationProperties.Name="Clipboard" Visibility="{Binding ShowClipboardTab, Converter={StaticResource BoolToVisibility}}">
                                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center"><ContentControl Content="{StaticResource NavClipboard}" VerticalAlignment="Center"/><TextBlock Text="Clip" Style="{StaticResource TabLabelBaseStyle}"
                                                    controls:TabLabelMotion.Active="{Binding IsClipboardActive}" />
                                     </StackPanel>
                                 </Button>
 
-<Button Style="{StaticResource ActivityTabButton}" Tag="{Binding IsTodayActive, Converter={StaticResource BoolToActiveTag}}" Click="TabToday_Click" Visibility="{Binding ShowTodayTab, Converter={StaticResource BoolToVisibility}}" ToolTip="Today calendar"><StackPanel Orientation="Horizontal" VerticalAlignment="Center"><ContentControl Content="{StaticResource NavCalendar}" VerticalAlignment="Center"/><TextBlock Text="Today" Style="{StaticResource TabLabelBaseStyle}" controls:TabLabelMotion.Active="{Binding IsTodayActive}"/></StackPanel></Button>
+<Button Style="{StaticResource ActivityTabButton}" Tag="{Binding IsTodayActive, Converter={StaticResource BoolToActiveTag}}" Click="TabToday_Click" Visibility="{Binding ShowTodayTab, Converter={StaticResource BoolToVisibility}}" ToolTip="Today calendar" AutomationProperties.Name="Today"><StackPanel Orientation="Horizontal" VerticalAlignment="Center"><ContentControl Content="{StaticResource NavCalendar}" VerticalAlignment="Center"/><TextBlock Text="Today" Style="{StaticResource TabLabelBaseStyle}" controls:TabLabelMotion.Active="{Binding IsTodayActive}"/></StackPanel></Button>
 
-<Button Style="{StaticResource ActivityTabButton}" Tag="{Binding IsAiUsageActive, Converter={StaticResource BoolToActiveTag}}" Click="TabAiUsage_Click" Visibility="{Binding ShowAiUsageTab, Converter={StaticResource BoolToVisibility}}" ToolTip="Local AI Coding Plan Usage"><StackPanel Orientation="Horizontal" VerticalAlignment="Center"><ContentControl Content="{StaticResource NavSparkles}" VerticalAlignment="Center"/><TextBlock Text="AI Usage" Style="{StaticResource TabLabelBaseStyle}" controls:TabLabelMotion.Active="{Binding IsAiUsageActive}"/></StackPanel></Button>
+<Button Style="{StaticResource ActivityTabButton}" Tag="{Binding IsAiUsageActive, Converter={StaticResource BoolToActiveTag}}" Click="TabAiUsage_Click" Visibility="{Binding ShowAiUsageTab, Converter={StaticResource BoolToVisibility}}" ToolTip="Local AI Coding Plan Usage" AutomationProperties.Name="AI Usage"><StackPanel Orientation="Horizontal" VerticalAlignment="Center"><ContentControl Content="{StaticResource NavSparkles}" VerticalAlignment="Center"/><TextBlock Text="AI Usage" Style="{StaticResource TabLabelBaseStyle}" controls:TabLabelMotion.Active="{Binding IsAiUsageActive}"/></StackPanel></Button>
 
-<Button Style="{StaticResource ActivityTabButton}" Tag="{Binding IsScriptActive, Converter={StaticResource BoolToActiveTag}}" Click="TabScript_Click" Visibility="{Binding ShowScriptTab, Converter={StaticResource BoolToVisibility}}" ToolTip="Webcam Teleprompter / Script"><StackPanel Orientation="Horizontal" VerticalAlignment="Center"><ContentControl Content="{StaticResource NavScript}" VerticalAlignment="Center"/><TextBlock Text="Script" Style="{StaticResource TabLabelBaseStyle}" controls:TabLabelMotion.Active="{Binding IsScriptActive}"/></StackPanel></Button>
+<Button Style="{StaticResource ActivityTabButton}" Tag="{Binding IsScriptActive, Converter={StaticResource BoolToActiveTag}}" Click="TabScript_Click" Visibility="{Binding ShowScriptTab, Converter={StaticResource BoolToVisibility}}" ToolTip="Webcam Teleprompter / Script" AutomationProperties.Name="Script"><StackPanel Orientation="Horizontal" VerticalAlignment="Center"><ContentControl Content="{StaticResource NavScript}" VerticalAlignment="Center"/><TextBlock Text="Script" Style="{StaticResource TabLabelBaseStyle}" controls:TabLabelMotion.Active="{Binding IsScriptActive}"/></StackPanel></Button>
 
-<Button Style="{StaticResource ActivityTabButton}" Tag="{Binding IsDownloadsActive, Converter={StaticResource BoolToActiveTag}}" Click="TabDownloads_Click" Visibility="{Binding ShowDownloadsTab, Converter={StaticResource BoolToVisibility}}" ToolTip="Media Downloader"><StackPanel Orientation="Horizontal" VerticalAlignment="Center"><ContentControl Content="{StaticResource NavDownload}" VerticalAlignment="Center"/><TextBlock Text="Downloads" Style="{StaticResource TabLabelBaseStyle}" controls:TabLabelMotion.Active="{Binding IsDownloadsActive}"/></StackPanel></Button>
+<Button Style="{StaticResource ActivityTabButton}" Tag="{Binding IsDownloadsActive, Converter={StaticResource BoolToActiveTag}}" Click="TabDownloads_Click" Visibility="{Binding ShowDownloadsTab, Converter={StaticResource BoolToVisibility}}" ToolTip="Media Downloader" AutomationProperties.Name="Downloads"><StackPanel Orientation="Horizontal" VerticalAlignment="Center"><ContentControl Content="{StaticResource NavDownload}" VerticalAlignment="Center"/><TextBlock Text="Downloads" Style="{StaticResource TabLabelBaseStyle}" controls:TabLabelMotion.Active="{Binding IsDownloadsActive}"/></StackPanel></Button>
 
-<Button Style="{StaticResource ActivityTabButton}" Tag="{Binding IsFxRatesActive, Converter={StaticResource BoolToActiveTag}}" Visibility="{Binding ShowFxRatesTab, Converter={StaticResource BoolToVisibility}}" Click="TabFxRates_Click" ToolTip="FX Rates"><StackPanel Orientation="Horizontal" VerticalAlignment="Center"><ContentControl Content="{StaticResource NavFx}" VerticalAlignment="Center"/><TextBlock Text="FX Rates" Style="{StaticResource TabLabelBaseStyle}" controls:TabLabelMotion.Active="{Binding IsFxRatesActive}"/></StackPanel></Button>
+<Button Style="{StaticResource ActivityTabButton}" Tag="{Binding IsFxRatesActive, Converter={StaticResource BoolToActiveTag}}" Visibility="{Binding ShowFxRatesTab, Converter={StaticResource BoolToVisibility}}" Click="TabFxRates_Click" ToolTip="FX Rates" AutomationProperties.Name="FX Rates"><StackPanel Orientation="Horizontal" VerticalAlignment="Center"><ContentControl Content="{StaticResource NavFx}" VerticalAlignment="Center"/><TextBlock Text="FX Rates" Style="{StaticResource TabLabelBaseStyle}" controls:TabLabelMotion.Active="{Binding IsFxRatesActive}"/></StackPanel></Button>
 </StackPanel></Grid>
                         </ScrollViewer>
                     </Grid>
@@ -1398,9 +1405,11 @@
                         <Button Width="26" Height="24" Margin="0,0,4,0"
                                 Click="PinButton_Click"
                                 ToolTip="{Binding PinToolTip}"
+                                AutomationProperties.Name="Pin dock"
                                 Cursor="Hand">
                             <Button.Style>
                                 <Style TargetType="Button">
+                                    <Setter Property="FocusVisualStyle" Value="{StaticResource IslandFocusVisual}" />
                                     <Setter Property="Background" Value="{DynamicResource IslandIconButtonBackgroundBrush}" />
                                     <Setter Property="BorderBrush" Value="Transparent" />
                                     <Setter Property="BorderThickness" Value="1" />
@@ -1447,7 +1456,7 @@
                         </Button>
 
                         <!-- Settings Button -->
-                        <Button Style="{StaticResource IslandIconButton}" Click="SettingsButton_Click" ToolTip="Dock Settings / Monitor" Margin="0,0,8,0">
+                        <Button Style="{StaticResource IslandIconButton}" Click="SettingsButton_Click" ToolTip="Dock Settings / Monitor" AutomationProperties.Name="Dock Settings" Margin="0,0,8,0">
                             <ContentControl Content="{StaticResource NavGear}"/>
                         </Button>
 
@@ -1462,65 +1471,39 @@
 
                 </Grid>
 
+                <!-- First-Run Onboarding Banner -->
+                <Border Grid.Row="1"
+                        x:Name="FirstRunWelcomeBanner"
+                        Visibility="{Binding IsFirstRunWelcomeVisible, Converter={StaticResource BoolToVisibility}}"
+                        Background="{DynamicResource IslandAccentSubtleBrush}"
+                        BorderBrush="{DynamicResource IslandSelectionBorderBrush}"
+                        BorderThickness="1"
+                        CornerRadius="12"
+                        Padding="10,7"
+                        Margin="0,0,0,8">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0"
+                                   Text="Welcome! Hover to expand, scroll the pill to adjust volume or switch tabs, and drag to move."
+                                   Foreground="{DynamicResource IslandInkBrush}"
+                                   FontSize="11.5"
+                                   TextWrapping="Wrap"
+                                   VerticalAlignment="Center"
+                                   Margin="0,0,8,0" />
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                            <Button Content="Set city" Click="WelcomeSetCity_Click" Style="{StaticResource ActionButton}" FontSize="11" Padding="8,3" Margin="0,0,4,0" ToolTip="Set your city for Weather &amp; Prayer" />
+                            <Button Content="Tabs" Click="WelcomeTabs_Click" Style="{StaticResource ActionButton}" FontSize="11" Padding="8,3" Margin="0,0,4,0" ToolTip="Choose which tabs appear in the dock" />
+                            <Button Content="Got it" Click="WelcomeDismiss_Click" Style="{StaticResource ActionButton}" FontSize="11" Padding="8,3" ToolTip="Dismiss welcome banner" />
+                        </StackPanel>
+                    </Grid>
+                </Border>
+
                 <!-- Main Dynamic Content: MODULAR CARDS -->
 
-                <controls:TabTransitionHost Grid.Row="1" SelectedKey="{Binding ActiveCardType}" x:Name="CardTransitions" Order="Media,WhatsApp,Email,Discord,Apps,Hardware,Weather,Pomodoro,Prayer,FileShelf,Clipboard,Today,AiUsage,Script,Downloads,FxRates,Settings">
-
-                    <!-- Pomodoro Card Component -->
-
-                    <cards:PomodoroCardView Tag="Pomodoro" Visibility="Collapsed" />
-
-                    <!-- Prayer Times Card Component -->
-                    <cards:PrayerCardView Tag="Prayer" Visibility="Collapsed" />
-
-                    <!-- Weather Card Component -->
-
-                    <cards:WeatherCardView Tag="Weather" Visibility="Collapsed" />
-
-                    <!-- A. Media Player Card Component -->
-
-                    <cards:MediaCardView Tag="Media" Visibility="Collapsed" />
-
-                    <!-- B. WhatsApp Card Component (with emoji support & quick reactions) -->
-
-                    <cards:WhatsAppCardView Tag="WhatsApp" Visibility="Collapsed" />
-
-                    <!-- B2. Discord Card Component -->
-
-                    <cards:DiscordCardView Tag="Discord" Visibility="Collapsed" />
-
-                    <!-- B3. Apps Card: notifications from the watched apps -->
-
-                    <cards:AppsCardView Tag="Apps" Visibility="Collapsed" />
-
-                    <!-- C. Email Card Component (Mailspring Gmail & Outlook) -->
-
-                    <cards:EmailCardView Tag="Email" Visibility="Collapsed" />
-
-                    <!-- D. Settings Card Component -->
-
-                    <cards:SettingsCardView Tag="Settings" Visibility="Collapsed" />
-
-                    <!-- E. Hardware Monitor Card Component -->
-
-                    <cards:FxRatesCardView Tag="FxRates" Visibility="Collapsed"/><cards:TodayCardView Tag="Today" Visibility="Collapsed"/><cards:HardwareCardView Tag="Hardware" Visibility="Collapsed" />
-
-                    <!-- Optional cards (each has a tab switch in Settings > Tabs) -->
-                    <cards:AiUsageCardView x:Name="AiUsageCard" Tag="AiUsage" Visibility="Collapsed" />
-                    <cards:ScriptCardView Tag="Script" Visibility="Collapsed" />
-                    <cards:DownloadsCardView Tag="Downloads" Visibility="Collapsed" />
-
-                    <!-- F. Session / Overnight Summary Card Component -->
-
-                    <cards:SummaryCardView Tag="Summary" Visibility="Collapsed" />
-
-                    <!-- H. File Shelf Card Component -->
-                    <cards:FileShelfCardView Tag="FileShelf" Visibility="Collapsed" />
-
-                    <!-- I. Clipboard Card Component -->
-                    <cards:ClipboardCardView Tag="Clipboard" Visibility="Collapsed" />
-
-                </controls:TabTransitionHost>
+                <controls:TabTransitionHost Grid.Row="2" SelectedKey="{Binding ActiveCardType}" x:Name="CardTransitions" Order="Media,WhatsApp,Email,Discord,Apps,Hardware,Weather,Pomodoro,Prayer,FileShelf,Clipboard,Today,AiUsage,Script,Downloads,FxRates,Settings" />
 
             </Grid>
 

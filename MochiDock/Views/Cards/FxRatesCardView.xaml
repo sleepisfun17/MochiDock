@@ -8,7 +8,7 @@
             <Setter Property="BorderBrush" Value="{DynamicResource IslandSubCardBorderBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="FocusVisualStyle" Value="{StaticResource IslandFocusVisual}"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="RadioButton">
@@ -37,7 +37,7 @@
             <Setter Property="FontSize" Value="9.5"/>
             <Setter Property="FontWeight" Value="{DynamicResource IslandSmallLabelWeight}"/>
             <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="FocusVisualStyle" Value="{StaticResource IslandFocusVisual}"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="RadioButton">
@@ -188,7 +188,7 @@
         <Grid Grid.Row="3" Margin="2,5,2,0">
             <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
             <TextBlock x:Name="SourceText" Text="Automatic keyless rates · waiting for data" FontSize="10.5" Foreground="{DynamicResource IslandSecondaryInkBrush}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
-            <Button x:Name="RefreshButton" Grid.Column="1" Content="↻" Margin="8,0,0,0" Click="Refresh_Click" Style="{StaticResource IslandIconButton}" FontSize="12" ToolTip="Refresh rates (available once per minute)"/>
+            <Button x:Name="RefreshButton" Grid.Column="1" Content="↻" Margin="8,0,0,0" Click="Refresh_Click" Style="{StaticResource IslandIconButton}" FontSize="12" ToolTip="Refresh rates (available once per minute)" AutomationProperties.Name="Refresh exchange rates"/>
         </Grid>
     </Grid>
 </UserControl>

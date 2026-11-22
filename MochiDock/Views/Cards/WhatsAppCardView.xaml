@@ -122,23 +122,23 @@
         <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,0,0,4" VerticalAlignment="Center">
             <TextBlock Text="React: " Foreground="{DynamicResource IslandMutedInkBrush}" FontSize="11" VerticalAlignment="Center" Margin="0,0,4,0" />
             <!-- Like / Thumbs Up -->
-            <Button Style="{StaticResource ReactionChipButton}" Click="Reaction_Click" Tag="👍" ToolTip="Like">
+            <Button Style="{StaticResource ReactionChipButton}" Click="Reaction_Click" Tag="👍" ToolTip="Like" AutomationProperties.Name="React Like">
                 <Image Width="14" Height="14" Source="pack://application:,,,/Assets/Icons/like.png" RenderOptions.BitmapScalingMode="HighQuality" />
             </Button>
             <!-- Heart -->
-            <Button Style="{StaticResource ReactionChipButton}" Click="Reaction_Click" Tag="❤️" ToolTip="Love">
+            <Button Style="{StaticResource ReactionChipButton}" Click="Reaction_Click" Tag="❤️" ToolTip="Love" AutomationProperties.Name="React Love">
                 <Image Width="14" Height="14" Source="pack://application:,,,/Assets/Icons/heart.png" RenderOptions.BitmapScalingMode="HighQuality" />
             </Button>
             <!-- Laughing -->
-            <Button Style="{StaticResource ReactionChipButton}" Click="Reaction_Click" Tag="😂" ToolTip="Haha">
+            <Button Style="{StaticResource ReactionChipButton}" Click="Reaction_Click" Tag="😂" ToolTip="Haha" AutomationProperties.Name="React Haha">
                 <Image Width="14" Height="14" Source="pack://application:,,,/Assets/Icons/haha.png" RenderOptions.BitmapScalingMode="HighQuality" />
             </Button>
             <!-- Fire -->
-            <Button Style="{StaticResource ReactionChipButton}" Click="Reaction_Click" Tag="🔥" ToolTip="Fire">
+            <Button Style="{StaticResource ReactionChipButton}" Click="Reaction_Click" Tag="🔥" ToolTip="Fire" AutomationProperties.Name="React Fire">
                 <Image Width="14" Height="14" Source="pack://application:,,,/Assets/Icons/fire.png" RenderOptions.BitmapScalingMode="HighQuality" />
             </Button>
             <!-- Pray / Thanks -->
-            <Button Style="{StaticResource ReactionChipButton}" Click="Reaction_Click" Tag="🙏" ToolTip="Thanks">
+            <Button Style="{StaticResource ReactionChipButton}" Click="Reaction_Click" Tag="🙏" ToolTip="Thanks" AutomationProperties.Name="React Thanks">
                 <Image Width="14" Height="14" Source="pack://application:,,,/Assets/Icons/pray.png" RenderOptions.BitmapScalingMode="HighQuality" />
             </Button>
         </StackPanel>

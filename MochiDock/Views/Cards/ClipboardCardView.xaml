@@ -37,7 +37,7 @@
                                 </StackPanel>
 
                                 <!-- Pin Button -->
-                                <Button Grid.Column="1" Style="{StaticResource IslandIconButton}" Click="PinItem_Click" Margin="4,0" ToolTip="Pin item">
+                                <Button Grid.Column="1" Style="{StaticResource IslandIconButton}" Click="PinItem_Click" Margin="4,0" ToolTip="Pin item" AutomationProperties.Name="Pin item">
                                     <Image Source="{StaticResource IconPin}" Stretch="Uniform" RenderOptions.BitmapScalingMode="HighQuality" Width="12" Height="12" VerticalAlignment="Center"/>
                                 </Button>
 

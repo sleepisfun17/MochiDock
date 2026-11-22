@@ -114,6 +114,8 @@ public class AppSettings
     public bool EnableWhatsApp { get; set; }
     /// <summary>Set once the opt-in switch was introduced; fresh installs start with it set (and WhatsApp off).</summary>
     public bool WhatsAppOptInMigrated { get; set; }
+    /// <summary>Set once the user dismisses the first-run welcome cue.</summary>
+    public bool OnboardingDismissed { get; set; }
     public string GowaMode { get; set; } = "Local"; // "Local" or "Remote"
     public string RemoteGowaUrl { get; set; } = "";
     /// <summary>Secret the shared GOWA server must present when it forwards read receipts to this PC (generated automatically).</summary>

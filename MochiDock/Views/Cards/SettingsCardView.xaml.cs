@@ -26,7 +26,8 @@ public partial class SettingsCardView : UserControl
 
         IsVisibleChanged += (s, e) =>
         {
-            if (Visibility == Visibility.Visible) ReloadAllSettings();
+            if (IsVisible) ReloadAllSettings();
+            else _snoozeRefreshTimer?.Stop();
         };
 
         Unloaded += (s, e) => { _snoozeRefreshTimer?.Stop(); Unsubscribe(); };

@@ -45,7 +45,7 @@
                 </StackPanel>
 
                 <!-- Quick Reset / Stop Button -->
-                <Button Grid.Column="1" Style="{StaticResource IslandIconButton}" Click="Reset_Click" ToolTip="Reset Timer" VerticalAlignment="Center">
+                <Button Grid.Column="1" Style="{StaticResource IslandIconButton}" Click="Reset_Click" ToolTip="Reset Timer" AutomationProperties.Name="Reset timer" VerticalAlignment="Center">
                     <TextBlock Text="✕" FontSize="11" Foreground="{DynamicResource IslandMutedInkBrush}" FontWeight="{DynamicResource IslandSmallLabelWeight}" />
                 </Button>
             </Grid>

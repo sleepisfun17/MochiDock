@@ -42,6 +42,7 @@
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,0,2">
                     <Image Source="{StaticResource IconLocation}" Stretch="Uniform" RenderOptions.BitmapScalingMode="HighQuality" Width="12" Height="12" VerticalAlignment="Center" Margin="0,0,4,0"/>
                     <TextBlock Text="{Binding WeatherCityDisplay, FallbackValue='Locating…'}" ToolTip="{Binding WeatherCityDisplay}" Foreground="{DynamicResource IslandSecondaryInkBrush}" FontSize="12" FontWeight="{DynamicResource IslandSmallLabelWeight}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                    <Button Content="Change city" Click="ChangeCity_Click" Style="{StaticResource ActionButton}" FontSize="10.5" Padding="6,2" Margin="8,0,0,0" VerticalAlignment="Center" ToolTip="Change weather city in Settings" />
                 </StackPanel>
 
                 <!-- Temperature & Wind Speed -->

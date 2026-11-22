@@ -115,14 +115,7 @@ public partial class MainWindow : Window
             }
         };
 
-        AiUsageCard.PreferredHeightChanged += () =>
-        {
-            if (_viewModel.ActiveCardType == IslandCardType.AiUsage && (_viewModel.IsExpanded || ExpandedBorder.Visibility == Visibility.Visible))
-            {
-                var (w, h) = GetCardDimensions(IslandCardType.AiUsage);
-                AnimateExpandedDimensions(w, h);
-            }
-        };
+        CardTransitions.CardFactory = CreateCardForKey;
 
         _viewModel.RecentEmailMessages.CollectionChanged += (s, e) =>
         {
@@ -584,14 +577,21 @@ public partial class MainWindow : Window
         advancedItem.Click += (s, e) => App.OpenSettings();
         menu.Items.Add(advancedItem);
 
-        // 5. WhatsApp Pairing (GOWA)
+        // 5. WhatsApp Pairing / Setup
+        bool waEnabled = _viewModel.Settings.EnableWhatsApp;
         var waItem = new MenuItem
         {
-            Header = "WhatsApp Pairing (GOWA)",
+            Header = MochiDock.Core.OnboardingPolicy.WhatsAppTrayHeader(waEnabled),
             Icon = CreateTrayIcon("whatsapp.png"),
             Style = itemStyle
         };
-        waItem.Click += (s, e) => _viewModel.OpenWhatsAppDashboard();
+        waItem.Click += (s, e) =>
+        {
+            if (MochiDock.Core.OnboardingPolicy.ShouldOpenWhatsAppSettings(waEnabled))
+                App.OpenSettings(MochiDock.Core.SettingsSections.WhatsApp);
+            else
+                _viewModel.OpenWhatsAppDashboard();
+        };
         menu.Items.Add(waItem);
 
         // 6. Toggle Pin
@@ -737,6 +737,8 @@ public partial class MainWindow : Window
 
     private void MainWindow_Loaded(object sender, RoutedEventArgs e)
     {
+        PreviewKeyDown -= MainWindow_PreviewKeyDown;
+        PreviewKeyDown += MainWindow_PreviewKeyDown;
         // Exclude MochiDock from Windows Alt+Tab switcher and initialize global hotkeys
         try
         {
@@ -770,6 +772,7 @@ public partial class MainWindow : Window
         UpdateCompactPillWidth();
         _viewModel.ClipboardServiceInstance.Initialize(this);
         ThemeService.ApplyTheme(this, _viewModel.CapsuleTheme);
+        if (_viewModel.IsFirstRunWelcomeVisible) _viewModel.ShowFirstRunCapsuleNotice();
 
         _ = Task.Run(async () =>
         {
@@ -911,36 +914,79 @@ public partial class MainWindow : Window
     private double _cardChrome;
 
     // As tall as the provider list (the card scrolls past 360); 360 until the list has been laid out once.
+    private Views.Cards.AiUsageCardView? _aiUsageCard;
+
+    private FrameworkElement? CreateCardForKey(string key) => key switch
+    {
+        "Pomodoro" => new Views.Cards.PomodoroCardView(),
+        "Prayer" => new Views.Cards.PrayerCardView(),
+        "Weather" => new Views.Cards.WeatherCardView(),
+        "Media" => new Views.Cards.MediaCardView(),
+        "WhatsApp" => new Views.Cards.WhatsAppCardView(),
+        "Discord" => new Views.Cards.DiscordCardView(),
+        "Apps" => new Views.Cards.AppsCardView(),
+        "Email" => new Views.Cards.EmailCardView(),
+        "Settings" => new Views.Cards.SettingsCardView(),
+        "FxRates" => new Views.Cards.FxRatesCardView(),
+        "Today" => new Views.Cards.TodayCardView(),
+        "Hardware" => new Views.Cards.HardwareCardView(),
+        "AiUsage" => CreateAiUsageCard(),
+        "Script" => new Views.Cards.ScriptCardView(),
+        "Downloads" => new Views.Cards.DownloadsCardView(),
+        "Summary" => new Views.Cards.SummaryCardView(),
+        "FileShelf" => new Views.Cards.FileShelfCardView(),
+        "Clipboard" => new Views.Cards.ClipboardCardView(),
+        _ => null
+    };
+
+    private Views.Cards.AiUsageCardView CreateAiUsageCard()
+    {
+        var card = new Views.Cards.AiUsageCardView();
+        _aiUsageCard = card;
+        card.PreferredHeightChanged += () =>
+        {
+            if (!_viewModel.IsExpanded || _viewModel.ActiveCardType != IslandCardType.AiUsage) return;
+            var (w, h) = GetCardDimensions(IslandCardType.AiUsage);
+            AnimateExpandedDimensions(w, h);
+        };
+        return card;
+    }
+
     private double AiUsageCardHeight()
     {
         if (ExpandedBorder.ActualHeight > 0 && CardTransitions.ActualHeight > 0 && ExpandedBorder.ActualHeight > CardTransitions.ActualHeight)
             _cardChrome = ExpandedBorder.ActualHeight - CardTransitions.ActualHeight;
-        if (_cardChrome <= 0 || AiUsageCard.PreferredHeight <= 0) return 360;
-        return Math.Clamp(Math.Ceiling(_cardChrome + AiUsageCard.PreferredHeight), 200, 360);
+        if (_cardChrome <= 0 || _aiUsageCard is not { PreferredHeight: > 0 }) return 360;
+        return Math.Clamp(Math.Ceiling(_cardChrome + _aiUsageCard.PreferredHeight), 200, 360);
     }
 
-    private (double width, double height) GetCardDimensions(IslandCardType cardType) => cardType switch
+    private (double width, double height) GetCardDimensions(IslandCardType cardType)
     {
-        IslandCardType.WhatsApp => (_viewModel.RecentWhatsAppMessages.Count > 1 ? (620, 340) : (620, 295)),
-        IslandCardType.Discord => (620, 230),
-        IslandCardType.Apps => (620, 230),
-        IslandCardType.Settings => (620, 400),
-        IslandCardType.Hardware => (620, 345),
-        IslandCardType.Today => (620, 360),
-        IslandCardType.FxRates => (620, 360),
-        IslandCardType.AiUsage => (620, AiUsageCardHeight()),
-        IslandCardType.Script => (620, 300),
-        IslandCardType.Downloads => (620, 350),
-        IslandCardType.Email => (620, EmailCardHeight()),
-        IslandCardType.Media => (620, 170),
-        IslandCardType.Summary => (620, _viewModel.HasSummaryLines ? 350 : 250),
-        IslandCardType.Weather => (620, 275),
-        IslandCardType.Pomodoro => (620, 170),
-        IslandCardType.Prayer => (620, 270),
-        IslandCardType.FileShelf => (620, 410),
-        IslandCardType.Clipboard => (620, 250),
-        _ => (620, 200)
-    };
+        var (w, h) = cardType switch
+        {
+            IslandCardType.WhatsApp => (_viewModel.RecentWhatsAppMessages.Count > 1 ? (620, 340) : (620, 295)),
+            IslandCardType.Discord => (620, 230),
+            IslandCardType.Apps => (620, 230),
+            IslandCardType.Settings => (620, 400),
+            IslandCardType.Hardware => (620, 345),
+            IslandCardType.Today => (620, 360),
+            IslandCardType.FxRates => (620, 360),
+            IslandCardType.AiUsage => (620, AiUsageCardHeight()),
+            IslandCardType.Script => (620, 300),
+            IslandCardType.Downloads => (620, 350),
+            IslandCardType.Email => (620, EmailCardHeight()),
+            IslandCardType.Media => (620, 170),
+            IslandCardType.Summary => (620, _viewModel.HasSummaryLines ? 350 : 250),
+            IslandCardType.Weather => (620, 275),
+            IslandCardType.Pomodoro => (620, 170),
+            IslandCardType.Prayer => (620, 270),
+            IslandCardType.FileShelf => (620, 410),
+            IslandCardType.Clipboard => (620, 250),
+            _ => (620, 200)
+        };
+        if (_viewModel.IsFirstRunWelcomeVisible) h += 58;
+        return (w, h);
+    }
     private void ViewModel_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
         if (e.PropertyName == nameof(MainViewModel.CapsuleTheme))
@@ -959,11 +1005,10 @@ public partial class MainWindow : Window
             ApplyExpandState(_viewModel.IsExpanded);
             if (_viewModel.IsExpanded)
             {
-                ThemeService.ApplyTheme(this, _viewModel.CapsuleTheme);
                 QueueHeaderSelectionReveal();
             }
         }
-        else if (e.PropertyName == nameof(MainViewModel.ActiveCardType))
+        else if (e.PropertyName == nameof(MainViewModel.ActiveCardType) || e.PropertyName == nameof(MainViewModel.IsFirstRunWelcomeVisible))
         {
             QueueHeaderSelectionReveal();
             if (_viewModel.IsExpanded || ExpandedBorder.Visibility == Visibility.Visible)
@@ -1929,6 +1974,34 @@ public partial class MainWindow : Window
     }
 
 
+
+    private void MainWindow_PreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+    {
+        if (e.Key != Key.Escape || !_viewModel.IsExpanded) return;
+        if (Keyboard.FocusedElement is System.Windows.Controls.Primitives.TextBoxBase { IsReadOnly: false }) return;
+        if (Keyboard.FocusedElement is System.Windows.Controls.ComboBox { IsDropDownOpen: true }) return;
+        _viewModel.IsPinned = false;
+        _viewModel.IsExpanded = false;
+        e.Handled = true;
+    }
+
+    private void WelcomeSetCity_Click(object sender, RoutedEventArgs e)
+    {
+        App.OpenSettings(MochiDock.Core.SettingsSections.Location);
+        e.Handled = true;
+    }
+
+    private void WelcomeTabs_Click(object sender, RoutedEventArgs e)
+    {
+        App.OpenSettings(MochiDock.Core.SettingsSections.Tabs);
+        e.Handled = true;
+    }
+
+    private void WelcomeDismiss_Click(object sender, RoutedEventArgs e)
+    {
+        _viewModel.DismissFirstRunWelcome();
+        e.Handled = true;
+    }
 
     private bool _policyHidden;
     private MochiDock.Services.PowerNotifications? _powerNotifications;
