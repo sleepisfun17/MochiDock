@@ -18,6 +18,11 @@ public class GowaService
     // Message ids are remembered per account: a message between two of your own accounts has the same id on both sides,
     // and the incoming copy must not be dropped because the outgoing copy was seen first.
     private readonly HashSet<string> _seenMessageIds = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Queue<string> _seenMessageOrder = new();
+    private readonly object _seenGate = new();
+    private const int MaxSeenMessageIds = 4096;
+    private const int MaxWebhookBodyBytes = 256 * 1024;
+    private readonly SemaphoreSlim _webhookConcurrency = new(16, 16);
     // Phone number (or LID) -> display name, learned from senders and from the contact list, to name "@number" mentions.
     private readonly ConcurrentDictionary<string, string> _knownNames = new(StringComparer.OrdinalIgnoreCase);
     private DateTime _contactsLoadedUtc = DateTime.MinValue;
@@ -25,7 +30,8 @@ public class GowaService
     private readonly ConcurrentDictionary<string, string> _groupNamesCache = new(StringComparer.OrdinalIgnoreCase);
     private DateTime _lastMetadataRefreshUtc = DateTime.MinValue;
     private DateTime _serviceStartedUtc = DateTime.UtcNow;
-    private string? _authHeader;
+    private volatile string? _authHeader;
+    private volatile System.Net.Http.Headers.AuthenticationHeaderValue? _authHeaderValue;
     private int _failedChecks;
     private string _lastDevicesBody = "";
     private IReadOnlyList<MochiDock.Core.GowaAccount> _accounts = Array.Empty<MochiDock.Core.GowaAccount>();
@@ -39,7 +45,6 @@ public class GowaService
 
     /// <summary>Why the server is not usable right now ("login rejected", "unreachable", ...), empty while connected.</summary>
     public string ConnectionProblem { get; private set; } = "";
-    private static readonly string LogFile = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "gowa_service.log");
 
     public bool UseRemoteServer { get; set; }
     public string RemoteServerUrl { get; set; } = ""; // empty: the local engine is used (see ActiveBaseUrl)
@@ -144,10 +149,32 @@ public class GowaService
     // A shared GOWA server is protected with --basic-auth; local GOWA is bound to 127.0.0.1 and needs none.
     private void ApplyRemoteAuth()
     {
-        _authHeader = CurrentAuthHeader(UseRemoteServer);
-        _httpClient.DefaultRequestHeaders.Authorization = _authHeader == null
+        var header = CurrentAuthHeader(UseRemoteServer);
+        _authHeader = header;
+        _authHeaderValue = header == null
             ? null
-            : System.Net.Http.Headers.AuthenticationHeaderValue.Parse(_authHeader);
+            : System.Net.Http.Headers.AuthenticationHeaderValue.Parse(header);
+    }
+
+    internal bool TryMarkSeen(string key)
+    {
+        lock (_seenGate)
+        {
+            if (!_seenMessageIds.Add(key)) return false;
+            _seenMessageOrder.Enqueue(key);
+            while (_seenMessageOrder.Count > MaxSeenMessageIds)
+            {
+                _seenMessageIds.Remove(_seenMessageOrder.Dequeue());
+            }
+            return true;
+        }
+    }
+
+    private HttpRequestMessage CreateRequest(HttpMethod method, string url)
+    {
+        var req = new HttpRequestMessage(method, url);
+        if (_authHeaderValue is { } auth) req.Headers.Authorization = auth;
+        return req;
     }
 
     public async Task<bool> CheckConnectionAsync()
@@ -158,7 +185,8 @@ public class GowaService
         {
             // GET /devices lists every account and needs no device id. /app/devices refuses to answer without one once
             // more than one account is linked (DEVICE_ID_REQUIRED), so it is only the fallback for older servers.
-            var list = await _httpClient.GetAsync($"{ActiveBaseUrl}/devices");
+            using var listReq = CreateRequest(HttpMethod.Get, $"{ActiveBaseUrl}/devices");
+            using var list = await _httpClient.SendAsync(listReq);
             if (list.IsSuccessStatusCode)
             {
                 var listBody = await list.Content.ReadAsStringAsync();
@@ -176,7 +204,8 @@ public class GowaService
                 }
             }
 
-            var res = await _httpClient.GetAsync($"{ActiveBaseUrl}/app/devices");
+            using var resReq = CreateRequest(HttpMethod.Get, $"{ActiveBaseUrl}/app/devices");
+            using var res = await _httpClient.SendAsync(resReq);
             if (res.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden)
             {
                 ConnectionProblem = "login rejected";
@@ -274,19 +303,12 @@ public class GowaService
         string device = ResolveDevice(deviceId);
         string url = ActiveBaseUrl + path;
         if (!string.IsNullOrEmpty(device)) url += (path.Contains('?') ? "&" : "?") + "device_id=" + Uri.EscapeDataString(device);
-        var req = new HttpRequestMessage(method, url);
+        var req = CreateRequest(method, url);
         if (!string.IsNullOrEmpty(device)) req.Headers.TryAddWithoutValidation("X-Device-Id", device);
         return req;
     }
 
-    private static void Log(string msg)
-    {
-        try
-        {
-            File.AppendAllText(LogFile, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {msg}{Environment.NewLine}");
-        }
-        catch (System.Exception logEx) { MochiDock.Services.AppLog.Warn("Gowa", logEx); }
-    }
+    private static void Log(string msg) => AppLog.Warn("Gowa", msg);
 
     public bool IsChatMuted(string chatJid, bool isGroup, string? deviceId = null)
     {
@@ -352,7 +374,7 @@ public class GowaService
         {
             using var req = DeviceRequest(HttpMethod.Get, $"/chat/{Uri.EscapeDataString(chatJid)}/messages?limit={limit}", device);
 
-            var res = await _httpClient.SendAsync(req).ConfigureAwait(false);
+            using var res = await _httpClient.SendAsync(req).ConfigureAwait(false);
             if (!res.IsSuccessStatusCode) return list;
 
             var json = await res.Content.ReadAsStringAsync().ConfigureAwait(false);
@@ -522,7 +544,7 @@ public class GowaService
             // 1. Fetch group list and cache names
             using var reqGroups = DeviceRequest(HttpMethod.Get, "/user/my/groups", deviceId);
 
-            var resGroups = await _httpClient.SendAsync(reqGroups).ConfigureAwait(false);
+            using var resGroups = await _httpClient.SendAsync(reqGroups).ConfigureAwait(false);
             if (resGroups.IsSuccessStatusCode)
             {
                 var content = await resGroups.Content.ReadAsStringAsync().ConfigureAwait(false);
@@ -553,7 +575,7 @@ public class GowaService
             // 2. Fetch recent chats to update archived list
             using var reqChats = DeviceRequest(HttpMethod.Get, "/chats?limit=100", deviceId);
 
-            var resChats = await _httpClient.SendAsync(reqChats).ConfigureAwait(false);
+            using var resChats = await _httpClient.SendAsync(reqChats).ConfigureAwait(false);
             if (resChats.IsSuccessStatusCode)
             {
                 var content = await resChats.Content.ReadAsStringAsync().ConfigureAwait(false);
@@ -597,7 +619,7 @@ public class GowaService
         {
             using var req = DeviceRequest(HttpMethod.Get, $"/group/info?group_id={Uri.EscapeDataString(groupJid)}", deviceId);
 
-            var res = await _httpClient.SendAsync(req).ConfigureAwait(false);
+            using var res = await _httpClient.SendAsync(req).ConfigureAwait(false);
             if (res.IsSuccessStatusCode)
             {
                 var content = await res.Content.ReadAsStringAsync().ConfigureAwait(false);
@@ -646,7 +668,10 @@ public class GowaService
     public void Stop()
     {
         Log("Stopping GowaService...");
-        try { _cts?.Cancel(); } catch (System.Exception logEx) { MochiDock.Services.AppLog.Warn("Gowa", logEx); }
+        var cts = _cts;
+        _cts = null;
+        try { cts?.Cancel(); } catch (System.Exception logEx) { MochiDock.Services.AppLog.Warn("Gowa", logEx); }
+        finally { try { cts?.Dispose(); } catch { } }
 
         try
         {
@@ -668,9 +693,13 @@ public class GowaService
 
         try
         {
-            if (_gowaProcess != null && !_gowaProcess.HasExited)
+            if (_gowaProcess != null)
             {
-                _gowaProcess.Kill(true);
+                if (!_gowaProcess.HasExited)
+                {
+                    _gowaProcess.Kill(true);
+                }
+                _gowaProcess.Dispose();
             }
             _gowaProcess = null;
         }
@@ -796,7 +825,7 @@ public class GowaService
         }
 
         using var req = DeviceRequest(HttpMethod.Get, "/chats?limit=12", device);
-        var res = await _httpClient.SendAsync(req, token).ConfigureAwait(false);
+        using var res = await _httpClient.SendAsync(req, token).ConfigureAwait(false);
         if (!res.IsSuccessStatusCode)
         {
             Log($"[Poll] /chats for account '{device}' answered {(int)res.StatusCode}: {(await res.Content.ReadAsStringAsync(token).ConfigureAwait(false))}");
@@ -887,7 +916,7 @@ public class GowaService
 
             using var req = DeviceRequest(HttpMethod.Get, $"/chat/{Uri.EscapeDataString(chatJid)}/messages?limit=5", device);
 
-            var res = await _httpClient.SendAsync(req, token).ConfigureAwait(false);
+            using var res = await _httpClient.SendAsync(req, token).ConfigureAwait(false);
             if (!res.IsSuccessStatusCode) return;
 
             var json = await res.Content.ReadAsStringAsync(token).ConfigureAwait(false);
@@ -935,7 +964,7 @@ public class GowaService
 
                 if (msgUtc <= sinceUtc) continue;
 
-                if (!string.IsNullOrEmpty(id) && !_seenMessageIds.Add(device + "|" + id))
+                if (!string.IsNullOrEmpty(id) && !TryMarkSeen(device + "|" + id))
                 {
                     // Already processed via webhook or previous poll
                     continue;
@@ -1050,7 +1079,13 @@ public class GowaService
                     try
                     {
                         var context = await _httpListener.GetContextAsync();
-                        _ = ProcessWebhookRequestAsync(context);
+                        if (!await _webhookConcurrency.WaitAsync(0, token))
+                        {
+                            context.Response.StatusCode = 503;
+                            context.Response.Close();
+                            continue;
+                        }
+                        _ = ProcessWebhookRequestWithReleaseAsync(context, token);
                     }
                     catch
                     {
@@ -1083,7 +1118,28 @@ public class GowaService
         return null;
     }
 
-    private async Task ProcessWebhookRequestAsync(HttpListenerContext context)
+    private async Task ProcessWebhookRequestWithReleaseAsync(HttpListenerContext context, CancellationToken token)
+    {
+        try { await ProcessWebhookRequestAsync(context, token); }
+        finally { _webhookConcurrency.Release(); }
+    }
+
+    private static async Task<string?> ReadBoundedBodyAsync(Stream stream, int maxBytes, CancellationToken ct)
+    {
+        using var ms = new MemoryStream();
+        var buffer = new byte[4096];
+        int total = 0;
+        int read;
+        while ((read = await stream.ReadAsync(buffer, ct).ConfigureAwait(false)) > 0)
+        {
+            total += read;
+            if (total > maxBytes) return null;
+            ms.Write(buffer, 0, read);
+        }
+        return Encoding.UTF8.GetString(ms.ToArray());
+    }
+
+    private async Task ProcessWebhookRequestAsync(HttpListenerContext context, CancellationToken token = default)
     {
         try
         {
@@ -1098,8 +1154,15 @@ public class GowaService
 
             if (context.Request.HttpMethod == "POST")
             {
-                using var reader = new StreamReader(context.Request.InputStream, Encoding.UTF8);
-                var body = await reader.ReadToEndAsync();
+                using var readCts = CancellationTokenSource.CreateLinkedTokenSource(token);
+                readCts.CancelAfter(TimeSpan.FromSeconds(5));
+                var body = await ReadBoundedBodyAsync(context.Request.InputStream, MaxWebhookBodyBytes, readCts.Token);
+                if (body is null)
+                {
+                    context.Response.StatusCode = 413;
+                    context.Response.Close();
+                    return;
+                }
 
                 using var doc = JsonDocument.Parse(body);
                 var root = doc.RootElement;
@@ -1214,7 +1277,7 @@ public class GowaService
                         remoteId = keyId.GetString() ?? "";
                     }
 
-                    if (!string.IsNullOrEmpty(remoteId) && !_seenMessageIds.Add(device + "|" + remoteId))
+                    if (!string.IsNullOrEmpty(remoteId) && !TryMarkSeen(device + "|" + remoteId))
                     {
                         // Already processed
                         context.Response.StatusCode = 200;
@@ -1382,16 +1445,14 @@ public class GowaService
             };
 
             var json = JsonSerializer.Serialize(payload);
-            using var req = new HttpRequestMessage(HttpMethod.Post, url)
-            {
-                Content = new StringContent(json, Encoding.UTF8, "application/json")
-            };
+            using var req = CreateRequest(HttpMethod.Post, url);
+            req.Content = new StringContent(json, Encoding.UTF8, "application/json");
             if (!string.IsNullOrEmpty(activeDevice))
             {
                 req.Headers.TryAddWithoutValidation("X-Device-Id", activeDevice);
             }
 
-            var response = await _httpClient.SendAsync(req);
+            using var response = await _httpClient.SendAsync(req);
             Log($"Sent reply to {phone} via {ActiveBaseUrl}, status: {response.StatusCode}");
             return response.IsSuccessStatusCode;
         }
@@ -1417,9 +1478,10 @@ public class GowaService
                 string url = $"{ActiveBaseUrl}/message/{Uri.EscapeDataString(id)}/read";
                 if (!string.IsNullOrEmpty(activeDevice)) url += $"?device_id={Uri.EscapeDataString(activeDevice)}";
                 var json = JsonSerializer.Serialize(new { phone = chatJid });
-                using var req = new HttpRequestMessage(HttpMethod.Post, url) { Content = new StringContent(json, Encoding.UTF8, "application/json") };
+                using var req = CreateRequest(HttpMethod.Post, url);
+                req.Content = new StringContent(json, Encoding.UTF8, "application/json");
                 if (!string.IsNullOrEmpty(activeDevice)) req.Headers.TryAddWithoutValidation("X-Device-Id", activeDevice);
-                var response = await _httpClient.SendAsync(req);
+                using var response = await _httpClient.SendAsync(req);
                 Log($"Marked {id} read in {chatJid}, status: {response.StatusCode}");
                 if (!response.IsSuccessStatusCode) break;   // the server does not take the call: do not repeat it for every message
             }
@@ -1435,7 +1497,7 @@ public class GowaService
     {
         try
         {
-            Process.Start(new ProcessStartInfo
+            using var _ = Process.Start(new ProcessStartInfo
             {
                 FileName = DashboardUrl,
                 UseShellExecute = true

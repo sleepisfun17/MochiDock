@@ -147,4 +147,43 @@ public class GowaServiceConnectionTests
         service.ConfigureFromSettings(new AppSettings { EnableWhatsApp = true, GowaMode = "Remote", RemoteGowaUrl = "http://127.0.0.1:1", RemoteWebhookToken = "t" });
         Assert.False(service.IsChatMuted("333@g.us", true, "dev-1"));                   // switched off again
     }
+
+    [Fact]
+    public async Task ConcurrentDeduplicationAndAuthUpdatesAreThreadSafe()
+    {
+        using var server = new FakeServer(new()
+        {
+            ["/devices"] = (200, """{"results":[{"id":"dev-1","display_name":"Phone","jid":"6281@s.whatsapp.net","state":"logged_in"}]}""")
+        });
+        var service = Remote(server.Url);
+
+        var dedupTasks = Enumerable.Range(0, 8).Select(worker => Task.Run(() =>
+        {
+            int added = 0;
+            for (int i = 0; i < 500; i++)
+            {
+                if (service.TryMarkSeen($"dev-1|msg-{i}")) added++;
+            }
+            return added;
+        })).ToArray();
+
+        var authTasks = Enumerable.Range(0, 4).Select(_ => Task.Run(async () =>
+        {
+            for (int i = 0; i < 20; i++)
+            {
+                service.ConfigureFromSettings(new AppSettings
+                {
+                    EnableWhatsApp = true,
+                    GowaMode = i % 2 == 0 ? "Remote" : "Local",
+                    RemoteGowaUrl = server.Url,
+                    RemoteWebhookToken = "test-token"
+                });
+                await service.CheckConnectionAsync();
+            }
+        })).ToArray();
+
+        var counts = await Task.WhenAll(dedupTasks);
+        await Task.WhenAll(authTasks);
+        Assert.Equal(500, counts.Sum());
+    }
 }

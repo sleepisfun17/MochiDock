@@ -1,6 +1,8 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
@@ -10,6 +12,7 @@ namespace MochiDock.Core;
 /// <summary>
 /// Reads new mail from classic Outlook through COM. It must run at the same elevation as Outlook, so MochiDock
 /// (which runs as Administrator) hosts it inside a non-elevated helper process; a non-elevated MochiDock can run it directly.
+/// All COM objects are created, polled, and released on a single dedicated STA thread.
 /// </summary>
 [System.Runtime.Versioning.SupportedOSPlatform("windows")]
 public sealed class OutlookComReader
@@ -22,15 +25,19 @@ public sealed class OutlookComReader
 
     const int MaxReadAttempts = 3;
     const int MaxBodyChars = 4000;
+    internal const int MaxUnreadPerFolder = 30;
 
     readonly Action<string> _log;
     readonly HashSet<string> _seenIds = new();
     readonly Dictionary<string, int> _failedAttempts = new();
-    readonly object _comGate = new();
+    readonly ConcurrentQueue<Action> _staCommands = new();
+    readonly AutoResetEvent _staWake = new(false);
+    readonly object _lifecycleGate = new();
     CancellationTokenSource? _cts;
+    Thread? _staThread;
     dynamic? _cachedOutlookApp;
     dynamic? _cachedMapiNamespace;
-    List<dynamic> _cachedInboxes = new();
+    readonly List<dynamic> _cachedInboxes = new();
     readonly HashSet<string> _folderIds = new();
     bool _justConnected;
     DateTime _watchSince = DateTime.MinValue;
@@ -52,23 +59,62 @@ public sealed class OutlookComReader
     {
         _trackedFolderNames = OutlookFolderPolicy.Split(OutlookFolderPolicy.Join(names));
         _onlyListed = onlyListed;
-        lock (_comGate) ResetComCache();
+        EnqueueSta(ResetComCache);
     }
 
     public static bool IsInstalled => Type.GetTypeFromProgID("Outlook.Application") != null;
 
     public void Start()
     {
-        _cts?.Cancel();
-        _cts = new CancellationTokenSource();
-        var token = _cts.Token;
-        Task.Run(() => MonitorLoopAsync(token));
+        Stop();
+        lock (_lifecycleGate)
+        {
+            _cts = new CancellationTokenSource();
+            var token = _cts.Token;
+            _staThread = new Thread(() => StaLoop(token))
+            {
+                IsBackground = true,
+                Name = "MochiDock_OutlookCom"
+            };
+            _staThread.SetApartmentState(ApartmentState.STA);
+            _staThread.Start();
+        }
     }
 
     public void Stop()
     {
-        _cts?.Cancel();
-        lock (_comGate) ResetComCache();
+        CancellationTokenSource? cts;
+        Thread? thread;
+        lock (_lifecycleGate)
+        {
+            cts = _cts;
+            _cts = null;
+            thread = _staThread;
+            _staThread = null;
+        }
+        if (cts != null)
+        {
+            try { cts.Cancel(); } catch { }
+            _staWake.Set();
+            if (thread != null && thread != Thread.CurrentThread)
+                thread.Join(2000);
+            cts.Dispose();
+        }
+        while (_staCommands.TryDequeue(out _)) { }
+    }
+
+    void EnqueueSta(Action work)
+    {
+        _staCommands.Enqueue(work);
+        _staWake.Set();
+    }
+
+    static void ReleaseCom(object? obj)
+    {
+        if (obj != null && Marshal.IsComObject(obj))
+        {
+            try { Marshal.ReleaseComObject(obj); } catch { }
+        }
     }
 
     void LogStateChange(string message)
@@ -80,8 +126,11 @@ public sealed class OutlookComReader
 
     void ResetComCache()
     {
+        foreach (var inbox in _cachedInboxes) ReleaseCom(inbox);
         _cachedInboxes.Clear();
+        ReleaseCom(_cachedMapiNamespace);
         _cachedMapiNamespace = null;
+        ReleaseCom(_cachedOutlookApp);
         _cachedOutlookApp = null;
     }
 
@@ -221,15 +270,22 @@ public sealed class OutlookComReader
         catch { return true; }
     }
 
-    async Task MonitorLoopAsync(CancellationToken token)
+    void StaLoop(CancellationToken token)
     {
         bool initialized = false;
-
-        while (!token.IsCancellationRequested)
+        try
         {
-            try
+            while (!token.IsCancellationRequested)
             {
-                lock (_comGate)
+                while (_staCommands.TryDequeue(out var cmd))
+                {
+                    if (token.IsCancellationRequested) break;
+                    try { cmd(); }
+                    catch (Exception ex) { _log("Outlook command failed: " + ex.Message); }
+                }
+                if (token.IsCancellationRequested) break;
+
+                try
                 {
                     if (EnsureConnected())
                     {
@@ -238,22 +294,52 @@ public sealed class OutlookComReader
                     }
                     else initialized = false; // Outlook was closed; re-check when it reopens
                 }
-            }
-            catch (Exception ex)
-            {
-                LogStateChange("Outlook polling failed: " + ex.Message);
-                lock (_comGate) ResetComCache();
-                initialized = false;
-            }
+                catch (Exception ex)
+                {
+                    LogStateChange("Outlook polling failed: " + ex.Message);
+                    ResetComCache();
+                    initialized = false;
+                }
 
-            try { await Task.Delay(TimeSpan.FromSeconds(PollIntervalSeconds), token); }
-            catch (OperationCanceledException) { break; }
+                // Wait for the poll interval or an incoming command (Open/MarkRead/Stop)
+                var deadline = Environment.TickCount64 + Math.Max(1, PollIntervalSeconds) * 1000L;
+                while (!token.IsCancellationRequested)
+                {
+                    while (_staCommands.TryDequeue(out var cmd))
+                    {
+                        if (token.IsCancellationRequested) break;
+                        try { cmd(); }
+                        catch (Exception ex) { _log("Outlook command failed: " + ex.Message); }
+                    }
+                    long remaining = deadline - Environment.TickCount64;
+                    if (remaining <= 0 || token.IsCancellationRequested) break;
+                    _staWake.WaitOne((int)Math.Min(remaining, 250));
+                }
+            }
+        }
+        finally
+        {
+            ResetComCache();
         }
     }
 
     /// <summary>Outlook's Restrict wants the date in the user's short date/time format.</summary>
     string UnreadSinceFilter() =>
         "[UnRead] = true AND [ReceivedTime] >= '" + _watchSince.ToString("g", System.Globalization.CultureInfo.CurrentCulture) + "'";
+
+    /// <summary>Orders unread items newest-first and returns at most <paramref name="maxCount"/> unseen items.</summary>
+    public static IReadOnlyList<T> PickNewestUnseen<T>(IEnumerable<T> items, Func<T, DateTime> receivedAt, Func<T, string?> idOf, ISet<string> seenIds, int maxCount = MaxUnreadPerFolder)
+    {
+        var result = new List<T>();
+        foreach (var item in items.OrderByDescending(receivedAt))
+        {
+            string? id = idOf(item);
+            if (string.IsNullOrEmpty(id) || seenIds.Contains(id)) continue;
+            result.Add(item);
+            if (result.Count >= maxCount) break;
+        }
+        return result;
+    }
 
     void InitializeBaseline()
     {
@@ -264,35 +350,44 @@ public sealed class OutlookComReader
 
             foreach (var inbox in _cachedInboxes)
             {
+                dynamic? items = null;
+                dynamic? unreadItems = null;
                 try
                 {
-                    dynamic items = inbox.Items;
+                    items = inbox.Items;
 
                     // Only unread mail that arrived since monitoring began (minus 15 minutes); older unread mail in many folders is never walked.
-                    dynamic unreadItems = items.Restrict(UnreadSinceFilter());
+                    unreadItems = items.Restrict(UnreadSinceFilter());
+                    try { unreadItems.Sort("[ReceivedTime]", true); } catch { }
                     int unreadCount = (int)unreadItems.Count;
                     for (int i = 1; i <= unreadCount; i++)
                     {
+                        dynamic? mail = null;
                         try
                         {
-                            dynamic mail = unreadItems.Item(i);
+                            mail = unreadItems.Item(i);
                             object? mailObj = mail;
                             if (mailObj == null) continue;
-                            if (((int)mail.Class) != 43) continue;
+                            if (((int)mail.Class) != 43) { ReleaseCom(mail); continue; }
 
                             string? id = (string?)mail?.EntryID;
-                            if (string.IsNullOrEmpty(id) || _seenIds.Contains(id)) continue;
+                            if (string.IsNullOrEmpty(id) || _seenIds.Contains(id)) { ReleaseCom(mail); continue; }
 
                             toNotify.Add(mail);
                         }
-                        catch (Exception ex) { _log("Baseline unread item failed: " + ex.Message); }
+                        catch (Exception ex) { ReleaseCom(mail); _log("Baseline unread item failed: " + ex.Message); }
                     }
                 }
                 catch (Exception ex) { _log("Baseline folder failed: " + ex.Message); }
+                finally { ReleaseCom(unreadItems); ReleaseCom(items); }
             }
 
             _log($"Baseline done: {toNotify.Count} recent unread mail(s) to notify, {_seenIds.Count} already known.");
-            foreach (var mail in toNotify) ProcessAndEmitMail(mail);
+            foreach (var mail in toNotify)
+            {
+                try { ProcessAndEmitMail(mail); }
+                finally { ReleaseCom(mail); }
+            }
         }
         catch (Exception ex) { _log("Baseline failed: " + ex.Message); }
     }
@@ -305,36 +400,46 @@ public sealed class OutlookComReader
 
             foreach (var inbox in _cachedInboxes)
             {
+                dynamic? items = null;
+                dynamic? unreadItems = null;
                 try
                 {
-                    dynamic items = inbox.Items;
-                    dynamic unreadItems = items.Restrict(UnreadSinceFilter());
+                    items = inbox.Items;
+                    unreadItems = items.Restrict(UnreadSinceFilter());
+                    // Sort newest-first so >30 accumulated unread messages never hide new arrivals.
+                    try { unreadItems.Sort("[ReceivedTime]", true); } catch { }
 
                     int count = (int)unreadItems.Count;
                     if (count == 0) continue;
 
-                    for (int i = 1; i <= Math.Min(count, 30); i++)
+                    for (int i = 1; i <= Math.Min(count, MaxUnreadPerFolder); i++)
                     {
+                        dynamic? mail = null;
                         try
                         {
-                            dynamic mail = unreadItems.Item(i);
+                            mail = unreadItems.Item(i);
                             object? mailObj = mail;
                             if (mailObj == null) continue;
-                            if (((int)mail.Class) != 43) continue;
+                            if (((int)mail.Class) != 43) { ReleaseCom(mail); continue; }
 
                             string? id = (string?)mail?.EntryID;
-                            if (string.IsNullOrEmpty(id) || _seenIds.Contains(id)) continue;
+                            if (string.IsNullOrEmpty(id) || _seenIds.Contains(id)) { ReleaseCom(mail); continue; }
 
                             newMails.Add(mail);
                         }
-                        catch (Exception ex) { _log("Unread item failed: " + ex.Message); }
+                        catch (Exception ex) { ReleaseCom(mail); _log("Unread item failed: " + ex.Message); }
                     }
                 }
                 catch (Exception ex) { _log("Folder poll failed: " + ex.Message); }
+                finally { ReleaseCom(unreadItems); ReleaseCom(items); }
             }
 
             if (newMails.Count > 0) _log($"Found {newMails.Count} new unread mail(s).");
-            foreach (var mail in newMails) ProcessAndEmitMail(mail);
+            foreach (var mail in newMails)
+            {
+                try { ProcessAndEmitMail(mail); }
+                finally { ReleaseCom(mail); }
+            }
         }
         catch
         {
@@ -398,21 +503,20 @@ public sealed class OutlookComReader
     /// <summary>Opens a mail in Outlook, or just starts Outlook when the item cannot be found.</summary>
     public void Open(string? entryId)
     {
-        Task.Run(() =>
+        EnqueueSta(() =>
         {
             try
             {
-                if (!string.IsNullOrEmpty(entryId))
+                if (!string.IsNullOrEmpty(entryId) && _cachedMapiNamespace is not null)
                 {
-                    lock (_comGate)
+                    dynamic? item = null;
+                    try
                     {
-                        if (_cachedMapiNamespace is not null)
-                        {
-                            dynamic item = _cachedMapiNamespace.GetItemFromID(entryId);
-                            item.Display();
-                            return;
-                        }
+                        item = _cachedMapiNamespace.GetItemFromID(entryId);
+                        item.Display();
+                        return;
                     }
+                    finally { ReleaseCom(item); }
                 }
             }
             catch (Exception ex) { _log("Opening mail failed: " + ex.Message); }
@@ -425,19 +529,18 @@ public sealed class OutlookComReader
     public void MarkRead(string? entryId)
     {
         if (string.IsNullOrEmpty(entryId)) return;
-        Task.Run(() =>
+        EnqueueSta(() =>
         {
+            dynamic? item = null;
             try
             {
-                lock (_comGate)
-                {
-                    if (_cachedMapiNamespace is null) return;
-                    dynamic item = _cachedMapiNamespace.GetItemFromID(entryId);
-                    item.UnRead = false;
-                    item.Save();
-                }
+                if (_cachedMapiNamespace is null) return;
+                item = _cachedMapiNamespace.GetItemFromID(entryId);
+                item.UnRead = false;
+                item.Save();
             }
             catch (Exception ex) { _log("Marking mail read failed: " + ex.Message); }
+            finally { ReleaseCom(item); }
         });
     }
 }

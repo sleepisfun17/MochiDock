@@ -113,7 +113,9 @@ public sealed class OutlookHelperHost : IDisposable
                 using var reader = new StreamReader(server, utf8);
                 using var writer = new StreamWriter(server, utf8) { AutoFlush = true };
 
-                var hello = OutlookPipeMessage.TryDecode(await reader.ReadLineAsync(token));
+                using var helloCts = CancellationTokenSource.CreateLinkedTokenSource(token);
+                helloCts.CancelAfter(TimeSpan.FromSeconds(10));
+                var hello = OutlookPipeMessage.TryDecode(await reader.ReadLineAsync(helloCts.Token));
                 if (hello?.T != "hello" || hello.Secret is null
                     || !CryptographicOperations.FixedTimeEquals(Encoding.UTF8.GetBytes(hello.Secret), Encoding.UTF8.GetBytes(secret)))
                 {

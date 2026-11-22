@@ -365,4 +365,18 @@ public class ImapMailServiceTests : IDisposable
         factory.Connections.Enqueue(() => new FakeSession());
         Assert.Equal("", await service.TestAsync(Account, "x", CancellationToken.None));
     }
+
+    [Fact]
+    public void PickNewestUnseenFindsNewArrivalsBeyondThirtyUnreadItems()
+    {
+        var baseTime = new DateTime(2026, 11, 22, 10, 0, 0);
+        var items = Enumerable.Range(1, 35)
+            .Select(i => (Id: $"id-{i}", Received: baseTime.AddMinutes(i)))
+            .ToList();
+        var seen = Enumerable.Range(1, 34).Select(i => $"id-{i}").ToHashSet();
+
+        var picked = OutlookComReader.PickNewestUnseen(items, x => x.Received, x => x.Id, seen);
+        Assert.Single(picked);
+        Assert.Equal("id-35", picked[0].Id);
+    }
 }

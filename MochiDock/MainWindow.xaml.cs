@@ -836,7 +836,7 @@ public partial class MainWindow : Window
         _settings = _viewModel.Settings ?? SettingsService.Load();
         var targetScreen = MultiMonitorHelper.GetTargetScreen(_settings.TargetMonitor);
         if (targetScreen == null || targetScreen.WorkingArea.Width <= 0 || targetScreen.WorkingArea.Height <= 0) return;
-        var (dpiX, dpiY) = MultiMonitorHelper.GetDpiScale(this);
+        var (dpiX, dpiY) = MultiMonitorHelper.GetDpiScale(targetScreen, this);
         ApplyInterfaceScale(targetScreen, dpiX, dpiY);
         double screenLeftDip = targetScreen.WorkingArea.Left / dpiX;
         double screenWidthDip = targetScreen.WorkingArea.Width / dpiX;
@@ -845,19 +845,31 @@ public partial class MainWindow : Window
         ApplyDockStyle(isNotch);
 
         double normalTop = isNotch ? (targetScreen.Bounds.Top / dpiY) : MultiMonitorHelper.GetTopY(this, targetScreen, topMargin: _settings.TopMargin);
-        this.Left = MultiMonitorHelper.RoundToDevicePixel(MochiDock.Core.SpotPolicy.ComputeWindowLeftDip(screenLeftDip, screenWidthDip, this.Width, _settings.IslandHorizontalRatio), dpiX);
+        double leftDip = MultiMonitorHelper.RoundToDevicePixel(MochiDock.Core.SpotPolicy.ComputeWindowLeftDip(screenLeftDip, screenWidthDip, this.Width, _settings.IslandHorizontalRatio), dpiX);
 
         this.BeginAnimation(Window.TopProperty, null);
+        double topDip;
         if (_viewModel.IsGamingSessionActive)
         {
             double offset = isNotch ? 0 : _settings.EffectiveGamingTopOffset;
-            this.Top = MultiMonitorHelper.RoundToDevicePixel(normalTop + offset, dpiY);
+            topDip = MultiMonitorHelper.RoundToDevicePixel(normalTop + offset, dpiY);
             SetGamingClickThrough(true);
         }
         else
         {
-            this.Top = MultiMonitorHelper.RoundToDevicePixel(normalTop, dpiY);
+            topDip = MultiMonitorHelper.RoundToDevicePixel(normalTop, dpiY);
             SetGamingClickThrough(false);
+        }
+
+        IntPtr hwnd = new WindowInteropHelper(this).Handle;
+        if (hwnd != IntPtr.Zero)
+        {
+            SetWindowPos(hwnd, HWND_TOPMOST, (int)Math.Round(leftDip * dpiX), (int)Math.Round(topDip * dpiY), 0, 0, SWP_NOSIZE | SWP_NOACTIVATE);
+        }
+        else
+        {
+            this.Left = leftDip;
+            this.Top = topDip;
         }
 
         EnsureWindowTopmost();
@@ -1017,7 +1029,7 @@ public partial class MainWindow : Window
         _settings = _viewModel.Settings ?? SettingsService.Load();
         var targetScreen = MultiMonitorHelper.GetTargetScreen(_settings.TargetMonitor);
         if (targetScreen == null || targetScreen.WorkingArea.Width <= 0 || targetScreen.WorkingArea.Height <= 0) return;
-        var (dpiX, dpiY) = MultiMonitorHelper.GetDpiScale(this);
+        var (dpiX, dpiY) = MultiMonitorHelper.GetDpiScale(targetScreen, this);
         ApplyInterfaceScale(targetScreen, dpiX, dpiY);
         bool isNotch = string.Equals(_settings.DockStyle, "Notch", StringComparison.OrdinalIgnoreCase);
         ApplyDockStyle(isNotch);
