@@ -348,6 +348,8 @@ public partial class MainViewModel : INotifyPropertyChanged
         }
         ApplyDateFormat();
         OnPropertyChanged(nameof(Settings));
+        // OnboardingDismissed comes from the imported file: the welcome banner and the dock height read it.
+        OnPropertyChanged(nameof(IsFirstRunWelcomeVisible));
         SettingsChanged?.Invoke(SettingsApply.Hotkey);
         ApplyReminderSettings();
         OnPropertyChanged(nameof(ShowStatsTab));

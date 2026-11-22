@@ -30,8 +30,26 @@ public partial class MainWindow
             IslandCardType.Clipboard => (620, 250),
             _ => (620, 200)
         };
-        if (_viewModel.IsFirstRunWelcomeVisible) h += 58;
+        h += WelcomeBannerAllowance();
         return (w, h);
+    }
+
+    // Room for the first-run welcome banner above the card. It follows the banner's own visibility (what is on screen) rather than
+    // the view model flag, so a stale flag can never leave the card cut off: 58 DIPs before the banner has been laid out, otherwise
+    // its measured height with margins (about 53 for its two lines), never less than 58.
+    private double WelcomeBannerAllowance()
+    {
+        var banner = FirstRunWelcomeBanner;
+        if (banner == null || banner.Visibility != Visibility.Visible) return 0;
+        double measured = banner.ActualHeight > 0 ? banner.ActualHeight + banner.Margin.Top + banner.Margin.Bottom : 0;
+        return Math.Max(58, Math.Ceiling(measured));
+    }
+
+    private void ResizeForWelcomeBanner()
+    {
+        if (_windowClosed || !_viewModel.IsExpanded || ExpandedBorder.Visibility != Visibility.Visible) return;
+        var (w, h) = GetCardDimensions(_viewModel.ActiveCardType);
+        if (Math.Abs(ExpandedBorder.ActualHeight - h) > 0.5) AnimateExpandedDimensions(w, h);
     }
 
     private double MeasurePrayerArrivalWidth()
