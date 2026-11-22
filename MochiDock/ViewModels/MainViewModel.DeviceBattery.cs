@@ -150,6 +150,10 @@ public partial class MainViewModel
     public MochiDock.Core.PowerReading? LatestPower { get; private set; }
     /// <summary>The recent total-power samples, oldest first (up to 60: one to two minutes).</summary>
     public IReadOnlyList<double> PowerSamples => _powerHistory.Samples();
+    /// <summary>The same samples with their CPU and GPU parts, for the Battery page's stacked Power chart.</summary>
+    public IReadOnlyList<MochiDock.Core.PowerSample> PowerPoints => _powerHistory.Points();
+    /// <summary>Slots in the power charts: the history's capacity, so they fill from the right at a fixed step.</summary>
+    public int PowerSampleCapacity => _powerHistory.Capacity;
     /// <summary>Raised on the UI thread after each power sample.</summary>
     public event Action? PowerSampled;
     public string PowerChipText => MochiDock.Core.PowerChip.Text(LatestPower);
@@ -166,9 +170,9 @@ public partial class MainViewModel
         // A sensor or driver failure must never take the hardware tick down: the chip just shows "-".
         try { LatestPower = SamplePower(_hasSystemBattery); }
         catch (Exception ex) { LatestPower = null; AppLog.Warn("Power", ex); }
-        if (LatestPower != null) _powerHistory.Add(LatestPower.Watts);
+        if (LatestPower != null) _powerHistory.Add(LatestPower.Watts, LatestPower.CpuW, LatestPower.GpuW);
         var points = new System.Windows.Media.PointCollection();
-        foreach (var (x, y) in MochiDock.Core.PowerChip.SparkPoints(_powerHistory.Samples())) points.Add(new System.Windows.Point(x, y));
+        foreach (var (x, y) in MochiDock.Core.PowerChip.SparkPoints(_powerHistory.Samples(), _powerHistory.Capacity)) points.Add(new System.Windows.Point(x, y));
         points.Freeze();
         PowerChipSparkPoints = points;
         OnPropertyChanged(nameof(PowerChipText));

@@ -49,6 +49,7 @@ pwsh -NoProfile -STA -File tools/verify/verify-typography.ps1
 | `verify-compact-typography.ps1` | Compact capsule modes, digit centering and role transitions |
 | `verify-clock-weather-balance.ps1` | Resting clock + weather capsule: clock centred, equal gaps to Mochi and weather, no clipping |
 | `verify-prayer-capsule.ps1` | Prayer reminder capsule widths, gaps and state handling |
+| `verify-power-chart.ps1` | Battery page power panel: desktop stacked chart, laptop single area and empty state in both themes at four scales (right-anchored fill, no clipping or overlap) |
 | `verify-games-readout.ps1` | Gaming readout contrast, layout (no overlapping text, no scrolling column) and view-model getters |
 | `verify-email-theme.ps1` | Email card controls across theme switches |
 | `verify-apps-card.ps1` | Apps card (other apps' notifications) in both themes at four scales, with and without app logos |

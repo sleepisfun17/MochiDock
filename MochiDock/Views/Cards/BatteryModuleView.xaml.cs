@@ -12,71 +12,115 @@ public partial class BatteryModuleView : System.Windows.Controls.UserControl {
  MochiDock.Services.PowerNotifications? notifications;
  readonly DispatcherTimer timer=new(){Interval=TimeSpan.FromSeconds(30)};
  // Total power and its history come from the view model, which samples it with the hardware readings whether or not this page is
- // open; the page only draws them (the sparkline is already filled when the page opens and survives tab switches).
+ // open; the page only draws them (the chart is already filled when the page opens and survives tab switches).
  MochiDock.Core.PowerReading? power;
  bool powerLaptop;
- const double SparkWidth=48,SparkHeight=16;
- TextBlock? wattsText;
- System.Windows.Shapes.Polyline? spark;
+ TextBlock? wattsText,averageText,sessionText,legendText;
+ PowerChartView? chart;
  void PowerSampled()
  {
   if(vm==null||!IsVisible)return;
   power=vm.LatestPower;
   ApplyPower();
-  ApplySessionCard();
+  ApplySession();
  }
- TextBlock? sessionEnergy,sessionDetail;
- /// <summary>"Power use" card: energy, average and peak of this session (the power log) and a summary of the previous session.</summary>
- Border? BuildSessionCard()
+ /// <summary>"This session 85 Wh" from the power log, with this and recent sessions in the tooltip; hidden while logging is off.</summary>
+ void ApplySession()
  {
+  if(sessionText==null)return;
   var log=vm?.PowerLog;
-  if(log==null||vm==null||!vm.EnablePowerLogging)return null;
+  if(log==null||vm==null||!vm.EnablePowerLogging){sessionText.Visibility=Visibility.Collapsed;return;}
+  sessionText.Visibility=Visibility.Visible;
+  var cur=log.Current;
+  var prefix=cur?.Source=="Measured"?"":"~";
+  sessionText.Text=cur==null?"This session: collecting…":"This session "+prefix+MochiDock.Core.PowerSessionFormat.Energy(cur.EnergyWh);
   var history=log.History;
-  var icon=Text("",24,"IslandAccentBrush");icon.FontFamily=new System.Windows.Media.FontFamily("Segoe Fluent Icons, Segoe MDL2 Assets");icon.HorizontalAlignment=System.Windows.HorizontalAlignment.Left;
-  sessionEnergy=Text("-",20,"IslandInkBrush",true);sessionEnergy.Margin=new Thickness(0,0,10,0);
-  sessionDetail=Text("",11,"IslandSecondaryInkBrush");
-  var extra=new StackPanel{Orientation=Orientation.Horizontal,VerticalAlignment=VerticalAlignment.Center};extra.Children.Add(sessionEnergy);extra.Children.Add(sessionDetail);
-  var caption=history.Count>0?"Last: "+MochiDock.Core.PowerSessionFormat.Summary(history[0],DateTime.Now,false):"No earlier session recorded yet";
-  var card=Card("Power use",null,"This session","IslandMutedInkBrush",icon,"",caption,null,extra);
   var lines=history.Take(5).Select(r=>MochiDock.Core.PowerSessionFormat.Summary(r,DateTime.Now)+(r.EndedUnexpectedly?" (ended unexpectedly)":""));
-  card.ToolTip=history.Count>0?"Recent sessions:\n"+string.Join("\n",lines):"Power is logged about every 10 seconds; the total is an estimate unless it was read from the laptop battery.";
-  ApplySessionCard();
-  return card;
+  var current=cur==null?"":$"This session: avg {prefix}{MochiDock.Core.PowerSessionFormat.Watts(cur.AverageW)}, peak {MochiDock.Core.PowerSessionFormat.Watts(cur.PeakW)}, sampled {MochiDock.Core.GameSessionFormat.Duration(cur.SampledSeconds)} since {cur.StartUtc.ToLocalTime():HH:mm}\n";
+  sessionText.ToolTip=current+(history.Count>0?"Recent sessions:\n"+string.Join("\n",lines):"Power is logged about every 10 seconds; the total is an estimate unless it was read from the laptop battery.");
  }
- void ApplySessionCard()
- {
-  if(sessionEnergy==null||sessionDetail==null)return;
-  var cur=vm?.PowerLog?.Current;
-  if(cur==null){sessionEnergy.Text="-";sessionDetail.Text="collecting…";sessionEnergy.ToolTip=null;return;}
-  var prefix=cur.Source=="Measured"?"":"~";
-  sessionEnergy.Text=prefix+MochiDock.Core.PowerSessionFormat.Energy(cur.EnergyWh);
-  sessionDetail.Text="avg "+prefix+MochiDock.Core.PowerSessionFormat.Watts(cur.AverageW)+"\npeak "+MochiDock.Core.PowerSessionFormat.Watts(cur.PeakW);
-  sessionEnergy.ToolTip=cur.Source+" · sampled "+MochiDock.Core.GameSessionFormat.Duration(cur.SampledSeconds)+" since "+cur.StartUtc.ToLocalTime().ToString("HH:mm");
- }
- // Updates the watts line and sparkline of the "This PC" card in place (no card rebuild on every sample).
+ // Updates the panel's numbers, legend and chart in place (no rebuild on every sample).
  void ApplyPower()
  {
   if(wattsText==null)return;
+  var estimated=power?.Source==MochiDock.Core.PowerSource.Estimated;
   if(power==null){wattsText.Text="-";wattsText.ToolTip=powerLaptop?"Windows reports no battery rate right now.":"No CPU or GPU power reading is available. Windows' Energy Meter is tried first; the optional PawnIO driver adds more sensors (Settings > Hardware & power > CPU sensors), and GPU power is read on NVIDIA cards.";}
-  else{wattsText.Text=(power.Source==MochiDock.Core.PowerSource.Estimated?"~":"")+power.Watts.ToString(power.Watts<100?"0.0":"0")+" W";wattsText.ToolTip=(power.Source==MochiDock.Core.PowerSource.Estimated?"Estimate: ":"Measured: ")+power.Detail;}
-  if(spark==null)return;
-  var samples=vm?.PowerSamples??Array.Empty<double>();
-  spark.Points.Clear();
-  if(samples.Count<2)return;
-  double max=Math.Max(1,samples.Max()),min=samples.Min(),range=Math.Max(1,max-min);
-  for(var i=0;i<samples.Count;i++)spark.Points.Add(new System.Windows.Point(SparkWidth*i/(samples.Count-1),SparkHeight-1-(SparkHeight-2)*(samples[i]-min)/range));
+  else{wattsText.Text=(estimated?"~":"")+power.Watts.ToString(power.Watts<100?"0.0":"0")+" W";wattsText.ToolTip=(estimated?"Estimate: ":"Measured: ")+power.Detail;}
+  var points=vm?.PowerPoints??Array.Empty<MochiDock.Core.PowerSample>();
+  chart?.Show(points,vm?.PowerSampleCapacity??60);
+  if(averageText!=null)
+  {
+   var g=chart?.Geometry;
+   averageText.Text=g==null?"":$"avg {(estimated?"~":"")}{g.Average:0} · peak {g.Peak:0} W";
+   averageText.ToolTip=g==null?null:"Over the last "+points.Count+" readings (about 1-2 minutes). The dashed line is the average, the dot the latest peak.";
+  }
+  if(legendText!=null)
+  {
+   // Where the latest total goes: the measured CPU and GPU, and the rest (memory when exposed plus the assumed allowance).
+   legendText.Inlines.Clear();
+   if(points.Count>0&&(points[^1].CpuW!=null||points[^1].GpuW!=null))
+   {
+    var last=points[^1];
+    double cpuW=Math.Clamp(last.CpuW??0,0,last.Total),gpuW=Math.Clamp(last.GpuW??0,0,last.Total-cpuW);
+    Legend("IslandGreenBrush","CPU",cpuW);Legend("IslandBlueBrush","GPU",gpuW);Legend("IslandMutedInkBrush","Other",last.Total-cpuW-gpuW);
+   }
+   else legendText.Inlines.Add(new System.Windows.Documents.Run(power?.Source==MochiDock.Core.PowerSource.Measured?"Measured battery discharge rate":powerLaptop?"Battery rate not reported right now":"Waiting for CPU and GPU power readings"));
+  }
  }
- /// <summary>Watts line plus sparkline shown on the right of the "This PC" card.</summary>
- UIElement BuildPowerBlock()
+ void Legend(string brush,string name,double watts)
  {
-  // Side by side (sparkline, then watts) so the block is no taller than the percentage and the caption below stays visible.
-  wattsText=Text("-",16,"IslandInkBrush",true,TextAlignment.Right);
-  spark=new System.Windows.Shapes.Polyline{Width=SparkWidth,Height=SparkHeight,StrokeThickness=1.5,StrokeLineJoin=PenLineJoin.Round,Margin=new Thickness(0,0,8,0),VerticalAlignment=VerticalAlignment.Center};
-  spark.SetResourceReference(System.Windows.Shapes.Shape.StrokeProperty,"IslandAccentBrush");
-  var block=new StackPanel{Orientation=Orientation.Horizontal,HorizontalAlignment=System.Windows.HorizontalAlignment.Right,VerticalAlignment=VerticalAlignment.Center};
-  block.Children.Add(spark);block.Children.Add(wattsText);
+  var dot=new System.Windows.Documents.Run("● ");dot.SetResourceReference(System.Windows.Documents.TextElement.ForegroundProperty,brush);
+  legendText!.Inlines.Add(dot);legendText.Inlines.Add(new System.Windows.Documents.Run($"{name} {watts:0} W   "));
+ }
+ /// <summary>
+ /// One full-width "This PC" panel in place of the old half-width power and session cards (the same height, so the device cards
+ /// below do not move): state on the left, the Power chart in the middle, the numbers on the right.
+ /// </summary>
+ Border BuildPowerPanel(string badge,string badgeBrush,UIElement gauge,string percent,string caption)
+ {
+  var panel=new Border{BorderThickness=new Thickness(1),CornerRadius=new CornerRadius(10),Padding=new Thickness(10,6,10,6),Margin=new Thickness(0,0,8,8),Height=_cardHeight>0?_cardHeight:double.NaN};
+  panel.SetResourceReference(Border.BackgroundProperty,"IslandSubCardBackgroundBrush");panel.SetResourceReference(Border.BorderBrushProperty,"IslandSubCardBorderBrush");
+  var grid=new Grid();
+  grid.ColumnDefinitions.Add(new ColumnDefinition{Width=GridLength.Auto,MinWidth=150});grid.ColumnDefinitions.Add(new ColumnDefinition{Width=new GridLength(12)});
+  grid.ColumnDefinitions.Add(new ColumnDefinition());grid.ColumnDefinitions.Add(new ColumnDefinition{Width=new GridLength(12)});
+  grid.ColumnDefinitions.Add(new ColumnDefinition{Width=GridLength.Auto,MinWidth=96});
+
+  // Left: name and state, gauge (and the percentage on a laptop), caption.
+  var left=new StackPanel{MaxWidth=170};
+  var top=new StackPanel{Orientation=Orientation.Horizontal};
+  var glyph=Text("",14,"IslandAccentBrush");glyph.FontFamily=new FontFamily("Segoe Fluent Icons, Segoe MDL2 Assets");glyph.Margin=new Thickness(0,0,6,0);top.Children.Add(glyph);
+  top.Children.Add(Text("This PC",13,"IslandInkBrush",true));
+  var chip=new Border{CornerRadius=new CornerRadius(4),Padding=new Thickness(5,1,5,1),Margin=new Thickness(8,0,0,0),VerticalAlignment=VerticalAlignment.Center};
+  chip.SetResourceReference(Border.BackgroundProperty,"IslandChipActiveBrush");chip.Child=Text(badge,11,badgeBrush,true);top.Children.Add(chip);
+  left.Children.Add(top);
+  var mid=new StackPanel{Orientation=Orientation.Horizontal,Margin=new Thickness(0,6,0,0)};
+  mid.Children.Add(gauge);
+  if(percent.Length>0){var pct=Text(percent,22,"IslandInkBrush",true);pct.Margin=new Thickness(10,0,0,0);mid.Children.Add(pct);}
+  left.Children.Add(mid);
+  var cap=Text(caption,11,"IslandMutedInkBrush");cap.Margin=new Thickness(0,4,0,0);cap.ToolTip=caption;left.Children.Add(cap);
+  grid.Children.Add(left);
+
+  // Middle: the chart, with where the power goes underneath.
+  var middle=new Grid();middle.RowDefinitions.Add(new RowDefinition());middle.RowDefinitions.Add(new RowDefinition{Height=GridLength.Auto});
+  chart=new PowerChartView{MinHeight=30};
+  var frame=new Border{CornerRadius=new CornerRadius(6),BorderThickness=new Thickness(1),Child=chart,ClipToBounds=true};
+  frame.SetResourceReference(Border.BorderBrushProperty,"IslandSubCardBorderBrush");
+  middle.Children.Add(frame);
+  legendText=Text("",10,"IslandSecondaryInkBrush");legendText.Margin=new Thickness(0,3,0,0);Grid.SetRow(legendText,1);middle.Children.Add(legendText);
+  Grid.SetColumn(middle,2);grid.Children.Add(middle);
+
+  // Right: the latest total, the recent average and peak, and this session's energy when logging is on.
+  var right=new StackPanel{VerticalAlignment=VerticalAlignment.Center};
+  wattsText=Text("-",18,"IslandInkBrush",true,TextAlignment.Right);
+  averageText=Text("",11,"IslandSecondaryInkBrush",false,TextAlignment.Right);averageText.Margin=new Thickness(0,2,0,0);
+  sessionText=Text("",11,"IslandMutedInkBrush",false,TextAlignment.Right);sessionText.Margin=new Thickness(0,2,0,0);
+  foreach(var t in new[]{wattsText,averageText,sessionText}){System.Windows.Documents.Typography.SetNumeralAlignment(t,FontNumeralAlignment.Tabular);right.Children.Add(t);}
+  Grid.SetColumn(right,4);grid.Children.Add(right);
+
+  panel.Child=grid;
   ApplyPower();
-  return block;
+  ApplySession();
+  return panel;
  }
  [StructLayout(LayoutKind.Sequential)] struct Power {public byte AC,Flag,Percent,Saver;public uint Life,Full;}
  [DllImport("kernel32.dll")] static extern bool GetSystemPowerStatus(out Power value);
@@ -113,6 +157,7 @@ public partial class BatteryModuleView : System.Windows.Controls.UserControl {
   if(Math.Abs(height-_cardHeight)<0.5)return;
   _cardHeight=height;
   foreach(var child in CardsPanel.Children)if(child is Border card)card.Height=height;
+  if(PowerPanelHost.Child is Border panel)panel.Height=height;
  }
  Border Card(string title,string? glyph,string badge,string badgeBrush,UIElement gauge,string percent,string caption,string? deviceKey=null,UIElement? extra=null)
  {
@@ -160,12 +205,10 @@ public partial class BatteryModuleView : System.Windows.Controls.UserControl {
    var state=charging?"Charging":onAc?"On AC power":"On battery";
    string caption=onAc||charging?"Plugged in":(last.Life!=0xFFFFFFFF?$"{(int)TimeSpan.FromSeconds(last.Life).TotalHours}h {TimeSpan.FromSeconds(last.Life).Minutes:00}m left":"Running on battery");
    if(last.Saver==1)caption+=" · Battery saver on";
-   CardsPanel.Children.Add(Card("This PC","\uE7F8",state,charging?"IslandPositiveBrush":"IslandMutedInkBrush",new BatteryGauge{Percent=last.Percent,Charging=charging,HorizontalAlignment=System.Windows.HorizontalAlignment.Left},last.Percent+"%",caption,null,BuildPowerBlock()));
+   PowerPanelHost.Child=BuildPowerPanel(state,charging?"IslandPositiveBrush":"IslandMutedInkBrush",new BatteryGauge{Percent=last.Percent,Charging=charging,HorizontalAlignment=System.Windows.HorizontalAlignment.Left},last.Percent+"%",caption);
   }
   else
-   CardsPanel.Children.Add(Card("This PC","\uE7F8","Wall power","IslandPositiveBrush",new BatteryGauge{IsPsu=true,HorizontalAlignment=System.Windows.HorizontalAlignment.Left},"PSU","Desktop · estimated from CPU + GPU",null,BuildPowerBlock()));
-  sessionEnergy=null;sessionDetail=null;
-  if(BuildSessionCard() is {} sessionCard)CardsPanel.Children.Add(sessionCard);
+   PowerPanelHost.Child=BuildPowerPanel("Wall power","IslandPositiveBrush",new BatteryGauge{IsPsu=true,HorizontalAlignment=System.Windows.HorizontalAlignment.Left},"","Estimated from CPU + GPU");
   if(vm?.DeviceBatteries==null)return;
   foreach(var r in vm.DeviceBatteries)
   {

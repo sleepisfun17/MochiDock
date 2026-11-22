@@ -7,8 +7,15 @@ namespace MochiDock.Core;
 /// <summary>Whether a wattage was read from a sensor or worked out from other readings.</summary>
 public enum PowerSource { Measured, Estimated }
 
-/// <summary>One total-power sample for the Battery page. <see cref="Detail"/> explains the number (tooltip).</summary>
-public sealed record PowerReading(double Watts, PowerSource Source, DateTimeOffset At, string Detail);
+/// <summary>
+/// One total-power sample for the Battery page. <see cref="Detail"/> explains the number (tooltip). <see cref="CpuW"/> and
+/// <see cref="GpuW"/> are the measured parts of a desktop estimate (null when not measured, and always null for a battery rate),
+/// so the Power chart can show where the power goes.
+/// </summary>
+public sealed record PowerReading(double Watts, PowerSource Source, DateTimeOffset At, string Detail, double? CpuW = null, double? GpuW = null);
+
+/// <summary>One point of the power history: the total and, for a desktop estimate, its measured CPU and GPU parts.</summary>
+public readonly record struct PowerSample(double Total, double? CpuW, double? GpuW);
 
 /// <summary>
 /// Desktop estimate: a PC has no sensor for the board, fans, drives or PSU losses, so the total is the measured parts
@@ -34,7 +41,7 @@ public static class PowerEstimator
         if (gpu is { } g) { total += g; parts.Add($"GPU {g:0}"); }
         if (mem is { } m) { total += m; parts.Add($"memory {m:0}"); }
         parts.Add($"{Math.Max(0, allowanceW):0} other");
-        return new PowerReading(total, PowerSource.Estimated, now, string.Join(" + ", parts) + " W (" + (allowanceNote ?? "other is assumed") + ")");
+        return new PowerReading(total, PowerSource.Estimated, now, string.Join(" + ", parts) + " W (" + (allowanceNote ?? "other is assumed") + ")", cpu, gpu);
     }
 }
 
@@ -65,21 +72,28 @@ public static class BatteryRate
 /// <summary>Fixed-size ring of recent samples for the sparkline, so memory never grows.</summary>
 public sealed class PowerHistory
 {
-    readonly double[] _values;
+    readonly double[] _values, _cpu, _gpu;   // the parts are NaN when that sample has none
     int _count, _next;
 
     public PowerHistory(int capacity = 60)
     {
         if (capacity < 1) throw new ArgumentOutOfRangeException(nameof(capacity));
         _values = new double[capacity];
+        _cpu = new double[capacity];
+        _gpu = new double[capacity];
     }
 
     public int Count => _count;
+    /// <summary>How many samples the ring holds: the chart width is divided into this many slots.</summary>
+    public int Capacity => _values.Length;
 
-    public void Add(double watts)
+    public void Add(double watts, double? cpuW = null, double? gpuW = null)
     {
         if (!double.IsFinite(watts) || watts < 0) return;
+        static double Part(double? w) => w is { } v && double.IsFinite(v) && v >= 0 ? v : double.NaN;
         _values[_next] = watts;
+        _cpu[_next] = Part(cpuW);
+        _gpu[_next] = Part(gpuW);
         _next = (_next + 1) % _values.Length;
         if (_count < _values.Length) _count++;
     }
@@ -92,6 +106,20 @@ public sealed class PowerHistory
         var result = new double[_count];
         var start = _count < _values.Length ? 0 : _next;
         for (var i = 0; i < _count; i++) result[i] = _values[(start + i) % _values.Length];
+        return result;
+    }
+
+    /// <summary>Samples with their CPU and GPU parts, oldest first.</summary>
+    public IReadOnlyList<PowerSample> Points()
+    {
+        static double? Part(double v) => double.IsNaN(v) ? null : v;
+        var result = new PowerSample[_count];
+        var start = _count < _values.Length ? 0 : _next;
+        for (var i = 0; i < _count; i++)
+        {
+            int k = (start + i) % _values.Length;
+            result[i] = new PowerSample(_values[k], Part(_cpu[k]), Part(_gpu[k]));
+        }
         return result;
     }
 
@@ -120,9 +148,11 @@ public static class PowerChip
 
     /// <summary>
     /// Points for the chip's 80 x 4 sparkline (the same box the CPU, GPU, Drives and Network chips draw in), scaled to the history's
-    /// own range so changes stay visible; a flat line sits in the middle. Fewer than two samples give no line.
+    /// own range so changes stay visible; a flat line sits in the middle. Fewer than two samples give no line. The newest sample sits at
+    /// the right edge and slots are a fixed width apart (<paramref name="capacity"/> slots), so a history that is still filling grows in
+    /// from the right like the other chips.
     /// </summary>
-    public static IReadOnlyList<(double X, double Y)> SparkPoints(IReadOnlyList<double> samples)
+    public static IReadOnlyList<(double X, double Y)> SparkPoints(IReadOnlyList<double> samples, int capacity = 60)
     {
         if (samples.Count < 2) return Array.Empty<(double, double)>();
         double min = samples.Min(), range = samples.Max() - min;
@@ -130,7 +160,7 @@ public static class PowerChip
         for (int i = 0; i < samples.Count; i++)
         {
             double fraction = range < 0.5 ? 0.5 : (samples[i] - min) / range;
-            points[i] = (0.75 + i * 78.5 / (samples.Count - 1), 0.75 + (1 - fraction) * 2.5);
+            points[i] = (0.75 + HardwareChartMath.SlotX(i, samples.Count, 78.5, capacity), 0.75 + (1 - fraction) * 2.5);
         }
         return points;
     }

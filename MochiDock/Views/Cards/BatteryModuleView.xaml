@@ -14,7 +14,11 @@
             </Button>
         </Grid>
         <ScrollViewer x:Name="CardsScroll" Grid.Row="1" VerticalScrollBarVisibility="Auto" Style="{DynamicResource ModernCardScrollViewer}" SizeChanged="CardsScroll_SizeChanged">
-            <UniformGrid x:Name="CardsPanel" Columns="2" VerticalAlignment="Top"/>
+            <StackPanel VerticalAlignment="Top">
+                <!-- Full-width "This PC" panel: state, Power chart and numbers (BatteryModuleView.BuildPowerPanel). -->
+                <Border x:Name="PowerPanelHost"/>
+                <UniformGrid x:Name="CardsPanel" Columns="2" VerticalAlignment="Top"/>
+            </StackPanel>
         </ScrollViewer>
     </Grid>
 </UserControl>
