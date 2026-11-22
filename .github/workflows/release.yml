@@ -68,6 +68,7 @@ jobs:
           $setup = "installer/Output/MochiDock-Setup-$version.exe"
           $notes = & ./scripts/release-notes.ps1 -Version $version -Setup $setup
           $notes | Set-Content -Encoding utf8 release-notes.md
+          # A normal release even for a -beta version (every MochiDock version is a beta for now): a pre-release is not
+          # GitHub's "Latest" release, so its installer would not be the download the Releases page leads with.
           $flags = @('--draft', '--verify-tag', '--title', "MochiDock $version", '--notes-file', 'release-notes.md')
-          if ($version -match '-') { $flags += '--prerelease' }
           gh release create '${{ github.ref_name }}' $setup @flags
