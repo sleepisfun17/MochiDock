@@ -4,6 +4,14 @@ Add-Type -AssemblyName PresentationFramework
 $repo = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
 $dll = Join-Path $repo "MochiDock/bin/$Configuration/net8.0-windows10.0.19041.0/MochiDock.dll"
 $assembly = [Reflection.Assembly]::LoadFrom($dll)
+# EmojiImages reads Assets\emoji.pak beside the app (AppContext.BaseDirectory), which inside pwsh is the pwsh folder. Open the pak once
+# with the base directory pointed at the build output, then restore it; EmojiImages keeps the opened pak for the rest of the run.
+$pak = Join-Path (Split-Path $dll) "Assets/emoji.pak"
+if (!(Test-Path $pak)) { throw "Build output has no Assets/emoji.pak: $pak" }
+$baseKey = "APP_CONTEXT_BASE_DIRECTORY"; $baseOld = [AppContext]::GetData($baseKey)
+[AppContext]::SetData($baseKey, (Split-Path $dll) + [IO.Path]::DirectorySeparatorChar)
+try { if ($null -eq [MochiDock.Services.EmojiImages]::Get("1f600")) { throw "emoji.pak did not load from $pak" } }
+finally { [AppContext]::SetData($baseKey, $baseOld) }
 # Load resources only: never instantiate MochiDock.App or MainWindow.
 
 $application = New-Object System.Windows.Application
@@ -228,13 +236,13 @@ foreach($file in Get-ChildItem (Join-Path $repo "MochiDock/Views/Cards") -Filter
    if($rows.Count -lt 6){throw "Summary rows are missing ($($rows.Count) text blocks found), $theme, $scale"}
   }
   if($name -eq "WhatsApp" -or $name -eq "Discord"){
-   # Message text must show its emoji as coloured pictures (WPF text draws them black and white): the Emoji.Text inlines hold Twemoji images.
+   # Message text must show its emoji as coloured pictures (WPF text draws them black and white): the Emoji.Text inlines hold Twemoji images (decoded at 32 px by EmojiImages).
    $surface.Measure([Windows.Size]::new($surface.Width,$surface.Height));$surface.Arrange([Windows.Rect]::new(0,0,$surface.Width,$surface.Height));$surface.UpdateLayout()
    $stack=[Collections.Generic.Stack[Windows.DependencyObject]]::new();$stack.Push($surface);$pictures=0
    while($stack.Count -gt 0){$node=$stack.Pop()
     for($k=0;$k -lt [Windows.Media.VisualTreeHelper]::GetChildrenCount($node);$k++){$stack.Push([Windows.Media.VisualTreeHelper]::GetChild($node,$k))}
     if($node -is [Windows.Controls.TextBlock]){foreach($kid in $node.Inlines){if($kid -is [Windows.Documents.InlineUIContainer]){$stack.Push($kid.Child)}}}
-    if($node -is [Windows.Controls.Image] -and $node.Source -is [Windows.Media.Imaging.BitmapSource] -and $node.Source.PixelWidth -eq 72 -and $node.Margin.Left -eq 0.5){$pictures++}
+    if($node -is [Windows.Controls.Image] -and $node.Source -is [Windows.Media.Imaging.BitmapSource] -and $node.Source.PixelWidth -eq 32 -and $node.Margin.Left -eq 0.5){$pictures++}
    }
    if($pictures -lt 5){throw "Colour emoji are not drawn as pictures in the $name card ($pictures found), $theme, $scale"}
   }

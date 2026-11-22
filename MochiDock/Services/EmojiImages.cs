@@ -7,7 +7,7 @@ using System.Windows.Media.Imaging;
 namespace MochiDock.Services;
 
 /// <summary>
-/// The coloured emoji pictures (Twemoji 72 x 72 PNG, CC-BY 4.0) packed in the embedded <c>emoji.pak</c> (a zip named by code points, for example
+/// The coloured emoji pictures (Twemoji 72 x 72 PNG, CC-BY 4.0) packed in <c>Assets\emoji.pak</c> beside the app (a zip named by code points, for example
 /// "1f600.png"). WPF text cannot draw colour emoji, so message text shows these pictures instead. A missing picture gives null and the
 /// caller keeps the emoji as text.
 /// </summary>
