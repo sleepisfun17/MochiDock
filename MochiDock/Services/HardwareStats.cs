@@ -195,42 +195,55 @@ public class HardwareStats
     public float FpsCeiling { get; set; } = 144f;
     public string FpsCeilingText => $"{FpsCeiling:0}";
 
+    // Stats are built on a thread-pool thread (MainViewModel's hardware poll) and handed to the UI.
+    // An unfrozen PointCollection is owned by the thread that created it, and binding to it from the UI
+    // throws "Must create DependencySource on same Thread as the DependencyObject". Every default
+    // therefore shares this frozen, thread-free empty instance; real series come frozen from ToPointCollection.
+    private static readonly PointCollection EmptyPoints = CreateEmptyPoints();
+
+    private static PointCollection CreateEmptyPoints()
+    {
+        var points = new PointCollection();
+        points.Freeze();
+        return points;
+    }
+
     // History Polyline & Area Polygon Points
-    public PointCollection CpuHistoryPoints { get; set; } = new();
-    public PointCollection CpuHistoryFillPoints { get; set; } = new();
+    public PointCollection CpuHistoryPoints { get; set; } = EmptyPoints;
+    public PointCollection CpuHistoryFillPoints { get; set; } = EmptyPoints;
 
-    public PointCollection GpuHistoryPoints { get; set; } = new();
-    public PointCollection GpuHistoryFillPoints { get; set; } = new();
+    public PointCollection GpuHistoryPoints { get; set; } = EmptyPoints;
+    public PointCollection GpuHistoryFillPoints { get; set; } = EmptyPoints;
 
-    public PointCollection RamHistoryPoints { get; set; } = new();
-    public PointCollection RamHistoryFillPoints { get; set; } = new();
+    public PointCollection RamHistoryPoints { get; set; } = EmptyPoints;
+    public PointCollection RamHistoryFillPoints { get; set; } = EmptyPoints;
 
-    public PointCollection DiskHistoryPoints { get; set; } = new();
-    public PointCollection DiskHistoryFillPoints { get; set; } = new();
-    public PointCollection DiskWriteHistoryPoints { get; set; } = new();
-    public PointCollection DiskWriteHistoryFillPoints { get; set; } = new();
+    public PointCollection DiskHistoryPoints { get; set; } = EmptyPoints;
+    public PointCollection DiskHistoryFillPoints { get; set; } = EmptyPoints;
+    public PointCollection DiskWriteHistoryPoints { get; set; } = EmptyPoints;
+    public PointCollection DiskWriteHistoryFillPoints { get; set; } = EmptyPoints;
 
-    public PointCollection NetHistoryPoints { get; set; } = new();
-    public PointCollection NetHistoryFillPoints { get; set; } = new();
-    public PointCollection NetUploadHistoryPoints { get; set; } = new();
-    public PointCollection NetUploadHistoryFillPoints { get; set; } = new();
+    public PointCollection NetHistoryPoints { get; set; } = EmptyPoints;
+    public PointCollection NetHistoryFillPoints { get; set; } = EmptyPoints;
+    public PointCollection NetUploadHistoryPoints { get; set; } = EmptyPoints;
+    public PointCollection NetUploadHistoryFillPoints { get; set; } = EmptyPoints;
 
-    public PointCollection FpsHistoryPoints { get; set; } = new();
-    public PointCollection FpsHistoryFillPoints { get; set; } = new();
+    public PointCollection FpsHistoryPoints { get; set; } = EmptyPoints;
+    public PointCollection FpsHistoryFillPoints { get; set; } = EmptyPoints;
 
     // Live frame-time chart (220 x 40): the slowest frame of each 250 ms over the last minute, with the stutter guide line.
     public const double FrameTimeChartWidth = 220, FrameTimeChartHeight = 40;
-    public PointCollection FrameTimePoints { get; set; } = new();
+    public PointCollection FrameTimePoints { get; set; } = EmptyPoints;
     public double FrameTimeGuideY { get; set; } = FrameTimeChartHeight;
     public string FrameTimeCeilingText { get; set; } = "";
     public bool HasFrameTimeChart => FrameTimePoints.Count >= 2;
 
     // Top strip mini-sparklines
-    public PointCollection CpuChipSparkPoints { get; set; } = new();
-    public PointCollection GpuChipSparkPoints { get; set; } = new();
-    public PointCollection DiskChipSparkPoints { get; set; } = new();
-    public PointCollection NetChipSparkPoints { get; set; } = new();
-    public PointCollection FpsChipSparkPoints { get; set; } = new();
+    public PointCollection CpuChipSparkPoints { get; set; } = EmptyPoints;
+    public PointCollection GpuChipSparkPoints { get; set; } = EmptyPoints;
+    public PointCollection DiskChipSparkPoints { get; set; } = EmptyPoints;
+    public PointCollection NetChipSparkPoints { get; set; } = EmptyPoints;
+    public PointCollection FpsChipSparkPoints { get; set; } = EmptyPoints;
 
     // Process & Core Collections
     public ObservableCollection<CoreUsageItem> CoreUsages { get; set; } = new();
