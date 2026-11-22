@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -151,8 +151,11 @@ public class FpsMonitorService : IDisposable
 
     public void Start()
     {
-        if (IsMonitoring || _isDisposed) return;
-        IsMonitoring = true;
+        lock (_lock)
+        {
+            if (IsMonitoring || _isDisposed) return;
+            IsMonitoring = true;
+        }
 
         Task.Run(FpsCalculationLoop);
 
@@ -169,6 +172,11 @@ public class FpsMonitorService : IDisposable
     {
         const string sessionName = "MochiDock_Dxgi_Fps_Session";
 
+        lock (_lock)
+        {
+            if (_isDisposed) return;
+        }
+
         try
         {
             using (var existing = new TraceEventSession(sessionName))
@@ -178,25 +186,45 @@ public class FpsMonitorService : IDisposable
         }
         catch (System.Exception logEx) { MochiDock.Services.AppLog.Warn("Fps", logEx); }
 
+        TraceEventSession? session = null;
         try
         {
-            _session = new TraceEventSession(sessionName)
+            session = new TraceEventSession(sessionName)
             {
                 StopOnDispose = true
             };
 
-            _session.EnableProvider(DxgiProviderGuid, TraceEventLevel.Informational);
-            _session.EnableProvider(D3D9ProviderGuid, TraceEventLevel.Informational);
-            _session.EnableProvider(DxgKrnlProviderGuid, TraceEventLevel.Informational, 0x1);
+            session.EnableProvider(DxgiProviderGuid, TraceEventLevel.Informational);
+            session.EnableProvider(D3D9ProviderGuid, TraceEventLevel.Informational);
+            session.EnableProvider(DxgKrnlProviderGuid, TraceEventLevel.Informational, 0x1);
 
-            _session.Source.Dynamic.All += OnTraceEvent;
-            IsEtwActive = true;
+            session.Source.Dynamic.All += OnTraceEvent;
 
-            _session.Source.Process();
+            lock (_lock)
+            {
+                if (_isDisposed)
+                {
+                    session.Dispose();
+                    return;
+                }
+                _session = session;
+                IsEtwActive = true;
+            }
+
+            session.Source.Process();
         }
         catch
         {
             IsEtwActive = false;
+        }
+        finally
+        {
+            IsEtwActive = false;
+            lock (_lock)
+            {
+                if (ReferenceEquals(_session, session)) _session = null;
+            }
+            try { session?.Dispose(); } catch { }
         }
     }
 
@@ -395,11 +423,26 @@ public class FpsMonitorService : IDisposable
 
     public void Dispose()
     {
-        _isDisposed = true;
-        IsMonitoring = false;
+        TraceEventSession? session;
+        lock (_lock)
+        {
+            if (_isDisposed) return;
+            _isDisposed = true;
+            IsMonitoring = false;
+            IsEtwActive = false;
+            session = _session;
+            _session = null;
+            Volatile.Write(ref _targetPid, -1);
+            _activeGameName = "";
+            _activeGameTitle = "";
+            _currentFps = 0;
+            _averageFrameTimeMs = 0.0;
+            _slowestFrameTimeMs = 0.0;
+            _frameTimestamps.Clear();
+        }
         try
         {
-            _session?.Dispose();
+            session?.Dispose();
         }
         catch (System.Exception logEx) { MochiDock.Services.AppLog.Warn("Fps", logEx); }
     }

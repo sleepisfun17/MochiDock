@@ -9,7 +9,7 @@ using Microsoft.Win32;
 
 namespace MochiDock.Services;
 
-public class HardwareMonitorService
+public class HardwareMonitorService : IDisposable
 {
     private readonly MochiDock.Core.NetworkHistory _networkHistory = new();
     private readonly MochiDock.Core.ProcessCpuSampler _processCpu = new();
@@ -73,8 +73,15 @@ public class HardwareMonitorService
         var sensors = _sensors.Latest(_detectedGpuName);
         bool fresh = sensors.CapturedAt != DateTimeOffset.MinValue && DateTimeOffset.UtcNow - sensors.CapturedAt < TimeSpan.FromSeconds(8);
         double? gpu = null;
-        if (_nvmlLoaded && _nvmlDevice != IntPtr.Zero && nvmlDeviceGetPowerUsage(_nvmlDevice, out uint milliwatts) == 0 && milliwatts > 0) gpu = milliwatts / 1000.0;
-        else if (fresh) gpu = sensors.GpuPowerW;
+        if (Volatile.Read(ref _nvmlLoaded) && _nvmlDevice != IntPtr.Zero)
+        {
+            try
+            {
+                if (nvmlDeviceGetPowerUsage(_nvmlDevice, out uint milliwatts) == 0 && milliwatts > 0) gpu = milliwatts / 1000.0;
+            }
+            catch (Exception ex) { AppLog.Warn("Hardware", ex); }
+        }
+        if (gpu is null && fresh) gpu = sensors.GpuPowerW;
         double? cpu = fresh ? sensors.CpuPackagePowerW : null;
         double? memory = fresh ? sensors.CpuMemoryPowerW : null;
         // Without the PawnIO driver the sensor reader has no CPU power: use Windows' own Energy Meter counters instead.
@@ -376,7 +383,7 @@ public class HardwareMonitorService
     /// <summary>Rows in each top-process list (CPU, memory, disk): ten 21-DIP rows fill a Stats page column.</summary>
     public const int TopProcessCount = 10;
 
-    private readonly Dictionary<int, string> _coreKindMap = new();
+    private Dictionary<int, string> _coreKindMap = new();
     // "8 P-cores (16 threads) · 16 E-cores", from the CPU Sets' physical core index and efficiency class (CoreTopology.Summary).
     private string _coreSummary = "", _coreHeader = "PER CORE / THREADS";
     private bool _isHybridCpuDetected;
@@ -401,7 +408,8 @@ public class HardwareMonitorService
     private double _cachedNetDownloadBytesPerSec = 0.0;
     private double _cachedNetUploadBytesPerSec = 0.0;
 private float _lastGpuUsage;
-    private readonly System.Collections.Concurrent.ConcurrentDictionary<int, (string Name, bool IsExcluded, bool IsKnownGameDir)> _pidClassificationCache = new();
+    private bool _disposed;
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<int, (long StartTimeTicks, string Name, bool IsExcluded, bool IsKnownGameDir)> _pidClassificationCache = new();
 
     public bool IsGamingMode
     {
@@ -504,14 +512,6 @@ private float _lastGpuUsage;
                 Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
                 "NVIDIA Corporation", "NVSMI", "nvml.dll");
             if (File.Exists(nvsmiPath)) return nvsmiPath;
-
-            // 3. DriverStore FileRepository
-            string driverStore = Path.Combine(Environment.SystemDirectory, "DriverStore", "FileRepository");
-            if (Directory.Exists(driverStore))
-            {
-                var match = Directory.EnumerateFiles(driverStore, "nvml.dll", SearchOption.AllDirectories).FirstOrDefault();
-                if (!string.IsNullOrEmpty(match)) return match;
-            }
         }
         catch (System.Exception logEx) { MochiDock.Services.AppLog.Warn("Hardware", logEx); }
 
@@ -571,10 +571,12 @@ private float _lastGpuUsage;
 
     private void InitCounters()
     {
+        if (_disposed) return;
         try
         {
-            _cpuCounter = new PerformanceCounter("Processor", "% Processor Time", "_Total", true);
-            _cpuCounter.NextValue();
+            var cpuCounter = new PerformanceCounter("Processor", "% Processor Time", "_Total", true);
+            cpuCounter.NextValue();
+            _cpuCounter = cpuCounter;
 
             var gcMemoryInfo = GC.GetGCMemoryInfo();
             if (gcMemoryInfo.TotalAvailableMemoryBytes > 0)
@@ -599,63 +601,69 @@ private float _lastGpuUsage;
             int res = nvmlInit();
             if (res == 0)
             {
-                res = nvmlDeviceGetHandleByIndex(0, out _nvmlDevice);
-                if (res == 0 && _nvmlDevice != IntPtr.Zero)
+                res = nvmlDeviceGetHandleByIndex(0, out IntPtr nvmlDevice);
+                if (res == 0 && nvmlDevice != IntPtr.Zero)
                 {
-                    _nvmlLoaded = true;
                     var sb = new StringBuilder(64);
-                    if (nvmlDeviceGetName(_nvmlDevice, sb, 64) == 0)
+                    if (nvmlDeviceGetName(nvmlDevice, sb, 64) == 0)
                     {
                         _detectedGpuName = sb.ToString();
                     }
+                    _nvmlDevice = nvmlDevice;
+                    Volatile.Write(ref _nvmlLoaded, true);
                 }
             }
         }
         catch
         {
-            _nvmlLoaded = false;
+            Volatile.Write(ref _nvmlLoaded, false);
         }
 
-        // 2. Fallback / Universal GPU Name & Performance Counters (AMD Radeon, Intel Arc, etc.)
-        if (!_nvmlLoaded || string.IsNullOrEmpty(_detectedGpuName) || _detectedGpuName == "GPU")
+        // 2. Single Win32_VideoController query for GPU name (when NVML didn't supply it), driver version, and VRAM fallback.
+        bool needName = !Volatile.Read(ref _nvmlLoaded) || string.IsNullOrEmpty(_detectedGpuName) || _detectedGpuName == "GPU";
+        bool needDriver = _detectedGpuDriver == "–";
+        bool needVram = _totalVramGb <= 0f;
+        if (needName || needDriver || needVram)
         {
             try
             {
-                using var searcher = new System.Management.ManagementObjectSearcher("SELECT Name, DriverVersion FROM Win32_VideoController");
-                foreach (var mo in searcher.Get())
+                using var searcher = new System.Management.ManagementObjectSearcher("SELECT Name, DriverVersion, AdapterRAM FROM Win32_VideoController");
+                using var results = searcher.Get();
+                string? fallbackDriver = null;
+                foreach (var obj in results)
                 {
+                    using var mo = obj;
                     string name = mo["Name"]?.ToString() ?? "";
-                    if (!string.IsNullOrEmpty(name) && !name.Contains("Remote", StringComparison.OrdinalIgnoreCase))
+                    if (name.Contains("Remote", StringComparison.OrdinalIgnoreCase)) continue;
+
+                    if (needVram && mo["AdapterRAM"] != null && ulong.TryParse(mo["AdapterRAM"].ToString(), out ulong ramBytes) && ramBytes > 0)
+                    {
+                        _totalVramGb = (float)Math.Round((double)ramBytes / (1024.0 * 1024 * 1024), 1);
+                        needVram = false;
+                    }
+
+                    if (needName && !string.IsNullOrEmpty(name))
                     {
                         _detectedGpuName = name;
                         _detectedGpuDriver = mo["DriverVersion"]?.ToString() ?? "–";
-                        break;
+                        needName = false;
+                        needDriver = false;
                     }
-                }
-            }
-            catch (System.Exception logEx) { MochiDock.Services.AppLog.Warn("Hardware", logEx); }
-        }
-
-        // The driver version is needed even when NVML supplied the name: look it up from the matching video controller.
-        if (_detectedGpuDriver == "–")
-        {
-            try
-            {
-                using var searcher = new System.Management.ManagementObjectSearcher("SELECT Name, DriverVersion FROM Win32_VideoController");
-                string? fallbackDriver = null;
-                foreach (var mo in searcher.Get())
-                {
-                    string name = mo["Name"]?.ToString() ?? "";
-                    string? driver = mo["DriverVersion"]?.ToString();
-                    if (string.IsNullOrEmpty(driver) || name.Contains("Remote", StringComparison.OrdinalIgnoreCase)) continue;
-                    fallbackDriver ??= driver;
-                    if (name.Length > 0 && (_detectedGpuName.Contains(name, StringComparison.OrdinalIgnoreCase) || name.Contains(_detectedGpuName, StringComparison.OrdinalIgnoreCase)))
+                    else if (needDriver)
                     {
-                        _detectedGpuDriver = driver;
-                        break;
+                        string? driver = mo["DriverVersion"]?.ToString();
+                        if (!string.IsNullOrEmpty(driver))
+                        {
+                            fallbackDriver ??= driver;
+                            if (name.Length > 0 && (_detectedGpuName.Contains(name, StringComparison.OrdinalIgnoreCase) || name.Contains(_detectedGpuName, StringComparison.OrdinalIgnoreCase)))
+                            {
+                                _detectedGpuDriver = driver;
+                                needDriver = false;
+                            }
+                        }
                     }
                 }
-                if (_detectedGpuDriver == "–" && fallbackDriver != null) _detectedGpuDriver = fallbackDriver;
+                if (needDriver && fallbackDriver != null) _detectedGpuDriver = fallbackDriver;
             }
             catch (System.Exception logEx) { MochiDock.Services.AppLog.Warn("Hardware", logEx); }
         }
@@ -663,13 +671,14 @@ private float _lastGpuUsage;
         // Initialize Windows PDH Query for GPU Engine Wildcards (captures all active processes on 3D/Copy/Decode/Encode)
         try
         {
-            if (PdhOpenQuery(IntPtr.Zero, IntPtr.Zero, out _pdhGpuQuery) == 0)
+            if (PdhOpenQuery(IntPtr.Zero, IntPtr.Zero, out IntPtr pdhQuery) == 0)
             {
-                PdhAddEnglishCounter(_pdhGpuQuery, @"\GPU Engine(*engtype_3D*)\Utilization Percentage", IntPtr.Zero, out _pdh3DCounter);
-                PdhAddEnglishCounter(_pdhGpuQuery, @"\GPU Engine(*engtype_Copy*)\Utilization Percentage", IntPtr.Zero, out _pdhCopyCounter);
-                PdhAddEnglishCounter(_pdhGpuQuery, @"\GPU Engine(*engtype_VideoDecode*)\Utilization Percentage", IntPtr.Zero, out _pdhDecodeCounter);
-                PdhAddEnglishCounter(_pdhGpuQuery, @"\GPU Engine(*engtype_VideoEncode*)\Utilization Percentage", IntPtr.Zero, out _pdhEncodeCounter);
-                PdhCollectQueryData(_pdhGpuQuery);
+                PdhAddEnglishCounter(pdhQuery, @"\GPU Engine(*engtype_3D*)\Utilization Percentage", IntPtr.Zero, out _pdh3DCounter);
+                PdhAddEnglishCounter(pdhQuery, @"\GPU Engine(*engtype_Copy*)\Utilization Percentage", IntPtr.Zero, out _pdhCopyCounter);
+                PdhAddEnglishCounter(pdhQuery, @"\GPU Engine(*engtype_VideoDecode*)\Utilization Percentage", IntPtr.Zero, out _pdhDecodeCounter);
+                PdhAddEnglishCounter(pdhQuery, @"\GPU Engine(*engtype_VideoEncode*)\Utilization Percentage", IntPtr.Zero, out _pdhEncodeCounter);
+                PdhCollectQueryData(pdhQuery);
+                _pdhGpuQuery = pdhQuery;
             }
         }
         catch (System.Exception logEx) { MochiDock.Services.AppLog.Warn("Hardware", logEx); }
@@ -715,10 +724,12 @@ private float _lastGpuUsage;
                             if (minClass != maxClass)
                             {
                                 _isHybridCpuDetected = true;
+                                var kindMap = new Dictionary<int, string>(classes.Count);
                                 foreach (var kvp in classes)
                                 {
-                                    _coreKindMap[kvp.Key] = (kvp.Value == maxClass) ? "Performance" : "Efficiency";
+                                    kindMap[kvp.Key] = (kvp.Value == maxClass) ? "Performance" : "Efficiency";
                                 }
+                                _coreKindMap = kindMap;
                             }
                         }
                     }
@@ -789,16 +800,11 @@ private float _lastGpuUsage;
         }
         catch (System.Exception logEx) { MochiDock.Services.AppLog.Warn("Hardware", logEx); }
 
-        _initialized = true;
+        Volatile.Write(ref _initialized, true);
     }
 
     private (string Name, bool IsExcluded, bool IsKnownGameDir) ClassifyProcess(int pid)
     {
-        if (_pidClassificationCache.TryGetValue(pid, out var cached))
-        {
-            return cached;
-        }
-
         string procName = "";
         bool isExcluded = false;
         bool isKnownGameDir = false;
@@ -806,6 +812,13 @@ private float _lastGpuUsage;
         try
         {
             using var proc = Process.GetProcessById(pid);
+            long startTicks = 0;
+            try { startTicks = proc.StartTime.ToUniversalTime().Ticks; } catch { }
+            if (startTicks != 0 && _pidClassificationCache.TryGetValue(pid, out var cached) && cached.StartTimeTicks == startTicks)
+            {
+                return (cached.Name, cached.IsExcluded, cached.IsKnownGameDir);
+            }
+
             procName = proc.ProcessName;
 
             if (string.IsNullOrWhiteSpace(procName) || NonGameProcesses.Contains(procName))
@@ -839,18 +852,18 @@ private float _lastGpuUsage;
                 }
                 catch (System.Exception logEx) { MochiDock.Services.AppLog.Warn("Hardware", logEx); }
             }
+
+            if (startTicks != 0 && !string.IsNullOrEmpty(procName))
+            {
+                _pidClassificationCache[pid] = (startTicks, procName, isExcluded, isKnownGameDir);
+            }
+            return (procName, isExcluded, isKnownGameDir);
         }
         catch
         {
-            isExcluded = true;
+            _pidClassificationCache.TryRemove(pid, out _);
+            return ("", true, false);
         }
-
-        var result = (procName, isExcluded, isKnownGameDir);
-        if (!string.IsNullOrEmpty(procName))
-        {
-            _pidClassificationCache[pid] = result;
-        }
-        return result;
     }
 
     private static bool IsFullscreenOrBorderlessWindow(IntPtr hwnd)
@@ -1020,14 +1033,18 @@ private float _lastGpuUsage;
         return _lastGpuUsage;
     }
 
-    public HardwareStats GetCurrentStats()
+    private readonly object _statsGate = new();
+
+    public HardwareStats GetCurrentStats(bool includeHeavy = true, bool? isGamingActiveOverride = null)
     {
+        lock (_statsGate)
+        {
         var stats = new HardwareStats
         {
             TotalRamGb = _totalRamGb > 0 ? _totalRamGb : 16.0f,
             TotalVramGb = _totalVramGb,
             IsNvmlAvailable = _nvmlLoaded,
-            IsGamingActive = IsGameRunning(),
+            IsGamingActive = isGamingActiveOverride ?? IsGameRunning(),
             IsGamingMode = _isGamingMode,
             GpuName = _detectedGpuName
         };
@@ -1243,11 +1260,16 @@ private float _lastGpuUsage;
         // GPU power: NVML, then the sensor library; never a load-based guess
         if (stats.GpuPowerWatts <= 0)
         {
-            if (_nvmlLoaded && _nvmlDevice != IntPtr.Zero && nvmlDeviceGetPowerUsage(_nvmlDevice, out uint milliwatts) == 0 && milliwatts > 0)
+            if (Volatile.Read(ref _nvmlLoaded) && _nvmlDevice != IntPtr.Zero)
             {
-                stats.GpuPowerWatts = (float)Math.Round(milliwatts / 1000.0, 0);
+                try
+                {
+                    if (nvmlDeviceGetPowerUsage(_nvmlDevice, out uint milliwatts) == 0 && milliwatts > 0)
+                        stats.GpuPowerWatts = (float)Math.Round(milliwatts / 1000.0, 0);
+                }
+                catch (Exception ex) { AppLog.Warn("Hardware", ex); }
             }
-            else if (sensorsFresh && sensors.GpuPowerW is { } gpuPowerW)
+            if (stats.GpuPowerWatts <= 0 && sensorsFresh && sensors.GpuPowerW is { } gpuPowerW)
             {
                 stats.GpuPowerWatts = (float)Math.Round(gpuPowerW, 0);
             }
@@ -1257,11 +1279,16 @@ private float _lastGpuUsage;
         // GPU clock: NVML, then the sensor library; never a load-based guess
         if (stats.GpuClockMhz <= 0)
         {
-            if (_nvmlLoaded && _nvmlDevice != IntPtr.Zero && nvmlDeviceGetClockInfo(_nvmlDevice, 0, out uint clockMhz) == 0 && clockMhz > 0)
+            if (Volatile.Read(ref _nvmlLoaded) && _nvmlDevice != IntPtr.Zero)
             {
-                stats.GpuClockMhz = clockMhz;
+                try
+                {
+                    if (nvmlDeviceGetClockInfo(_nvmlDevice, 0, out uint clockMhz) == 0 && clockMhz > 0)
+                        stats.GpuClockMhz = clockMhz;
+                }
+                catch (Exception ex) { AppLog.Warn("Hardware", ex); }
             }
-            else if (sensorsFresh && sensors.GpuClockMhz is { } gpuClockMhz)
+            if (stats.GpuClockMhz <= 0 && sensorsFresh && sensors.GpuClockMhz is { } gpuClockMhz)
             {
                 stats.GpuClockMhz = (float)Math.Round(gpuClockMhz, 0);
             }
@@ -1292,7 +1319,7 @@ private float _lastGpuUsage;
         double totalDiskBytesPerSec = _cachedDiskReadBytesPerSec + _cachedDiskWriteBytesPerSec;
         stats.FormattedDiskSpeed = HardwareStats.FormatRate(totalDiskBytesPerSec);
 
-        UpdateNetworkBandwidth();
+        if (includeHeavy) UpdateNetworkBandwidth();
         stats.NetDownloadBytesPerSec = _cachedNetDownloadBytesPerSec;
         stats.NetUploadBytesPerSec = _cachedNetUploadBytesPerSec;
         stats.DownloadSpeedMbps = _cachedNetDownloadBytesPerSec / (1024.0 * 1024.0);
@@ -1323,14 +1350,19 @@ private float _lastGpuUsage;
 
         // 5. In-Game FPS & Active Process
         _lastGpuUsage = stats.GpuUsage;
-        if (_capturing) _sessionHardware.Add(stats.GpuUsage, stats.GpuTemp, stats.IsGpuTempMeasured, stats.CpuUsage, stats.CpuTemp, stats.IsCpuTempMeasured);
-        stats.CurrentFps = _fpsService.CurrentFps;
-        stats.ActiveGameName = _fpsService.ActiveGameName;
-        stats.ActiveGameTitle = _fpsService.ActiveGameTitle;
-        stats.AverageFrameTimeMs = _fpsService.AverageFrameTimeMs;
-        stats.SlowestFrameTimeMs = _fpsService.SlowestFrameTimeMs;
+        if (_capturing)
+        {
+            _sessionHardware.Add(stats.GpuUsage, stats.GpuTemp, stats.IsGpuTempMeasured, stats.CpuUsage, stats.CpuTemp, stats.IsCpuTempMeasured);
+            stats.CurrentFps = _fpsService.CurrentFps;
+            stats.ActiveGameName = _fpsService.ActiveGameName;
+            stats.ActiveGameTitle = _fpsService.ActiveGameTitle;
+            stats.AverageFrameTimeMs = _fpsService.AverageFrameTimeMs;
+            stats.SlowestFrameTimeMs = _fpsService.SlowestFrameTimeMs;
+        }
         stats.GpuName = !string.IsNullOrEmpty(_detectedGpuName) ? _detectedGpuName : "GPU";
         stats.GpuDriverVersion = !string.IsNullOrEmpty(_detectedGpuDriver) ? _detectedGpuDriver : "–";
+
+        if (!includeHeavy) return stats;
 
         // Query Fixed Local Drives
         try
@@ -1392,6 +1424,8 @@ private float _lastGpuUsage;
                 idx++;
             }
             pFill.Add(new System.Windows.Point(width, height));
+            pLine.Freeze();
+            pFill.Freeze();
             return (pLine, pFill);
         }
 
@@ -1446,7 +1480,10 @@ private float _lastGpuUsage;
                 pDownFill.Add(pt);
             }
             pDownFill.Add(new System.Windows.Point(width, mid));
-
+            pUpLine.Freeze();
+            pUpFill.Freeze();
+            pDownLine.Freeze();
+            pDownFill.Freeze();
             return (pUpLine, pUpFill, pDownLine, pDownFill, scaleLabel);
         }
 
@@ -1506,6 +1543,7 @@ private float _lastGpuUsage;
                 var ftPoints = new PointCollection();
                 for (int i = 0; i < worst.Length; i++)
                     ftPoints.Add(new System.Windows.Point(i * ftWidth / (worst.Length - 1), ftHeight - Math.Clamp(worst[i] / ceiling, 0, 1) * (ftHeight - 2)));
+                ftPoints.Freeze();
                 stats.FrameTimePoints = ftPoints;
                 stats.FrameTimeGuideY = ftHeight - Math.Clamp(guide / ceiling, 0, 1) * (ftHeight - 2);
                 stats.FrameTimeCeilingText = $"{ceiling:0} ms";
@@ -1523,6 +1561,7 @@ private float _lastGpuUsage;
                 var fraction = Math.Clamp(value / Math.Max(1, ceiling), 0, 1);
                 result.Add(new System.Windows.Point(x, 0.75 + (1 - fraction) * 2.5));
             }
+            result.Freeze();
             return result;
         }
 
@@ -1541,23 +1580,25 @@ private float _lastGpuUsage;
         IntPtr pBuf = Marshal.AllocHGlobal(size);
         try
         {
-            if (NtQuerySystemInformation(8, pBuf, (uint)size, out _) == 0)
+            if (NtQuerySystemInformation(8, pBuf, (uint)size, out uint returnLength) == 0)
             {
-                var currentTimes = new SYSTEM_PROCESSOR_PERFORMANCE_INFORMATION[coreCount];
                 int itemSize = Marshal.SizeOf(typeof(SYSTEM_PROCESSOR_PERFORMANCE_INFORMATION));
-                for (int i = 0; i < coreCount; i++)
+                int returnedCount = Math.Min(coreCount, (int)(returnLength / (uint)itemSize));
+                var currentTimes = new SYSTEM_PROCESSOR_PERFORMANCE_INFORMATION[returnedCount];
+                for (int i = 0; i < returnedCount; i++)
                 {
                     currentTimes[i] = Marshal.PtrToStructure<SYSTEM_PROCESSOR_PERFORMANCE_INFORMATION>(IntPtr.Add(pBuf, i * itemSize));
                 }
 
-                if (_prevCoreTimes != null && _prevCoreTimes.Length == coreCount)
+                var kindMap = _coreKindMap;
+                if (_prevCoreTimes != null && _prevCoreTimes.Length == returnedCount)
                 {
                     double perfSum = 0;
                     int perfCount = 0;
                     double effSum = 0;
                     int effCount = 0;
 
-                    for (int i = 0; i < coreCount; i++)
+                    for (int i = 0; i < returnedCount; i++)
                     {
                         long deltaKernel = currentTimes[i].KernelTime - _prevCoreTimes[i].KernelTime;
                         long deltaUser = currentTimes[i].UserTime - _prevCoreTimes[i].UserTime;
@@ -1565,7 +1606,7 @@ private float _lastGpuUsage;
                         long total = deltaKernel + deltaUser;
                         double usage = (total > 0) ? Math.Clamp(((total - deltaIdle) / (double)total) * 100.0, 0.0, 100.0) : 0.0;
 
-                        string kind = _coreKindMap.TryGetValue(i, out var k) ? k : "Any";
+                        string kind = kindMap.TryGetValue(i, out var k) ? k : "Any";
                         if (kind == "Performance") { perfSum += usage; perfCount++; }
                         else if (kind == "Efficiency") { effSum += usage; effCount++; }
 
@@ -1582,9 +1623,9 @@ private float _lastGpuUsage;
                 }
                 else
                 {
-                    for (int i = 0; i < coreCount; i++)
+                    for (int i = 0; i < returnedCount; i++)
                     {
-                        string kind = _coreKindMap.TryGetValue(i, out var k) ? k : "Any";
+                        string kind = kindMap.TryGetValue(i, out var k) ? k : "Any";
                         stats.CoreUsages.Add(new CoreUsageItem
                         {
                             CoreIndex = i + 1,
@@ -1616,54 +1657,63 @@ private float _lastGpuUsage;
             try
             {
                 var liveCpu = new List<(int Pid, long Created)>();
+                var livePids = new HashSet<int>();
                 var sampleSeconds = Stopwatch.GetTimestamp() / (double)Stopwatch.Frequency;
-                var allProcs = Process.GetProcesses()
-                    .ToList();
-
-                var procMetaList = allProcs.Select(p =>
+                var allProcs = Process.GetProcesses();
+                var procMetaList = new List<(string Name, (string DisplayName, ImageSource? Icon) Meta, ulong IoRate, double? Cpu, long Memory)>(allProcs.Length);
+                try
                 {
-                    try {
-                    double? cpu = null;
-                    long memory = 0;
-                    try { var created = p.StartTime.ToUniversalTime().Ticks; liveCpu.Add((p.Id, created)); cpu = _processCpu.Sample(p.Id, created, p.TotalProcessorTime.Ticks, sampleSeconds, Environment.ProcessorCount); memory = p.WorkingSet64; }
-                    catch (System.ComponentModel.Win32Exception) { /* protected or system process: its CPU time cannot be read, expected */ }
-                    catch (System.InvalidOperationException) { /* the process exited while sampling, expected */ }
-                    catch (System.Exception logEx) { MochiDock.Services.AppLog.Warn("Hardware", logEx); }
-                    var meta = GetProcessMeta(p);
-                    ulong ioRate = 0;
-                    try
+                    foreach (var p in allProcs)
                     {
-                        IntPtr hProc = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, false, p.Id);
-                        if (hProc != IntPtr.Zero)
+                        using (p)
                         {
+                            livePids.Add(p.Id);
+                            string name = SafeProcessName(p);
+                            if (name == "Idle") continue;
+                            double? procCpu = null;
+                            long memory = 0;
+                            try { var created = p.StartTime.ToUniversalTime().Ticks; liveCpu.Add((p.Id, created)); procCpu = _processCpu.Sample(p.Id, created, p.TotalProcessorTime.Ticks, sampleSeconds, Environment.ProcessorCount); memory = p.WorkingSet64; }
+                            catch (System.ComponentModel.Win32Exception) { }
+                            catch (System.InvalidOperationException) { }
+                            catch (System.Exception logEx) { MochiDock.Services.AppLog.Warn("Hardware", logEx); }
+                            var meta = GetProcessMeta(p);
+                            ulong ioRate = 0;
                             try
                             {
-                                if (GetProcessIoCounters(hProc, out var io))
+                                IntPtr hProc = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, false, p.Id);
+                                if (hProc != IntPtr.Zero)
                                 {
-                                    ulong totalIo = io.ReadTransferCount + io.WriteTransferCount;
-                                    if (_lastProcIoTotal.TryGetValue(p.Id, out ulong prev))
+                                    try
                                     {
-                                        ioRate = totalIo >= prev ? totalIo - prev : 0;
+                                        if (GetProcessIoCounters(hProc, out var io))
+                                        {
+                                            ulong totalIo = io.ReadTransferCount + io.WriteTransferCount;
+                                            if (_lastProcIoTotal.TryGetValue(p.Id, out ulong prev))
+                                            {
+                                                ioRate = totalIo >= prev ? totalIo - prev : 0;
+                                            }
+                                            _lastProcIoTotal[p.Id] = totalIo;
+                                        }
                                     }
-                                    _lastProcIoTotal[p.Id] = totalIo;
+                                    finally
+                                    {
+                                        CloseHandle(hProc);
+                                    }
                                 }
                             }
-                            finally
-                            {
-                                CloseHandle(hProc);
-                            }
+                            catch (System.Exception logEx) { MochiDock.Services.AppLog.Warn("Hardware", logEx); }
+                            procMetaList.Add((name, meta, ioRate, procCpu, memory));
                         }
                     }
-                    catch (System.Exception logEx) { MochiDock.Services.AppLog.Warn("Hardware", logEx); }
-
-                    return new
-                    {
-                        Process = p,
-                        Meta = meta,
-                        IoRate = ioRate, Cpu = cpu, Memory = memory, Name = SafeProcessName(p)
-                    };
-                    } finally { p.Dispose(); }
-                }).Where(p=>p.Name != "Idle").ToList();
+                }
+                finally
+                {
+                    foreach (var p in allProcs) { try { p.Dispose(); } catch { } }
+                }
+                foreach (var stalePid in _pidClassificationCache.Keys)
+                {
+                    if (!livePids.Contains(stalePid)) _pidClassificationCache.TryRemove(stalePid, out _);
+                }
                 _processCpu.Retain(liveCpu);
 
                 _cachedTopProcesses = procMetaList
@@ -1711,7 +1761,7 @@ private float _lastGpuUsage;
         foreach (var p in _cachedTopMemoryProcesses) stats.TopMemoryProcesses.Add(p);
         foreach (var p in _cachedTopDiskProcesses) stats.TopDiskProcesses.Add(p);
         return stats;
-
+        }
     }
 
     private static string SafeProcessName(Process p) { try { return p.ProcessName; } catch { return "Unavailable process"; } }
@@ -1740,7 +1790,7 @@ private float _lastGpuUsage;
             if (_lastNetworkSampleTime == DateTime.MinValue)
             {
                 _lastNetworkSampleTime = now;
-                GetTotalNetworkBytes(out _, out _);
+                GetTotalNetworkBytes(System.Net.NetworkInformation.NetworkInterface.GetAllNetworkInterfaces(), out _, out _);
                 _lastBytesReceived=_networkHistory.Received;_lastBytesSent=_networkHistory.Sent;
                 return;
             }
@@ -1748,12 +1798,13 @@ private float _lastGpuUsage;
             double elapsedSec = (now - _lastNetworkSampleTime).TotalSeconds;
             if (elapsedSec >= 0.75)
             {
+                var allNics = System.Net.NetworkInformation.NetworkInterface.GetAllNetworkInterfaces();
                 var counters = new List<MochiDock.Core.AdapterCounter>();
-                foreach(var nic in System.Net.NetworkInformation.NetworkInterface.GetAllNetworkInterfaces()) {
+                foreach (var nic in allNics) {
                     if(nic.OperationalStatus != System.Net.NetworkInformation.OperationalStatus.Up || nic.NetworkInterfaceType == System.Net.NetworkInformation.NetworkInterfaceType.Loopback || nic.NetworkInterfaceType == System.Net.NetworkInformation.NetworkInterfaceType.Tunnel) continue;
                     try { var c=nic.GetIPv4Statistics(); counters.Add(new(nic.Id,c.BytesReceived,c.BytesSent)); } catch (System.Exception logEx) { MochiDock.Services.AppLog.Warn("Hardware", logEx); }
                 }
-                GetTotalNetworkBytes(out _, out _);
+                GetTotalNetworkBytes(allNics, out _, out _);
                 _networkHistory.Update(Stopwatch.GetTimestamp()/(double)Stopwatch.Frequency,counters);
                 _cachedNetDownloadBytesPerSec = _networkHistory.Down;
                 _cachedNetUploadBytesPerSec = _networkHistory.Up;
@@ -1769,13 +1820,13 @@ private float _lastGpuUsage;
         catch (System.Exception logEx) { MochiDock.Services.AppLog.Warn("Hardware", logEx); }
     }
 
-    private void GetTotalNetworkBytes(out long bytesReceived, out long bytesSent)
+    private void GetTotalNetworkBytes(System.Net.NetworkInformation.NetworkInterface[] allNics, out long bytesReceived, out long bytesSent)
     {
         bytesReceived = 0;
         bytesSent = 0;
         try
         {
-            var activeNics = System.Net.NetworkInformation.NetworkInterface.GetAllNetworkInterfaces()
+            var activeNics = allNics
                 .Where(nic => nic.OperationalStatus == System.Net.NetworkInformation.OperationalStatus.Up &&
                               nic.NetworkInterfaceType != System.Net.NetworkInformation.NetworkInterfaceType.Loopback &&
                               nic.NetworkInterfaceType != System.Net.NetworkInformation.NetworkInterfaceType.Tunnel)
@@ -1848,5 +1899,34 @@ private float _lastGpuUsage;
             }
         }
         catch (System.Exception logEx) { MochiDock.Services.AppLog.Warn("Hardware", logEx); }
+    }
+
+    public void Dispose()
+    {
+        if (_disposed) return;
+        _disposed = true;
+        try { _fpsService.Dispose(); } catch { }
+        StopCpuTelemetry();
+        try { _cpuCounter?.Dispose(); } catch { }
+        try { _gpuCounter?.Dispose(); } catch { }
+        try { _vramCounter?.Dispose(); } catch { }
+        try { _diskReadCounter?.Dispose(); } catch { }
+        try { _diskWriteCounter?.Dispose(); } catch { }
+        _cpuCounter = null;
+        _gpuCounter = null;
+        _vramCounter = null;
+        _diskReadCounter = null;
+        _diskWriteCounter = null;
+        if (_pdhGpuQuery != IntPtr.Zero)
+        {
+            try { PdhCloseQuery(_pdhGpuQuery); } catch { }
+            _pdhGpuQuery = IntPtr.Zero;
+        }
+        if (Volatile.Read(ref _nvmlLoaded))
+        {
+            Volatile.Write(ref _nvmlLoaded, false);
+            _nvmlDevice = IntPtr.Zero;
+            try { nvmlShutdown(); } catch { }
+        }
     }
 }

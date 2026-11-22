@@ -253,6 +253,7 @@ public partial class MainViewModel : INotifyPropertyChanged
     public AudioEndpointService AudioService => _audioService;
     private readonly DispatcherTimer _autoCollapseTimer;
     private readonly DispatcherTimer _hardwarePollTimer;
+    private bool _hardwarePollInFlight;
 
     private AppSettings _settings;
     public AppSettings Settings => _settings;
@@ -741,76 +742,111 @@ public partial class MainViewModel : INotifyPropertyChanged
         };
         _hardwarePollTimer.Tick += (s, e) =>
         {
-            if(_hardwareNoticeUntil!=default && DateTimeOffset.UtcNow>=_hardwareNoticeUntil){_hardwareNoticeUntil=default;NotifyHardwareNotice();}
-            bool isGaming = _hardwareService.IsGameRunning();
-            _hardwareService.SetGameCapture(!_isWorkstationLocked && _displayAwake && isGaming && (_settings.IsHardwareGamingMode || _settings.EnableGameSessionSummary));
-            bool gamingStateChanged = _wasGaming != isGaming;
+            if (_hardwareNoticeUntil != default && DateTimeOffset.UtcNow >= _hardwareNoticeUntil) { _hardwareNoticeUntil = default; NotifyHardwareNotice(); }
+            if (_hardwarePollInFlight) return;
+            _hardwarePollInFlight = true;
 
-            // Adaptive polling frequency: 300ms during games, 1000ms while stats card open or active, 2000ms idle
+            bool locked = _isWorkstationLocked;
+            bool awake = _displayAwake;
             bool statsVisible = _isExpanded && _activeCardType == IslandCardType.Hardware;
-            var targetInterval = isGaming ? TimeSpan.FromMilliseconds(300) : (statsVisible ? TimeSpan.FromSeconds(1) : TimeSpan.FromSeconds(2));
-            if (_hardwarePollTimer.Interval != targetInterval)
-            {
-                _hardwarePollTimer.Interval = targetInterval;
-            }
+            bool pinned = IsStatsShownInCapsule;
+            bool gamingMode = _settings.IsHardwareGamingMode;
+            bool alerts = EnableHardwareAlerts;
+            bool sessionSummary = _settings.EnableGameSessionSummary;
 
-            // Detect Game Transitions
-            if (gamingStateChanged)
+            _ = Task.Run(() =>
             {
-                if (isGaming)
+                bool isGaming = _hardwareService.IsGameRunning();
+                _hardwareService.SetGameCapture(!locked && awake && isGaming && (gamingMode || sessionSummary));
+                bool sample = MochiDock.Core.LocalFeaturePolicy.SampleHardware(locked, awake, statsVisible, pinned, isGaming && gamingMode, alerts);
+                HardwareStats? stats = sample ? _hardwareService.GetCurrentStats(includeHeavy: statsVisible, isGamingActiveOverride: isGaming) : null;
+                return (isGaming, stats);
+            }).ContinueWith(t =>
+            {
+                App.BeginOnUI(() =>
                 {
-                    MascotMood = MascotMood.Focused;
-                }
-                else
-                {
-                    if (_queuedGamingWhatsAppCount > 0 || _queuedGamingEmailCount > 0 || _queuedGamingDiscordCount > 0 || _queuedGamingAppsCount > 0 || HasFreshGameSession())
+                    try
                     {
-                        ShowGamingSummary();
+                        if (t.IsFaulted || t.IsCanceled)
+                        {
+                            if (t.Exception != null) AppLog.Warn("Hardware", t.Exception);
+                            return;
+                        }
+                        var (isGaming, stats) = t.Result;
+                        bool gamingStateChanged = _wasGaming != isGaming;
+
+                        // Adaptive polling frequency: 300ms during games, 1000ms while stats card open or active, 2000ms idle
+                        bool nowStatsVisible = _isExpanded && _activeCardType == IslandCardType.Hardware;
+                        var targetInterval = isGaming ? TimeSpan.FromMilliseconds(300) : (nowStatsVisible ? TimeSpan.FromSeconds(1) : TimeSpan.FromSeconds(2));
+                        if (_hardwarePollTimer.Interval != targetInterval)
+                        {
+                            _hardwarePollTimer.Interval = targetInterval;
+                        }
+
+                        // Detect Game Transitions
+                        if (gamingStateChanged)
+                        {
+                            if (isGaming)
+                            {
+                                MascotMood = MascotMood.Focused;
+                            }
+                            else
+                            {
+                                if (_queuedGamingWhatsAppCount > 0 || _queuedGamingEmailCount > 0 || _queuedGamingDiscordCount > 0 || _queuedGamingAppsCount > 0 || HasFreshGameSession())
+                                {
+                                    ShowGamingSummary();
+                                }
+                                else
+                                {
+                                    MascotMood = CurrentMedia.IsPlaying ? MascotMood.Music : MascotMood.Idle;
+                                }
+                            }
+                        }
+                        UpdatePlaytime(isGaming, gamingStateChanged);
+                        if (gamingStateChanged) { _gameTrouble.Reset(); _mascotGameTrouble = false; }
+                        RefreshGamingFace(isGaming);
+                        ExpireGamingPassThrough();
+                        UpdateGameProfile(isGaming, gamingStateChanged);
+                        UpdateLolStats(isGaming);
+                        UpdateRestingFace(isGaming);
+                        _wasGaming = isGaming;
+
+                        if (stats != null)
+                        {
+                            HardwareStats = stats;
+                            NoteFullSample();
+                            UpdateMascotFromHardware(HardwareStats);
+                            if (EnableHardwareAlerts) CheckHardwareAlerts();
+                            SamplePowerTick();
+                        }
+                        else if (_mascotGpuHot || _mascotOverloaded)
+                        {
+                            // No fresh readings while sampling is paused: the hot and dizzy faces must not stay on.
+                            _mascotGpuHot = _mascotOverloaded = false;
+                            _mascotLoadTracker.Update(DateTime.Now, double.NaN, double.NaN);
+                            RefreshMascotMood();
+                        }
+
+                        if (gamingStateChanged)
+                        {
+                            OnPropertyChanged(nameof(IsStatsShownInCapsule));
+                            OnPropertyChanged(nameof(IsGamingSessionActive));
+                            OnPropertyChanged(nameof(IsAudioWaveformVisible));
+                            OnPropertyChanged(nameof(IsCompactMarqueeEnabled));
+                            OnPropertyChanged(nameof(CompactCapsuleText));
+                            OnPropertyChanged(nameof(CompactCapsuleIconType));
+                            OnPropertyChanged(nameof(IsCompactTextVisible));
+                            OnPropertyChanged(nameof(HasCompanionBubble));
+                            OnPropertyChanged(nameof(HasMultipleActivities));
+                            OnPropertyChanged(nameof(HasSingleNotification));
+                        }
                     }
-                    else
+                    finally
                     {
-                        MascotMood = CurrentMedia.IsPlaying ? MascotMood.Music : MascotMood.Idle;
+                        _hardwarePollInFlight = false;
                     }
-                }
-            }
-            UpdatePlaytime(isGaming, gamingStateChanged);
-            if (gamingStateChanged) { _gameTrouble.Reset(); _mascotGameTrouble = false; }
-            RefreshGamingFace(isGaming);
-            ExpireGamingPassThrough();
-            UpdateGameProfile(isGaming, gamingStateChanged);
-            UpdateLolStats(isGaming);
-            UpdateRestingFace(isGaming);
-            _wasGaming = isGaming;
-
-            if (MochiDock.Core.LocalFeaturePolicy.SampleHardware(_isWorkstationLocked,_displayAwake,statsVisible,IsStatsShownInCapsule,isGaming && _settings.IsHardwareGamingMode,EnableHardwareAlerts))
-            {
-                HardwareStats = _hardwareService.GetCurrentStats();
-                NoteFullSample();
-                UpdateMascotFromHardware(HardwareStats);
-                if(EnableHardwareAlerts) CheckHardwareAlerts();
-                SamplePowerTick();
-            }
-            else if (_mascotGpuHot || _mascotOverloaded)
-            {
-                // No fresh readings while sampling is paused: the hot and dizzy faces must not stay on.
-                _mascotGpuHot = _mascotOverloaded = false;
-                _mascotLoadTracker.Update(DateTime.Now, double.NaN, double.NaN);
-                RefreshMascotMood();
-            }
-
-            if (gamingStateChanged)
-            {
-                OnPropertyChanged(nameof(IsStatsShownInCapsule));
-                OnPropertyChanged(nameof(IsGamingSessionActive));
-                OnPropertyChanged(nameof(IsAudioWaveformVisible));
-                OnPropertyChanged(nameof(IsCompactMarqueeEnabled));
-                OnPropertyChanged(nameof(CompactCapsuleText));
-                OnPropertyChanged(nameof(CompactCapsuleIconType));
-                OnPropertyChanged(nameof(IsCompactTextVisible));
-                OnPropertyChanged(nameof(HasCompanionBubble));
-                OnPropertyChanged(nameof(HasMultipleActivities));
-                OnPropertyChanged(nameof(HasSingleNotification));
-            }
+                });
+            }, TaskScheduler.Default);
         };
         _hardwarePollTimer.Start();
     }
@@ -957,7 +993,7 @@ public partial class MainViewModel : INotifyPropertyChanged
 
     public bool EnableHardwareAlerts { get=>_settings.EnableHardwareAlerts; set { _settings.EnableHardwareAlerts=value; SettingsService.Save(_settings); OnPropertyChanged();_hardwareNoticeUntil=default;_hardwareAlerts.ResetContinuity();NotifyHardwareNotice(); } }
     private bool _displayAwake=true;
-    public void StopHardwareCapture(){EndPlaytimeSession();EndGameProfile();_lol.Stop();StopPubgFetch();_hardwareService.SetGameCapture(false);_hardwareService.StopCpuTelemetry();}
+    public void StopHardwareCapture(){EndPlaytimeSession();EndGameProfile();_lol.Stop();StopPubgFetch();_hardwareService.SetGameCapture(false);_hardwareService.Dispose();}
     public void SetDisplayAwake(bool awake){Fx?.Configure(ShowFxRatesTab,_isWorkstationLocked||!awake);_deviceBatteries?.Configure(EnableDeviceBatteries,_isWorkstationLocked||!awake);if(!awake){_hardwareNoticeUntil=default;_hardwareAlerts.ResetContinuity();NotifyHardwareNotice();DismissPrayerArrival();}_displayAwake=awake;_hardwareService.ResetSamplingBaseline();if(!awake)_hardwareService.SetGameCapture(false);}
     public bool IsBatteryModuleActive => ActiveSystemModule=="Battery";
     public FxRatesService? Fx {get;private set;}
