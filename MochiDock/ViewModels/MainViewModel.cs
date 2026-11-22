@@ -1427,8 +1427,9 @@ public partial class MainViewModel : INotifyPropertyChanged
     public bool IsFirstRunWelcomeVisible => MochiDock.Core.OnboardingPolicy.ShouldShowFirstRunWelcome(_settings?.OnboardingDismissed ?? true);
     public void DismissFirstRunWelcome()
     {
-        if (_settings.OnboardingDismissed) return;
-        UpdateSettings(x => x.OnboardingDismissed = true, SettingsApply.None);
+        // Got it always hides the banner: if the flag is already set (an import or reload set it while the banner was showing),
+        // only the save is skipped, never the notifications below, so the button can never look dead.
+        if (!_settings.OnboardingDismissed) UpdateSettings(x => x.OnboardingDismissed = true, SettingsApply.None);
         if (_noticeIsWelcome)
         {
             _noticeIsWelcome = false;
