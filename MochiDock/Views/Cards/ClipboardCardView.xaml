@@ -37,7 +37,21 @@
                                 </StackPanel>
 
                                 <!-- Pin Button -->
-                                <Button Grid.Column="1" Style="{StaticResource IslandIconButton}" Click="PinItem_Click" Margin="4,0" ToolTip="Pin item" AutomationProperties.Name="Pin item">
+                                <Button Grid.Column="1" Click="PinItem_Click" Margin="4,0">
+                                    <Button.Style>
+                                        <Style TargetType="Button" BasedOn="{StaticResource IslandIconButton}">
+                                            <Setter Property="ToolTip" Value="Pin item"/>
+                                            <Setter Property="AutomationProperties.Name" Value="Pin item"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsPinned}" Value="True">
+                                                    <Setter Property="Background" Value="{DynamicResource IslandAccentSubtleBrush}"/>
+                                                    <Setter Property="BorderBrush" Value="{DynamicResource IslandSelectionBorderBrush}"/>
+                                                    <Setter Property="ToolTip" Value="Unpin item"/>
+                                                    <Setter Property="AutomationProperties.Name" Value="Unpin item"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Button.Style>
                                     <Image Source="{StaticResource IconPin}" Stretch="Uniform" RenderOptions.BitmapScalingMode="HighQuality" Width="12" Height="12" VerticalAlignment="Center"/>
                                 </Button>
 

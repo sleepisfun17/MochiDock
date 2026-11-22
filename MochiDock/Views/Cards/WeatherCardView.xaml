@@ -67,26 +67,49 @@
 
         <!-- ROW 1: Hourly Forecast Strip (Next 12 Hours) -->
         <Border Grid.Row="1" Background="{DynamicResource IslandSubCardBackgroundBrush}" CornerRadius="10" Padding="6" Margin="0,0,0,8" BorderBrush="{DynamicResource IslandSubCardBorderBrush}" BorderThickness="1">
-            <ScrollViewer Style="{StaticResource ModernCardScrollViewer}" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled" PreviewMouseWheel="HourlyScroll_PreviewMouseWheel">
-                <ItemsControl ItemsSource="{Binding WeatherInfo.HourlyList}">
-                    <ItemsControl.ItemsPanel>
-                        <ItemsPanelTemplate>
-                            <StackPanel Orientation="Horizontal" />
-                        </ItemsPanelTemplate>
-                    </ItemsControl.ItemsPanel>
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate>
-                            <Border Background="{DynamicResource IslandSurfaceBrush}" CornerRadius="6" Padding="8,6" Margin="0,0,6,0" Width="48">
-                                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                                    <TextBlock Text="{Binding DisplayTime}" Foreground="{DynamicResource IslandMutedInkBrush}" FontSize="11" HorizontalAlignment="Center" />
-                                    <ContentControl Content="{Binding}" ContentTemplate="{StaticResource WeatherVectorIconTemplate}" Width="16" Height="16" Margin="0,3,0,3" HorizontalAlignment="Center" />
-                                    <TextBlock Text="{Binding DisplayTemp}" Foreground="{DynamicResource IslandInkBrush}" FontSize="11" FontWeight="{DynamicResource IslandSmallLabelWeight}" HorizontalAlignment="Center" />
-                                </StackPanel>
-                            </Border>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
-            </ScrollViewer>
+            <Grid>
+                <ScrollViewer Style="{StaticResource ModernCardScrollViewer}" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled" PreviewMouseWheel="HourlyScroll_PreviewMouseWheel">
+                    <ItemsControl ItemsSource="{Binding WeatherInfo.HourlyList}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <StackPanel Orientation="Horizontal" />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Background="{DynamicResource IslandSurfaceBrush}" CornerRadius="6" Padding="8,6" Margin="0,0,6,0" Width="48">
+                                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding DisplayTime}" Foreground="{DynamicResource IslandMutedInkBrush}" FontSize="11" HorizontalAlignment="Center" />
+                                        <ContentControl Content="{Binding}" ContentTemplate="{StaticResource WeatherVectorIconTemplate}" Width="16" Height="16" Margin="0,3,0,3" HorizontalAlignment="Center" />
+                                        <TextBlock Text="{Binding DisplayTemp}" Foreground="{DynamicResource IslandInkBrush}" FontSize="11" FontWeight="{DynamicResource IslandSmallLabelWeight}" HorizontalAlignment="Center" />
+                                    </StackPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+                <TextBlock Text="Hourly forecast unavailable — check connection or city"
+                           Foreground="{DynamicResource IslandMutedInkBrush}"
+                           FontSize="11.5"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Center"
+                           Margin="8,14"
+                           IsHitTestVisible="False">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Visibility" Value="Collapsed" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding WeatherInfo}" Value="{x:Null}">
+                                    <Setter Property="Visibility" Value="Visible" />
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding WeatherInfo.HourlyList.Count}" Value="0">
+                                    <Setter Property="Visibility" Value="Visible" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
+            </Grid>
         </Border>
 
         <!-- ROW 2: 3-Day Forecast Cards -->

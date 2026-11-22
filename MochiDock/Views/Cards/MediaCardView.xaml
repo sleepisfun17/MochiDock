@@ -38,6 +38,10 @@
 
                 <!-- Interactive Timeline Progress Bar & Scrubber -->
                 <Grid Margin="0,0,2,6" Visibility="{Binding CurrentMedia.CanSeek, Converter={StaticResource BoolToVisibility}}">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="34" />
                         <ColumnDefinition Width="*" />
@@ -45,10 +49,10 @@
                     </Grid.ColumnDefinitions>
 
                     <!-- Current Position -->
-                    <TextBlock Grid.Column="0" x:Name="SeekPositionLabel" Text="0:00" Foreground="{DynamicResource IslandMutedInkBrush}" FontSize="11" VerticalAlignment="Center" HorizontalAlignment="Left" />
+                    <TextBlock Grid.Row="0" Grid.Column="0" x:Name="SeekPositionLabel" Text="0:00" Foreground="{DynamicResource IslandMutedInkBrush}" FontSize="11" VerticalAlignment="Center" HorizontalAlignment="Left" />
 
                     <!-- Scrubber Slider -->
-                    <Slider Grid.Column="1" x:Name="TrackSlider"
+                    <Slider Grid.Row="0" Grid.Column="1" x:Name="TrackSlider"
                             Margin="4,0"
                             Minimum="0"
                             Maximum="{Binding CurrentMedia.DurationSeconds}"
@@ -60,9 +64,20 @@
                             Style="{StaticResource MediaSeekStyle}"
                             VerticalAlignment="Center" />
 
-                    <TextBlock x:Name="SeekErrorText" Grid.ColumnSpan="3" VerticalAlignment="Bottom" Margin="0,28,0,-25" Foreground="{DynamicResource IslandNegativeBrush}" FontSize="11"/>
                     <!-- Total Duration -->
-                    <TextBlock Grid.Column="2" Text="{Binding CurrentMedia.DurationString}" Foreground="{DynamicResource IslandSecondaryInkBrush}" FontSize="11" VerticalAlignment="Center" HorizontalAlignment="Right" />
+                    <TextBlock Grid.Row="0" Grid.Column="2" Text="{Binding CurrentMedia.DurationString}" Foreground="{DynamicResource IslandSecondaryInkBrush}" FontSize="11" VerticalAlignment="Center" HorizontalAlignment="Right" />
+
+                    <TextBlock x:Name="SeekErrorText" Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3" Margin="0,3,0,0" Foreground="{DynamicResource IslandNegativeBrush}" FontSize="11" TextWrapping="Wrap">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Style.Triggers>
+                                    <Trigger Property="Text" Value="">
+                                        <Setter Property="Visibility" Value="Collapsed" />
+                                    </Trigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
                 </Grid>
 
                 <!-- Playback Buttons + Audio Output Switcher -->
@@ -177,7 +192,7 @@
                 <Image Source="{StaticResource IconNote}" Stretch="Uniform" RenderOptions.BitmapScalingMode="HighQuality" Width="22" Height="22" HorizontalAlignment="Center" Opacity="0.55" Margin="0,0,0,5"/>
                 <TextBlock Text="{Binding LyricsStatusText}" Foreground="{DynamicResource IslandMutedInkBrush}" FontSize="12" FontWeight="{DynamicResource IslandSmallLabelWeight}" HorizontalAlignment="Center" />
                 <TextBlock Text="{Binding PlainLyrics}" TextWrapping="Wrap" MaxHeight="90" Width="190" Foreground="{DynamicResource IslandMutedInkBrush}" FontSize="11" HorizontalAlignment="Center" Margin="0,3,0,0" />
-            <Button Content="Retry lyrics" Click="RetryLyrics_Click" HorizontalAlignment="Center" Margin="0,8,0,0" Style="{StaticResource ActionButton}"/></StackPanel>
+            <Button Content="Retry lyrics" Click="RetryLyrics_Click" Visibility="{Binding CanRetryLyrics, Converter={StaticResource BoolToVisibility}}" HorizontalAlignment="Center" Margin="0,8,0,0" Style="{StaticResource ActionButton}"/></StackPanel>
         </Grid>
 
             <!-- Lyric timing nudge: small, bottom-right, dim until hovered so it never moves the lyric lines. Positive = earlier. -->

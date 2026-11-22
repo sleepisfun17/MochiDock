@@ -56,7 +56,7 @@
                                         <TextBlock controls:Emoji.Text="{Binding Message}" Foreground="{DynamicResource IslandInkBrush}" FontSize="12" LineHeight="16" TextWrapping="Wrap" />
                                     </StackPanel>
                                     <Button Grid.Column="2" VerticalAlignment="Top" Margin="6,0,0,0" Click="DismissItem_Click"
-                                            Background="Transparent" BorderThickness="0" Cursor="Hand" ToolTip="Dismiss notification" AutomationProperties.Name="Dismiss notification">
+                                            Style="{StaticResource IslandIconButton}" ToolTip="Dismiss notification" AutomationProperties.Name="Dismiss notification">
                                         <TextBlock Text="✕" Foreground="{DynamicResource IslandMutedInkBrush}" FontSize="11" FontWeight="{DynamicResource IslandSmallLabelWeight}" />
                                     </Button>
                                 </Grid>

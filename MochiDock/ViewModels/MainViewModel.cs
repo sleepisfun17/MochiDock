@@ -1165,9 +1165,10 @@ public partial class MainViewModel : INotifyPropertyChanged
     private bool _lyricsLoading,_lyricLookupFailed,_forceLyricsRefresh;
     public string PlainLyrics => _currentLyrics?.PlainLyrics??"";
     public string LyricsStatusText => !EnableSyncedLyrics?"Synced lyrics are off":_lyricsLoading?"Loading lyrics…":_currentLyrics?.IsSynced==true?"Synced":_currentLyrics?.IsInstrumental==true?"Instrumental":!string.IsNullOrWhiteSpace(PlainLyrics)?"Plain text":_lyricLookupFailed?"Lyrics unavailable — retry":"No lyrics found";
-    private void RefreshLyricsStatus(){OnPropertyChanged(nameof(LyricsStatusText));OnPropertyChanged(nameof(PlainLyrics));OnPropertyChanged(nameof(HasLyrics));}
+    private void RefreshLyricsStatus(){OnPropertyChanged(nameof(LyricsStatusText));OnPropertyChanged(nameof(PlainLyrics));OnPropertyChanged(nameof(HasLyrics));OnPropertyChanged(nameof(CanRetryLyrics));}
     public Task RetryLyricsAsync(){_forceLyricsRefresh=true;_lastFetchedTrack="";OnMediaUpdated(CurrentMedia);return Task.CompletedTask;}
     public bool HasLyrics => _currentLyrics != null && _currentLyrics.IsSynced;
+    public bool CanRetryLyrics => MochiDock.Core.LyricsPolicy.CanRetryLyrics(HasActiveMedia, EnableSyncedLyrics, _lyricsLoading, HasLyrics);
 
     // ───────────── Feature tab visibility toggles ─────────────
     public bool ShowStatsTab
@@ -1642,6 +1643,7 @@ public partial class MainViewModel : INotifyPropertyChanged
         OnPropertyChanged(nameof(HasActiveApps));
         OnPropertyChanged(nameof(HasActiveEmail));
         OnPropertyChanged(nameof(HasActiveMedia));
+        OnPropertyChanged(nameof(CanRetryLyrics));
         OnPropertyChanged(nameof(NotificationCount));
         OnPropertyChanged(nameof(IsNotificationInMainPill));
         OnPropertyChanged(nameof(HasSingleNotification));

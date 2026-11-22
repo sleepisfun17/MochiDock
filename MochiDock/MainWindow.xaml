@@ -155,7 +155,8 @@
 
                                 <!-- Icon / Checkmark -->
 
-                                <ContentPresenter Grid.Column="0" ContentSource="Icon" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,0,6,0" />
+                                <ContentPresenter x:Name="IconHost" Grid.Column="0" ContentSource="Icon" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,0,6,0" />
+                                <TextBlock x:Name="CheckGlyph" Grid.Column="0" Text="✓" Foreground="{DynamicResource IslandAccentBrush}" FontSize="12" FontWeight="{DynamicResource IslandSmallStrongWeight}" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,0,6,0" Visibility="Collapsed" />
 
                                 <!-- Header / Label -->
 
@@ -197,6 +198,13 @@
                             <Trigger Property="HasItems" Value="True">
 
                                 <Setter TargetName="Arrow" Property="Visibility" Value="Visible" />
+
+                            </Trigger>
+
+                            <Trigger Property="IsChecked" Value="True">
+
+                                <Setter TargetName="CheckGlyph" Property="Visibility" Value="Visible" />
+                                <Setter TargetName="IconHost" Property="Visibility" Value="Collapsed" />
 
                             </Trigger>
 
