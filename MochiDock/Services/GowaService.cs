@@ -670,6 +670,23 @@ public class GowaService
         }
     }
 
+    /// <summary>
+    /// <see cref="Start"/>, first downloading the local engine when Local WhatsApp is on and none exists yet.
+    /// Startup, retry and settings changes go through here, so an enabled user never stays stuck on "not downloaded yet".
+    /// A failed download is logged and Start still runs (it reports the missing engine and keeps the webhook listener up).
+    /// </summary>
+    public async Task StartAsync(CancellationToken ct = default)
+    {
+        if (GowaInstaller.NeedsDownload(Enabled, UseRemoteServer, GowaInstaller.ResolveLocalExecutable() != null))
+        {
+            Log("Local WhatsApp engine is missing; downloading it...");
+            try { await GowaInstaller.EnsureInstalledAsync(ct: ct).ConfigureAwait(false); }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested) { return; }
+            catch (Exception ex) { AppLog.Warn("Gowa", ex); }
+        }
+        Start();
+    }
+
     public void Start()
     {
         Stop();

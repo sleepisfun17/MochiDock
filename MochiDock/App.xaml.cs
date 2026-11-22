@@ -179,8 +179,9 @@ public partial class App : System.Windows.Application
             {
                 try { await _mediaService.InitializeAsync(); } catch (System.Exception logEx) { MochiDock.Services.AppLog.Warn("App", logEx); }
                 try { _mailService.Start(); } catch (System.Exception logEx) { MochiDock.Services.AppLog.Warn("App", logEx); }
-                try { _gowaService.Start(); } catch (System.Exception logEx) { MochiDock.Services.AppLog.Warn("App", logEx); }
                 try { await _discordService.StartAsync(); } catch (System.Exception logEx) { MochiDock.Services.AppLog.Warn("App", logEx); }
+                // Last, because it may first download the local WhatsApp engine (about 13 MB).
+                try { await _gowaService.StartAsync(); } catch (System.Exception logEx) { MochiDock.Services.AppLog.Warn("App", logEx); }
             });
         }
         catch (Exception ex)

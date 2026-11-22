@@ -22,6 +22,10 @@ public static class GowaInstaller
     public static string BinFolder => Path.Combine(AppDataPaths.Local, "GOWA", "bin");
     public static string InstalledExePath => Path.Combine(BinFolder, ExeName);
 
+    /// <summary>True when Local WhatsApp is on but no engine exists yet (a clean reinstall, imported settings, a new PC).</summary>
+    public static bool NeedsDownload(bool whatsAppEnabled, bool remoteMode, bool enginePresent) =>
+        whatsAppEnabled && !remoteMode && !enginePresent;
+
     public static string? ResolveLocalExecutable()
     {
         string bundled = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "GOWA", ExeName);

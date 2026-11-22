@@ -300,7 +300,7 @@ public partial class MainViewModel : INotifyPropertyChanged
         ImapMail?.Configure(_settings.ImapAccounts);
         _mailService.Stop();
         _mailService.Start();
-        _gowaService.Start();
+        await _gowaService.StartAsync();
         _ = PollWeatherAsync();
         await Task.Delay(1200);
         await _gowaService.CheckConnectionAsync();
@@ -393,7 +393,7 @@ public partial class MainViewModel : INotifyPropertyChanged
         if (gowaChanged)
         {
             _gowaService.ConfigureFromSettings(_settings);
-            _gowaService.Start();
+            await _gowaService.StartAsync();
             await Task.Delay(1200);
         }
         else

@@ -159,14 +159,8 @@ public partial class MainViewModel
         _gowaService.ConfigureFromSettings(_settings);
         if (changed)
         {
-            if (_settings.EnableWhatsApp &&
-                !string.Equals(_settings.GowaMode, "Remote", StringComparison.OrdinalIgnoreCase) &&
-                GowaInstaller.ResolveLocalExecutable() == null)
-            {
-                try { await GowaInstaller.EnsureInstalledAsync().ConfigureAwait(false); }
-                catch (Exception ex) { AppLog.Warn("Gowa", ex); }
-            }
-            _gowaService.Start();
+            // Resumes on the UI thread (no ConfigureAwait(false)), so IntegrationStatus below is raised there.
+            await _gowaService.StartAsync();
             await Task.Delay(1200);
         }
         await _gowaService.CheckConnectionAsync();

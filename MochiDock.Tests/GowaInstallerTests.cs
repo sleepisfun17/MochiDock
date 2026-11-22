@@ -19,6 +19,14 @@ public class GowaInstallerTests
             });
     }
 
+    [Theory]
+    [InlineData(true, false, false, true)]   // Local WhatsApp on, engine missing (clean reinstall, imported settings): download.
+    [InlineData(true, false, true, false)]   // Engine already present (bundled from an upgrade, or downloaded): no download.
+    [InlineData(true, true, false, false)]   // Remote mode never needs the local engine.
+    [InlineData(false, false, false, false)] // WhatsApp off: nothing to download.
+    public void NeedsDownloadOnlyForEnabledLocalModeWithoutEngine(bool enabled, bool remote, bool present, bool expected) =>
+        Assert.Equal(expected, GowaInstaller.NeedsDownload(enabled, remote, present));
+
     [Fact]
     public void PinnedReleaseMetadata_IsValidHttpsAndSha256()
     {
