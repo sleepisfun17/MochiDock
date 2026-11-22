@@ -314,7 +314,11 @@ public class ImapMailServiceTests : IDisposable
         service.EmailReceived += n => received.TrySetResult(n);
 
         service.Start();
-        await Task.Delay(30);
+        // Reconfigure only once the first loop has connected (it took s1): a fixed short delay raced on slow CI machines,
+        // where the restarted loop then got s1 (no mail) and the test timed out.
+        var connected = DateTime.UtcNow.AddSeconds(5);
+        while (Volatile.Read(ref factory.Attempts) < 1 && DateTime.UtcNow < connected) await Task.Delay(5);
+        Assert.True(Volatile.Read(ref factory.Attempts) >= 1, "The first loop never connected.");
         service.Configure(new[] { Account });
         var mail = await received.Task.WaitAsync(TimeSpan.FromSeconds(5));
         service.Stop();

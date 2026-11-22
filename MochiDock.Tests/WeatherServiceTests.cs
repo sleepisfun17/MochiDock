@@ -9,9 +9,12 @@ public class WeatherServiceTests
     public void ParseOpenMeteoForecast_SkipsNullHourlyAndDailyEntries_WithoutFailingForecast()
     {
         var now = new DateTime(2026, 11, 22, 12, 0, 0, DateTimeKind.Local);
-        string t1 = now.AddHours(1).ToString("yyyy-MM-ddTHH:00");
-        string t2 = now.AddHours(2).ToString("yyyy-MM-ddTHH:00");
-        string t3 = now.AddHours(3).ToString("yyyy-MM-ddTHH:00");
+        // Open-Meteo writes times in the city's local time (utc_offset_seconds below: Tokyo, UTC+9), so the test does too:
+        // the same instants as now + 1, 2, 3 hours on any machine time zone (it used to pass only on a UTC+9 PC).
+        var cityNow = new DateTimeOffset(now).ToOffset(TimeSpan.FromSeconds(32400));
+        string t1 = cityNow.AddHours(1).ToString("yyyy-MM-ddTHH:00", System.Globalization.CultureInfo.InvariantCulture);
+        string t2 = cityNow.AddHours(2).ToString("yyyy-MM-ddTHH:00", System.Globalization.CultureInfo.InvariantCulture);
+        string t3 = cityNow.AddHours(3).ToString("yyyy-MM-ddTHH:00", System.Globalization.CultureInfo.InvariantCulture);
 
         string json = $$"""
         {
