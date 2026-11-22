@@ -512,23 +512,44 @@ public class GowaService
         catch (Exception ex) { MochiDock.Services.AppLog.Warn("Gowa", ex); }
     }
 
-    public static string FormatPhoneNumber(string raw)
+    public static string FormatPhoneNumber(string raw) => MochiDock.Core.GowaMessageParser.FormatPhoneNumber(raw);
+
+    private async Task DispatchIncomingMessageAsync(
+        string remoteId,
+        string chatJid,
+        string participantJid,
+        string device,
+        bool isGroup,
+        string groupName,
+        string? displayName,
+        string? fallbackChatName,
+        string phoneFallbackJid,
+        string rawMessageText,
+        DateTime timestampLocal,
+        string rememberJid,
+        string rememberDisplayName,
+        string logPrefix)
     {
-        if (string.IsNullOrWhiteSpace(raw)) return "Unknown";
-        string clean = raw.Replace("@s.whatsapp.net", "").Replace("@c.us", "").Replace("@g.us", "").Replace("@lid", "").Trim();
+        RememberName(rememberJid, rememberDisplayName);
+        string messageText = await NameMentionsAsync(rawMessageText).ConfigureAwait(false);
+        var (resolvedGroupName, sender, senderName) = MochiDock.Core.GowaMessageParser.FormatSender(
+            isGroup, groupName, displayName, fallbackChatName, phoneFallbackJid);
 
-        // Indonesian numbers (628000000001 -> +62 800-0000-0001)
-        if (clean.StartsWith("62") && clean.Length >= 10)
+        Log($"{logPrefix}Incoming WhatsApp message from {sender}: {messageText}");
+        MessageReceived?.Invoke(new WhatsAppNotification
         {
-            string prefix = "+62";
-            string rest = clean.Substring(2);
-            if (rest.Length <= 4) return $"{prefix} {rest}";
-            if (rest.Length <= 8) return $"{prefix} {rest[..3]}-{rest[3..]}";
-            return $"{prefix} {rest[..3]}-{rest.Substring(3, 4)}-{rest[7..]}";
-        }
-
-        if (clean.StartsWith("+")) return clean;
-        return "+" + clean;
+            RemoteId = remoteId,
+            Sender = sender,
+            Message = messageText,
+            FromJid = chatJid,
+            DeviceId = device,
+            AccountName = AccountNameFor(device),
+            IsGroup = isGroup,
+            GroupName = resolvedGroupName,
+            SenderName = senderName,
+            ParticipantJid = participantJid,
+            Timestamp = timestampLocal
+        });
     }
 
     public async Task RefreshMetadataAsync()
@@ -982,48 +1003,21 @@ public class GowaService
                 }
                 else if (!string.IsNullOrWhiteSpace(content))
                 {
-                    RememberName(isGroup ? participantJid : chatJid, !string.IsNullOrWhiteSpace(senderDisplay) ? senderDisplay : (isGroup ? "" : chatName));
-                    content = await NameMentionsAsync(content).ConfigureAwait(false);
-                    string sender;
-                    string senderName = "";
-
-                    if (isGroup)
-                    {
-                        string participantPhone = FormatPhoneNumber(participantJid);
-                        senderName = !string.IsNullOrWhiteSpace(senderDisplay) ? senderDisplay : participantPhone;
-                        sender = $"{groupName}: {senderName}";
-                    }
-                    else
-                    {
-                        string displayName = !string.IsNullOrWhiteSpace(senderDisplay) ? senderDisplay : chatName;
-                        if (!string.IsNullOrWhiteSpace(displayName) && !displayName.StartsWith("Group ", StringComparison.OrdinalIgnoreCase))
-                        {
-                            sender = displayName;
-                            senderName = displayName;
-                        }
-                        else
-                        {
-                            string formattedNum = FormatPhoneNumber(chatJid);
-                            sender = formattedNum;
-                            senderName = formattedNum;
-                        }
-                    }
-
-                    Log($"[Poll] Incoming WhatsApp message from {sender}: {content}");
-                    MessageReceived?.Invoke(new WhatsAppNotification
-                    {
-                        RemoteId = id,
-                        Sender = sender,
-                        Message = content,
-                        FromJid = chatJid,
-                        DeviceId = device,
-                    AccountName = AccountNameFor(device),
-                        IsGroup = isGroup,
-                        GroupName = groupName,
-                        SenderName = senderName,
-                        ParticipantJid = participantJid,
-                        Timestamp = msgUtc.ToLocalTime()
-                    });
+                    await DispatchIncomingMessageAsync(
+                        remoteId: id,
+                        chatJid: chatJid,
+                        participantJid: participantJid,
+                        device: device,
+                        isGroup: isGroup,
+                        groupName: groupName,
+                        displayName: senderDisplay,
+                        fallbackChatName: chatName,
+                        phoneFallbackJid: isGroup ? participantJid : chatJid,
+                        rawMessageText: content,
+                        timestampLocal: msgUtc.ToLocalTime(),
+                        rememberJid: isGroup ? participantJid : chatJid,
+                        rememberDisplayName: !string.IsNullOrWhiteSpace(senderDisplay) ? senderDisplay : (isGroup ? "" : chatName),
+                        logPrefix: "[Poll] ").ConfigureAwait(false);
                 }
             }
         }
@@ -1197,8 +1191,7 @@ public class GowaService
                         return;
                     }
 
-                    bool isGroup = chatId.EndsWith("@g.us", StringComparison.OrdinalIgnoreCase) || from.EndsWith("@g.us", StringComparison.OrdinalIgnoreCase);
-                    string targetChatId = isGroup && chatId.EndsWith("@g.us", StringComparison.OrdinalIgnoreCase) ? chatId : (from.EndsWith("@g.us", StringComparison.OrdinalIgnoreCase) ? from : chatId);
+                    var (isGroup, targetChatId) = MochiDock.Core.GowaMessageParser.ResolveWebhookChatTarget(from, chatId);
 
                     if (IsChatMuted(targetChatId, isGroup, device) || (isGroup ? IsSenderMuted(from, device) : IsChatMuted(from, false, device)))
                     {
@@ -1208,74 +1201,9 @@ public class GowaService
                         return;
                     }
 
-                    string contactName = "";
-                    if (payload.TryGetProperty("sender_display_name", out var sdn) && !string.IsNullOrWhiteSpace(sdn.GetString()))
-                    {
-                        contactName = sdn.GetString()!.Trim();
-                    }
-                    else if (payload.TryGetProperty("from_name", out var fn) && !string.IsNullOrWhiteSpace(fn.GetString()))
-                    {
-                        contactName = fn.GetString()!.Trim();
-                    }
-                    else if (payload.TryGetProperty("push_name", out var pn) && !string.IsNullOrWhiteSpace(pn.GetString()))
-                    {
-                        contactName = pn.GetString()!.Trim();
-                    }
-                    else if (payload.TryGetProperty("name", out var n) && !string.IsNullOrWhiteSpace(n.GetString()))
-                    {
-                        contactName = n.GetString()!.Trim();
-                    }
-
-                    string messageText = "";
-
-                    if (payload.TryGetProperty("body", out var b) && !string.IsNullOrEmpty(b.GetString()))
-                    {
-                        messageText = b.GetString()!;
-                    }
-                    else if (payload.TryGetProperty("message", out var msgObj))
-                    {
-                        if (msgObj.TryGetProperty("conversation", out var conv) && !string.IsNullOrEmpty(conv.GetString()))
-                        {
-                            messageText = conv.GetString()!;
-                        }
-                        else if (msgObj.TryGetProperty("extendedTextMessage", out var ext) && ext.TryGetProperty("text", out var extText))
-                        {
-                            messageText = extText.GetString() ?? "";
-                        }
-                        else if (msgObj.TryGetProperty("imageMessage", out var img))
-                        {
-                            string capText = img.TryGetProperty("caption", out var cap) ? (cap.GetString() ?? "") : "";
-                            messageText = string.IsNullOrEmpty(capText) ? "📷 [Photo]" : $"📷 {capText}";
-                        }
-                        else if (msgObj.TryGetProperty("audioMessage", out _))
-                        {
-                            messageText = "🎤 [Voice Note]";
-                        }
-                        else if (msgObj.TryGetProperty("videoMessage", out var vid))
-                        {
-                            string capText = vid.TryGetProperty("caption", out var cap) ? (cap.GetString() ?? "") : "";
-                            messageText = string.IsNullOrEmpty(capText) ? "🎥 [Video]" : $"🎥 {capText}";
-                        }
-                        else if (msgObj.TryGetProperty("stickerMessage", out _))
-                        {
-                            messageText = "🖼️ [Sticker]";
-                        }
-                        else if (msgObj.TryGetProperty("documentMessage", out var docMsg))
-                        {
-                            string fileName = docMsg.TryGetProperty("fileName", out var fnProp) ? (fnProp.GetString() ?? "file") : "file";
-                            messageText = $"📄 [{fileName}]";
-                        }
-                    }
-
-                    string remoteId = "";
-                    if (payload.TryGetProperty("id", out var idProp) && !string.IsNullOrEmpty(idProp.GetString()))
-                    {
-                        remoteId = idProp.GetString()!;
-                    }
-                    else if (payload.TryGetProperty("key", out var keyObj) && keyObj.TryGetProperty("id", out var keyId))
-                    {
-                        remoteId = keyId.GetString() ?? "";
-                    }
+                    string contactName = MochiDock.Core.GowaMessageParser.ExtractContactName(payload);
+                    string messageText = MochiDock.Core.GowaMessageParser.ExtractMessageText(payload);
+                    string remoteId = MochiDock.Core.GowaMessageParser.ExtractRemoteId(payload);
 
                     if (!string.IsNullOrEmpty(remoteId) && !TryMarkSeen(device + "|" + remoteId))
                     {
@@ -1285,60 +1213,37 @@ public class GowaService
                         return;
                     }
 
-                    bool fromMe = payload.TryGetProperty("is_from_me", out var ifm) ? ifm.GetBoolean() : (payload.TryGetProperty("from_me", out var fm) && fm.GetBoolean());
+                    bool fromMe = MochiDock.Core.GowaMessageParser.IsFromMe(payload);
                     if (!fromMe && !string.IsNullOrWhiteSpace(messageText))
                     {
-                        RememberName(from, contactName);
-                        messageText = await NameMentionsAsync(messageText).ConfigureAwait(false);
-                        string sender;
-                        string groupName = "";
-                        string senderName = "";
-
-                        if (isGroup)
-                        {
-                            groupName = await ResolveGroupNameAsync(targetChatId, device).ConfigureAwait(false);
-                            if (string.IsNullOrWhiteSpace(groupName))
-                            {
-                                groupName = "Group";
-                            }
-
-                            string participantPhone = FormatPhoneNumber(from);
-                            senderName = !string.IsNullOrWhiteSpace(contactName) ? contactName : participantPhone;
-                            sender = $"{groupName}: {senderName}";
-                        }
-                        else
-                        {
-                            string formattedNumber = FormatPhoneNumber(from);
-                            sender = !string.IsNullOrWhiteSpace(contactName) ? contactName : formattedNumber;
-                            senderName = sender;
-                        }
+                        string groupName = isGroup ? await ResolveGroupNameAsync(targetChatId, device).ConfigureAwait(false) : "";
 
                         // A re-linked or re-synced session replays history as webhook events: only fresh messages may notify.
                         var messageTime = ReadPayloadTime(payload, root);
                         if (!MochiDock.Core.WhatsAppMessageAgePolicy.ShouldNotify(messageTime, DateTimeOffset.Now, DateTime.UtcNow - _serviceStartedUtc))
                         {
-                            Log($"[Webhook] Ignoring an old or replayed message from {sender}");
+                            var (_, skippedSender, _) = MochiDock.Core.GowaMessageParser.FormatSender(isGroup, groupName, contactName, null, from);
+                            Log($"[Webhook] Ignoring an old or replayed message from {skippedSender}");
                             context.Response.StatusCode = 200;
                             context.Response.Close();
                             return;
                         }
 
-                        Log($"Incoming WhatsApp message from {sender}: {messageText}");
-
-                        MessageReceived?.Invoke(new WhatsAppNotification
-                        {
-                            RemoteId = remoteId,
-                            Sender = sender,
-                            Message = messageText,
-                            FromJid = targetChatId,
-                            DeviceId = device,
-                            AccountName = AccountNameFor(device),
-                            IsGroup = isGroup,
-                            GroupName = groupName,
-                            SenderName = senderName,
-                            ParticipantJid = from,
-                            Timestamp = messageTime?.LocalDateTime ?? DateTime.Now
-                        });
+                        await DispatchIncomingMessageAsync(
+                            remoteId: remoteId,
+                            chatJid: targetChatId,
+                            participantJid: from,
+                            device: device,
+                            isGroup: isGroup,
+                            groupName: groupName,
+                            displayName: contactName,
+                            fallbackChatName: null,
+                            phoneFallbackJid: from,
+                            rawMessageText: messageText,
+                            timestampLocal: messageTime?.LocalDateTime ?? DateTime.Now,
+                            rememberJid: from,
+                            rememberDisplayName: contactName,
+                            logPrefix: "").ConfigureAwait(false);
                     }
                     else if (fromMe)
                     {
