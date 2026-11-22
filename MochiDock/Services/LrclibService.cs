@@ -273,6 +273,8 @@ public class LrclibService
         double duration = double.IsFinite(durationSeconds) && durationSeconds > 0 ? durationSeconds : 0;
         string key = CacheKey(title, artist, album ?? "", duration);
 
+        cancellationToken.ThrowIfCancellationRequested();
+
         if (!forceRefresh && TryReadCache(key, out var cached))
         {
             LastLookupFailed = false;
@@ -285,8 +287,12 @@ public class LrclibService
             // A finished task left behind by a cancelled caller is not reused: its outcome is already cached, or it failed and deserves a retry.
             if (forceRefresh || !_inFlight.TryGetValue(key, out shared!) || shared.IsCompleted)
             {
-                shared = LookupAndStoreAsync(key, title, artist, album ?? "", duration, cancellationToken);
+                shared = LookupAndStoreAsync(key, title, artist, album ?? "", duration, CancellationToken.None);
                 _inFlight[key] = shared;
+                _ = shared.ContinueWith(t =>
+                {
+                    lock (_gate) { if (_inFlight.TryGetValue(key, out var current) && current == t) _inFlight.Remove(key); }
+                }, TaskScheduler.Default);
             }
         }
 
@@ -514,12 +520,13 @@ public class LrclibService
         if (secondsPart.Length is < 1 or > 2 || !secondsPart.All(char.IsAsciiDigit)) return false;
         if (fractionPart.Length > 3 || !fractionPart.All(char.IsAsciiDigit)) return false;
 
-        int minutes = int.Parse(minutesPart, CultureInfo.InvariantCulture);
-        int secs = int.Parse(secondsPart, CultureInfo.InvariantCulture);
-        if (secs >= 60) return false;
-        double fraction = fractionPart.Length == 0 ? 0 : int.Parse(fractionPart, CultureInfo.InvariantCulture) / Math.Pow(10, fractionPart.Length);
-        seconds = minutes * 60 + secs + fraction;
-        return true;
+        if (!int.TryParse(minutesPart, NumberStyles.None, CultureInfo.InvariantCulture, out int minutes)) return false;
+        if (!int.TryParse(secondsPart, NumberStyles.None, CultureInfo.InvariantCulture, out int secs) || secs >= 60) return false;
+        int fractionValue = 0;
+        if (fractionPart.Length > 0 && !int.TryParse(fractionPart, NumberStyles.None, CultureInfo.InvariantCulture, out fractionValue)) return false;
+        double fraction = fractionPart.Length == 0 ? 0 : fractionValue / Math.Pow(10, fractionPart.Length);
+        seconds = minutes * 60.0 + secs + fraction;
+        return double.IsFinite(seconds);
     }
 
     static bool TryParseOffset(string tag, out double seconds)
@@ -591,9 +598,16 @@ public class LrclibService
         try
         {
             Directory.CreateDirectory(_cacheDirectory);
-            string path = CachePath(key), temp = path + ".tmp";
-            File.WriteAllText(temp, JsonSerializer.Serialize(entry, CacheJson));
-            File.Move(temp, path, overwrite: true);
+            string path = CachePath(key), temp = path + ".tmp-" + Guid.NewGuid().ToString("N");
+            try
+            {
+                File.WriteAllText(temp, JsonSerializer.Serialize(entry, CacheJson));
+                File.Move(temp, path, overwrite: true);
+            }
+            finally
+            {
+                if (File.Exists(temp)) try { File.Delete(temp); } catch { }
+            }
             TrimDisk();
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)

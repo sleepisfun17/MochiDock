@@ -95,8 +95,11 @@ public sealed class UpdateInstaller
     }
 
     /// <summary>Starts the verified setup silently; it closes MochiDock, installs over it and starts it again.</summary>
-    public static void Launch(string setupPath) =>
-        Process.Start(new ProcessStartInfo(setupPath, SetupArguments) { UseShellExecute = false, WorkingDirectory = Path.GetDirectoryName(setupPath) });
+    public static bool Launch(string setupPath)
+    {
+        using var process = Process.Start(new ProcessStartInfo(setupPath, SetupArguments) { UseShellExecute = false, WorkingDirectory = Path.GetDirectoryName(setupPath) });
+        return process != null;
+    }
 
     /// <summary>Removes setups left from an earlier update (run at startup; the running copy is already the new one).</summary>
     public static void CleanUp()

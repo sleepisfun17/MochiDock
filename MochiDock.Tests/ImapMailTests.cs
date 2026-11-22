@@ -165,12 +165,17 @@ public class ImapMailServiceTests : IDisposable
 
     sealed class FakeSession : IImapSession
     {
+        public uint UidValidity { get; set; } = 1;
         public uint Latest = 10;
         public Queue<IReadOnlyList<ImapMessage>> Batches { get; } = new();
+        public List<uint> BaselinesRequested { get; } = new();
         public Func<Task>? OnBatchesDone;
         public Task<uint> GetLatestUidAsync(CancellationToken ct) => Task.FromResult(Latest);
-        public Task<IReadOnlyList<ImapMessage>> FetchAfterAsync(uint baseline, CancellationToken ct) =>
-            Task.FromResult(Batches.Count > 0 ? Batches.Dequeue() : (IReadOnlyList<ImapMessage>)Array.Empty<ImapMessage>());
+        public Task<IReadOnlyList<ImapMessage>> FetchAfterAsync(uint baseline, CancellationToken ct)
+        {
+            BaselinesRequested.Add(baseline);
+            return Task.FromResult(Batches.Count > 0 ? Batches.Dequeue() : (IReadOnlyList<ImapMessage>)Array.Empty<ImapMessage>());
+        }
         public async Task WaitForChangeAsync(TimeSpan max, CancellationToken ct)
         {
             if (Batches.Count == 0 && OnBatchesDone != null) { await OnBatchesDone(); OnBatchesDone = null; }
@@ -267,6 +272,55 @@ public class ImapMailServiceTests : IDisposable
 
         Assert.Equal("After reconnect", mail.Subject);
         Assert.True(factory.Attempts >= 2);
+    }
+
+    [Fact]
+    public async Task ReconnectRetainsLastUidAndAnnouncesMailReceivedWhileOffline()
+    {
+        var (service, factory) = Build();
+        var s1 = new FakeSession { UidValidity = 42, Latest = 10 };
+        s1.Batches.Enqueue(new[] { Msg(11, "Before drop") });
+        s1.OnBatchesDone = () => throw new IOException("connection lost");
+
+        var s2 = new FakeSession { UidValidity = 42, Latest = 15 };
+        s2.Batches.Enqueue(new[] { Msg(12, "While offline"), Msg(13, "Also offline") });
+
+        factory.Connections.Enqueue(() => s1);
+        factory.Connections.Enqueue(() => s2);
+
+        var subjects = new List<string>();
+        var allDone = new TaskCompletionSource();
+        service.EmailReceived += n => { lock (subjects) { subjects.Add(n.Subject); if (subjects.Count == 3) allDone.TrySetResult(); } };
+
+        service.Start();
+        await allDone.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        service.Stop();
+
+        Assert.Equal(new[] { "Before drop", "While offline", "Also offline" }, subjects);
+        Assert.Contains(11u, s2.BaselinesRequested);
+    }
+
+    [Fact]
+    public async Task ConfigureRestartsCleanlyWithoutDuplicateLoops()
+    {
+        var (service, factory) = Build();
+        var s1 = new FakeSession { Latest = 1 };
+        var s2 = new FakeSession { Latest = 2 };
+        s2.Batches.Enqueue(new[] { Msg(3, "After configure") });
+        factory.Connections.Enqueue(() => s1);
+        factory.Connections.Enqueue(() => s2);
+
+        var received = new TaskCompletionSource<EmailNotification>();
+        service.EmailReceived += n => received.TrySetResult(n);
+
+        service.Start();
+        await Task.Delay(30);
+        service.Configure(new[] { Account });
+        var mail = await received.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        service.Stop();
+        await service.WhenLoopsEnded().WaitAsync(TimeSpan.FromSeconds(5));
+
+        Assert.Equal("After configure", mail.Subject);
     }
 
     [Fact]

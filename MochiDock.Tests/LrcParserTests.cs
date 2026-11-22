@@ -48,4 +48,12 @@ public class LrcParserTests
         var other = LrclibService.MatchScore("Lemon", "Kenshi Yonezu", 255, "Flamingo", "Kenshi Yonezu", 200, true);
         Assert.True(other is null || other < LrclibService.MinScore);
     }
+
+    [Fact]
+    public void OverflowingMinutesTagIsIgnoredWithoutThrowing()
+    {
+        var lines = LrclibService.ParseLrc("[99999999999:00]line\n[00:05.00]valid");
+        Assert.Single(lines);
+        Assert.Equal("valid", lines[0].Text);
+    }
 }

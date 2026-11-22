@@ -17,6 +17,7 @@ public sealed class ImapAuthException : Exception
 /// <summary>An open, read-only view of one INBOX. Only <see cref="MarkSeenAsync"/> ever writes, and only when the user allowed it.</summary>
 public interface IImapSession : IAsyncDisposable
 {
+    uint UidValidity => 0;
     Task<uint> GetLatestUidAsync(CancellationToken ct);
     Task<IReadOnlyList<ImapMessage>> FetchAfterAsync(uint baseline, CancellationToken ct);
     /// <summary>Returns when the mailbox changed or <paramref name="max"/> passed, whichever is first.</summary>
@@ -104,8 +105,16 @@ public sealed class ImapMailService : IMailService
     public void Stop()
     {
         CancellationTokenSource? cts;
-        lock (_gate) { cts = _cts; _cts = null; }
-        try { cts?.Cancel(); } catch (Exception ex) { AppLog.Warn("Mail", ex); }
+        Task[] loops;
+        lock (_gate)
+        {
+            cts = _cts;
+            _cts = null;
+            loops = _loops.ToArray();
+        }
+        if (cts is null) return;
+        try { cts.Cancel(); } catch (Exception ex) { AppLog.Warn("Mail", ex); }
+        _ = Task.WhenAll(loops).ContinueWith(_ => { try { cts.Dispose(); } catch { } }, TaskScheduler.Default);
     }
 
     /// <summary>Test connection for the settings page: "" when the sign-in worked, otherwise a short reason.</summary>
@@ -125,6 +134,8 @@ public sealed class ImapMailService : IMailService
     private async Task RunAsync(ImapAccount account, CancellationToken ct)
     {
         int failures = 0;
+        uint? last = null;
+        uint uidValidity = 0;
         while (!ct.IsCancellationRequested)
         {
             try
@@ -133,17 +144,26 @@ public sealed class ImapMailService : IMailService
                 if (string.IsNullOrEmpty(password)) { SetStatus(account.Address, "No password saved."); return; }
 
                 await using var session = await _factory.ConnectAsync(account, password, ct).ConfigureAwait(false);
-                uint last = await session.GetLatestUidAsync(ct).ConfigureAwait(false);
+                uint currentValidity = session.UidValidity;
+                bool resetBaseline = last is null || (currentValidity != 0 && uidValidity != 0 && currentValidity != uidValidity);
+                if (resetBaseline)
+                {
+                    last = await session.GetLatestUidAsync(ct).ConfigureAwait(false);
+                }
+                uidValidity = currentValidity;
                 SetStatus(account.Address, "Connected");
                 failures = 0;
 
+                bool checkImmediately = !resetBaseline;
                 while (!ct.IsCancellationRequested)
                 {
-                    await session.WaitForChangeAsync(WaitInterval, ct).ConfigureAwait(false);
-                    var fresh = await session.FetchAfterAsync(last, ct).ConfigureAwait(false);
+                    if (!checkImmediately)
+                        await session.WaitForChangeAsync(WaitInterval, ct).ConfigureAwait(false);
+                    checkImmediately = false;
+                    var fresh = await session.FetchAfterAsync(last!.Value, ct).ConfigureAwait(false);
                     foreach (var message in fresh.OrderBy(m => m.Uid))
                     {
-                        if (message.Uid <= last) continue;
+                        if (message.Uid <= last.Value) continue;
                         last = message.Uid;
                         Announce(account, message);
                     }

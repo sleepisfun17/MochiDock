@@ -39,10 +39,17 @@ public sealed class MailKitImapSessionFactory : IImapSessionFactory
         private readonly ImapClient _client;
         public Session(ImapClient client) => _client = client;
 
-        public Task<uint> GetLatestUidAsync(CancellationToken ct)
+        public uint UidValidity => _client.Inbox.UidValidity;
+
+        public async Task<uint> GetLatestUidAsync(CancellationToken ct)
         {
-            uint next = _client.Inbox.UidNext?.Id ?? 1;
-            return Task.FromResult(next > 0 ? next - 1 : 0);
+            if (_client.Inbox.UidNext is { Id: > 0 } next)
+                return next.Id - 1;
+            if (_client.Inbox.Count == 0)
+                return 0;
+            int lastIndex = _client.Inbox.Count - 1;
+            var items = await _client.Inbox.FetchAsync(lastIndex, lastIndex, MessageSummaryItems.UniqueId, ct).ConfigureAwait(false);
+            return items.FirstOrDefault()?.UniqueId.Id ?? 0;
         }
 
         public async Task<IReadOnlyList<ImapMessage>> FetchAfterAsync(uint baseline, CancellationToken ct)
@@ -84,7 +91,15 @@ public sealed class MailKitImapSessionFactory : IImapSessionFactory
 
         public async ValueTask DisposeAsync()
         {
-            try { if (_client.IsConnected) await _client.DisconnectAsync(true).ConfigureAwait(false); } catch { }
+            try
+            {
+                if (_client.IsConnected)
+                {
+                    using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+                    await _client.DisconnectAsync(true, cts.Token).ConfigureAwait(false);
+                }
+            }
+            catch { }
             _client.Dispose();
         }
     }

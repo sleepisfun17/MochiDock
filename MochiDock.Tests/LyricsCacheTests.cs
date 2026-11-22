@@ -23,4 +23,41 @@ public class LyricsCacheTests {
   finally { if(Directory.Exists(dir))Directory.Delete(dir,true); }
  }
  [Fact] public async Task CancellationPropagates() { using var c=new CancellationTokenSource(); c.Cancel(); await Assert.ThrowsAnyAsync<OperationCanceledException>(()=>new LrclibService(new HttpClient(new Handler()),Path.GetTempPath()).FetchLyricsAsync("Song","Artist",cancellationToken:c.Token)); }
+
+ sealed class DelayedHandler : HttpMessageHandler {
+  public TaskCompletionSource Gate = new(TaskCreationOptions.RunContinuationsAsynchronously);
+  public string Body = """[{"trackName":"Song","artistName":"Artist","plainLyrics":"Shared"}]""";
+  protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage r, CancellationToken t) {
+   await Gate.Task.WaitAsync(t);
+   return new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(Body) };
+  }
+ }
+
+ [Fact] public async Task CallerACancellingDoesNotAbortCallerBOnSharedFetch() {
+  var dir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+  var h = new DelayedHandler();
+  try {
+   var service = new LrclibService(new HttpClient(h), dir);
+   using var ctsA = new CancellationTokenSource();
+   var taskA = service.FetchLyricsAsync("Song", "Artist", cancellationToken: ctsA.Token);
+   var taskB = service.FetchLyricsAsync("Song", "Artist");
+   ctsA.Cancel();
+   await Assert.ThrowsAnyAsync<OperationCanceledException>(() => taskA);
+   h.Gate.TrySetResult();
+   var lyricsB = await taskB;
+   Assert.NotNull(lyricsB);
+   Assert.Equal("Shared", lyricsB.PlainLyrics);
+  } finally { if (Directory.Exists(dir)) Directory.Delete(dir, true); }
+ }
+
+ [Fact] public async Task ConcurrentForceRefreshWritesCacheSafely() {
+  var dir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+  var h = new Handler { Body = """[{"trackName":"Song","artistName":"Artist","plainLyrics":"Words"}]""" };
+  try {
+   var service = new LrclibService(new HttpClient(h), dir);
+   var results = await Task.WhenAll(Enumerable.Range(0, 8).Select(_ => service.FetchLyricsAsync("Song", "Artist", forceRefresh: true)));
+   Assert.All(results, r => Assert.NotNull(r));
+   Assert.Empty(Directory.GetFiles(dir, "*.tmp-*"));
+  } finally { if (Directory.Exists(dir)) Directory.Delete(dir, true); }
+ }
 }

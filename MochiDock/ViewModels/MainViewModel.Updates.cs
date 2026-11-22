@@ -123,12 +123,15 @@ public partial class MainViewModel
         _updateNoticeRetry?.Stop();
         _pendingUpdateNotice = null;
         try { _updateCts?.Cancel(); } catch (Exception ex) { AppLog.Warn("Update", ex); }
+        try { _updateCts?.Dispose(); } catch { }
+        _updateCts = null;
+        try { _downloadCts?.Cancel(); } catch (Exception ex) { AppLog.Warn("Update", ex); }
     }
 
     public async Task CheckForUpdatesAsync(bool manual)
     {
         if (!manual && !_settings.CheckForUpdates) return;
-        if (_updateBusy) return;
+        if (_updateBusy || _installing) return;
         _updateBusy = true;
         var cts = _updateCts ??= new CancellationTokenSource();
         try
@@ -137,9 +140,16 @@ public partial class MainViewModel
             OnPropertyChanged(nameof(UpdateStatusText));
             NotifyUpdateChip();
             var result = await _updateCheck.CheckAsync(UpdateCheckService.CurrentVersion, cts.Token);
-            _availableUpdate = result.Offer;
-            _updateStatus = result.State == UpdateCheckState.Available ? "" : result.Message;
-            if (result.State != UpdateCheckState.Failed) UpdateSettings(x => x.LastUpdateCheckUtc = DateTime.UtcNow);
+            if (result.State != UpdateCheckState.Failed)
+            {
+                _availableUpdate = result.Offer;
+                _updateStatus = result.State == UpdateCheckState.Available ? "" : result.Message;
+                UpdateSettings(x => x.LastUpdateCheckUtc = DateTime.UtcNow);
+            }
+            else if (_availableUpdate == null)
+            {
+                _updateStatus = result.Message;
+            }
             if (UpdateAnnouncePolicy.ShouldAnnounce(result.Offer?.Version, _settings.LastAnnouncedUpdate, manual))
             {
                 _pendingUpdateNotice = result.Offer!.Version;
@@ -215,26 +225,35 @@ public partial class MainViewModel
         if (answer != System.Windows.MessageBoxResult.Yes) return;
 
         _installing = true;
+        _downloadCts?.Dispose();
         _downloadCts = new CancellationTokenSource();
         _downloadPercent = null;
         _updateStatus = "Starting the download…";
         NotifyUpdateState();
         bool launched = false;
+        bool downloadDone = false;
         try
         {
             var progress = new Progress<(long Done, long Total)>(p =>
             {
+                if (downloadDone || !_installing) return;
                 _updateStatus = $"Downloading {p.Done / 1048576.0:0.0} of {p.Total / 1048576.0:0.0} MB…";
                 _downloadPercent = p.Total > 0 ? (int)(p.Done * 100 / p.Total) : null;
                 OnPropertyChanged(nameof(UpdateStatusText));
                 NotifyUpdateChip();
             });
             string setup = await _updateInstaller.DownloadAsync(asset, progress, _downloadCts.Token);
+            downloadDone = true;
+            _downloadCts.Dispose();
             _downloadCts = null;
             _downloadPercent = null;
             _updateStatus = "Installing, MochiDock will restart in a moment…";
             NotifyUpdateState();
-            UpdateInstaller.Launch(setup);
+            if (!UpdateInstaller.Launch(setup))
+            {
+                _updateStatus = "The update installer could not be started.";
+                return;
+            }
             launched = true;
             await Task.Delay(400);   // let the setup start before this copy leaves
             System.Windows.Application.Current?.Shutdown();
@@ -248,10 +267,12 @@ public partial class MainViewModel
         }
         finally
         {
+            downloadDone = true;
+            _downloadCts?.Dispose();
+            _downloadCts = null;
             if (!launched)
             {
                 _installing = false;
-                _downloadCts = null;
                 NotifyUpdateState();
             }
         }
