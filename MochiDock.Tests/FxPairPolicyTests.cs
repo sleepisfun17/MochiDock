@@ -81,4 +81,25 @@ public class FxPairPolicyTests
         Assert.Equal(8000m, quotes.Single(q => q.Pair == "SGD/IDR").Value);
         Assert.All(quotes, q => Assert.Equal("daily fallback", q.Interval));
     }
+
+    // Yahoo has no VNDIDR=X (and similar): the card builds it from USD/VND and USD/IDR.
+    [Fact] public void MissingCrossIsBuiltFromTheUsdLegs()
+    {
+        var t0 = DateTimeOffset.FromUnixTimeSeconds(100000);
+        var usdVnd = new MarketQuote("USD/VND", "Yahoo Finance", 25000m, t0.AddHours(2), t0.AddHours(3),
+            [new(t0, 25000m), new(t0.AddHours(1), 20000m)], "1h", PreviousClose: 25000m);
+        var usdIdr = new MarketQuote("USD/IDR", "Yahoo Finance", 15000m, t0.AddHours(1), t0.AddHours(3),
+            [new(t0.AddMinutes(-30), 15000m), new(t0.AddHours(1), 16000m)], "1h", PreviousClose: 12500m);
+        var cross = KeylessFxProvider.Cross("VND/IDR", usdVnd, usdIdr, t0.AddHours(3));
+        Assert.Equal(0.6m, cross.Value);
+        Assert.Equal(t0.AddHours(1), cross.SourceAt);   // the older leg
+        Assert.Equal("Yahoo Finance", cross.Provider);  // the card draws its chart
+        Assert.Equal([0.8m], cross.Bars.Select(b => b.Value));   // the -30 min IDR bar has no VND bar at or before it
+        Assert.Equal(0.5m, cross.PreviousClose);
+        Assert.Equal(20m, cross.ChangePercent);
+
+        var vndUsd = KeylessFxProvider.Cross("VND/USD", usdVnd, null, t0.AddHours(3));
+        Assert.Equal(0.00004m, vndUsd.Value);
+        Assert.Equal(2, vndUsd.Bars.Length);
+    }
 }

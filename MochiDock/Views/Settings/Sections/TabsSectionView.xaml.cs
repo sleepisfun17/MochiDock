@@ -95,6 +95,20 @@ public partial class TabsSectionView : UserControl
         vm.SetFxPairs(pairs);
     }
 
+    // One click turns USD/JPY into JPY/USD (picking the two sides one at a time would pass through the refused USD/USD).
+    private void FxSwap_Click(object sender, System.Windows.RoutedEventArgs e)
+    {
+        if (sender is not System.Windows.Controls.Button { Tag: string tag } || !int.TryParse(tag, out int row) || ViewModel is not { } vm) return;
+        var pairs = vm.FxPairs;
+        if (row < 0 || row >= pairs.Length || !FxPairPolicy.TryParse(pairs[row], out var baseCode, out var quoteCode)) return;
+        foreach (var r in _rows) r.Validation = "";
+        var swapped = FxPairPolicy.Join(quoteCode, baseCode);
+        if (pairs.Where((p, i) => i != row).Contains(swapped)) { _rows[row].Validation = "That pair is already shown in another tile."; return; }
+        pairs[row] = swapped;
+        vm.SetFxPairs(pairs);
+        LoadFromSettings();
+    }
+
     private void FxReset_Click(object sender, System.Windows.RoutedEventArgs e)
     {
         foreach (var r in _rows) r.Validation = "";

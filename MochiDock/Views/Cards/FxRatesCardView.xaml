@@ -89,7 +89,7 @@
                         <Border Margin="0,0,5,0" CornerRadius="3" Padding="4,0" VerticalAlignment="Center" Background="{DynamicResource IslandAccentSubtleBrush}" BorderBrush="{DynamicResource IslandAccentBrush}" BorderThickness="1">
                             <TextBlock x:Name="Pair1Symbols" Text="" FontFamily="Segoe UI" FontSize="9.5" FontWeight="{DynamicResource IslandSmallStrongWeight}" Foreground="{DynamicResource IslandAccentBrush}"/>
                         </Border>
-                        <TextBlock x:Name="Pair1Label" Grid.Column="1" Text="USD / JPY" FontSize="10.5" FontWeight="{DynamicResource IslandSmallLabelWeight}" Foreground="{DynamicResource IslandSecondaryInkBrush}" VerticalAlignment="Center"/>
+                        <TextBlock x:Name="Pair1Label" Grid.Column="1" Text="USD / JPY" Margin="0,0,4,0" TextTrimming="CharacterEllipsis" FontSize="10.5" FontWeight="{DynamicResource IslandSmallLabelWeight}" Foreground="{DynamicResource IslandSecondaryInkBrush}" VerticalAlignment="Center"/>
                         <Border x:Name="Pair1Badge" Grid.Column="2" CornerRadius="4" Padding="5,1" Background="{DynamicResource IslandChipBackgroundBrush}"><TextBlock x:Name="Pair1Change" Text="—" FontSize="10.5" FontWeight="{DynamicResource IslandSmallLabelWeight}"/></Border>
                     </Grid>
                     <TextBlock x:Name="Pair1Value" Grid.Row="1" Text="—" Margin="0,5,0,0" FontSize="17" FontWeight="{DynamicResource IslandSmallLabelWeight}" Foreground="{DynamicResource IslandInkBrush}"/>
@@ -103,7 +103,7 @@
                         <Border Margin="0,0,5,0" CornerRadius="3" Padding="4,0" VerticalAlignment="Center" Background="{DynamicResource IslandAccentSubtleBrush}" BorderBrush="{DynamicResource IslandAccentBrush}" BorderThickness="1">
                             <TextBlock x:Name="Pair2Symbols" Text="" FontFamily="Segoe UI" FontSize="9.5" FontWeight="{DynamicResource IslandSmallStrongWeight}" Foreground="{DynamicResource IslandAccentBrush}"/>
                         </Border>
-                        <TextBlock x:Name="Pair2Label" Grid.Column="1" Text="USD / IDR" FontSize="10.5" FontWeight="{DynamicResource IslandSmallLabelWeight}" Foreground="{DynamicResource IslandSecondaryInkBrush}" VerticalAlignment="Center"/>
+                        <TextBlock x:Name="Pair2Label" Grid.Column="1" Text="USD / IDR" Margin="0,0,4,0" TextTrimming="CharacterEllipsis" FontSize="10.5" FontWeight="{DynamicResource IslandSmallLabelWeight}" Foreground="{DynamicResource IslandSecondaryInkBrush}" VerticalAlignment="Center"/>
                         <Border x:Name="Pair2Badge" Grid.Column="2" CornerRadius="4" Padding="5,1" Background="{DynamicResource IslandChipBackgroundBrush}"><TextBlock x:Name="Pair2Change" Text="—" FontSize="10.5" FontWeight="{DynamicResource IslandSmallLabelWeight}"/></Border>
                     </Grid>
                     <TextBlock x:Name="Pair2Value" Grid.Row="1" Text="—" Margin="0,5,0,0" FontSize="17" FontWeight="{DynamicResource IslandSmallLabelWeight}" Foreground="{DynamicResource IslandInkBrush}"/>
@@ -117,7 +117,7 @@
                         <Border Margin="0,0,5,0" CornerRadius="3" Padding="4,0" VerticalAlignment="Center" Background="{DynamicResource IslandAccentSubtleBrush}" BorderBrush="{DynamicResource IslandAccentBrush}" BorderThickness="1">
                             <TextBlock x:Name="Pair3Symbols" Text="" FontFamily="Segoe UI" FontSize="9.5" FontWeight="{DynamicResource IslandSmallStrongWeight}" Foreground="{DynamicResource IslandAccentBrush}"/>
                         </Border>
-                        <TextBlock x:Name="Pair3Label" Grid.Column="1" Text="JPY / IDR" FontSize="10.5" FontWeight="{DynamicResource IslandSmallLabelWeight}" Foreground="{DynamicResource IslandSecondaryInkBrush}" VerticalAlignment="Center"/>
+                        <TextBlock x:Name="Pair3Label" Grid.Column="1" Text="JPY / IDR" Margin="0,0,4,0" TextTrimming="CharacterEllipsis" FontSize="10.5" FontWeight="{DynamicResource IslandSmallLabelWeight}" Foreground="{DynamicResource IslandSecondaryInkBrush}" VerticalAlignment="Center"/>
                         <Border x:Name="Pair3Badge" Grid.Column="2" CornerRadius="4" Padding="5,1" Background="{DynamicResource IslandChipBackgroundBrush}"><TextBlock x:Name="Pair3Change" Text="—" FontSize="10.5" FontWeight="{DynamicResource IslandSmallLabelWeight}"/></Border>
                     </Grid>
                     <TextBlock x:Name="Pair3Value" Grid.Row="1" Text="—" Margin="0,5,0,0" FontSize="17" FontWeight="{DynamicResource IslandSmallLabelWeight}" Foreground="{DynamicResource IslandInkBrush}"/>

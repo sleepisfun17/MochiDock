@@ -9,21 +9,21 @@
         <s:SettingRow x:Name="FxRow1" Label="Pair 1" Description="Shown in the first tile of the FX card.">
             <StackPanel Orientation="Horizontal">
                 <ComboBox x:Name="FxBase1" Style="{StaticResource ModernDarkComboBox}" Width="110" SelectionChanged="FxPair_Changed" AutomationProperties.Name="Pair 1 base currency"/>
-                <TextBlock Text="&#x2192;" Style="{StaticResource CardBodyText}" Margin="10,0" VerticalAlignment="Center"/>
+                <Button x:Name="FxSwap1" Tag="0" Style="{StaticResource IslandIconButton}" Width="28" Height="28" FontSize="13" Margin="8,0" Content="&#x21C4;" Click="FxSwap_Click" ToolTip="Swap the two currencies" AutomationProperties.Name="Swap pair 1 currencies"/>
                 <ComboBox x:Name="FxQuote1" Style="{StaticResource ModernDarkComboBox}" Width="110" SelectionChanged="FxPair_Changed" AutomationProperties.Name="Pair 1 quote currency"/>
             </StackPanel>
         </s:SettingRow>
         <s:SettingRow x:Name="FxRow2" Label="Pair 2" Description="Shown in the second tile.">
             <StackPanel Orientation="Horizontal">
                 <ComboBox x:Name="FxBase2" Style="{StaticResource ModernDarkComboBox}" Width="110" SelectionChanged="FxPair_Changed" AutomationProperties.Name="Pair 2 base currency"/>
-                <TextBlock Text="&#x2192;" Style="{StaticResource CardBodyText}" Margin="10,0" VerticalAlignment="Center"/>
+                <Button x:Name="FxSwap2" Tag="1" Style="{StaticResource IslandIconButton}" Width="28" Height="28" FontSize="13" Margin="8,0" Content="&#x21C4;" Click="FxSwap_Click" ToolTip="Swap the two currencies" AutomationProperties.Name="Swap pair 2 currencies"/>
                 <ComboBox x:Name="FxQuote2" Style="{StaticResource ModernDarkComboBox}" Width="110" SelectionChanged="FxPair_Changed" AutomationProperties.Name="Pair 2 quote currency"/>
             </StackPanel>
         </s:SettingRow>
         <s:SettingRow x:Name="FxRow3" Label="Pair 3" Description="Shown in the third tile. The card opens on this pair.">
             <StackPanel Orientation="Horizontal">
                 <ComboBox x:Name="FxBase3" Style="{StaticResource ModernDarkComboBox}" Width="110" SelectionChanged="FxPair_Changed" AutomationProperties.Name="Pair 3 base currency"/>
-                <TextBlock Text="&#x2192;" Style="{StaticResource CardBodyText}" Margin="10,0" VerticalAlignment="Center"/>
+                <Button x:Name="FxSwap3" Tag="2" Style="{StaticResource IslandIconButton}" Width="28" Height="28" FontSize="13" Margin="8,0" Content="&#x21C4;" Click="FxSwap_Click" ToolTip="Swap the two currencies" AutomationProperties.Name="Swap pair 3 currencies"/>
                 <ComboBox x:Name="FxQuote3" Style="{StaticResource ModernDarkComboBox}" Width="110" SelectionChanged="FxPair_Changed" AutomationProperties.Name="Pair 3 quote currency"/>
             </StackPanel>
         </s:SettingRow>

@@ -34,7 +34,7 @@ A new install starts small: the **Media**, **Stats** and **Weather** tabs, plus 
 | **Email** | New-mail notices from Gmail or other IMAP accounts (app password), Outlook Classic and Mailspring; verification codes can be copied. | Ready, add an account | Email |
 | **Prayer times** | Location-aware schedule, qibla bearing, reminders and a Tone or Silent chime. | Off | Tabs, or Location & Prayer |
 | **Today and calendar** | Month calendar, events from a Google Calendar link ([how to connect it](docs/USER_GUIDE.md#connecting-google-calendar)), tasks with reminders, optional Japan and Indonesia holidays. | Off | Tabs; link and holidays in Calendar |
-| **FX rates** | USD/JPY, USD/IDR and JPY/IDR with a trajectory chart, no API key needed. | Off | Tabs |
+| **FX rates** | Three currency pairs of your choice from 25 currencies (default USD/JPY, USD/IDR and JPY/IDR) with a trajectory chart, no API key needed. | Off | Tabs |
 | **AI usage** | Remaining usage for Claude, Codex, Antigravity, Cursor, Gemini and GitHub Copilot, with an optional low-usage alert. | Off | Tabs; providers in AI usage |
 | **Wireless device batteries** | Mouse, keyboard and headset levels on the Stats Battery page and an optional taskbar readout. | Off | Hardware & power |
 | **Window-size shortcuts** | Resize the window you are using to a set size and centre it (Ctrl+Alt+1 to 4, Ctrl+Alt+F to swap width and height; editable). | Off | Gaming & Display |

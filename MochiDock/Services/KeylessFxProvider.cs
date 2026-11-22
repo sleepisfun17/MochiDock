@@ -64,8 +64,52 @@ public sealed class KeylessFxProvider(HttpClient http, Func<DateTimeOffset>? clo
             "1D" => ("1d", "1mo"),
             _ => ("1h", "7d")
         };
-        using var json = await Get("Yahoo", $"https://query1.finance.yahoo.com/v8/finance/chart/{Uri.EscapeDataString(Symbol(pair))}?interval={interval}&range={range}", token);
-        return ParseYahoo(json.RootElement, pair, interval, Now, normSpan);
+        try { return await YahooDirect(pair, interval, range, normSpan, token); }
+        catch (Exception e) when (e is not OperationCanceledException)
+        {
+            // Yahoo has no symbol for some crosses (VND/IDR, AED/IDR, MXN/IDR...) and rounds tiny ones to 0 (VND/USD):
+            // build those from the USD legs, which Yahoo has for every listed currency.
+            FxPairPolicy.TryParse(pair, out var baseCode, out var quoteCode);
+            if (baseCode == "USD") throw;
+            var baseLeg = await YahooDirect("USD/" + baseCode, interval, range, normSpan, token);
+            var quoteLeg = quoteCode == "USD" ? null : await YahooDirect("USD/" + quoteCode, interval, range, normSpan, token);
+            return Cross(pair, baseLeg, quoteLeg, Now);
+        }
+    }
+
+    // A missing symbol cools down only itself, never the other Yahoo pairs.
+    async Task<MarketQuote> YahooDirect(string pair, string interval, string range, string span, CancellationToken token)
+    {
+        var symbol = Symbol(pair);
+        using var json = await Get("Yahoo:" + symbol, $"https://query1.finance.yahoo.com/v8/finance/chart/{Uri.EscapeDataString(symbol)}?interval={interval}&range={range}", token);
+        return ParseYahoo(json.RootElement, pair, interval, Now, span);
+    }
+
+    /// <summary>
+    /// BASE/QUOTE from Yahoo's USD/BASE and USD/QUOTE quotes (quoteLeg null means the quote currency is USD): value, previous
+    /// close and every bar of the quote leg divided by the base leg's latest bar at or before it.
+    /// </summary>
+    public static MarketQuote Cross(string pair, MarketQuote baseLeg, MarketQuote? quoteLeg, DateTimeOffset now)
+    {
+        decimal QuoteAt(decimal quoteValue, decimal baseValue) => quoteValue / baseValue;
+        var value = QuoteAt(quoteLeg?.Value ?? 1m, baseLeg.Value);
+        var source = quoteLeg is null || baseLeg.SourceAt < quoteLeg.SourceAt ? baseLeg.SourceAt : quoteLeg.SourceAt;
+        decimal? previous = baseLeg.PreviousClose is > 0 && (quoteLeg is null || quoteLeg.PreviousClose is > 0)
+            ? QuoteAt(quoteLeg?.PreviousClose ?? 1m, baseLeg.PreviousClose.Value) : null;
+        var baseBars = baseLeg.Bars.OrderBy(b => b.At).ToArray();
+        var bars = new List<MarketBar>();
+        if (quoteLeg is null) bars.AddRange(baseBars.Select(b => new MarketBar(b.At, QuoteAt(1m, b.Value))));
+        else
+        {
+            int j = -1;
+            foreach (var q in quoteLeg.Bars.OrderBy(b => b.At))
+            {
+                while (j + 1 < baseBars.Length && baseBars[j + 1].At <= q.At) j++;
+                if (j >= 0) bars.Add(new MarketBar(q.At, QuoteAt(q.Value, baseBars[j].Value)));
+            }
+        }
+        return new(pair, "Yahoo Finance", value, source, now, bars.ToArray(), baseLeg.Interval + " via USD",
+            previous, previous is > 0 ? (value - previous.Value) / previous.Value * 100m : null);
     }
     public static MarketQuote ParseYahoo(JsonElement root, string pair, string interval, DateTimeOffset now, string span = "7D")
     {

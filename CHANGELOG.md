@@ -6,7 +6,7 @@ All notable changes to MochiDock are documented here. The format follows [Keep a
 
 ### Added
 
-- **FX rates**: pick the three currency pairs the card shows (about 25 currencies) in Settings, Tabs, FX rates. The default stays USD/JPY, USD/IDR and JPY/IDR; the daily fallback computes any pair as a cross rate.
+- **FX rates**: pick the three currency pairs the card shows (25 currencies) in Settings, Tabs, FX rates, with a swap button per pair. The default stays USD/JPY, USD/IDR and JPY/IDR. Pairs Yahoo does not list (VND/IDR, AED/IDR, MXN/IDR...) are built from the two USD rates, chart included, and the daily fallback computes any pair as a cross rate.
 
 ### Fixed
 

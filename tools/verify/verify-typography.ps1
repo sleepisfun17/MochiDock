@@ -326,15 +326,18 @@ $cases=@(
  [pscustomobject]@{Name="Fallback";Pair="JPY/IDR";Status="Ready"},
  [pscustomobject]@{Name="Stale";Pair="JPY/IDR";Status="Ready"},
  [pscustomobject]@{Name="Cooldown";Pair="JPY/IDR";Status="Checked recently — refresh available every minute."},
- [pscustomobject]@{Name="Empty";Pair="JPY/IDR";Status="FX unavailable — cached data retained."}
+ [pscustomobject]@{Name="Empty";Pair="JPY/IDR";Status="FX unavailable — cached data retained."},
+ # User-chosen pairs with the widest symbols and values: four-decimal, five-digit and three-letter-symbol tiles.
+ [pscustomobject]@{Name="LongPairs";Pair="TWD/IDR";Status="Ready";Pairs=@("MXN/NZD","GBP/VND","TWD/IDR")}
 )
 foreach($case in $cases){
  foreach($theme in @("Dark","Matcha")){foreach($scale in @(1,1.25,1.5,2)){
    $markets=[Activator]::CreateInstance($dictionaryType)
    if($case.Name -ne "Empty"){
-    $values=@{"USD/JPY"=[decimal]158.34;"USD/IDR"=[decimal]18103;"JPY/IDR"=[decimal]114.36}
-    $changes=@{"USD/JPY"=[decimal]0.4;"USD/IDR"=[decimal]0.3;"JPY/IDR"=[decimal]-0.1}
-    foreach($name in @("USD/JPY","USD/IDR","JPY/IDR")){
+    $values=@{"USD/JPY"=[decimal]158.34;"USD/IDR"=[decimal]18103;"JPY/IDR"=[decimal]114.36;"MXN/NZD"=[decimal]0.0912;"GBP/VND"=[decimal]34512.5;"TWD/IDR"=[decimal]512.34}
+    $changes=@{"USD/JPY"=[decimal]0.4;"USD/IDR"=[decimal]0.3;"JPY/IDR"=[decimal]-0.1;"MXN/NZD"=[decimal]-12.5;"GBP/VND"=[decimal]10.25;"TWD/IDR"=[decimal]-0.05}
+    $names=if($case.Pairs){$case.Pairs}else{@("USD/JPY","USD/IDR","JPY/IDR")}
+    foreach($name in $names){
      $change=if($case.Name -eq "Unavailable"){$null}else{$changes[$name]}
      $provider=if($case.Name -eq "Fallback" -and $name -eq $case.Pair){"ExchangeRate-API"}else{"Yahoo Finance"}
      $quoteSource=if($case.Name -eq "Stale" -and $name -eq $case.Pair){$now.AddHours(-3)}else{$now.AddMinutes(-5)}
@@ -350,6 +353,7 @@ foreach($case in $cases){
   $surface=[Windows.Controls.Border]::new();$surface.Child=$view;$surface.Width=592;$surface.Height=300;$surface.Background=$application.Resources["IslandGroundBrush"]
   [Windows.Media.TextOptions]::SetTextRenderingMode($surface,[Windows.Media.TextRenderingMode]::Grayscale)
   [Windows.Media.VisualTreeHelper]::SetRootDpi($surface,[Windows.DpiScale]::new($scale,$scale));$surface.Measure([Windows.Size]::new(592,300));$surface.Arrange([Windows.Rect]::new(0,0,592,300));$surface.UpdateLayout()
+   if($case.Pairs){$view.SetFixturePairs([string[]]$case.Pairs)}
    $view.GetType().GetMethod("RenderMarkets").Invoke($view,@($markets,$case.Pair,$case.Status,[Nullable[DateTimeOffset]]$now));$surface.UpdateLayout()
    if($case.Name -ne "Empty" -and $view.FindName("Chart").Children.Count -ne 3){throw "FX must contain one continuous fill, line and endpoint even with irregular timestamps"}
    foreach($controlName in @("Pair1","Pair2","Pair3","Chart","SourceText","RefreshButton")){
@@ -357,6 +361,14 @@ foreach($case in $cases){
     $tolerance=1/$scale
     if($control.ActualWidth -le 0 -or $control.ActualHeight -le 0 -or $point.X -lt -$tolerance -or $point.Y -lt -$tolerance -or $point.X+$control.ActualWidth -gt 592+$tolerance -or $point.Y+$control.ActualHeight -gt 300+$tolerance){throw "FX bounds failed: $($case.Name) $controlName $theme $scale"}
    }
+   # A tile's value, label and symbols must fit their slot: nothing clipped by a long pair.
+   # Labels may end in an ellipsis only for the extreme LongPairs case (the symbol chip and value still name the currencies).
+   $parts=if($case.Name -eq "LongPairs"){@("Value","Symbols")}else{@("Value","Label","Symbols")}
+   foreach($n in 1..3){foreach($part in $parts){
+    $text=$view.FindName("Pair$n$part");$probe=[Windows.Controls.TextBlock]::new();$probe.Text=$text.Text;$probe.FontFamily=$text.FontFamily;$probe.FontSize=$text.FontSize;$probe.FontWeight=$text.FontWeight
+    $probe.Measure([Windows.Size]::new([double]::PositiveInfinity,[double]::PositiveInfinity))
+    if($probe.DesiredSize.Width -gt $text.ActualWidth+0.5){throw "FX text clipped: $($case.Name) Pair$n$part '$($text.Text)' needs $($probe.DesiredSize.Width) has $($text.ActualWidth) ($theme $scale)"}
+   }}
   $bitmap=[Windows.Media.Imaging.RenderTargetBitmap]::new([int](592*$scale),[int](300*$scale),96*$scale,96*$scale,[Windows.Media.PixelFormats]::Pbgra32);$bitmap.Render($surface)
    $encoder=[Windows.Media.Imaging.PngBitmapEncoder]::new();$encoder.Frames.Add([Windows.Media.Imaging.BitmapFrame]::Create($bitmap));$path=Join-Path $output "FX-$($case.Name)-$theme-$scale.png";$stream=[IO.File]::Create($path);try{$encoder.Save($stream)}finally{$stream.Dispose()}
   }}
