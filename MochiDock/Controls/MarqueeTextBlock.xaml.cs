@@ -124,7 +124,7 @@ public partial class MarqueeTextBlock : System.Windows.Controls.UserControl
         _stopwatch.Restart();
     }
 
-    private void StopScroll()
+    private void StopScroll(bool resetPosition = true)
     {
         if (_isRenderingHooked)
         {
@@ -135,8 +135,11 @@ public partial class MarqueeTextBlock : System.Windows.Controls.UserControl
         _isMarqueeActive = false;
         _totalLoopDistance = 0;
         _scrollDurationSeconds = 0;
-        TranslateTransform.X = 0;
-        TranslateTransform.Y = 0;
+        if (resetPosition)
+        {
+            TranslateTransform.X = 0;
+            TranslateTransform.Y = 0;
+        }
         if (ContentPanel != null) ContentPanel.Opacity = 1;
     }
 
@@ -549,10 +552,14 @@ public partial class MarqueeTextBlock : System.Windows.Controls.UserControl
         {
             double travelled = elapsedSeconds <= _pacedStartPause ? 0 : Math.Min(_totalLoopDistance, (elapsedSeconds - _pacedStartPause) * _pacedSpeed);
             TranslateTransform.X = SnapX(-travelled);
-            if (travelled >= _totalLoopDistance && _singleLineCompletedCycleCount == 0)
+            if (travelled >= _totalLoopDistance)
             {
-                _singleLineCompletedCycleCount = 1;
-                FireCycleCompleted();
+                if (_singleLineCompletedCycleCount == 0)
+                {
+                    _singleLineCompletedCycleCount = 1;
+                    FireCycleCompleted();
+                }
+                StopScroll(resetPosition: false);
             }
             return;
         }

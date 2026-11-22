@@ -139,7 +139,7 @@ public partial class App : System.Windows.Application
             _fileShelfService = new FileShelfService();
             _clipboardService = new ClipboardService();
 
-            var viewModel = new MainViewModel(_mediaService, _mailService, _gowaService, _discordService, _weatherService, _pomodoroService, _prayerTimesService, _lrclibService, _tasksService, _fileShelfService, _clipboardService);
+            var viewModel = new MainViewModel(_mediaService, _mailService, _gowaService, _discordService, _weatherService, _pomodoroService, _prayerTimesService, _lrclibService, _tasksService, _fileShelfService, _clipboardService, initialSettings: settings);
             _fxHttp=new System.Net.Http.HttpClient{Timeout=TimeSpan.FromSeconds(8)};
             _fxRates=new FxRatesService(new KeylessFxProvider(_fxHttp), initialPairs: settings.FxPairs);viewModel.ConfigureFx(_fxRates);_ = _fxRates.StartAsync(settings.ShowFxRatesTab);
             _deviceBatteries = new DeviceBatteryService();viewModel.ConfigureDeviceBatteries(_deviceBatteries);

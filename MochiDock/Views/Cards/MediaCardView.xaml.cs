@@ -12,8 +12,9 @@ public partial class MediaCardView : UserControl
     public MediaCardView()
     {
         InitializeComponent();
-        Loaded+=(_,_)=>{Detach();_owner=ViewModel;if(_owner!=null)_owner.PropertyChanged+=Changed;Sync();};
+        Loaded+=(_,_)=>{Detach();_owner=ViewModel;if(_owner!=null){_owner.PropertyChanged+=Changed;_owner.MediaPositionUpdated+=OnMediaPositionUpdated;}Sync();};
         Unloaded+=(_,_)=>{Cancel();Detach();};
+        IsVisibleChanged+=(_,_)=>{if(IsVisible)Sync();};
     }
 
     private async void RetryLyrics_Click(object sender,RoutedEventArgs e){if(ViewModel!=null)await ViewModel.RetryLyricsAsync();}
@@ -79,8 +80,9 @@ public partial class MediaCardView : UserControl
     private MainViewModel? _owner;
     private string _track="";
     private long _commandGeneration;
-    private void Detach(){if(_owner!=null)_owner.PropertyChanged-=Changed;_owner=null;}
+    private void Detach(){if(_owner!=null){_owner.PropertyChanged-=Changed;_owner.MediaPositionUpdated-=OnMediaPositionUpdated;}_owner=null;}
     private void Changed(object? s,System.ComponentModel.PropertyChangedEventArgs e){if(e.PropertyName==nameof(MainViewModel.CurrentMedia))Sync();}
+    private void OnMediaPositionUpdated(){if(IsVisible)Sync();}
     private string Identity=>ViewModel==null?"":MochiDock.Services.LrclibService.CreateIdentity(ViewModel.CurrentMedia.SessionIdentity,ViewModel.CurrentMedia.Title,ViewModel.CurrentMedia.Artist,ViewModel.CurrentMedia.Album,ViewModel.CurrentMedia.Duration.TotalSeconds).Key;
     private void Sync(){if(ViewModel==null)return;if(_track!=Identity){_track=Identity;Cancel();SeekErrorText.Text="";}if(!_isDraggingSlider){TrackSlider.SetCurrentValue(System.Windows.Controls.Slider.ValueProperty,ViewModel.CurrentMedia.Position.TotalSeconds);SeekPositionLabel.Text=ViewModel.CurrentMedia.Position.ToString(@"m\:ss");}}
     private void Preview(){SeekPositionLabel.Text=TimeSpan.FromSeconds(TrackSlider.Value).ToString(@"m\:ss");}

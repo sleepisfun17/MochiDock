@@ -34,11 +34,14 @@ public static class SettingsService
         loaded.MigrateTasksTab();
         loaded.MigrateWhatsAppOptIn(HasGowaSession());
         // The WhatsApp webhook token is created once and kept, so a shared GOWA server's webhook URL stays valid across restarts.
+        // Also persist immediately when recovered from .bak so a subsequent Load() does not see a missing file and reset to defaults.
+        bool needsSave = result.Status == JsonLoadStatus.Recovered;
         if (string.IsNullOrWhiteSpace(loaded.RemoteWebhookToken))
         {
             loaded.RemoteWebhookToken = GowaService.NewWebhookToken();
-            if (result.CanWrite) { Save(loaded); FlushAsync().GetAwaiter().GetResult(); }
+            needsSave = true;
         }
+        if (needsSave && result.CanWrite) { Save(loaded); FlushAsync().GetAwaiter().GetResult(); }
         return loaded;
     }
 

@@ -40,6 +40,7 @@ public class MediaService : IDisposable
     private TimeSpan _basePosition = TimeSpan.Zero;
     private TimeSpan _totalDuration = TimeSpan.Zero;
     private bool _isPlaying;
+    private bool _isIdle;
     private MediaInfo _lastMediaInfo = new();
 
     public event Action<MediaInfo>? MediaUpdated;
@@ -241,6 +242,8 @@ public class MediaService : IDisposable
 
     private void EmitIdleMedia()
     {
+        if (_isIdle) return;
+        _isIdle = true;
         _timelineTickTimer?.Stop();_pendingSeek=null;_lyricClock.Reset();
         _isPlaying = false;
         _basePosition = TimeSpan.Zero;
@@ -338,6 +341,7 @@ public class MediaService : IDisposable
 
             _lastMediaInfo = info;
             UpdateTimelineFromSession();
+            _isIdle = false;
             MediaUpdated?.Invoke(info);
             if(props.Thumbnail!=null){var art=await LoadThumbnailAsync(props.Thumbnail);if(!_disposed&&generation==_generation&&version==_refreshVersion){info.AlbumArt=art;MediaUpdated?.Invoke(info);}}
         }

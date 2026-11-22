@@ -777,8 +777,11 @@ public partial class MainWindow : Window
                 bool startWithWindows = await StartupService.InitializeAsync();
                 Dispatcher.Invoke(() =>
                 {
-                    _settings.StartWithWindows = startWithWindows;
-                    SettingsService.Save(_settings);
+                    if (_settings.StartWithWindows != startWithWindows)
+                    {
+                        _settings.StartWithWindows = startWithWindows;
+                        SettingsService.Save(_settings);
+                    }
                 });
             }
             catch (Exception ex) { System.Diagnostics.Debug.WriteLine("Startup initialization: " + ex.Message); }
@@ -1505,27 +1508,39 @@ public partial class MainWindow : Window
             return;
         }
 
+        double curWidth = CompactPillBorder.ActualWidth > 0 ? CompactPillBorder.ActualWidth : 44;
+        double curHeight = CompactPillBorder.ActualHeight > 0 ? CompactPillBorder.ActualHeight : 36;
+        bool widthChanged = Math.Abs(curWidth - targetWidth) >= 0.5;
+        bool heightChanged = Math.Abs(curHeight - targetHeight) >= 0.5;
+        if (!widthChanged && !heightChanged) return;
+
         var duration = TimeSpan.FromMilliseconds(200);
         var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
 
-        var wAnim = new DoubleAnimation(CompactPillBorder.ActualWidth > 0 ? CompactPillBorder.ActualWidth : 44, targetWidth, duration)
+        if (widthChanged)
         {
-            EasingFunction = ease
-        };
-        wAnim.Completed += (s, e) =>
-        {
-            if (!_isAdjustingVolume)
+            var wAnim = new DoubleAnimation(curWidth, targetWidth, duration)
             {
-                CapsuleMarquee.UpdateMarquee(resetScroll: false);
-            }
-        };
-        CompactPillBorder.BeginAnimation(WidthProperty, wAnim);
+                EasingFunction = ease
+            };
+            wAnim.Completed += (s, e) =>
+            {
+                if (!_isAdjustingVolume)
+                {
+                    CapsuleMarquee.UpdateMarquee(resetScroll: false);
+                }
+            };
+            CompactPillBorder.BeginAnimation(WidthProperty, wAnim);
+        }
 
-        var hAnim = new DoubleAnimation(CompactPillBorder.ActualHeight > 0 ? CompactPillBorder.ActualHeight : 36, targetHeight, duration)
+        if (heightChanged)
         {
-            EasingFunction = ease
-        };
-        CompactPillBorder.BeginAnimation(HeightProperty, hAnim);
+            var hAnim = new DoubleAnimation(curHeight, targetHeight, duration)
+            {
+                EasingFunction = ease
+            };
+            CompactPillBorder.BeginAnimation(HeightProperty, hAnim);
+        }
     }
 
     private bool _prayerSizePending;

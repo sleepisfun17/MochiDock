@@ -95,6 +95,7 @@ public partial class MascotControl : System.Windows.Controls.UserControl
 
     private readonly DispatcherTimer _idleSleepTimer;
     private readonly DispatcherTimer _winkTimer;
+    private readonly DispatcherTimer _cursorWatchTimer;
 
     private readonly Random _random = new();
 
@@ -128,7 +129,11 @@ public partial class MascotControl : System.Windows.Controls.UserControl
         if (_theme != MascotTheme.Default) ApplyMood(Mood);   // the XAML body is the grey one
         BuildWind();
         Unloaded += (_, _) => { if (_spinning) EndSpin(landing: false); };
-        IsVisibleChanged += (_, _) => { if (!IsVisible && _spinning) EndSpin(landing: false); };
+        IsVisibleChanged += (_, _) =>
+        {
+            if (!IsVisible && _spinning) EndSpin(landing: false);
+            UpdateActivityTimers();
+        };
 
 
 
@@ -156,16 +161,15 @@ public partial class MascotControl : System.Windows.Controls.UserControl
             if (IsVisible && MochiWink.CanWink(Mood) && AnimationsEnabled) PerformWink();
         };
 
+        // Lightweight cursor-movement check when gaze has converged so CompositionTarget.Rendering stays unhooked at idle
+        _cursorWatchTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(100) };
+        _cursorWatchTimer.Tick += CursorWatchTimer_Tick;
+
         Loaded += (s, e) =>
 
         {
 
-            StartRenderingHook();
-
-            _blinkTimer.Start();
-            _winkTimer.Start();
-
-            _idleSleepTimer.Start();
+            UpdateActivityTimers();
 
         };
 
@@ -176,6 +180,8 @@ public partial class MascotControl : System.Windows.Controls.UserControl
         {
 
             StopRenderingHook();
+
+            _cursorWatchTimer.Stop();
 
             _blinkTimer.Stop();
             _winkTimer.Stop();
@@ -188,76 +194,92 @@ public partial class MascotControl : System.Windows.Controls.UserControl
 
 
 
-    private void StartRenderingHook()
-
+    private void UpdateActivityTimers()
     {
-
-        if (!_isRenderingHooked)
-
+        if (!IsLoaded || !IsVisible)
         {
-
-            _frameStopwatch.Restart();
-
-            CompositionTarget.Rendering += OnCompositionRendering;
-
-            _isRenderingHooked = true;
-
+            StopRenderingHook();
+            _cursorWatchTimer.Stop();
+            _blinkTimer.Stop();
+            _winkTimer.Stop();
+            _idleSleepTimer.Stop();
+            return;
         }
 
+        _blinkTimer.Start();
+        _winkTimer.Start();
+        _idleSleepTimer.Start();
+        if (IsStill(Mood))
+        {
+            StopRenderingHook();
+            _cursorWatchTimer.Stop();
+        }
+        else
+        {
+            StartRenderingHook();
+        }
     }
 
+    private void CursorWatchTimer_Tick(object? sender, EventArgs e)
+    {
+        if (!IsLoaded || !IsVisible || IsStill(Mood))
+        {
+            _cursorWatchTimer.Stop();
+            return;
+        }
+        if (_isRenderingHooked)
+        {
+            _cursorWatchTimer.Stop();
+            return;
+        }
+        if (GetCursorPos(out var pt) && (pt.X != _lastMousePos.X || pt.Y != _lastMousePos.Y))
+        {
+            _cursorWatchTimer.Stop();
+            StartRenderingHook();
+        }
+    }
 
+    private void StartRenderingHook()
+    {
+        if (!_isRenderingHooked)
+        {
+            _frameStopwatch.Restart();
+            CompositionTarget.Rendering += OnCompositionRendering;
+            _isRenderingHooked = true;
+        }
+    }
 
     private void StopRenderingHook()
-
     {
-
         if (_isRenderingHooked)
-
         {
-
             CompositionTarget.Rendering -= OnCompositionRendering;
-
             _isRenderingHooked = false;
-
         }
-
     }
 
-
-
     private void OnCompositionRendering(object? sender, EventArgs e)
-
     {
-
-        if (!IsLoaded || !IsVisible || IsStill(Mood)) return;
-
-
+        if (!IsLoaded || !IsVisible || IsStill(Mood))
+        {
+            StopRenderingHook();
+            return;
+        }
 
         double dt = _frameStopwatch.Elapsed.TotalSeconds;
-
         _frameStopwatch.Restart();
-
-
 
         if (dt > 0.1) dt = 0.016;
 
-
-
+        bool mouseMoved = false;
         try
-
         {
-
             if (GetCursorPos(out var pt))
-
             {
-
                 if (pt.X != _lastMousePos.X || pt.Y != _lastMousePos.Y)
-
                 {
-
+                    mouseMoved = true;
                     _lastMousePos = pt;
-
                     _lastMouseMoveTime = DateTime.Now;
 
                     if (Mood == MascotMood.Sleeping)
@@ -270,67 +292,47 @@ public partial class MascotControl : System.Windows.Controls.UserControl
                             RequestMood(MascotMood.Idle);
                         }
                     }
-
                 }
-
-
 
                 if (Mood != MascotMood.Sleeping)
-
                 {
-
                     var center = PointToScreen(new Point(ActualWidth / 2.0, ActualHeight / 2.0));
-
                     double dx = pt.X - center.X;
-
                     double dy = pt.Y - center.Y;
-
                     double dist = Math.Sqrt(dx * dx + dy * dy);
 
-
-
                     double maxOffset = 2.2;
-
                     double factor = (dist > 0) ? Math.Min(dist / 80.0, 1.0) : 0;
-
                     _targetX = (dist > 0) ? (dx / dist) * factor * maxOffset : 0;
-
                     _targetY = (dist > 0) ? (dy / dist) * factor * maxOffset : 0;
-
                 }
-
                 else
-
                 {
-
                     _targetX = 0;
-
                     _targetY = 1.0;
-
                 }
-
             }
-
         }
-
         catch { }
 
-
-
         // Exponential smoothing (Coucou math) - perfectly fluid at 60Hz, 144Hz, 200Hz, 240Hz
-
         double k = 1.0 - Math.Pow(0.0005, dt);
-
         _curX += (_targetX - _curX) * k;
-
         _curY += (_targetY - _curY) * k;
 
-
+        if (!mouseMoved && Math.Abs(_targetX - _curX) < 0.01 && Math.Abs(_targetY - _curY) < 0.01)
+        {
+            _curX = _targetX;
+            _curY = _targetY;
+            FaceTransform.X = _curX;
+            FaceTransform.Y = _curY;
+            StopRenderingHook();
+            _cursorWatchTimer.Start();
+            return;
+        }
 
         FaceTransform.X = _curX;
-
         FaceTransform.Y = _curY;
-
     }
 
 
@@ -703,6 +705,11 @@ public partial class MascotControl : System.Windows.Controls.UserControl
         if (_spinning) { _pendingMood = mood; return; }
         if (SpinEnabled && AnimationsEnabled && IsLoaded && IsVisible && MascotSpinPolicy.ShouldSpin(_appliedMood, mood)) Spin(mood);
         else ApplyMood(mood);
+        if (IsLoaded && IsVisible)
+        {
+            if (IsStill(mood)) { StopRenderingHook(); _cursorWatchTimer.Stop(); }
+            else { StartRenderingHook(); }
+        }
     }
 
     private void Spin(MascotMood mood)

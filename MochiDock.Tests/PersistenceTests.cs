@@ -29,6 +29,44 @@ public sealed class PersistenceTests : IDisposable
         Assert.Equal(1, result.Value.Value);
         Assert.Equal("broken", File.ReadAllText(Directory.GetFiles(root, "*.corrupt-*").Single()));
     }
+    [Fact] public async Task SettingsServiceLoadRecoversFromBackupAndSurvivesSecondLoad()
+    {
+        string path = SettingsService.SettingsFilePath;
+        string dir = Path.GetDirectoryName(path)!;
+        Directory.CreateDirectory(dir);
+        try
+        {
+            var original = new MochiDock.Models.AppSettings
+            {
+                WeatherCity = "Osaka",
+                CapsuleTheme = "Matcha",
+                RemoteWebhookToken = "tok-keep-123"
+            };
+            SettingsService.Save(original);
+            await SettingsService.FlushAsync();
+            // Save a second time so .bak holds original
+            SettingsService.Save(original);
+            await SettingsService.FlushAsync();
+            File.WriteAllText(path, "{corrupt");
+
+            var first = SettingsService.Load();
+            var second = SettingsService.Load();
+
+            Assert.Equal("Osaka", first.WeatherCity);
+            Assert.Equal("Matcha", first.CapsuleTheme);
+            Assert.Equal("tok-keep-123", first.RemoteWebhookToken);
+            Assert.Equal("Osaka", second.WeatherCity);
+            Assert.Equal("Matcha", second.CapsuleTheme);
+            Assert.Equal("tok-keep-123", second.RemoteWebhookToken);
+            Assert.True(File.Exists(path));
+        }
+        finally
+        {
+            await SettingsService.FlushAsync();
+            foreach (var f in Directory.EnumerateFiles(dir, "settings.json*"))
+                File.Delete(f);
+        }
+    }
     [Fact] public void LockedFileBlocksAutomaticOverwrite()
     {
         AtomicJsonStore.Save(FilePath, new Example(3));

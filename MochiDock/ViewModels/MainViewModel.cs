@@ -535,22 +535,31 @@ public partial class MainViewModel : INotifyPropertyChanged
         }
     }
 
+    private string _lastClockMinute = "";
+    public event Action? MediaPositionUpdated;
     public event PropertyChangedEventHandler? PropertyChanged;
 
-    public MainViewModel(MediaService mediaService, IMailService mailService, GowaService gowaService, DiscordNotificationService discordService, WeatherService weatherService, PomodoroService pomodoroService, PrayerTimesService prayerTimesService, LrclibService lrclibService, TasksService tasksService, FileShelfService fileShelfService, ClipboardService clipboardService, Action<AppSettings>? saveNavigationSettings = null)
+    public MainViewModel(MediaService mediaService, IMailService mailService, GowaService gowaService, DiscordNotificationService discordService, WeatherService weatherService, PomodoroService pomodoroService, PrayerTimesService prayerTimesService, LrclibService lrclibService, TasksService tasksService, FileShelfService fileShelfService, ClipboardService clipboardService, Action<AppSettings>? saveNavigationSettings = null, AppSettings? initialSettings = null)
     {
         _saveNavigationSettings = saveNavigationSettings ?? SettingsService.Save;
+        _lastClockMinute = CurrentTimeText;
         var clockTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
         clockTimer.Tick += (s, e) =>
         {
-            OnPropertyChanged(nameof(CurrentTimeText));
-            OnPropertyChanged(nameof(CurrentDateText));
-            OnPropertyChanged(nameof(HeaderDateTimeText));
+            string nowMinute = CurrentTimeText;
+            if (!string.Equals(_lastClockMinute, nowMinute, StringComparison.Ordinal))
+            {
+                _lastClockMinute = nowMinute;
+                OnPropertyChanged(nameof(CurrentTimeText));
+                OnPropertyChanged(nameof(CurrentDateText));
+                OnPropertyChanged(nameof(HeaderDateTimeText));
+                if (!_isExpanded && !HasActiveMedia && !IsStatsShownInCapsule && !IsNotificationInMainPill && !IsPomodoroInMainPill)
+                {
+                    OnPropertyChanged(nameof(CompactCapsuleText));
+                }
+            }
             UpdateActivityFace();   // Pomodoro state, FX change and the weather can change without navigation
             UpdateDayFace();        // throttled to every 30 seconds
-            if (!_isExpanded && !HasActiveMedia && !IsStatsShownInCapsule && !IsNotificationInMainPill && !IsPomodoroInMainPill)
-            {
-                OnPropertyChanged(nameof(CompactCapsuleText));
             if (DateTime.Today != _lastCalendarDate)
             {
                 _lastCalendarDate = DateTime.Today;
@@ -558,7 +567,6 @@ public partial class MainViewModel : INotifyPropertyChanged
                 OnPropertyChanged(nameof(CalendarDays));
                 OnPropertyChanged(nameof(CurrentDayOfWeekUpper));
                 OnPropertyChanged(nameof(CurrentDateMonthText));
-            }
             }
             if (_currentPrayerSchedule != null)
             {
@@ -598,7 +606,7 @@ public partial class MainViewModel : INotifyPropertyChanged
         _weatherService = weatherService;
         _pomodoroService = pomodoroService;
 
-        _settings = SettingsService.Load();
+        _settings = initialSettings ?? SettingsService.Load();
         MochiDock.Core.DateDisplay.Set(MochiDock.Core.DateDisplay.Parse(_settings.DateFormat));
         _aiUsageService = new AiUsageService { HiddenProviders = _settings.HiddenAiProviders ?? new() };
         _aiUsageService.AlertsEnabled = _settings.EnableAiUsageAlerts;
@@ -2089,7 +2097,9 @@ public partial class MainViewModel : INotifyPropertyChanged
     private void CheckHardwareAlerts()
     {
         var now=DateTimeOffset.UtcNow;
-        if(!EnableHardwareAlerts||_isWorkstationLocked||!_displayAwake){if((!_noticeIsAi&&!_noticeIsAgenda&&!_noticeIsGame&&!_noticeIsDevice&&!_noticeIsWeather&&!_noticeIsUpdate)||_isWorkstationLocked||!_displayAwake){_hardwareNoticeUntil=default;_noticeIsAi=false;_noticeIsAgenda=false;_noticeIsGame=false;_noticeIsDevice=false;_noticeIsWeather=false;_noticeIsUpdate=false;}_hardwareAlerts.ResetContinuity();NotifyHardwareNotice();return;}
+        bool wasVisible = IsHardwareNoticeVisible;
+        string wasText = _hardwareNoticeText;
+        if(!EnableHardwareAlerts||_isWorkstationLocked||!_displayAwake){if((!_noticeIsAi&&!_noticeIsAgenda&&!_noticeIsGame&&!_noticeIsDevice&&!_noticeIsWeather&&!_noticeIsUpdate)||_isWorkstationLocked||!_displayAwake){_hardwareNoticeUntil=default;_noticeIsAi=false;_noticeIsAgenda=false;_noticeIsGame=false;_noticeIsDevice=false;_noticeIsWeather=false;_noticeIsUpdate=false;}_hardwareAlerts.ResetContinuity();if(IsHardwareNoticeVisible!=wasVisible||!string.Equals(_hardwareNoticeText,wasText,StringComparison.Ordinal))NotifyHardwareNotice();return;}
         var s=HardwareStats;
         foreach(var metric in new[]{("CPU usage",s.CpuUsageReading,_settings.CpuAlertThreshold,"%"),("GPU usage",s.GpuUsageReading,_settings.GpuAlertThreshold,"%"),("CPU temperature",s.CpuTemperatureReading,_settings.TemperatureAlertThreshold,"°C"),("GPU temperature",s.GpuTemperatureReading,_settings.TemperatureAlertThreshold,"°C")}) {
             if(!_hardwareAlerts.Evaluate(metric.Item1,metric.Item2,metric.Item3,now))continue;
@@ -2097,7 +2107,7 @@ public partial class MainViewModel : INotifyPropertyChanged
             _noticeIsAi=false;_noticeIsAgenda=false;_noticeIsGame=false;_noticeIsDevice=false;_noticeIsWeather=false;_noticeIsUpdate=false;_hardwareNoticeText=$"{metric.Item1} {metric.Item2!.Value:0}{metric.Item4}";_hardwareNoticeUntil=now.AddSeconds(8);_hardwareNoticeTimer.Stop();_hardwareNoticeTimer.Start();
         }
         if(_hardwarePresentationSuppressed||IsNotificationInMainPill||IsPrayerReminderVisible||!ShouldShowNotification("Hardware"))_hardwareNoticeUntil=default;
-        NotifyHardwareNotice();
+        if(IsHardwareNoticeVisible!=wasVisible||!string.Equals(_hardwareNoticeText,wasText,StringComparison.Ordinal))NotifyHardwareNotice();
     }
 
     public void SetCapsuleScrollSpeed(double speed)
@@ -2110,9 +2120,13 @@ public partial class MainViewModel : INotifyPropertyChanged
     public void ApplyCapsuleTheme(string theme)
     {
         theme = MochiDock.Core.ThemePolicy.Normalize(theme);
+        bool changed = !string.Equals(_settings.CapsuleTheme, theme, StringComparison.Ordinal);
         CapsuleTheme = theme;
-        _settings.CapsuleTheme = theme;
-        SettingsService.Save(_settings);
+        if (changed)
+        {
+            _settings.CapsuleTheme = theme;
+            SettingsService.Save(_settings);
+        }
 
         if (System.Windows.Application.Current?.MainWindow != null)
         {
@@ -2505,7 +2519,7 @@ public partial class MainViewModel : INotifyPropertyChanged
             {
                 _currentMedia.Position = pos;
                 _currentMedia.Duration = dur;
-                OnPropertyChanged(nameof(CurrentMedia));
+                MediaPositionUpdated?.Invoke();
                 if (_currentLyrics != null && _currentLyrics.IsSynced && _currentLyrics.Lines.Count > 0)
                 {
                     // The playback clock is untouched (Spotify keeps its timestamp-corrected position); only the lookup position is shifted by the user's lyric offset.
