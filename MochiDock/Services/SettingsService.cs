@@ -9,8 +9,7 @@ public static class SettingsService
 {
     private static string SettingsPath => Path.Combine(AppDataPaths.Roaming, "settings.json");
     public static string SettingsFilePath => SettingsPath;
-    private static readonly object QueueGate = new();
-    private static Task Pending = Task.CompletedTask;
+    private static readonly QueuedJsonWriter Writer = new();
     public static event Action<string>? PersistenceError;
 
     public static AppSettings Load()
@@ -73,18 +72,10 @@ public static class SettingsService
         catch { return false; }
     }
 
-    public static void Save(AppSettings settings)
-    {
-        string snapshot = JsonSerializer.Serialize(settings, new JsonSerializerOptions { WriteIndented = true });
-        lock (QueueGate)
-            Pending = Pending.ContinueWith(_ =>
-            {
-                try { AtomicJsonStore.SaveJson(SettingsPath, snapshot); }
-                catch (Exception ex) { PersistenceError?.Invoke(ex.Message); }
-            }, TaskScheduler.Default);
-    }
+    public static void Save(AppSettings settings) =>
+        Writer.Enqueue(SettingsPath, settings, msg => PersistenceError?.Invoke(msg));
 
-    public static Task FlushAsync() { lock (QueueGate) return Pending; }
+    public static Task FlushAsync() => Writer.FlushAsync();
     /// <summary>
     /// Writes a portable export (<see cref="MochiDock.Core.SettingsTransfer.Format"/>): the saved settings without secrets or
     /// this PC's own values, plus <paramref name="tasks"/>. Mail and WhatsApp passwords live in DPAPI stores and never leave the PC.

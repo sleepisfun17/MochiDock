@@ -49,10 +49,15 @@ public static class LyricRomanizerService
     static readonly Lazy<(Dictionary<string, string> Map, int LongestKey)> JapaneseDictionary = new(LoadJapaneseDictionary, LazyThreadSafetyMode.ExecutionAndPublication);
     static readonly Lazy<Dictionary<char, string>> PinyinTable = new(LoadPinyinTable, LazyThreadSafetyMode.ExecutionAndPublication);
 
-    static Stream? OpenAsset(string name) =>
-        typeof(LyricRomanizerService).Assembly.GetManifestResourceStream("MochiDock.Assets." + name);
+    static Stream? OpenAsset(string name)
+    {
+        string filePath = Path.Combine(AppContext.BaseDirectory, "Assets", name);
+        return File.Exists(filePath)
+            ? File.OpenRead(filePath)
+            : typeof(LyricRomanizerService).Assembly.GetManifestResourceStream("MochiDock.Assets." + name);
+    }
 
-    static IEnumerable<string[]> ReadTsv(string name)
+    static IEnumerable<(string Key, string Value)> ReadTsv(string name)
     {
         using var stream = OpenAsset(name);
         if (stream == null) yield break;
@@ -62,7 +67,7 @@ public static class LyricRomanizerService
         while ((line = reader.ReadLine()) != null)
         {
             int tab = line.IndexOf('\t');
-            if (tab > 0 && tab < line.Length - 1) yield return new[] { line[..tab], line[(tab + 1)..] };
+            if (tab > 0 && tab < line.Length - 1) yield return (line[..tab], line[(tab + 1)..]);
         }
     }
 
@@ -72,10 +77,10 @@ public static class LyricRomanizerService
         int longest = 0;
         try
         {
-            foreach (var pair in ReadTsv("ja_readings.tsv.gz"))
+            foreach (var (surface, reading) in ReadTsv("ja_readings.tsv.gz"))
             {
-                map.TryAdd(pair[0], pair[1]);
-                longest = Math.Max(longest, pair[0].Length);
+                map.TryAdd(surface, reading);
+                longest = Math.Max(longest, surface.Length);
             }
         }
         catch (Exception ex) when (ex is IOException or InvalidDataException)
@@ -90,8 +95,8 @@ public static class LyricRomanizerService
         var map = new Dictionary<char, string>();
         try
         {
-            foreach (var pair in ReadTsv("zh_pinyin.tsv.gz"))
-                if (pair[0].Length == 1) map.TryAdd(pair[0][0], pair[1]);
+            foreach (var (hanzi, pinyin) in ReadTsv("zh_pinyin.tsv.gz"))
+                if (hanzi.Length == 1) map.TryAdd(hanzi[0], pinyin);
         }
         catch (Exception ex) when (ex is IOException or InvalidDataException)
         {

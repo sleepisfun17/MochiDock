@@ -13,8 +13,7 @@ namespace MochiDock.Services;
 public sealed class GamePlaytimeStore
 {
     private readonly string _path;
-    private readonly object _gate = new();
-    private Task _pending = Task.CompletedTask;
+    private readonly QueuedJsonWriter _writer = new();
 
     public GamePlaytimeLedger Ledger { get; private set; }
     public event Action<string>? PersistenceError;
@@ -40,16 +39,8 @@ public sealed class GamePlaytimeStore
         Save();
     }
 
-    public Task FlushAsync() { lock (_gate) return _pending; }
+    public Task FlushAsync() => _writer.FlushAsync();
 
-    private void Save()
-    {
-        string snapshot = JsonSerializer.Serialize(Ledger, new JsonSerializerOptions { WriteIndented = true });
-        lock (_gate)
-            _pending = _pending.ContinueWith(_ =>
-            {
-                try { AtomicJsonStore.SaveJson(_path, snapshot); }
-                catch (Exception ex) { PersistenceError?.Invoke(ex.Message); }
-            }, TaskScheduler.Default);
-    }
+    private void Save() =>
+        _writer.Enqueue(_path, Ledger, msg => PersistenceError?.Invoke(msg));
 }

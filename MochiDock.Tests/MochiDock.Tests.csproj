@@ -21,7 +21,7 @@
     <Compile Include="..\MochiDock\Models\AppSettings.cs" Link="AppSettings.cs" />
   </ItemGroup>
 
-<ItemGroup><ProjectReference Include="..\MochiDock.Core\MochiDock.Core.csproj" /><Compile Include="..\MochiDock\Services\AtomicJsonStore.cs" Link="AtomicJsonStore.cs" /></ItemGroup><ItemGroup><Compile Include="..\MochiDock\Services\PhoneDropServer.cs" Link="PhoneDropServer.cs" /></ItemGroup><ItemGroup>
+<ItemGroup><ProjectReference Include="..\MochiDock.Core\MochiDock.Core.csproj" /><Compile Include="..\MochiDock\Services\AtomicJsonStore.cs" Link="AtomicJsonStore.cs" /><Compile Include="..\MochiDock\Services\QueuedJsonWriter.cs" Link="QueuedJsonWriter.cs" /></ItemGroup><ItemGroup><Compile Include="..\MochiDock\Services\PhoneDropServer.cs" Link="PhoneDropServer.cs" /></ItemGroup><ItemGroup>
 <Compile Include="..\MochiDock\Models\PrayerSchedule.cs" Link="PrayerSchedule.cs"/>
 <Compile Include="..\MochiDock\Services\PrayerTimesService.cs" Link="LegacyPrayerCalculator.cs"/>
 <Compile Include="..\MochiDock\Services\PrayerScheduleProvider.cs" Link="PrayerScheduleProvider.cs"/>

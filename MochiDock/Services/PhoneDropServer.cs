@@ -26,6 +26,7 @@ public sealed class PhoneDropServer
     private readonly TimeSpan _uploadIdleTimeout;
     private readonly TimeSpan _stopDrainTimeout;
     private static readonly TimeSpan ResponseWriteTimeout = TimeSpan.FromSeconds(10);
+    private static readonly JsonSerializerOptions WebJsonOptions = new(JsonSerializerDefaults.Web);
     internal Func<HttpListenerResponse, byte[], CancellationToken, Task>? WriteResponseOverride { get; set; }
     private readonly object _gate = new();
     private readonly SemaphoreSlim _lifecycle = new(1);
@@ -159,7 +160,7 @@ public sealed class PhoneDropServer
     private Task JsonAsync(HttpListenerResponse response, int status, object value, CancellationToken token = default)
     {
         response.StatusCode = status; response.ContentType = "application/json";
-        byte[] bytes = JsonSerializer.SerializeToUtf8Bytes(value, new JsonSerializerOptions(JsonSerializerDefaults.Web));
+        byte[] bytes = JsonSerializer.SerializeToUtf8Bytes(value, WebJsonOptions);
         return WriteResponseAsync(response, bytes, token);
     }
     private async Task HandleAsync(HttpListenerContext context, CancellationToken token)
@@ -184,7 +185,7 @@ public sealed class PhoneDropServer
                 if (request.ContentLength64 > 16384) { await JsonAsync(response, 413, new { error = "Request too large." }, token); return; }
                 using var timeout = CancellationTokenSource.CreateLinkedTokenSource(token); timeout.CancelAfter(TimeSpan.FromSeconds(60));
                 using var metadataTimeout = timeout.Token.Register(() => { try { response.Abort(); } catch (System.Exception logEx) { MochiDock.Services.AppLog.Warn("PhoneDrop", logEx); } });
-                var files = await JsonSerializer.DeserializeAsync<DropFile[]>(request.InputStream, new JsonSerializerOptions(JsonSerializerDefaults.Web), timeout.Token) ?? throw new ArgumentException("Missing files.");
+                var files = await JsonSerializer.DeserializeAsync<DropFile[]>(request.InputStream, WebJsonOptions, timeout.Token) ?? throw new ArgumentException("Missing files.");
                 var safe = PhoneDropPolicy.Validate(files);
                 string id = Guid.NewGuid().ToString("N");
                 lock (_gate)

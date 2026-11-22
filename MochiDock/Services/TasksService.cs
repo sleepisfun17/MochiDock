@@ -42,8 +42,7 @@ public class TasksService
         }
     }
 
-    private readonly object _saveGate = new();
-    private Task _pendingSave = Task.CompletedTask;
+    private readonly QueuedJsonWriter _writer = new();
     public event Action<string>? PersistenceError;
     public void LoadTasks()
     {
@@ -53,16 +52,10 @@ public class TasksService
     }
     public void SaveTasks()
     {
-        string snapshot = JsonSerializer.Serialize(Tasks, new JsonSerializerOptions { WriteIndented = true });
-        lock (_saveGate)
-            _pendingSave = _pendingSave.ContinueWith(_ =>
-            {
-                try { AtomicJsonStore.SaveJson(TasksPath, snapshot); }
-                catch (Exception ex) { PersistenceError?.Invoke(ex.Message); }
-            }, TaskScheduler.Default);
+        _writer.Enqueue(TasksPath, Tasks, msg => PersistenceError?.Invoke(msg));
         TasksChanged?.Invoke();
     }
-    public Task FlushAsync() { lock (_saveGate) return _pendingSave; }
+    public Task FlushAsync() => _writer.FlushAsync();
 
     /// <summary>The app's task list for settings export and import. Read and changed on the UI thread only.</summary>
     public static TasksService? Current { get; private set; }

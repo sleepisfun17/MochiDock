@@ -93,6 +93,6 @@
         </Grid>
         <StackPanel Grid.Row="2" Margin="0,8,0,0">
             <TextBlock Text="{Binding CurrentPrayerSchedule.Source}" ToolTip="Aladhan (cached): prayer times fetched from Aladhan and saved on this PC. Offline calculations are labeled separately." Foreground="{DynamicResource IslandHighlightBrush}" FontSize="11"/>
-            <TextBlock Text="{Binding PrayerError}" Foreground="{DynamicResource IslandInkBrush}" TextWrapping="Wrap" FontSize="11"/>
+            <TextBlock Text="{Binding PrayerError}" Foreground="{DynamicResource IslandNegativeBrush}" TextWrapping="Wrap" FontSize="11"/>
         </StackPanel>    </Grid>
 </UserControl>

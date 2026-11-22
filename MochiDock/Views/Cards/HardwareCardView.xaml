@@ -291,7 +291,7 @@
                         <!-- Hybrid Cores Display (when detected) -->
                         <Grid Margin="0,2" Visibility="{Binding HardwareStats.IsHybridCpu, Converter={StaticResource BoolToVisibility}}">
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
-                                <Ellipse Width="6" Height="6" Fill="#64D2FF" Margin="0,0,6,0" VerticalAlignment="Center" />
+                                <Ellipse Width="6" Height="6" Fill="{DynamicResource IslandBlueBrush}" Margin="0,0,6,0" VerticalAlignment="Center" />
                                 <TextBlock Style="{StaticResource HardwareBody}" Text="Efficiency cores" Foreground="{DynamicResource IslandSecondaryInkBrush}" />
                             </StackPanel>
                             <TextBlock Style="{StaticResource HardwareBody}" HorizontalAlignment="Right" Text="{Binding HardwareStats.EfficiencyCoresPercent, StringFormat={}{0:0}%}" Foreground="{DynamicResource IslandInkBrush}" Typography.NumeralAlignment="Tabular" />
@@ -299,7 +299,7 @@
 
                         <Grid Margin="0,2" Visibility="{Binding HardwareStats.IsHybridCpu, Converter={StaticResource BoolToVisibility}}">
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
-                                <Ellipse Width="6" Height="6" Fill="#5E5CE6" Margin="0,0,6,0" VerticalAlignment="Center" />
+                                <Ellipse Width="6" Height="6" Fill="{DynamicResource IslandPurpleBrush}" Margin="0,0,6,0" VerticalAlignment="Center" />
                                 <TextBlock Style="{StaticResource HardwareBody}" Text="Performance cores" Foreground="{DynamicResource IslandSecondaryInkBrush}" />
                             </StackPanel>
                             <TextBlock Style="{StaticResource HardwareBody}" HorizontalAlignment="Right" Text="{Binding HardwareStats.PerformanceCoresPercent, StringFormat={}{0:0}%}" Foreground="{DynamicResource IslandInkBrush}" Typography.NumeralAlignment="Tabular" />
@@ -1183,14 +1183,7 @@
                         <TextBlock Style="{StaticResource HardwareBody}" Text="{Binding HardwareStats.FpsCeilingText}" Foreground="{DynamicResource IslandMutedInkBrush}" Margin="6,4,0,0" HorizontalAlignment="Left" VerticalAlignment="Top" Typography.NumeralAlignment="Tabular" />
 
                         <!-- Area Fill Polygon -->
-                        <Polygon Points="{Binding HardwareStats.FpsHistoryFillPoints}">
-                            <Polygon.Fill>
-                                <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-                                    <GradientStop Color="#DD007AFF" Offset="0" />
-                                    <GradientStop Color="#77007AFF" Offset="1" />
-                                </LinearGradientBrush>
-                            </Polygon.Fill>
-                        </Polygon>
+                        <Polygon Points="{Binding HardwareStats.FpsHistoryFillPoints}" Fill="{DynamicResource IslandBlueBrush}" Opacity="0.35" />
 
                         <!-- Stroke Line -->
                         <Polyline Points="{Binding HardwareStats.FpsHistoryPoints}" Stroke="{DynamicResource IslandBlueBrush}" StrokeThickness="1.5" />

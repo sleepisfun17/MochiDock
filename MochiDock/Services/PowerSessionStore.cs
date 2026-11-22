@@ -14,7 +14,7 @@ public sealed class PowerSessionStore
 {
     private readonly string _path;
     private readonly object _gate = new();
-    private Task _pending = Task.CompletedTask;
+    private readonly QueuedJsonWriter _writer = new();
     private List<PowerSessionRecord> _sessions;
 
     public event Action<string>? PersistenceError;
@@ -49,17 +49,12 @@ public sealed class PowerSessionStore
         Save();
     }
 
-    public Task FlushAsync() { lock (_gate) return _pending; }
+    public Task FlushAsync() => _writer.FlushAsync();
 
     private void Save()
     {
         string snapshot;
-        lock (_gate) snapshot = JsonSerializer.Serialize(_sessions, new JsonSerializerOptions { WriteIndented = true });
-        lock (_gate)
-            _pending = _pending.ContinueWith(_ =>
-            {
-                try { AtomicJsonStore.SaveJson(_path, snapshot); }
-                catch (Exception ex) { PersistenceError?.Invoke(ex.Message); }
-            }, TaskScheduler.Default);
+        lock (_gate) snapshot = JsonSerializer.Serialize(_sessions, QueuedJsonWriter.IndentedOptions);
+        _writer.EnqueueJson(_path, snapshot, msg => PersistenceError?.Invoke(msg));
     }
 }

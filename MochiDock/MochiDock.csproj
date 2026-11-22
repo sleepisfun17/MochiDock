@@ -31,9 +31,9 @@
     </Content>
     <Resource Include="Assets\Icons\*.png" />
     <Resource Include="Assets\Fonts\*.ttf" />
-    <EmbeddedResource Include="Assets\ja_readings.tsv.gz" />
-    <EmbeddedResource Include="Assets\zh_pinyin.tsv.gz" />
-    <EmbeddedResource Include="Assets\emoji.pak" />
+    <Content Include="Assets\ja_readings.tsv.gz" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="Assets\zh_pinyin.tsv.gz" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="Assets\emoji.pak" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="..\GOWA\windows-amd64.exe" Link="GOWA\windows-amd64.exe" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />

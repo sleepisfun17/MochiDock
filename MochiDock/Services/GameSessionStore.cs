@@ -15,8 +15,7 @@ namespace MochiDock.Services;
 public sealed class GameSessionStore
 {
     private readonly string _path;
-    private readonly object _gate = new();
-    private Task _pending = Task.CompletedTask;
+    private readonly QueuedJsonWriter _writer = new();
     private List<GameSessionRecord> _sessions;
 
     public event Action<string>? PersistenceError;
@@ -45,16 +44,8 @@ public sealed class GameSessionStore
         Save();
     }
 
-    public Task FlushAsync() { lock (_gate) return _pending; }
+    public Task FlushAsync() => _writer.FlushAsync();
 
-    private void Save()
-    {
-        string snapshot = JsonSerializer.Serialize(_sessions, new JsonSerializerOptions { WriteIndented = true });
-        lock (_gate)
-            _pending = _pending.ContinueWith(_ =>
-            {
-                try { AtomicJsonStore.SaveJson(_path, snapshot); }
-                catch (Exception ex) { PersistenceError?.Invoke(ex.Message); }
-            }, TaskScheduler.Default);
-    }
+    private void Save() =>
+        _writer.Enqueue(_path, _sessions, msg => PersistenceError?.Invoke(msg));
 }

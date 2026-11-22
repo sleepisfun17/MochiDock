@@ -17,13 +17,6 @@ namespace MochiDock.Views.Cards;
 public partial class PrayerCardView : UserControl
 {
     private static readonly double[] Slots = [0.1, 0.3, 0.5, 0.7, 0.9];
-    private static readonly SolidColorBrush PastDotBrush = new(Color.FromArgb((byte)(0.30 * 255), 255, 255, 255));
-    private static readonly SolidColorBrush LaterDotBrush = new(Color.FromArgb((byte)(0.62 * 255), 255, 255, 255));
-    private static readonly SolidColorBrush GoneArcBrush = new(Color.FromArgb((byte)(0.42 * 255), 255, 255, 255));
-    private static readonly SolidColorBrush ToComeArcBrush = new(Color.FromArgb((byte)(0.16 * 255), 255, 255, 255));
-    private static readonly SolidColorBrush PastTextBrush = new(Color.FromArgb((byte)(0.40 * 255), 255, 255, 255));
-    private static readonly SolidColorBrush SunHaloBrush = new(Color.FromArgb((byte)(0.22 * 255), 255, 159, 10));
-    private static readonly SolidColorBrush MoonHaloBrush = new(Color.FromArgb((byte)(0.22 * 255), 185, 174, 247));
 
     public PrayerCardView()
     {
@@ -131,7 +124,7 @@ public partial class PrayerCardView : UserControl
         var ink=(System.Windows.Media.Brush)FindResource("IslandInkBrush");
         var muted=(System.Windows.Media.Brush)FindResource("IslandMutedInkBrush");
         var accent=(System.Windows.Media.Brush)FindResource("IslandAccentBrush");
-        var halo=(System.Windows.Media.Brush)(TryFindResource("IslandAccentSubtleBrush")??SunHaloBrush);
+        var halo=(System.Windows.Media.Brush)FindResource("IslandAccentSubtleBrush");
         void Circle(Point point,double diameter,System.Windows.Media.Brush fill,System.Windows.Media.Brush? stroke=null)
         {
             var dot = new System.Windows.Shapes.Path
@@ -196,9 +189,9 @@ public partial class PrayerCardView : UserControl
         // Sun vs Moon distinction: above horizon line (Y <= 38) vs below horizon line (Y > 38)
         bool isAboveHorizon = marker.Y <= 38.0;
         var sunGoldBrush = (System.Windows.Media.Brush)FindResource("IslandWarningBrush"); // solar gold
-        var sunHaloBrush = new SolidColorBrush(Color.FromArgb((byte)(0.25 * 255), 245, 158, 11));
+        var sunHaloBrush = (System.Windows.Media.Brush)FindResource("IslandWarningSubtleBrush");
         var moonBrush = (System.Windows.Media.Brush)(TryFindResource("IslandHighlightBrush") ?? FindResource("IslandPurpleBrush"));
-        var moonHaloBrush = (System.Windows.Media.Brush)(TryFindResource("IslandHighlightSubtleBrush") ?? MoonHaloBrush);
+        var moonHaloBrush = (System.Windows.Media.Brush)FindResource("IslandHighlightSubtleBrush");
 
         bool showHalo = instants.Select((_,i)=>(ArcPoint(MochiDock.Core.PrayerTimeline.Slots[i],width)-marker).Length).Min()>=20.5;
         if(isAboveHorizon)

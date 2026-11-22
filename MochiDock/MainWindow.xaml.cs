@@ -353,12 +353,10 @@ public partial class MainWindow : Window
         }
     }
 
-    private async void ShowModernTrayMenu()
+    private void ShowModernTrayMenu()
     {
         try
         {
-            try { _settings.StartWithWindows = await StartupService.RefreshAsync(); }
-            catch (Exception ex) { MochiDock.Services.AppLog.Warn("Window", ex); }
             if (_windowClosed) return;
             _trayContextMenu = CreateModernTrayMenu();
             _trayContextMenu.Placement = System.Windows.Controls.Primitives.PlacementMode.MousePoint;
@@ -369,11 +367,23 @@ public partial class MainWindow : Window
             SetForegroundWindow(helper.Handle);
 
             _trayContextMenu.IsOpen = true;
+            _ = RefreshStartupStateAsync();
         }
-        catch (Exception ex)
+        catch (Exception ex) { MochiDock.Services.AppLog.Warn("Window", ex); }
+    }
+
+    private async Task RefreshStartupStateAsync()
+    {
+        try
         {
-            MochiDock.Services.AppLog.Warn("Window", ex);
+            bool startWithWindows = await StartupService.RefreshAsync();
+            if (!_windowClosed && _settings.StartWithWindows != startWithWindows)
+            {
+                _settings.StartWithWindows = startWithWindows;
+                SettingsService.Save(_settings);
+            }
         }
+        catch (Exception ex) { MochiDock.Services.AppLog.Warn("Window", ex); }
     }
 
     // Right-click on the taskbar battery widget: refresh, open the Battery page, hide the widget. Raised on the UI thread by the widget.

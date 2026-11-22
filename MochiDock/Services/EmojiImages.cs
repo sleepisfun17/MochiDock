@@ -44,12 +44,13 @@ public static class EmojiImages
                     var entry = pak.GetEntry(name + ".png");
                     if (entry == null) continue;
                     using var stream = entry.Open();
-                    var memory = new MemoryStream((int)Math.Max(entry.Length, 1));
+                    using var memory = new MemoryStream((int)Math.Max(entry.Length, 1));
                     stream.CopyTo(memory);
                     memory.Position = 0;
                     var image = new BitmapImage();
                     image.BeginInit();
                     image.CacheOption = BitmapCacheOption.OnLoad;
+                    image.DecodePixelWidth = 32;
                     image.StreamSource = memory;
                     image.EndInit();
                     image.Freeze();
@@ -74,7 +75,10 @@ public static class EmojiImages
     {
         if (_pakTried) return _pak;
         _pakTried = true;
-        var stream = typeof(EmojiImages).Assembly.GetManifestResourceStream(ResourceName);
+        string filePath = Path.Combine(AppContext.BaseDirectory, "Assets", "emoji.pak");
+        Stream? stream = File.Exists(filePath)
+            ? File.OpenRead(filePath)
+            : typeof(EmojiImages).Assembly.GetManifestResourceStream(ResourceName);
         if (stream != null) _pak = new ZipArchive(stream, ZipArchiveMode.Read);
         return _pak;
     }
