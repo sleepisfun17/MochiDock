@@ -93,6 +93,25 @@ public class HardwareMonitorService : IDisposable
         }
         return (cpu, memory, gpu);
     }
+    private const uint SHGFI_ICON = 0x000000100;
+    private const uint SHGFI_SMALLICON = 0x000000001;
+
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+    private struct SHFILEINFOW
+    {
+        public IntPtr hIcon;
+        public int iIcon;
+        public uint dwAttributes;
+        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 260)] public string szDisplayName;
+        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 80)] public string szTypeName;
+    }
+
+    [DllImport("shell32.dll", CharSet = CharSet.Unicode)]
+    private static extern IntPtr SHGetFileInfoW(string pszPath, uint dwFileAttributes, ref SHFILEINFOW psfi, uint cbFileInfo, uint uFlags);
+
+    [DllImport("user32.dll")]
+    private static extern bool DestroyIcon(IntPtr hIcon);
+
     // Shell User Notification State to detect full-screen games
     public enum QUERY_USER_NOTIFICATION_STATE
     {
@@ -469,15 +488,20 @@ private float _lastGpuUsage;
 
                 try
                 {
-                    using var sysIcon = System.Drawing.Icon.ExtractAssociatedIcon(exePath);
-                    if (sysIcon != null)
+                    var shfi = new SHFILEINFOW();
+                    if (SHGetFileInfoW(exePath, 0, ref shfi, (uint)Marshal.SizeOf<SHFILEINFOW>(), SHGFI_ICON | SHGFI_SMALLICON) != IntPtr.Zero &&
+                        shfi.hIcon != IntPtr.Zero)
                     {
-                        var bmp = System.Windows.Interop.Imaging.CreateBitmapSourceFromHIcon(
-                            sysIcon.Handle,
-                            System.Windows.Int32Rect.Empty,
-                            System.Windows.Media.Imaging.BitmapSizeOptions.FromWidthAndHeight(16, 16));
-                        bmp.Freeze();
-                        icon = bmp;
+                        try
+                        {
+                            var bmp = System.Windows.Interop.Imaging.CreateBitmapSourceFromHIcon(
+                                shfi.hIcon,
+                                System.Windows.Int32Rect.Empty,
+                                System.Windows.Media.Imaging.BitmapSizeOptions.FromWidthAndHeight(16, 16));
+                            bmp.Freeze();
+                            icon = bmp;
+                        }
+                        finally { DestroyIcon(shfi.hIcon); }
                     }
                 }
                 catch (System.Exception logEx) { MochiDock.Services.AppLog.Warn("Hardware", logEx); }
@@ -1039,23 +1063,44 @@ private float _lastGpuUsage;
     {
         lock (_statsGate)
         {
-        var stats = new HardwareStats
-        {
-            TotalRamGb = _totalRamGb > 0 ? _totalRamGb : 16.0f,
-            TotalVramGb = _totalVramGb,
-            IsNvmlAvailable = _nvmlLoaded,
-            IsGamingActive = isGamingActiveOverride ?? IsGameRunning(),
-            IsGamingMode = _isGamingMode,
-            GpuName = _detectedGpuName
-        };
+            var stats = new HardwareStats
+            {
+                TotalRamGb = _totalRamGb > 0 ? _totalRamGb : 16.0f,
+                TotalVramGb = _totalVramGb,
+                IsNvmlAvailable = _nvmlLoaded,
+                IsGamingActive = isGamingActiveOverride ?? IsGameRunning(),
+                IsGamingMode = _isGamingMode,
+                GpuName = _detectedGpuName
+            };
 
-        // 1. CPU Usage
+            var sensors = _sensors.Latest(_detectedGpuName);
+            var sensorAge = DateTimeOffset.UtcNow - sensors.CapturedAt;
+            bool sensorsFresh = sensors.CapturedAt != DateTimeOffset.MinValue && sensorAge < TimeSpan.FromSeconds(5);
+
+            SampleCpu(stats, sensors, sensorsFresh);
+            SampleMemory(stats);
+            SampleGpu(stats, sensors, sensorsFresh);
+            SampleDrivesAndNetwork(stats, includeHeavy);
+            SampleGamingFps(stats);
+
+            if (!includeHeavy) return stats;
+
+            SampleFixedDrives(stats);
+            SampleChartsAndHistory(stats);
+            SampleCoreUsages(stats);
+            SampleTopProcesses(stats);
+            return stats;
+        }
+    }
+
+    private void SampleCpu(HardwareStats stats, MochiDock.Core.SensorSnapshot sensors, bool sensorsFresh)
+    {
         if (_initialized && _cpuCounter != null)
         {
             try
             {
                 stats.CpuUsage = (float)Math.Round(_cpuCounter.NextValue(), 0);
-                stats.CpuUsageReading = new(stats.CpuUsage,"Windows CPU counter",DateTimeOffset.UtcNow);
+                stats.CpuUsageReading = new(stats.CpuUsage, "Windows CPU counter", DateTimeOffset.UtcNow);
             }
             catch (System.Exception logEx) { MochiDock.Services.AppLog.Warn("Hardware", logEx); }
         }
@@ -1064,13 +1109,10 @@ private float _lastGpuUsage;
         stats.CpuSpeedGhz = cpu.Ghz;
         stats.CpuBaseGhz = cpu.BaseGhz;
         if (cpu.BaseGhz.HasValue && cpu.BaseGhz.Value > 0)
-        {
             _observedCpuMaxGhz = MochiDock.Core.CpuClock.CeilingGhz(cpu.BaseGhz.Value, cpu.Ghz, _observedCpuMaxGhz);
-        }
         else if (cpu.Ghz.HasValue && cpu.Ghz.Value > _observedCpuMaxGhz - 0.1)
-        {
             _observedCpuMaxGhz = MochiDock.Core.CpuClock.CeilingGhz(2.5, cpu.Ghz, _observedCpuMaxGhz);
-        }
+
         stats.CpuMaxGhz = _observedCpuMaxGhz;
         stats.CpuClockStatus = cpu.Ghz.HasValue && cpu.BaseGhz.HasValue
             ? $"{cpu.Ghz.Value:0.00} GHz (Base: {cpu.BaseGhz.Value:0.00} GHz, Boost Ceiling: {_observedCpuMaxGhz:0.00} GHz)\n{cpu.ClockStatus}"
@@ -1084,11 +1126,6 @@ private float _lastGpuUsage;
             stats.CpuUsageReading = new(stats.CpuUsage, "Windows CPU time counters", cpu.CapturedAt);
         }
 
-        // Real CPU/GPU sensors (LibreHardwareMonitor). Null values mean "no measured reading".
-        var sensors = _sensors.Latest(_detectedGpuName);
-        var sensorAge = DateTimeOffset.UtcNow - sensors.CapturedAt;
-        bool sensorsFresh = sensors.CapturedAt != DateTimeOffset.MinValue && sensorAge < TimeSpan.FromSeconds(5);
-
         if (sensorsFresh && sensors.CpuTempC is { } cpuTempC)
         {
             stats.CpuTemp = (float)Math.Round(cpuTempC, 0);
@@ -1099,8 +1136,10 @@ private float _lastGpuUsage;
             // Estimate only: shown with "~" and never used for alerts.
             stats.CpuTemp = (float)Math.Round(42.0 + (stats.CpuUsage * 0.38), 0);
         }
+    }
 
-        // 2. RAM Stats
+    private void SampleMemory(HardwareStats stats)
+    {
         try
         {
             var memInfo = GC.GetGCMemoryInfo();
@@ -1125,8 +1164,6 @@ private float _lastGpuUsage;
             stats.UsedRamGb = 6.4f;
         }
 
-        // Committed memory (RAM plus page file in use, and its limit) and the file cache, from Windows' performance counters
-        // (one cheap call per poll). Unavailable values stay null and show "-".
         try
         {
             var perf = new PERFORMANCE_INFORMATION { cb = (uint)Marshal.SizeOf<PERFORMANCE_INFORMATION>() };
@@ -1139,11 +1176,12 @@ private float _lastGpuUsage;
             }
         }
         catch (Exception ex) { AppLog.Warn("Hardware", ex); }
+    }
 
-        // 3. GPU & VRAM Stats
+    private void SampleGpu(HardwareStats stats, MochiDock.Core.SensorSnapshot sensors, bool sensorsFresh)
+    {
         bool vramPopulated = false;
 
-        // Try NVML first (for NVIDIA)
         if (_nvmlLoaded && _nvmlDevice != IntPtr.Zero)
         {
             try
@@ -1152,13 +1190,13 @@ private float _lastGpuUsage;
                 if (nvmlDeviceGetUtilizationRates(_nvmlDevice, ref util) == 0)
                 {
                     stats.GpuUsage = util.gpu;
-                    stats.GpuUsageReading = new(stats.GpuUsage,"NVIDIA NVML",DateTimeOffset.UtcNow);
+                    stats.GpuUsageReading = new(stats.GpuUsage, "NVIDIA NVML", DateTimeOffset.UtcNow);
                 }
 
                 if (nvmlDeviceGetTemperature(_nvmlDevice, 0, out uint temp) == 0)
                 {
                     stats.GpuTemp = temp;
-                    stats.GpuTemperatureReading = new(temp,"NVIDIA NVML",DateTimeOffset.UtcNow);
+                    stats.GpuTemperatureReading = new(temp, "NVIDIA NVML", DateTimeOffset.UtcNow);
                 }
 
                 var mem = new NvmlMemory();
@@ -1172,19 +1210,17 @@ private float _lastGpuUsage;
             catch (System.Exception logEx) { MochiDock.Services.AppLog.Warn("Hardware", logEx); }
         }
 
-        // High-Precision Multi-Engine GPU Load via PDH Wildcards (Universal: AMD Radeon, Intel Arc, NVIDIA)
         if (_pdhGpuQuery != IntPtr.Zero)
         {
             try
             {
-                bool pdhCollected=PdhCollectQueryData(_pdhGpuQuery)==0;
-                bool pdhValid=false;
+                bool pdhCollected = PdhCollectQueryData(_pdhGpuQuery) == 0;
+                bool pdhValid = false;
 
                 double ReadPdhArray(IntPtr hCounter)
                 {
                     if (hCounter == IntPtr.Zero) return 0;
-                    uint bufSize = 0;
-                    uint itemCount = 0;
+                    uint bufSize = 0, itemCount = 0;
                     PdhGetFormattedCounterArray(hCounter, PDH_FMT_DOUBLE, ref bufSize, ref itemCount, IntPtr.Zero);
                     if (bufSize == 0) return 0;
 
@@ -1197,51 +1233,41 @@ private float _lastGpuUsage;
                             int itemSize = Marshal.SizeOf(typeof(PDH_FMT_COUNTERVALUE_ITEM));
                             for (int i = 0; i < itemCount; i++)
                             {
-                                IntPtr itemPtr = IntPtr.Add(buffer, i * itemSize);
-                                var item = Marshal.PtrToStructure<PDH_FMT_COUNTERVALUE_ITEM>(itemPtr);
+                                var item = Marshal.PtrToStructure<PDH_FMT_COUNTERVALUE_ITEM>(IntPtr.Add(buffer, i * itemSize));
                                 if ((item.CStatus == 0 || item.CStatus == 1) && double.IsFinite(item.doubleValue) && item.doubleValue >= 0)
                                 {
-                                    pdhValid=true;
+                                    pdhValid = true;
                                     total += item.doubleValue;
                                 }
                             }
                             return Math.Clamp(total, 0.0, 100.0);
                         }
                     }
-                    finally
-                    {
-                        Marshal.FreeHGlobal(buffer);
-                    }
+                    finally { Marshal.FreeHGlobal(buffer); }
                     return 0;
                 }
 
-                float pdh3D = (float)ReadPdhArray(_pdh3DCounter);
-                float pdhCopy = (float)ReadPdhArray(_pdhCopyCounter);
-                float pdhDecode = (float)ReadPdhArray(_pdhDecodeCounter);
-                float pdhEncode = (float)ReadPdhArray(_pdhEncodeCounter);
-
-                stats.GpuEngine3DPercent = (float)Math.Round(pdh3D, 0);
-                stats.GpuEngineCopyPercent = (float)Math.Round(pdhCopy, 0);
-                stats.GpuEngineDecodePercent = (float)Math.Round(pdhDecode, 0);
-                stats.GpuEngineEncodePercent = (float)Math.Round(pdhEncode, 0);
+                stats.GpuEngine3DPercent = (float)Math.Round(ReadPdhArray(_pdh3DCounter), 0);
+                stats.GpuEngineCopyPercent = (float)Math.Round(ReadPdhArray(_pdhCopyCounter), 0);
+                stats.GpuEngineDecodePercent = (float)Math.Round(ReadPdhArray(_pdhDecodeCounter), 0);
+                stats.GpuEngineEncodePercent = (float)Math.Round(ReadPdhArray(_pdhEncodeCounter), 0);
 
                 float pdhMax = Math.Max(stats.GpuEngine3DPercent, Math.Max(stats.GpuEngineCopyPercent, Math.Max(stats.GpuEngineDecodePercent, stats.GpuEngineEncodePercent)));
                 if (pdhMax > 0 || stats.GpuUsage <= 0)
                 {
                     stats.GpuUsage = pdhMax;
-                    if(pdhCollected&&pdhValid)stats.GpuUsageReading=new(pdhMax,"Windows PDH GPU engine",DateTimeOffset.UtcNow);
+                    if (pdhCollected && pdhValid) stats.GpuUsageReading = new(pdhMax, "Windows PDH GPU engine", DateTimeOffset.UtcNow);
                 }
             }
             catch (System.Exception logEx) { MochiDock.Services.AppLog.Warn("Hardware", logEx); }
         }
 
-        // Fallback GPU Load via Windows GPU Engine (for AMD, Intel, or if NVML load call failed)
         if (stats.GpuUsage <= 0 && _gpuCounter != null)
         {
             try
             {
                 stats.GpuUsage = (float)Math.Round(_gpuCounter.NextValue(), 0);
-                stats.GpuUsageReading = new(stats.GpuUsage,"Windows GPU counter",DateTimeOffset.UtcNow);
+                stats.GpuUsageReading = new(stats.GpuUsage, "Windows GPU counter", DateTimeOffset.UtcNow);
             }
             catch (System.Exception logEx) { MochiDock.Services.AppLog.Warn("Hardware", logEx); }
         }
@@ -1252,12 +1278,8 @@ private float _lastGpuUsage;
             stats.GpuTemperatureReading = new(gpuTempC, "LibreHardwareMonitor GPU", sensors.CapturedAt);
         }
         if (stats.GpuTemp <= 0)
-        {
-            // Estimate only: shown with "~" and never used for alerts.
             stats.GpuTemp = (float)Math.Round(45.0 + (stats.GpuUsage * 0.28), 0);
-        }
 
-        // GPU power: NVML, then the sensor library; never a load-based guess
         if (stats.GpuPowerWatts <= 0)
         {
             if (Volatile.Read(ref _nvmlLoaded) && _nvmlDevice != IntPtr.Zero)
@@ -1270,13 +1292,9 @@ private float _lastGpuUsage;
                 catch (Exception ex) { AppLog.Warn("Hardware", ex); }
             }
             if (stats.GpuPowerWatts <= 0 && sensorsFresh && sensors.GpuPowerW is { } gpuPowerW)
-            {
                 stats.GpuPowerWatts = (float)Math.Round(gpuPowerW, 0);
-            }
-            // Otherwise leave it unset: the card shows "–" instead of a made-up figure.
         }
 
-        // GPU clock: NVML, then the sensor library; never a load-based guess
         if (stats.GpuClockMhz <= 0)
         {
             if (Volatile.Read(ref _nvmlLoaded) && _nvmlDevice != IntPtr.Zero)
@@ -1289,35 +1307,29 @@ private float _lastGpuUsage;
                 catch (Exception ex) { AppLog.Warn("Hardware", ex); }
             }
             if (stats.GpuClockMhz <= 0 && sensorsFresh && sensors.GpuClockMhz is { } gpuClockMhz)
-            {
                 stats.GpuClockMhz = (float)Math.Round(gpuClockMhz, 0);
-            }
-            // Otherwise leave it unset: the card shows "–" instead of a made-up figure.
         }
 
-        // Universal VRAM Fallback via Windows Performance Counter (for AMD Radeon, Intel Arc, etc.)
         if (!vramPopulated && _vramCounter != null)
         {
             try
             {
                 float vramBytes = _vramCounter.NextValue();
                 stats.UsedVramGb = (float)Math.Round(vramBytes / (1024.0 * 1024 * 1024), 1);
-                if (stats.TotalVramGb <= 0)
-                {
-                    stats.TotalVramGb = _totalVramGb > 0 ? _totalVramGb : 8.0f;
-                }
+                if (stats.TotalVramGb <= 0) stats.TotalVramGb = _totalVramGb > 0 ? _totalVramGb : 8.0f;
             }
             catch (System.Exception logEx) { MochiDock.Services.AppLog.Warn("Hardware", logEx); }
         }
+    }
 
-        // 4. Drives I/O & Network Bandwidth Update
+    private void SampleDrivesAndNetwork(HardwareStats stats, bool includeHeavy)
+    {
         UpdateDiskBandwidth();
         stats.DiskReadBytesPerSec = _cachedDiskReadBytesPerSec;
         stats.DiskWriteBytesPerSec = _cachedDiskWriteBytesPerSec;
         stats.DiskReadSpeedMbps = _cachedDiskReadBytesPerSec / (1024.0 * 1024.0);
         stats.DiskWriteSpeedMbps = _cachedDiskWriteBytesPerSec / (1024.0 * 1024.0);
-        double totalDiskBytesPerSec = _cachedDiskReadBytesPerSec + _cachedDiskWriteBytesPerSec;
-        stats.FormattedDiskSpeed = HardwareStats.FormatRate(totalDiskBytesPerSec);
+        stats.FormattedDiskSpeed = HardwareStats.FormatRate(_cachedDiskReadBytesPerSec + _cachedDiskWriteBytesPerSec);
 
         if (includeHeavy) UpdateNetworkBandwidth();
         stats.NetDownloadBytesPerSec = _cachedNetDownloadBytesPerSec;
@@ -1334,7 +1346,6 @@ private float _lastGpuUsage;
         stats.NetPeakDownloadText = HardwareStats.FormatRate(_peakDownloadMbps * 1024.0 * 1024.0);
         stats.NetPeakUploadText = HardwareStats.FormatRate(_peakUploadMbps * 1024.0 * 1024.0);
 
-        // Outside games the ping feeds the Network card; while a game capture runs it also feeds the session's ping statistics.
         if ((!stats.IsGamingActive || _capturing) && (DateTime.UtcNow - _lastPingTime).TotalSeconds >= 3.0)
         {
             _lastPingTime = DateTime.UtcNow;
@@ -1347,8 +1358,10 @@ private float _lastGpuUsage;
             });
         }
         stats.NetworkPingMs = _cachedPing;
+    }
 
-        // 5. In-Game FPS & Active Process
+    private void SampleGamingFps(HardwareStats stats)
+    {
         _lastGpuUsage = stats.GpuUsage;
         if (_capturing)
         {
@@ -1361,217 +1374,103 @@ private float _lastGpuUsage;
         }
         stats.GpuName = !string.IsNullOrEmpty(_detectedGpuName) ? _detectedGpuName : "GPU";
         stats.GpuDriverVersion = !string.IsNullOrEmpty(_detectedGpuDriver) ? _detectedGpuDriver : "–";
+    }
 
-        if (!includeHeavy) return stats;
-
-        // Query Fixed Local Drives
+    private static void SampleFixedDrives(HardwareStats stats)
+    {
         try
         {
             foreach (var drive in DriveInfo.GetDrives())
             {
                 if (drive.IsReady && drive.DriveType == DriveType.Fixed)
                 {
-                    double freeGb = Math.Round(drive.AvailableFreeSpace / (1024.0 * 1024 * 1024), 1);
-                    double totalGb = Math.Round(drive.TotalSize / (1024.0 * 1024 * 1024), 1);
-                    string label = drive.VolumeLabel;
-                    string name = drive.Name.TrimEnd('\\');
                     stats.DrivesList.Add(new DriveMetricItem
                     {
-                        Name = name,
-                        VolumeLabel = label,
-                        FreeGb = freeGb,
-                        TotalGb = totalGb
+                        Name = drive.Name.TrimEnd('\\'),
+                        VolumeLabel = drive.VolumeLabel,
+                        FreeGb = Math.Round(drive.AvailableFreeSpace / (1024.0 * 1024 * 1024), 1),
+                        TotalGb = Math.Round(drive.TotalSize / (1024.0 * 1024 * 1024), 1)
                     });
                 }
             }
         }
         catch (System.Exception logEx) { MochiDock.Services.AppLog.Warn("Hardware", logEx); }
+    }
 
-        // Update Queues for 40-point history and area charts
-        void PushQueue(Queue<double> q, double val)
-        {
-            q.Enqueue(val);
-            while (q.Count > 40) q.Dequeue();
-        }
+    private static PointCollection ToPointCollection(IReadOnlyList<MochiDock.Core.ChartPoint> points)
+    {
+        var pc = new PointCollection(points.Count);
+        foreach (var pt in points) pc.Add(new System.Windows.Point(pt.X, pt.Y));
+        pc.Freeze();
+        return pc;
+    }
 
-        PushQueue(_cpuHistoryQueue, stats.CpuUsage);
-        PushQueue(_gpuHistoryQueue, stats.GpuUsage);
-        PushQueue(_ramHistoryQueue, stats.RamUsagePercent);
-        PushQueue(_diskReadHistoryQueue, _cachedDiskReadBytesPerSec);
-        PushQueue(_diskWriteHistoryQueue, _cachedDiskWriteBytesPerSec);
-        PushQueue(_netDownHistoryQueue, _cachedNetDownloadBytesPerSec);
-        PushQueue(_netUpHistoryQueue, _cachedNetUploadBytesPerSec);
-        PushQueue(_fpsHistoryQueue, stats.CurrentFps);
+    private void SampleChartsAndHistory(HardwareStats stats)
+    {
+        MochiDock.Core.HardwareChartMath.PushBounded(_cpuHistoryQueue, stats.CpuUsage);
+        MochiDock.Core.HardwareChartMath.PushBounded(_gpuHistoryQueue, stats.GpuUsage);
+        MochiDock.Core.HardwareChartMath.PushBounded(_ramHistoryQueue, stats.RamUsagePercent);
+        MochiDock.Core.HardwareChartMath.PushBounded(_diskReadHistoryQueue, _cachedDiskReadBytesPerSec);
+        MochiDock.Core.HardwareChartMath.PushBounded(_diskWriteHistoryQueue, _cachedDiskWriteBytesPerSec);
+        MochiDock.Core.HardwareChartMath.PushBounded(_netDownHistoryQueue, _cachedNetDownloadBytesPerSec);
+        MochiDock.Core.HardwareChartMath.PushBounded(_netUpHistoryQueue, _cachedNetUploadBytesPerSec);
+        MochiDock.Core.HardwareChartMath.PushBounded(_fpsHistoryQueue, stats.CurrentFps);
 
-        // Standard single-series area chart helper (CPU, GPU, RAM, FPS)
-        (PointCollection line, PointCollection fill) GenerateChartPoints(Queue<double> q, double width, double height, double maxVal)
-        {
-            var pLine = new PointCollection();
-            var pFill = new PointCollection();
-            if (q.Count == 0) return (pLine, pFill);
+        var (cpuLine, cpuFill) = MochiDock.Core.HardwareChartMath.BuildAreaSeries(_cpuHistoryQueue, 220.0, 100.0, 100.0);
+        stats.CpuHistoryPoints = ToPointCollection(cpuLine);
+        stats.CpuHistoryFillPoints = ToPointCollection(cpuFill);
 
-            double wStep = width / Math.Max(1, q.Count - 1);
-            int idx = 0;
-            pFill.Add(new System.Windows.Point(0, height));
-            foreach (var val in q)
-            {
-                double x = idx * wStep;
-                double frac = Math.Clamp(val / Math.Max(1.0, maxVal), 0.0, 1.0);
-                double y = height - (frac * (height - 3.0));
-                var pt = new System.Windows.Point(x, y);
-                pLine.Add(pt);
-                pFill.Add(pt);
-                idx++;
-            }
-            pFill.Add(new System.Windows.Point(width, height));
-            pLine.Freeze();
-            pFill.Freeze();
-            return (pLine, pFill);
-        }
+        var (gpuLine, gpuFill) = MochiDock.Core.HardwareChartMath.BuildAreaSeries(_gpuHistoryQueue, 220.0, 100.0, 100.0);
+        stats.GpuHistoryPoints = ToPointCollection(gpuLine);
+        stats.GpuHistoryFillPoints = ToPointCollection(gpuFill);
 
-        // Mirrored rate chart: read/download above the centre line, write/upload below it, sharing one scale.
-        (PointCollection upLine, PointCollection upFill, PointCollection downLine, PointCollection downFill, string scaleText)
-            GenerateMirroredChart(Queue<double> qUp, Queue<double> qDown, double width, double height)
-        {
-            var pUpLine = new PointCollection();
-            var pUpFill = new PointCollection();
-            var pDownLine = new PointCollection();
-            var pDownFill = new PointCollection();
+        var (ramLine, ramFill) = MochiDock.Core.HardwareChartMath.BuildAreaSeries(_ramHistoryQueue, 220.0, 100.0, 100.0);
+        stats.RamHistoryPoints = ToPointCollection(ramLine);
+        stats.RamHistoryFillPoints = ToPointCollection(ramFill);
 
-            double maxUp = qUp.Count > 0 ? qUp.Max() : 0.0;
-            double maxDown = qDown.Count > 0 ? qDown.Max() : 0.0;
-            double peak = Math.Max(maxUp, maxDown);
+        var disk = MochiDock.Core.HardwareChartMath.BuildMirroredSeries(_diskReadHistoryQueue, _diskWriteHistoryQueue, 220.0, 152.0);
+        stats.DiskHistoryPoints = ToPointCollection(disk.UpLine);
+        stats.DiskHistoryFillPoints = ToPointCollection(disk.UpFill);
+        stats.DiskWriteHistoryPoints = ToPointCollection(disk.DownLine);
+        stats.DiskWriteHistoryFillPoints = ToPointCollection(disk.DownFill);
+        stats.DiskChartScaleText = HardwareStats.FormatRate(disk.NiceCeiling);
 
-            double niceCeil = MochiDock.Core.RateScale.NiceCeiling(peak);
+        var net = MochiDock.Core.HardwareChartMath.BuildMirroredSeries(_netDownHistoryQueue, _netUpHistoryQueue, 220.0, 152.0);
+        stats.NetHistoryPoints = ToPointCollection(net.UpLine);
+        stats.NetHistoryFillPoints = ToPointCollection(net.UpFill);
+        stats.NetUploadHistoryPoints = ToPointCollection(net.DownLine);
+        stats.NetUploadHistoryFillPoints = ToPointCollection(net.DownFill);
+        stats.NetChartScaleText = HardwareStats.FormatRate(net.NiceCeiling);
 
-            string scaleLabel = HardwareStats.FormatRate(niceCeil);
-            double mid = Math.Round(height / 2.0);
-            double halfH = mid - 4.0;
-
-            int count = Math.Max(qUp.Count, qDown.Count);
-            if (count == 0) return (pUpLine, pUpFill, pDownLine, pDownFill, scaleLabel);
-
-            double wStep = width / Math.Max(1, count - 1);
-
-            // 1. Upward series (rises from mid to top 2.0)
-            pUpFill.Add(new System.Windows.Point(0, mid));
-            var upList = qUp.ToList();
-            for (int i = 0; i < upList.Count; i++)
-            {
-                double x = i * wStep;
-                double frac = Math.Clamp(upList[i] / niceCeil, 0.0, 1.0);
-                double y = mid - (frac * halfH);
-                var pt = new System.Windows.Point(x, y);
-                pUpLine.Add(pt);
-                pUpFill.Add(pt);
-            }
-            pUpFill.Add(new System.Windows.Point(width, mid));
-
-            // 2. Downward series (hangs from mid to bottom height - 2.0)
-            pDownFill.Add(new System.Windows.Point(0, mid));
-            var downList = qDown.ToList();
-            for (int i = 0; i < downList.Count; i++)
-            {
-                double x = i * wStep;
-                double frac = Math.Clamp(downList[i] / niceCeil, 0.0, 1.0);
-                double y = mid + (frac * halfH);
-                var pt = new System.Windows.Point(x, y);
-                pDownLine.Add(pt);
-                pDownFill.Add(pt);
-            }
-            pDownFill.Add(new System.Windows.Point(width, mid));
-            pUpLine.Freeze();
-            pUpFill.Freeze();
-            pDownLine.Freeze();
-            pDownFill.Freeze();
-            return (pUpLine, pUpFill, pDownLine, pDownFill, scaleLabel);
-        }
-
-        // 1. CPU
-        var (cpuLine, cpuFill) = GenerateChartPoints(_cpuHistoryQueue, 220.0, 100.0, 100.0);
-        stats.CpuHistoryPoints = cpuLine;
-        stats.CpuHistoryFillPoints = cpuFill;
-
-        // 2. GPU
-        var (gpuLine, gpuFill) = GenerateChartPoints(_gpuHistoryQueue, 220.0, 100.0, 100.0);
-        stats.GpuHistoryPoints = gpuLine;
-        stats.GpuHistoryFillPoints = gpuFill;
-
-        // 3. RAM
-        var (ramLine, ramFill) = GenerateChartPoints(_ramHistoryQueue, 220.0, 100.0, 100.0);
-        stats.RamHistoryPoints = ramLine;
-        stats.RamHistoryFillPoints = ramFill;
-
-        // 4. Drives Mirrored Chart (Read blue up, Write red down)
-        var (diskUpLine, diskUpFill, diskDownLine, diskDownFill, diskScale) =
-            GenerateMirroredChart(_diskReadHistoryQueue, _diskWriteHistoryQueue, 220.0, 152.0);
-        stats.DiskHistoryPoints = diskUpLine;
-        stats.DiskHistoryFillPoints = diskUpFill;
-        stats.DiskWriteHistoryPoints = diskDownLine;
-        stats.DiskWriteHistoryFillPoints = diskDownFill;
-        stats.DiskChartScaleText = diskScale;
-
-        // 5. Network Mirrored Chart (Download blue up, Upload red down)
-        var (netUpLine, netUpFill, netDownLine, netDownFill, netScale) =
-            GenerateMirroredChart(_netDownHistoryQueue, _netUpHistoryQueue, 220.0, 152.0);
-        stats.NetHistoryPoints = netUpLine;
-        stats.NetHistoryFillPoints = netUpFill;
-        stats.NetUploadHistoryPoints = netDownLine;
-        stats.NetUploadHistoryFillPoints = netDownFill;
-        stats.NetChartScaleText = netScale;
-        // 6. FPS (Ceiling 30, 60, 75, 120, 144, 165, 240, 360)
         double peakFps = _fpsHistoryQueue.Count > 0 ? _fpsHistoryQueue.Max() : 60.0;
-        float[] ceilings = [30f, 60f, 75f, 120f, 144f, 165f, 240f, 360f];
-        float pickedCeiling = ceilings.FirstOrDefault(c => peakFps <= c);
-        if (pickedCeiling <= 0) pickedCeiling = (float)(Math.Ceiling(peakFps / 120.0) * 120.0);
+        float pickedCeiling = MochiDock.Core.HardwareChartMath.PickFpsCeiling(peakFps);
         stats.FpsCeiling = pickedCeiling;
 
-        var (fpsLine, fpsFill) = GenerateChartPoints(_fpsHistoryQueue, 220.0, 55.0, pickedCeiling);
-        stats.FpsHistoryPoints = fpsLine;
-        stats.FpsHistoryFillPoints = fpsFill;
+        var (fpsLine, fpsFill) = MochiDock.Core.HardwareChartMath.BuildAreaSeries(_fpsHistoryQueue, 220.0, 55.0, pickedCeiling);
+        stats.FpsHistoryPoints = ToPointCollection(fpsLine);
+        stats.FpsHistoryFillPoints = ToPointCollection(fpsFill);
 
-        // Live frame-time chart: only while a game capture runs and frames have been seen.
         if (_capturing)
         {
             var worst = _fpsService.RecentWorstFrames();
             if (worst.Length >= 2)
             {
-                double ceiling = Math.Max(33.4, worst.Max());
-                var sorted = worst.OrderBy(v => v).ToArray();
-                double guide = Math.Min(2 * sorted[sorted.Length / 2], ceiling);     // the stutter rule: twice the typical slowest frame
-                double ftWidth = HardwareStats.FrameTimeChartWidth, ftHeight = HardwareStats.FrameTimeChartHeight;
-                var ftPoints = new PointCollection();
-                for (int i = 0; i < worst.Length; i++)
-                    ftPoints.Add(new System.Windows.Point(i * ftWidth / (worst.Length - 1), ftHeight - Math.Clamp(worst[i] / ceiling, 0, 1) * (ftHeight - 2)));
-                ftPoints.Freeze();
-                stats.FrameTimePoints = ftPoints;
-                stats.FrameTimeGuideY = ftHeight - Math.Clamp(guide / ceiling, 0, 1) * (ftHeight - 2);
-                stats.FrameTimeCeilingText = $"{ceiling:0} ms";
+                var ft = MochiDock.Core.HardwareChartMath.BuildFrameTimeSeries(worst, HardwareStats.FrameTimeChartWidth, HardwareStats.FrameTimeChartHeight);
+                stats.FrameTimePoints = ToPointCollection(ft.Points);
+                stats.FrameTimeGuideY = ft.GuideY;
+                stats.FrameTimeCeilingText = $"{ft.Ceiling:0} ms";
             }
         }
 
-        // Top-strip mini sparklines (80 x 4), isolated from label/value rows.
-        PointCollection GenerateChipPoints(Queue<double> samples, double ceiling)
-        {
-            var result = new PointCollection();
-            int index = 0;
-            foreach (var value in samples)
-            {
-                var x = 0.75 + index++ * 78.5 / Math.Max(1, samples.Count - 1);
-                var fraction = Math.Clamp(value / Math.Max(1, ceiling), 0, 1);
-                result.Add(new System.Windows.Point(x, 0.75 + (1 - fraction) * 2.5));
-            }
-            result.Freeze();
-            return result;
-        }
+        stats.CpuChipSparkPoints = ToPointCollection(MochiDock.Core.HardwareChartMath.BuildChipSparkline(_cpuHistoryQueue, 100.0));
+        stats.GpuChipSparkPoints = ToPointCollection(MochiDock.Core.HardwareChartMath.BuildChipSparkline(_gpuHistoryQueue, 100.0));
+        stats.DiskChipSparkPoints = ToPointCollection(MochiDock.Core.HardwareChartMath.BuildChipSparkline(_diskReadHistoryQueue, Math.Max(1024.0 * 1024.0, _cachedDiskReadBytesPerSec + _cachedDiskWriteBytesPerSec)));
+        stats.NetChipSparkPoints = ToPointCollection(MochiDock.Core.HardwareChartMath.BuildChipSparkline(_netDownHistoryQueue, Math.Max(1024.0 * 1024.0, _cachedNetDownloadBytesPerSec)));
+        stats.FpsChipSparkPoints = ToPointCollection(MochiDock.Core.HardwareChartMath.BuildChipSparkline(_fpsHistoryQueue, pickedCeiling));
+    }
 
-        stats.CpuChipSparkPoints = GenerateChipPoints(_cpuHistoryQueue, 100.0);
-        stats.GpuChipSparkPoints = GenerateChipPoints(_gpuHistoryQueue, 100.0);
-        stats.DiskChipSparkPoints = GenerateChipPoints(_diskReadHistoryQueue, Math.Max(1024.0 * 1024.0, _cachedDiskReadBytesPerSec + _cachedDiskWriteBytesPerSec));
-        stats.NetChipSparkPoints = GenerateChipPoints(_netDownHistoryQueue, Math.Max(1024.0 * 1024.0, _cachedNetDownloadBytesPerSec));
-        stats.FpsChipSparkPoints = GenerateChipPoints(_fpsHistoryQueue, pickedCeiling);
-
-        // Per-core load from NtQuerySystemInformation, with hybrid (P/E) core detection.
+    private void SampleCoreUsages(HardwareStats stats)
+    {
         int coreCount = Environment.ProcessorCount;
         stats.IsHybridCpu = _isHybridCpuDetected;
         stats.CoreSummaryText = _coreSummary.Length > 0 ? _coreSummary : $"{Environment.ProcessorCount} threads";
@@ -1586,17 +1485,13 @@ private float _lastGpuUsage;
                 int returnedCount = Math.Min(coreCount, (int)(returnLength / (uint)itemSize));
                 var currentTimes = new SYSTEM_PROCESSOR_PERFORMANCE_INFORMATION[returnedCount];
                 for (int i = 0; i < returnedCount; i++)
-                {
                     currentTimes[i] = Marshal.PtrToStructure<SYSTEM_PROCESSOR_PERFORMANCE_INFORMATION>(IntPtr.Add(pBuf, i * itemSize));
-                }
 
                 var kindMap = _coreKindMap;
                 if (_prevCoreTimes != null && _prevCoreTimes.Length == returnedCount)
                 {
-                    double perfSum = 0;
-                    int perfCount = 0;
-                    double effSum = 0;
-                    int effCount = 0;
+                    double perfSum = 0, effSum = 0;
+                    int perfCount = 0, effCount = 0;
 
                     for (int i = 0; i < returnedCount; i++)
                     {
@@ -1610,12 +1505,7 @@ private float _lastGpuUsage;
                         if (kind == "Performance") { perfSum += usage; perfCount++; }
                         else if (kind == "Efficiency") { effSum += usage; effCount++; }
 
-                        stats.CoreUsages.Add(new CoreUsageItem
-                        {
-                            CoreIndex = i + 1,
-                            Usage = usage,
-                            CoreKind = kind
-                        });
+                        stats.CoreUsages.Add(new CoreUsageItem { CoreIndex = i + 1, Usage = usage, CoreKind = kind });
                     }
 
                     if (perfCount > 0) stats.PerformanceCoresPercent = (float)Math.Round(perfSum / perfCount, 0);
@@ -1626,12 +1516,7 @@ private float _lastGpuUsage;
                     for (int i = 0; i < returnedCount; i++)
                     {
                         string kind = kindMap.TryGetValue(i, out var k) ? k : "Any";
-                        stats.CoreUsages.Add(new CoreUsageItem
-                        {
-                            CoreIndex = i + 1,
-                            Usage = stats.CpuUsage,
-                            CoreKind = kind
-                        });
+                        stats.CoreUsages.Add(new CoreUsageItem { CoreIndex = i + 1, Usage = stats.CpuUsage, CoreKind = kind });
                     }
                 }
 
@@ -1641,16 +1526,13 @@ private float _lastGpuUsage;
         catch
         {
             for (int i = 0; i < coreCount; i++)
-            {
                 stats.CoreUsages.Add(new CoreUsageItem { CoreIndex = i + 1, Usage = stats.CpuUsage, CoreKind = "Any" });
-            }
         }
-        finally
-        {
-            Marshal.FreeHGlobal(pBuf);
-        }
+        finally { Marshal.FreeHGlobal(pBuf); }
+    }
 
-        // Sample top CPU, Memory & Disk processes every 3 seconds
+    private void SampleTopProcesses(HardwareStats stats)
+    {
         if ((DateTime.UtcNow - _lastProcSample).TotalSeconds >= 2.5)
         {
             _lastProcSample = DateTime.UtcNow;
@@ -1689,16 +1571,11 @@ private float _lastGpuUsage;
                                         {
                                             ulong totalIo = io.ReadTransferCount + io.WriteTransferCount;
                                             if (_lastProcIoTotal.TryGetValue(p.Id, out ulong prev))
-                                            {
                                                 ioRate = totalIo >= prev ? totalIo - prev : 0;
-                                            }
                                             _lastProcIoTotal[p.Id] = totalIo;
                                         }
                                     }
-                                    finally
-                                    {
-                                        CloseHandle(hProc);
-                                    }
+                                    finally { CloseHandle(hProc); }
                                 }
                             }
                             catch (System.Exception logEx) { MochiDock.Services.AppLog.Warn("Hardware", logEx); }
@@ -1706,14 +1583,9 @@ private float _lastGpuUsage;
                         }
                     }
                 }
-                finally
-                {
-                    foreach (var p in allProcs) { try { p.Dispose(); } catch { } }
-                }
+                finally { foreach (var p in allProcs) { try { p.Dispose(); } catch { } } }
                 foreach (var stalePid in _pidClassificationCache.Keys)
-                {
                     if (!livePids.Contains(stalePid)) _pidClassificationCache.TryRemove(stalePid, out _);
-                }
                 _processCpu.Retain(liveCpu);
 
                 _cachedTopProcesses = procMetaList
@@ -1760,8 +1632,6 @@ private float _lastGpuUsage;
         foreach (var p in _cachedTopProcesses) stats.TopProcesses.Add(p);
         foreach (var p in _cachedTopMemoryProcesses) stats.TopMemoryProcesses.Add(p);
         foreach (var p in _cachedTopDiskProcesses) stats.TopDiskProcesses.Add(p);
-        return stats;
-        }
     }
 
     private static string SafeProcessName(Process p) { try { return p.ProcessName; } catch { return "Unavailable process"; } }

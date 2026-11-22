@@ -1,9 +1,7 @@
-using System.Drawing;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Forms;
 using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
@@ -14,11 +12,6 @@ using MochiDock.Models;
 using MochiDock.Services;
 using MochiDock.ViewModels;
 using Microsoft.Win32;
-using Application = System.Windows.Application;
-using Button = System.Windows.Controls.Button;
-using ContextMenu = System.Windows.Controls.ContextMenu;
-using MenuItem = System.Windows.Controls.MenuItem;
-using Separator = System.Windows.Controls.Separator;
 using Color = System.Windows.Media.Color;
 
 namespace MochiDock;
@@ -72,7 +65,7 @@ public partial class MainWindow : Window
     private const uint WDA_EXCLUDEFROMCAPTURE = 0x00000011;
 
     private readonly MainViewModel _viewModel;
-    private readonly NotifyIcon _trayIcon;
+    private readonly Win32TrayIcon _trayIcon;
     private readonly DispatcherTimer _hoverExpandTimer;
     private bool _isHoverNudged;
     private bool _isDraggingDock;
@@ -200,26 +193,18 @@ public partial class MainWindow : Window
         _viewModel.AudioService.MasterVolumeChanged += OnMasterVolumeChanged;
 
         // Load authentic Mochi Icon for System Tray
-        Icon trayAppIcon = SystemIcons.Application;
         string iconPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "icon.ico");
-        if (File.Exists(iconPath))
+        _trayIcon = new Win32TrayIcon(iconPath, "Mochi Dock") { Visible = true };
+        _trayIcon.DoubleClick += () => Dispatcher.Invoke(() => _viewModel.IsExpanded = !_viewModel.IsExpanded);
+        _trayIcon.RightClick += () => Dispatcher.Invoke(() =>
         {
-            try { trayAppIcon = new Icon(iconPath); } catch (System.Exception logEx) { MochiDock.Services.AppLog.Warn("Window", logEx); }
-        }
-
-        _trayIcon = new NotifyIcon
-        {
-            Icon = trayAppIcon,
-            Text = "Mochi Dock",
-            Visible = true
-        };
-
-        _trayIcon.DoubleClick += (s, e) => Dispatcher.Invoke(() => _viewModel.IsExpanded = !_viewModel.IsExpanded);
-        _trayIcon.MouseUp += TrayIcon_MouseUp;
+            try { ShowModernTrayMenu(); }
+            catch (System.Exception logEx) { MochiDock.Services.AppLog.Warn("Window", logEx); }
+        });
         // A reminder the hidden dock cannot show (a fullscreen app is in front): a Windows notification from the tray icon.
         _viewModel.ReminderFallbackRequested += (title, text) =>
         {
-            try { _trayIcon.ShowBalloonTip(8000, title, text, System.Windows.Forms.ToolTipIcon.Info); }
+            try { _trayIcon.ShowBalloonTip(8000, title, text); }
             catch (System.Exception ex) { MochiDock.Services.AppLog.Warn("Window", ex); }
         };
 
@@ -336,21 +321,6 @@ public partial class MainWindow : Window
                 PositionWindow();
             }
         });
-    }
-
-    private void TrayIcon_MouseUp(object? sender, System.Windows.Forms.MouseEventArgs e)
-    {
-        if (e.Button == MouseButtons.Right)
-        {
-            Dispatcher.Invoke(() =>
-            {
-                try
-                {
-                    ShowModernTrayMenu();
-                }
-                catch (System.Exception logEx) { MochiDock.Services.AppLog.Warn("Window", logEx); }
-            });
-        }
     }
 
     private void ShowModernTrayMenu()
@@ -761,6 +731,7 @@ public partial class MainWindow : Window
 
                 _hwndSource = HwndSource.FromHwnd(hwnd);
                 _hwndSource?.AddHook(HwndMessageHook);
+                _trayIcon.Attach(hwnd);
                 ApplyResolutionHotkey();
                 RegisterHotKey(hwnd, HOTKEY_ID_SCRIPT, MOD_ALT | MOD_SHIFT | MOD_NOREPEAT, VK_S);
                 ApplyWindowSizeShortcuts();
@@ -844,7 +815,7 @@ public partial class MainWindow : Window
     /// zoom with tooltips, combo-box drop-downs and the Advanced Settings window through the IslandInterfaceScaleTransform resource.
     /// Cheap when nothing changed, so every path that positions the window (startup, monitor switch, DPI or display change) calls it first.
     /// </summary>
-    private void ApplyInterfaceScale(System.Windows.Forms.Screen targetScreen, double dpiX, double dpiY)
+    private void ApplyInterfaceScale(MonitorScreen targetScreen, double dpiX, double dpiY)
     {
         var work = targetScreen.WorkingArea;
         var result = MochiDock.Core.InterfaceScale.Effective(_settings.InterfaceScalePercent, work.Width / dpiX, work.Height / dpiY, BaseWindowWidth, BaseWindowHeight, _settings.TopMargin);
@@ -1164,6 +1135,11 @@ public partial class MainWindow : Window
 
     private IntPtr HwndMessageHook(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
     {
+        if (_trayIcon.ProcessMessage(msg, wParam, lParam))
+        {
+            handled = true;
+            return IntPtr.Zero;
+        }
         // Device arrival/removal (DBT_DEVNODES_CHANGED) and resume (PBT_APMRESUMEAUTOMATIC) refresh the wireless battery list.
         if ((msg == 0x0219 && wParam.ToInt32() == 0x0007) || (msg == 0x0218 && wParam.ToInt32() == 0x0012))
             _viewModel.RequestDeviceBatteryRefresh(TimeSpan.FromSeconds(2));

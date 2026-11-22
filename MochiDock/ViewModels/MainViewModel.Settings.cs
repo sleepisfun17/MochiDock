@@ -159,6 +159,13 @@ public partial class MainViewModel
         _gowaService.ConfigureFromSettings(_settings);
         if (changed)
         {
+            if (_settings.EnableWhatsApp &&
+                !string.Equals(_settings.GowaMode, "Remote", StringComparison.OrdinalIgnoreCase) &&
+                GowaInstaller.ResolveLocalExecutable() == null)
+            {
+                try { await GowaInstaller.EnsureInstalledAsync().ConfigureAwait(false); }
+                catch (Exception ex) { AppLog.Warn("Gowa", ex); }
+            }
             _gowaService.Start();
             await Task.Delay(1200);
         }

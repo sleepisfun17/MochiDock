@@ -5,8 +5,6 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
-    <UseWindowsForms>true</UseWindowsForms>
-    <!-- WPF owns startup; its manifest configures DPI. WinForms is used only for platform helpers/tray. -->
     <NoWarn>$(NoWarn);WFAC010</NoWarn>
     <SupportedOSPlatformVersion>10.0.19041.0</SupportedOSPlatformVersion>
     <ApplicationIcon>icon.ico</ApplicationIcon>
@@ -36,7 +34,6 @@
     <Content Include="Assets\emoji.pak" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="..\GOWA\windows-amd64.exe" Link="GOWA\windows-amd64.exe" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <Content Include="..\GOWA\readme.md" Link="GOWA\readme.md" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <Content Include="Scripts\install-startup.ps1" Link="install-startup.ps1" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <Content Include="Scripts\uninstall-startup.ps1" Link="uninstall-startup.ps1" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />

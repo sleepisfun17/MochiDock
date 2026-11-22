@@ -708,11 +708,11 @@ public class GowaService
 
     private void StartGowaProcess()
     {
-        string basePath = AppDomain.CurrentDomain.BaseDirectory;
-        string exePath = Path.Combine(basePath, "GOWA", "windows-amd64.exe");
-        if (!File.Exists(exePath))
+        string? exePath = GowaInstaller.ResolveLocalExecutable();
+        if (exePath == null || !File.Exists(exePath))
         {
-            Log($"GOWA binary not found at: {exePath}");
+            ConnectionProblem = "Local WhatsApp engine not downloaded yet.";
+            Log("GOWA binary not found locally; enable Local WhatsApp in Settings to download it.");
             return;
         }
 

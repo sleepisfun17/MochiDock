@@ -132,7 +132,7 @@ try {
     $stage = 'validating published assets'
     Write-PublishMessage '[4/5] Validating required files and runtime configuration...'
     $helperRel = if ($Installer) { @('MochiDock.OutlookHelper.exe','MochiDock.OutlookHelper.dll','MochiDock.OutlookHelper.deps.json','MochiDock.OutlookHelper.runtimeconfig.json') } else { @('OutlookHelper\MochiDock.OutlookHelper.exe','OutlookHelper\MochiDock.OutlookHelper.dll','OutlookHelper\MochiDock.OutlookHelper.runtimeconfig.json') }
-    $required = @('MochiDock.exe','MochiDock.dll','MochiDock.deps.json','MochiDock.runtimeconfig.json','icon.ico','GOWA\windows-amd64.exe','GOWA\readme.md','install-startup.ps1','uninstall-startup.ps1') + $helperRel
+    $required = @('MochiDock.exe','MochiDock.dll','MochiDock.deps.json','MochiDock.runtimeconfig.json','icon.ico','GOWA\readme.md','install-startup.ps1','uninstall-startup.ps1') + $helperRel
     foreach ($relative in $required) {
         $file = Get-Item -LiteralPath (Join-Path $destination $relative)
         if ($file.Length -eq 0) { throw "Empty published file: $relative" }

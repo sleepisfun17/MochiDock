@@ -35,7 +35,8 @@ public static class FullscreenPolicy
 
         if (!GetWindowRect(h, out var r)) return false;
 
-        var fgScreen = System.Windows.Forms.Screen.FromHandle(h);
+        var fgScreen = MultiMonitorHelper.FromHandle(h);
+        if (fgScreen == null) return false;
         var dockScreen = MultiMonitorHelper.GetTargetScreen(targetMonitor);
         if (dockScreen != null && !string.Equals(fgScreen.DeviceName, dockScreen.DeviceName, StringComparison.OrdinalIgnoreCase))
             return false;

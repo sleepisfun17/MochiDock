@@ -213,11 +213,36 @@ public partial class WhatsAppSectionView : SettingsSectionBase
         _ = RefreshReadSyncUrlAsync();
     }
 
-    private void EnableWhatsApp_Changed(object sender, RoutedEventArgs e)
+    private async void EnableWhatsApp_Changed(object sender, RoutedEventArgs e)
     {
         if (!IsLoaded || Loading) return;
         bool on = EnableWhatsAppCheck.IsChecked == true;
+        if (on && !string.Equals(ViewModel?.Settings.GowaMode, "Remote", StringComparison.OrdinalIgnoreCase) &&
+            GowaInstaller.ResolveLocalExecutable() == null)
+        {
+            await DownloadLocalEngineWithFeedbackAsync();
+        }
         ViewModel?.UpdateSettings(x => x.EnableWhatsApp = on, SettingsApply.Gowa);
+    }
+
+    private async Task DownloadLocalEngineWithFeedbackAsync()
+    {
+        LinkStatusText.Text = "Downloading local WhatsApp engine… 0%";
+        var progress = new Progress<(long Done, long Total)>(p =>
+        {
+            int pct = p.Total > 0 ? (int)(p.Done * 100 / p.Total) : 0;
+            Dispatcher.BeginInvoke(() => LinkStatusText.Text = $"Downloading local WhatsApp engine… {pct}%");
+        });
+        try
+        {
+            await GowaInstaller.EnsureInstalledAsync(progress);
+            LinkStatusText.Text = "Local WhatsApp engine downloaded. Starting…";
+        }
+        catch (Exception ex)
+        {
+            AppLog.Warn("Gowa", ex);
+            LinkStatusText.Text = $"Could not download WhatsApp engine: {ex.Message}";
+        }
     }
 
     private void Option_Changed(object sender, RoutedEventArgs e)

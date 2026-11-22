@@ -1,20 +1,49 @@
 using System.Runtime.InteropServices;
 using System.Windows;
-using System.Windows.Forms;
 using System.Windows.Media;
 
 namespace MochiDock.Services;
+
+public readonly record struct MonitorRect(int Left, int Top, int Width, int Height)
+{
+    public int Right => Left + Width;
+    public int Bottom => Top + Height;
+}
+
+public sealed class MonitorScreen
+{
+    public string DeviceName { get; init; } = "";
+    public MonitorRect Bounds { get; init; }
+    public MonitorRect WorkingArea { get; init; }
+    public bool Primary { get; init; }
+    internal IntPtr Handle { get; init; }
+}
 
 public class MonitorOption
 {
     public string DeviceName { get; set; } = "";
     public string DisplayLabel { get; set; } = "";
     public bool IsPrimary { get; set; }
-    public Screen Screen { get; set; } = null!;
+    public MonitorScreen Screen { get; set; } = null!;
 }
 
 public static class MultiMonitorHelper
 {
+    private const uint MONITORINFOF_PRIMARY = 1;
+    private const uint MONITOR_DEFAULTTONEAREST = 2;
+    private const int MDT_EFFECTIVE_DPI = 0;
+
+    private delegate bool MonitorEnumProc(IntPtr hMonitor, IntPtr hdcMonitor, ref RECT lprcMonitor, IntPtr dwData);
+
+    [DllImport("user32.dll")]
+    private static extern bool EnumDisplayMonitors(IntPtr hdc, IntPtr lprcClip, MonitorEnumProc lpfnEnum, IntPtr dwData);
+
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+    private static extern bool GetMonitorInfoW(IntPtr hMonitor, ref MONITORINFOEXW lpmi);
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr MonitorFromWindow(IntPtr hwnd, uint dwFlags);
+
     [DllImport("user32.dll")]
     private static extern IntPtr MonitorFromRect(ref RECT lprc, uint dwFlags);
 
@@ -23,12 +52,57 @@ public static class MultiMonitorHelper
 
     [StructLayout(LayoutKind.Sequential)]
     private struct RECT { public int Left, Top, Right, Bottom; }
+
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+    private struct MONITORINFOEXW
+    {
+        public uint cbSize;
+        public RECT rcMonitor;
+        public RECT rcWork;
+        public uint dwFlags;
+        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 32)] public string szDevice;
+    }
+
+    private static MonitorScreen? ReadMonitor(IntPtr hMonitor)
+    {
+        var info = new MONITORINFOEXW { cbSize = (uint)Marshal.SizeOf<MONITORINFOEXW>() };
+        if (!GetMonitorInfoW(hMonitor, ref info)) return null;
+        return new MonitorScreen
+        {
+            DeviceName = info.szDevice ?? "",
+            Bounds = new MonitorRect(info.rcMonitor.Left, info.rcMonitor.Top,
+                info.rcMonitor.Right - info.rcMonitor.Left, info.rcMonitor.Bottom - info.rcMonitor.Top),
+            WorkingArea = new MonitorRect(info.rcWork.Left, info.rcWork.Top,
+                info.rcWork.Right - info.rcWork.Left, info.rcWork.Bottom - info.rcWork.Top),
+            Primary = (info.dwFlags & MONITORINFOF_PRIMARY) != 0,
+            Handle = hMonitor
+        };
+    }
+
+    private static List<MonitorScreen> EnumerateScreens()
+    {
+        var screens = new List<MonitorScreen>();
+        EnumDisplayMonitors(IntPtr.Zero, IntPtr.Zero, (IntPtr hMon, IntPtr _, ref RECT _, IntPtr _) =>
+        {
+            if (ReadMonitor(hMon) is { } screen) screens.Add(screen);
+            return true;
+        }, IntPtr.Zero);
+        return screens;
+    }
+
+    public static MonitorScreen? FromHandle(IntPtr hwnd)
+    {
+        if (hwnd == IntPtr.Zero) return null;
+        IntPtr hMon = MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST);
+        return hMon != IntPtr.Zero ? ReadMonitor(hMon) : null;
+    }
+
     public static List<MonitorOption> GetAllMonitors()
     {
         var list = new List<MonitorOption>();
-        var screens = Screen.AllScreens;
+        var screens = EnumerateScreens();
 
-        for (int i = 0; i < screens.Length; i++)
+        for (int i = 0; i < screens.Count; i++)
         {
             var s = screens[i];
             string primaryTag = s.Primary ? " (Primary)" : "";
@@ -46,41 +120,37 @@ public static class MultiMonitorHelper
         return list;
     }
 
-    public static Screen? GetTargetScreen(string? preferredDeviceName = null)
+    public static MonitorScreen? GetTargetScreen(string? preferredDeviceName = null)
     {
-        var screens = Screen.AllScreens;
-        if (screens.Length == 0)
-        {
-            var primary = Screen.PrimaryScreen;
-            return (primary != null && primary.Bounds.Width > 0 && primary.Bounds.Height > 0) ? primary : null;
-        }
+        var screens = EnumerateScreens();
+        if (screens.Count == 0) return null;
 
         if (!string.IsNullOrEmpty(preferredDeviceName))
         {
             var match = screens.FirstOrDefault(s => s.DeviceName.Equals(preferredDeviceName, StringComparison.OrdinalIgnoreCase));
             if (match != null && match.Bounds.Width > 0 && match.Bounds.Height > 0)
-            {
                 return match;
-            }
         }
 
-        var fallback = Screen.PrimaryScreen ?? screens[0];
-        return (fallback != null && fallback.Bounds.Width > 0 && fallback.Bounds.Height > 0) ? fallback : null;
+        var fallback = screens.FirstOrDefault(s => s.Primary) ?? screens[0];
+        return (fallback.Bounds.Width > 0 && fallback.Bounds.Height > 0) ? fallback : null;
     }
 
     /// <summary>Gets the effective DPI scale (1.0 = 96 DPI) for the destination <paramref name="screen"/>.</summary>
-    public static (double DpiX, double DpiY) GetDpiScale(Screen? screen, Visual? fallbackVisual = null)
+    public static (double DpiX, double DpiY) GetDpiScale(MonitorScreen? screen, Visual? fallbackVisual = null)
     {
         if (screen != null)
         {
             try
             {
-                var rc = new RECT { Left = screen.Bounds.Left, Top = screen.Bounds.Top, Right = screen.Bounds.Right, Bottom = screen.Bounds.Bottom };
-                IntPtr hMon = MonitorFromRect(ref rc, 2 /* MONITOR_DEFAULTTONEAREST */);
-                if (hMon != IntPtr.Zero && GetDpiForMonitor(hMon, 0 /* MDT_EFFECTIVE_DPI */, out uint dx, out uint dy) == 0 && dx > 0 && dy > 0)
+                IntPtr hMon = screen.Handle;
+                if (hMon == IntPtr.Zero)
                 {
-                    return (dx / 96.0, dy / 96.0);
+                    var rc = new RECT { Left = screen.Bounds.Left, Top = screen.Bounds.Top, Right = screen.Bounds.Right, Bottom = screen.Bounds.Bottom };
+                    hMon = MonitorFromRect(ref rc, MONITOR_DEFAULTTONEAREST);
                 }
+                if (hMon != IntPtr.Zero && GetDpiForMonitor(hMon, MDT_EFFECTIVE_DPI, out uint dx, out uint dy) == 0 && dx > 0 && dy > 0)
+                    return (dx / 96.0, dy / 96.0);
             }
             catch { }
         }
@@ -105,7 +175,7 @@ public static class MultiMonitorHelper
     public static double RoundToDevicePixel(double dip, double dpiScale) =>
         dpiScale > 0 ? Math.Round(dip * dpiScale) / dpiScale : dip;
 
-    public static void PositionAtTopCenter(Window window, Screen screen, double topMargin = 4)
+    public static void PositionAtTopCenter(Window window, MonitorScreen screen, double topMargin = 4)
     {
         var (dpiX, dpiY) = GetDpiScale(screen, window);
 
@@ -118,23 +188,23 @@ public static class MultiMonitorHelper
         double left = screenCenter - (window.Width / 2.0);
         double top = screenTopDip + topMargin;
 
-        window.Left = left;
-        window.Top = top;
+        window.Left = RoundToDevicePixel(left, dpiX);
+        window.Top = RoundToDevicePixel(top, dpiY);
     }
 
-    public static double GetTopY(Visual? visual, Screen screen, double topMargin = 4)
+    public static double GetTopY(Visual? visual, MonitorScreen screen, double topMargin = 4)
     {
         var (_, dpiY) = GetDpiScale(screen, visual);
         return (screen.WorkingArea.Top / dpiY) + topMargin;
     }
 
-    public static double GetTopY(Screen screen, double topMargin = 4) => GetTopY(null, screen, topMargin);
+    public static double GetTopY(MonitorScreen screen, double topMargin = 4) => GetTopY(null, screen, topMargin);
 
-    public static double GetBottomY(Visual? visual, Screen screen, double bottomMargin = 16, double pillHeight = 48)
+    public static double GetBottomY(Visual? visual, MonitorScreen screen, double bottomMargin = 16, double pillHeight = 48)
     {
         var (_, dpiY) = GetDpiScale(screen, visual);
         return (screen.WorkingArea.Bottom / dpiY) - pillHeight - bottomMargin;
     }
 
-    public static double GetBottomY(Screen screen, double bottomMargin = 16, double pillHeight = 48) => GetBottomY(null, screen, bottomMargin, pillHeight);
+    public static double GetBottomY(MonitorScreen screen, double bottomMargin = 16, double pillHeight = 48) => GetBottomY(null, screen, bottomMargin, pillHeight);
 }
