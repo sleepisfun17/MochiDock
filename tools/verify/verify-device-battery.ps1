@@ -30,7 +30,7 @@ if($Raw){
  '--'
 }
 $scanner=$assembly.GetType('MochiDock.Services.DeviceBattery.DeviceBatteryScanner')
-$readings=@($scanner.GetMethod('PollOnce').Invoke($null,@()))
+$readings=@($scanner.GetMethod('PollOnce',[Type[]]@()).Invoke($null,@()))
 foreach($r in $readings){
  $pct=if($null -eq $r.Percent){'?'}else{"$($r.Percent)%"}
  '{0,-9} {1,-28} {2,5} charging={3} connected={4} via={5} key={6}' -f $r.Kind,$r.Name,$pct,$r.Charging,$r.Connected,$r.Via,$r.Key

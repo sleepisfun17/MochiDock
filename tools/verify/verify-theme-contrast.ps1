@@ -18,7 +18,7 @@ function Read-Palette([string]$text) {
     foreach ($m in [regex]::Matches($text, 'SetBrushes\(app,\s*"(#[0-9A-Fa-f]{6,8})"\s*,([^)]*)\)')) {
         foreach ($n in [regex]::Matches($m.Groups[2].Value, '"(\w+)"')) { $palette[$n.Groups[1].Value] = $m.Groups[1].Value }
     }
-    foreach ($m in [regex]::Matches($text, 'Resources\["(\w+)"\]\s*=\s*new SolidColorBrush\(MediaColor\.(FromRgb|FromArgb)\(([^)]*)\)')) {
+    foreach ($m in [regex]::Matches($text, 'Resources\["(\w+)"\]\s*=\s*(?:new SolidColorBrush|FrozenBrush)\(MediaColor\.(FromRgb|FromArgb)\(([^)]*)\)')) {
         $v = $m.Groups[3].Value -split ',' | ForEach-Object { [int]$_.Trim() }
         if ($m.Groups[2].Value -eq "FromArgb") { $palette[$m.Groups[1].Value] = "#{0:X2}{1:X2}{2:X2}{3:X2}" -f $v[0], $v[1], $v[2], $v[3] }
         else { $palette[$m.Groups[1].Value] = "#{0:X2}{1:X2}{2:X2}" -f $v[0], $v[1], $v[2] }
