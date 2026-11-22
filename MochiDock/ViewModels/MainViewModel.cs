@@ -687,6 +687,9 @@ public partial class MainViewModel : INotifyPropertyChanged
             bool alerts = EnableHardwareAlerts;
             bool sessionSummary = _settings.EnableGameSessionSummary;
 
+            // Readings are taken whenever something needs them (Stats open, readout pinned, a game, or hardware alerts, which are
+            // on by default); each one also feeds the 2-minute Stats charts, so they keep recording while the card is closed.
+            // Only the heavy part (chart shapes, per-core grid, top processes, drives) waits for the card (includeHeavy).
             _ = Task.Run(() =>
             {
                 bool isGaming = _hardwareService.IsGameRunning();

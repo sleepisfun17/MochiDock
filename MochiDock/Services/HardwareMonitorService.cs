@@ -1080,8 +1080,11 @@ private float _lastGpuUsage;
             SampleCpu(stats, sensors, sensorsFresh);
             SampleMemory(stats);
             SampleGpu(stats, sensors, sensorsFresh);
-            SampleDrivesAndNetwork(stats, includeHeavy);
+            SampleDrivesAndNetwork(stats);
             SampleGamingFps(stats);
+            // Every reading, light or full, goes into the 2-minute chart history, so the Stats charts are already filled
+            // when the card opens; only building the chart shapes waits for the card.
+            PushHistory(stats);
 
             if (!includeHeavy) return stats;
 
@@ -1322,7 +1325,7 @@ private float _lastGpuUsage;
         }
     }
 
-    private void SampleDrivesAndNetwork(HardwareStats stats, bool includeHeavy)
+    private void SampleDrivesAndNetwork(HardwareStats stats)
     {
         UpdateDiskBandwidth();
         stats.DiskReadBytesPerSec = _cachedDiskReadBytesPerSec;
@@ -1331,7 +1334,8 @@ private float _lastGpuUsage;
         stats.DiskWriteSpeedMbps = _cachedDiskWriteBytesPerSec / (1024.0 * 1024.0);
         stats.FormattedDiskSpeed = HardwareStats.FormatRate(_cachedDiskReadBytesPerSec + _cachedDiskWriteBytesPerSec);
 
-        if (includeHeavy) UpdateNetworkBandwidth();
+        // Every sample (cheap: one adapter list and its byte counters), so the Network chart keeps recording while Stats is closed.
+        UpdateNetworkBandwidth();
         stats.NetDownloadBytesPerSec = _cachedNetDownloadBytesPerSec;
         stats.NetUploadBytesPerSec = _cachedNetUploadBytesPerSec;
         stats.DownloadSpeedMbps = _cachedNetDownloadBytesPerSec / (1024.0 * 1024.0);
@@ -1405,7 +1409,8 @@ private float _lastGpuUsage;
         return pc;
     }
 
-    private void SampleChartsAndHistory(HardwareStats stats)
+    /// <summary>Adds one reading to the 2-minute chart history (cheap; runs on every sample, card open or not). Call under <c>_statsGate</c>.</summary>
+    private void PushHistory(HardwareStats stats)
     {
         MochiDock.Core.HardwareChartMath.PushBounded(_cpuHistoryQueue, stats.CpuUsage);
         MochiDock.Core.HardwareChartMath.PushBounded(_gpuHistoryQueue, stats.GpuUsage);
@@ -1415,7 +1420,11 @@ private float _lastGpuUsage;
         MochiDock.Core.HardwareChartMath.PushBounded(_netDownHistoryQueue, _cachedNetDownloadBytesPerSec);
         MochiDock.Core.HardwareChartMath.PushBounded(_netUpHistoryQueue, _cachedNetUploadBytesPerSec);
         MochiDock.Core.HardwareChartMath.PushBounded(_fpsHistoryQueue, stats.CurrentFps);
+    }
 
+    /// <summary>Builds the chart shapes from the history (only while the Stats card is open).</summary>
+    private void SampleChartsAndHistory(HardwareStats stats)
+    {
         var (cpuLine, cpuFill) = MochiDock.Core.HardwareChartMath.BuildAreaSeries(_cpuHistoryQueue, 220.0, 100.0, 100.0);
         stats.CpuHistoryPoints = ToPointCollection(cpuLine);
         stats.CpuHistoryFillPoints = ToPointCollection(cpuFill);
