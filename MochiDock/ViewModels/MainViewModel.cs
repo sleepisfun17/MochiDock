@@ -1211,11 +1211,11 @@ public partial class MainViewModel : INotifyPropertyChanged
         get => _settings?.PrayerSoundMode ?? "Tone";
         set
         {
-            if (_settings != null && _settings.PrayerSoundMode != value)
+            string normalized = MochiDock.Core.PrayerTime.NormalizeSound(value);
+            if (_settings != null && !string.Equals(_settings.PrayerSoundMode, normalized, StringComparison.Ordinal))
             {
-                _settings.PrayerSoundMode = MochiDock.Core.PrayerTime.NormalizeSound(value);
                 PrayerAudio.Stop();
-                SettingsService.Save(_settings);
+                UpdateSettings(x => x.PrayerSoundMode = normalized);
                 OnPropertyChanged();
                 OnPropertyChanged(nameof(IsPrayerSoundTone));
                 OnPropertyChanged(nameof(IsPrayerSoundSilent));

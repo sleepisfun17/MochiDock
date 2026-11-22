@@ -659,6 +659,7 @@ public partial class MainWindow : Window
         };
         resetPosItem.Click += (s, e) =>
         {
+            _viewModel.UpdateSettings(x => x.IslandHorizontalRatio = null);
             PositionWindow();
             EnsureWindowTopmost();
             _viewModel.PrepareHoverExpand();
@@ -858,6 +859,7 @@ public partial class MainWindow : Window
         double normalTop = isNotch ? (targetScreen.Bounds.Top / dpiY) : MultiMonitorHelper.GetTopY(this, targetScreen, topMargin: _settings.TopMargin);
         this.Left = MultiMonitorHelper.RoundToDevicePixel(MochiDock.Core.SpotPolicy.ComputeWindowLeftDip(screenLeftDip, screenWidthDip, this.Width, _settings.IslandHorizontalRatio), dpiX);
 
+        this.BeginAnimation(Window.TopProperty, null);
         if (_viewModel.IsGamingSessionActive)
         {
             double offset = isNotch ? 0 : _settings.EffectiveGamingTopOffset;
@@ -950,7 +952,7 @@ public partial class MainWindow : Window
                 QueueHeaderSelectionReveal();
             });
         }
-        if (e.PropertyName == nameof(MainViewModel.IsExpanded)) SetGamingClickThrough(_viewModel.IsGamingSessionActive);
+        if (e.PropertyName == nameof(MainViewModel.IsExpanded) || e.PropertyName == nameof(MainViewModel.EffectiveGamingClickThrough)) SetGamingClickThrough(_viewModel.IsGamingSessionActive);
         if (e.PropertyName == nameof(MainViewModel.IsExpanded))
         {
             if (!_viewModel.IsExpanded) { CardTransitions.Settle(); HeaderPillOverlay.Cancel(); }
@@ -1038,10 +1040,11 @@ public partial class MainWindow : Window
 
         double screenLeftDip = targetScreen.WorkingArea.Left / dpiX;
         double screenWidthDip = targetScreen.WorkingArea.Width / dpiX;
-        double targetLeft = screenLeftDip + (screenWidthDip / 2.0) - (this.Width / 2.0);
+        double targetLeft = MochiDock.Core.SpotPolicy.ComputeWindowLeftDip(screenLeftDip, screenWidthDip, this.Width, _settings.IslandHorizontalRatio);
         this.Left = MultiMonitorHelper.RoundToDevicePixel(targetLeft, dpiX);
 
-        // Reset any internal translate so window coordinates dictate the real position
+        // Reset any internal translate or prior Top animation so window coordinates dictate the real position
+        this.BeginAnimation(Window.TopProperty, null);
         RootVerticalTranslate.BeginAnimation(TranslateTransform.YProperty, null);
         RootVerticalTranslate.Y = 0;
 
@@ -1674,7 +1677,7 @@ public partial class MainWindow : Window
         }
         else if (e.ChangedButton == MouseButton.Left)
         {
-            _dragStartPoint = e.GetPosition(this);
+            _dragStartPoint = PointToScreen(e.GetPosition(this));
             _dragStartLeft = this.Left;
             _isDraggingDock = false;
             CompactPillBorder.CaptureMouse();
@@ -1685,8 +1688,9 @@ public partial class MainWindow : Window
     {
         if (e.LeftButton == MouseButtonState.Pressed && CompactPillBorder.IsMouseCaptured)
         {
-            var currentPoint = e.GetPosition(this);
-            double deltaX = currentPoint.X - _dragStartPoint.X;
+            var currentScreen = PointToScreen(e.GetPosition(this));
+            var (dpiX, _) = MultiMonitorHelper.GetDpiScale(this);
+            double deltaX = (currentScreen.X - _dragStartPoint.X) / dpiX;
             if (!_isDraggingDock && Math.Abs(deltaX) > MochiDock.Core.SpotPolicy.DragSlopDip)
             {
                 _isDraggingDock = true;
@@ -1696,8 +1700,7 @@ public partial class MainWindow : Window
             if (_isDraggingDock)
             {
                 var targetScreen = MultiMonitorHelper.GetTargetScreen(_settings.TargetMonitor);
-        if (targetScreen == null || targetScreen.WorkingArea.Width <= 0 || targetScreen.WorkingArea.Height <= 0) return;
-                var (dpiX, _) = MultiMonitorHelper.GetDpiScale(this);
+                if (targetScreen == null || targetScreen.WorkingArea.Width <= 0 || targetScreen.WorkingArea.Height <= 0) return;
                 double screenLeftDip = targetScreen.WorkingArea.Left / dpiX;
                 double screenWidthDip = targetScreen.WorkingArea.Width / dpiX;
 
@@ -1917,9 +1920,9 @@ public partial class MainWindow : Window
     private readonly System.Windows.Threading.DispatcherTimer _policyTimer = new(){Interval=TimeSpan.FromMilliseconds(500)};
     private void PolicyTick(object? sender,EventArgs e) {
         if(_viewModel.IsAutoCollapseDeferred&&!_viewModel.IsPinned&&!(_viewModel.IsDockInteractionActive?.Invoke()??false)){_viewModel.IsAutoCollapseDeferred=false;_mouseLeaveTimer.Stop();_mouseLeaveTimer.Start();}
-        bool hide=MochiDock.Core.LocalFeaturePolicy.Hide(_viewModel.HideInFullscreen,MochiDock.Services.FullscreenPolicy.IsFullscreen(new WindowInteropHelper(this).Handle),_viewModel.IsGamingSessionActive||_viewModel.IsStatsPinnedToCapsule);
+        bool hide=MochiDock.Core.LocalFeaturePolicy.Hide(_viewModel.HideInFullscreen,MochiDock.Services.FullscreenPolicy.IsFullscreen(new WindowInteropHelper(this).Handle,_settings.TargetMonitor),_viewModel.IsGamingSessionActive||_viewModel.IsStatsPinnedToCapsule);
         if(hide&&!_policyHidden){_viewModel.SetHardwarePresentationSuppressed(true);_policyHidden=true;Hide();}
-        else if(!hide&&_policyHidden){_viewModel.SetHardwarePresentationSuppressed(false);_policyHidden=false;Show();}
+        else if(!hide&&_policyHidden){_viewModel.SetHardwarePresentationSuppressed(false);_policyHidden=false;Show();EnsureWindowTopmost();}
         if(!_policyHidden&&_viewModel.IsGamingSessionActive)EnsureWindowTopmost();
     }
     private void HardwareNotice_Click(object sender,RoutedEventArgs e){_viewModel.OpenHardwareNotice();e.Handled=true;}

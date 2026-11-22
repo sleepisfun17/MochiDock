@@ -33,7 +33,6 @@
             <ComboBox x:Name="SoundCombo" Style="{StaticResource ModernDarkComboBox}" Width="160" SelectionChanged="Sound_SelectionChanged">
                 <ComboBoxItem Content="Silent" Tag="Silent"/>
                 <ComboBoxItem Content="Tone" Tag="Tone"/>
-                <ComboBoxItem Content="Adzan" Tag="Adzan"/>
             </ComboBox>
         </s:SettingRow>
         <s:SettingRow Label="Pre-prayer reminder" Description="Show a notice shortly before each prayer.">

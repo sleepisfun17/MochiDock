@@ -34,6 +34,8 @@
 
         ShowInTaskbar="False"
 
+        ShowActivated="False"
+
         ResizeMode="NoResize"
 
         FontFamily="{DynamicResource IslandUiFont}"
