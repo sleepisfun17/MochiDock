@@ -53,6 +53,7 @@ public sealed class BatteryGauge : Grid
         Children.Add(psu);
         inner.SizeChanged += (_, _) => Update();
         Loaded += (_, _) => Update();
+        IsVisibleChanged += (_, _) => { if (IsVisible) Update(); else StopAnimations(); };
         // Nothing keeps running on a page that is no longer shown.
         Unloaded += (_, _) => StopAnimations();
         Update();
@@ -100,7 +101,7 @@ public sealed class BatteryGauge : Grid
         bolt.Visibility = charging ? Visibility.Visible : Visibility.Collapsed;
         bolt.SetResourceReference(TextBlock.ForegroundProperty, "IslandInkBrush");
         glow.Color = color;
-        if (charging) StartChargeAnimation(); else StopChargeAnimation();
+        if (charging && IsVisible) StartChargeAnimation(); else StopChargeAnimation();
     }
 
     /// <summary>
@@ -125,7 +126,7 @@ public sealed class BatteryGauge : Grid
     // Soft pulse on the glow and the fill. Skipped when Windows animations are off (a static glow stays).
     void StartChargeAnimation()
     {
-        if (!IsLoaded || !SystemParameters.ClientAreaAnimation) { glow.Opacity = 0.9; return; }
+        if (!IsLoaded || !IsVisible || !SystemParameters.ClientAreaAnimation) { glow.Opacity = 0.9; return; }
         glow.BeginAnimation(DropShadowEffect.OpacityProperty, new DoubleAnimation(0.35, 1, TimeSpan.FromSeconds(1.4)) { AutoReverse = true, RepeatBehavior = RepeatBehavior.Forever, EasingFunction = new SineEase() });
         fill.BeginAnimation(OpacityProperty, new DoubleAnimation(0.82, 1, TimeSpan.FromSeconds(1.4)) { AutoReverse = true, RepeatBehavior = RepeatBehavior.Forever, EasingFunction = new SineEase() });
     }

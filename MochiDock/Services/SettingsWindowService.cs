@@ -73,6 +73,7 @@ public sealed class SettingsWindowService
         try
         {
             var screen = MultiMonitorHelper.GetTargetScreen(_viewModel.Settings.TargetMonitor);
+            if (screen == null || screen.WorkingArea.Width <= 0 || screen.WorkingArea.Height <= 0) return;
             var (dpiX, dpiY) = MultiMonitorHelper.GetDpiScale(_dock);
             var work = screen.WorkingArea;
             window.Width = Math.Max(window.MinWidth, Math.Min(window.Width, work.Width / dpiX - 32));

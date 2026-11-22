@@ -37,10 +37,14 @@ public static class MultiMonitorHelper
         return list;
     }
 
-    public static Screen GetTargetScreen(string? preferredDeviceName = null)
+    public static Screen? GetTargetScreen(string? preferredDeviceName = null)
     {
         var screens = Screen.AllScreens;
-        if (screens.Length == 0) return Screen.PrimaryScreen!;
+        if (screens.Length == 0)
+        {
+            var primary = Screen.PrimaryScreen;
+            return (primary != null && primary.Bounds.Width > 0 && primary.Bounds.Height > 0) ? primary : null;
+        }
 
         if (!string.IsNullOrEmpty(preferredDeviceName))
         {
@@ -51,7 +55,8 @@ public static class MultiMonitorHelper
             }
         }
 
-        return Screen.PrimaryScreen ?? screens[0];
+        var fallback = Screen.PrimaryScreen ?? screens[0];
+        return (fallback != null && fallback.Bounds.Width > 0 && fallback.Bounds.Height > 0) ? fallback : null;
     }
 
     public static (double DpiX, double DpiY) GetDpiScale(Visual? visual)

@@ -7,6 +7,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <AssemblyName>MochiDock.OutlookHelper</AssemblyName>
     <RootNamespace>MochiDock.OutlookHelper</RootNamespace>
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\MochiDock.Core\MochiDock.Core.csproj" />

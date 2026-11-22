@@ -734,95 +734,101 @@
                                   VerticalAlignment="Center">
 
                                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Height="14">
-
-                                    <Border Width="2.2" Height="8" CornerRadius="1" Background="{DynamicResource IslandSpotifyBrush}" Margin="1,0" VerticalAlignment="Center">
-
-                                        <Border.Triggers>
-
-                                            <EventTrigger RoutedEvent="Loaded">
-
-                                                <BeginStoryboard>
-
-                                                    <Storyboard RepeatBehavior="Forever" AutoReverse="True">
-
-                                                        <DoubleAnimation Storyboard.TargetProperty="Height" From="4" To="14" Duration="0:0:0.45" />
-
-                                                    </Storyboard>
-
-                                                </BeginStoryboard>
-
-                                            </EventTrigger>
-
-                                        </Border.Triggers>
-
+                                    <Border Width="2.2" Height="14" CornerRadius="1" Background="{DynamicResource IslandSpotifyBrush}" Margin="1,0" VerticalAlignment="Center" RenderTransformOrigin="0.5,1">
+                                        <Border.RenderTransform>
+                                            <ScaleTransform ScaleY="0.57" />
+                                        </Border.RenderTransform>
+                                        <Border.Style>
+                                            <Style TargetType="Border">
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsAudioWaveformVisible}" Value="True">
+                                                        <DataTrigger.EnterActions>
+                                                            <BeginStoryboard x:Name="EqAnim1">
+                                                                <Storyboard RepeatBehavior="Forever" AutoReverse="True">
+                                                                    <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)" From="0.29" To="1.0" Duration="0:0:0.45" />
+                                                                </Storyboard>
+                                                            </BeginStoryboard>
+                                                        </DataTrigger.EnterActions>
+                                                        <DataTrigger.ExitActions>
+                                                            <StopStoryboard BeginStoryboardName="EqAnim1" />
+                                                        </DataTrigger.ExitActions>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Border.Style>
                                     </Border>
 
-                                    <Border Width="2.2" Height="13" CornerRadius="1" Background="{DynamicResource IslandSpotifyBrush}" Margin="1,0" VerticalAlignment="Center">
-
-                                        <Border.Triggers>
-
-                                            <EventTrigger RoutedEvent="Loaded">
-
-                                                <BeginStoryboard>
-
-                                                    <Storyboard RepeatBehavior="Forever" AutoReverse="True">
-
-                                                        <DoubleAnimation Storyboard.TargetProperty="Height" From="13" To="5" Duration="0:0:0.35" />
-
-                                                    </Storyboard>
-
-                                                </BeginStoryboard>
-
-                                            </EventTrigger>
-
-                                        </Border.Triggers>
-
+                                    <Border Width="2.2" Height="14" CornerRadius="1" Background="{DynamicResource IslandSpotifyBrush}" Margin="1,0" VerticalAlignment="Center" RenderTransformOrigin="0.5,1">
+                                        <Border.RenderTransform>
+                                            <ScaleTransform ScaleY="0.93" />
+                                        </Border.RenderTransform>
+                                        <Border.Style>
+                                            <Style TargetType="Border">
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsAudioWaveformVisible}" Value="True">
+                                                        <DataTrigger.EnterActions>
+                                                            <BeginStoryboard x:Name="EqAnim2">
+                                                                <Storyboard RepeatBehavior="Forever" AutoReverse="True">
+                                                                    <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)" From="0.93" To="0.36" Duration="0:0:0.35" />
+                                                                </Storyboard>
+                                                            </BeginStoryboard>
+                                                        </DataTrigger.EnterActions>
+                                                        <DataTrigger.ExitActions>
+                                                            <StopStoryboard BeginStoryboardName="EqAnim2" />
+                                                        </DataTrigger.ExitActions>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Border.Style>
                                     </Border>
 
-                                    <Border Width="2.2" Height="6" CornerRadius="1" Background="{DynamicResource IslandSpotifyBrush}" Margin="1,0" VerticalAlignment="Center">
-
-                                        <Border.Triggers>
-
-                                            <EventTrigger RoutedEvent="Loaded">
-
-                                                <BeginStoryboard>
-
-                                                    <Storyboard RepeatBehavior="Forever" AutoReverse="True">
-
-                                                        <DoubleAnimation Storyboard.TargetProperty="Height" From="5" To="13" Duration="0:0:0.55" />
-
-                                                    </Storyboard>
-
-                                                </BeginStoryboard>
-
-                                            </EventTrigger>
-
-                                        </Border.Triggers>
-
+                                    <Border Width="2.2" Height="14" CornerRadius="1" Background="{DynamicResource IslandSpotifyBrush}" Margin="1,0" VerticalAlignment="Center" RenderTransformOrigin="0.5,1">
+                                        <Border.RenderTransform>
+                                            <ScaleTransform ScaleY="0.43" />
+                                        </Border.RenderTransform>
+                                        <Border.Style>
+                                            <Style TargetType="Border">
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsAudioWaveformVisible}" Value="True">
+                                                        <DataTrigger.EnterActions>
+                                                            <BeginStoryboard x:Name="EqAnim3">
+                                                                <Storyboard RepeatBehavior="Forever" AutoReverse="True">
+                                                                    <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)" From="0.36" To="0.93" Duration="0:0:0.55" />
+                                                                </Storyboard>
+                                                            </BeginStoryboard>
+                                                        </DataTrigger.EnterActions>
+                                                        <DataTrigger.ExitActions>
+                                                            <StopStoryboard BeginStoryboardName="EqAnim3" />
+                                                        </DataTrigger.ExitActions>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Border.Style>
                                     </Border>
 
-                                    <Border Width="2.2" Height="10" CornerRadius="1" Background="{DynamicResource IslandSpotifyBrush}" Margin="1,0" VerticalAlignment="Center">
-
-                                        <Border.Triggers>
-
-                                            <EventTrigger RoutedEvent="Loaded">
-
-                                                <BeginStoryboard>
-
-                                                    <Storyboard RepeatBehavior="Forever" AutoReverse="True">
-
-                                                        <DoubleAnimation Storyboard.TargetProperty="Height" From="10" To="4" Duration="0:0:0.40" />
-
-                                                    </Storyboard>
-
-                                                </BeginStoryboard>
-
-                                            </EventTrigger>
-
-                                        </Border.Triggers>
-
+                                    <Border Width="2.2" Height="14" CornerRadius="1" Background="{DynamicResource IslandSpotifyBrush}" Margin="1,0" VerticalAlignment="Center" RenderTransformOrigin="0.5,1">
+                                        <Border.RenderTransform>
+                                            <ScaleTransform ScaleY="0.71" />
+                                        </Border.RenderTransform>
+                                        <Border.Style>
+                                            <Style TargetType="Border">
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsAudioWaveformVisible}" Value="True">
+                                                        <DataTrigger.EnterActions>
+                                                            <BeginStoryboard x:Name="EqAnim4">
+                                                                <Storyboard RepeatBehavior="Forever" AutoReverse="True">
+                                                                    <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)" From="0.71" To="0.29" Duration="0:0:0.40" />
+                                                                </Storyboard>
+                                                            </BeginStoryboard>
+                                                        </DataTrigger.EnterActions>
+                                                        <DataTrigger.ExitActions>
+                                                            <StopStoryboard BeginStoryboardName="EqAnim4" />
+                                                        </DataTrigger.ExitActions>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Border.Style>
                                     </Border>
-
                                 </StackPanel>
 
                             </Grid>

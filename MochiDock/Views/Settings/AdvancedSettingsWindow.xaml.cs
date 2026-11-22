@@ -62,9 +62,12 @@ public partial class AdvancedSettingsWindow : Window
         try
         {
             var screen = MultiMonitorHelper.GetTargetScreen(_viewModel.Settings.TargetMonitor);
-            var (dpiX, dpiY) = MultiMonitorHelper.GetDpiScale(this);
-            workWidth = screen.WorkingArea.Width / dpiX;
-            workHeight = screen.WorkingArea.Height / dpiY;
+            if (screen != null && screen.WorkingArea.Width > 0 && screen.WorkingArea.Height > 0)
+            {
+                var (dpiX, dpiY) = MultiMonitorHelper.GetDpiScale(this);
+                workWidth = screen.WorkingArea.Width / dpiX;
+                workHeight = screen.WorkingArea.Height / dpiY;
+            }
         }
         catch (Exception ex) { AppLog.Warn("Settings", ex); }
         scale = Math.Max(0.5, Math.Min(scale, Math.Min(workWidth / BaseMinWidth, workHeight / BaseMinHeight)));

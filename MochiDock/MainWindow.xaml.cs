@@ -256,7 +256,7 @@ public partial class MainWindow : Window
 
         Loaded += MainWindow_Loaded;
         Loaded += (_,_)=>{if(_powerNotifications!=null)return;_powerNotifications=new(new WindowInteropHelper(this).Handle);_powerNotifications.DisplayChanged+=OnConsoleDisplayChanged;_powerNotifications.PowerChanged+=OnSystemPowerChanged;_viewModel.PowerNoticeRequested+=ShowPowerNotice;_viewModel.OnPowerState(MochiDock.Services.BatteryStatus.Read());_policyTimer.Tick+=PolicyTick;_policyTimer.Start();};
-        Closed += (_,_)=>{_batteryWidget?.Dispose();_batteryWidget=null;_powerNoticeTimer?.Stop();_viewModel.PowerNoticeRequested-=ShowPowerNotice;HeaderPillOverlay.Cancel();_viewModel.StopPresentationTimers();_windowClosed=true;_expansionTransition.Invalidate();_hoverExpandTimer.Stop();_mouseLeaveTimer.Stop();_takeoverTimeoutTimer.Stop();_volumeOverlayTimer?.Stop();_volumeWatcherTimer?.Stop();_topmostWatchdogTimer?.Stop();if(_hwndSource!=null){try{var h=new WindowInteropHelper(this);if(h.Handle!=IntPtr.Zero){UnregisterHotKey(h.Handle,HOTKEY_ID_RESOLUTION);UnregisterHotKey(h.Handle,HOTKEY_ID_SCRIPT);UnregisterWindowSizeShortcuts(h.Handle);}_hwndSource.RemoveHook(HwndMessageHook);}catch (System.Exception logEx) { MochiDock.Services.AppLog.Warn("Window", logEx); }}_resolutionNoticeTimer?.Stop();_viewModel.IsDockInteractionActive=null;_viewModel.StopHardwareCapture();_policyTimer.Stop();_policyTimer.Tick-=PolicyTick;if(_powerNotifications!=null){_powerNotifications.DisplayChanged-=_viewModel.SetDisplayAwake;_powerNotifications.Dispose();}};
+        Closed += (_,_)=>{_batteryWidget?.Dispose();_batteryWidget=null;_powerNoticeTimer?.Stop();_viewModel.PowerNoticeRequested-=ShowPowerNotice;HeaderPillOverlay.Cancel();_viewModel.StopPresentationTimers();_windowClosed=true;_expansionTransition.Invalidate();_hoverExpandTimer.Stop();_mouseLeaveTimer.Stop();_takeoverTimeoutTimer.Stop();_volumeOverlayTimer?.Stop();_volumeWatcherTimer?.Stop();_topmostWatchdogTimer?.Stop();SystemEvents.SessionSwitch-=SystemEvents_SessionSwitch;SystemEvents.DisplaySettingsChanged-=SystemEvents_DisplaySettingsChanged;if(_hwndSource!=null){try{var h=new WindowInteropHelper(this);if(h.Handle!=IntPtr.Zero){UnregisterHotKey(h.Handle,HOTKEY_ID_RESOLUTION);UnregisterHotKey(h.Handle,HOTKEY_ID_SCRIPT);UnregisterWindowSizeShortcuts(h.Handle);}_hwndSource.RemoveHook(HwndMessageHook);}catch (System.Exception logEx) { MochiDock.Services.AppLog.Warn("Window", logEx); }}_resolutionNoticeTimer?.Stop();_viewModel.IsDockInteractionActive=null;_viewModel.StopHardwareCapture();_policyTimer.Stop();_policyTimer.Tick-=PolicyTick;if(_powerNotifications!=null){_powerNotifications.DisplayChanged-=OnConsoleDisplayChanged;_powerNotifications.PowerChanged-=OnSystemPowerChanged;_powerNotifications.Dispose();_powerNotifications=null;}};
 
         Closing += MainWindow_Closing;
 
@@ -264,7 +264,7 @@ public partial class MainWindow : Window
         SystemEvents.SessionSwitch += SystemEvents_SessionSwitch;
 
         // Recalibrate window position on monitor wake-up or display resolution changes
-        SystemEvents.DisplaySettingsChanged += (s, e) => Dispatcher.Invoke(PositionWindow);
+        SystemEvents.DisplaySettingsChanged += SystemEvents_DisplaySettingsChanged;
 
         // Anti-disappearance watchdog timer: keep MochiDock pinned to HWND_TOPMOST
         _topmostWatchdogTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(4) };
@@ -335,10 +335,21 @@ public partial class MainWindow : Window
         _viewModel.SetDisplayAwake(awake);
     }
 
+    private void SystemEvents_DisplaySettingsChanged(object? sender, EventArgs e)
+    {
+        if (_windowClosed || Dispatcher.HasShutdownStarted) return;
+        Dispatcher.BeginInvoke(() =>
+        {
+            if (!_windowClosed) PositionWindow();
+        });
+    }
+
     private void SystemEvents_SessionSwitch(object sender, SessionSwitchEventArgs e)
     {
-        Dispatcher.Invoke(() =>
+        if (_windowClosed || Dispatcher.HasShutdownStarted) return;
+        Dispatcher.BeginInvoke(() =>
         {
+            if (_windowClosed) return;
             if (e.Reason is SessionSwitchReason.RemoteConnect or SessionSwitchReason.RemoteDisconnect or SessionSwitchReason.ConsoleConnect or SessionSwitchReason.ConsoleDisconnect)
                 ApplyDisplayAwake();
             if (e.Reason == SessionSwitchReason.SessionLock)
@@ -349,6 +360,11 @@ public partial class MainWindow : Window
             else if (e.Reason == SessionSwitchReason.SessionUnlock)
             {
                 _viewModel.HandleSessionUnlock();
+                PositionWindow();
+            }
+            else if (e.Reason == SessionSwitchReason.RemoteConnect)
+            {
+                PositionWindow();
             }
         });
     }
@@ -830,6 +846,7 @@ public partial class MainWindow : Window
     {
         _settings = _viewModel.Settings ?? SettingsService.Load();
         var targetScreen = MultiMonitorHelper.GetTargetScreen(_settings.TargetMonitor);
+        if (targetScreen == null || targetScreen.WorkingArea.Width <= 0 || targetScreen.WorkingArea.Height <= 0) return;
         var (dpiX, dpiY) = MultiMonitorHelper.GetDpiScale(this);
         ApplyInterfaceScale(targetScreen, dpiX, dpiY);
         double screenLeftDip = targetScreen.WorkingArea.Left / dpiX;
@@ -1009,6 +1026,7 @@ public partial class MainWindow : Window
     {
         _settings = _viewModel.Settings ?? SettingsService.Load();
         var targetScreen = MultiMonitorHelper.GetTargetScreen(_settings.TargetMonitor);
+        if (targetScreen == null || targetScreen.WorkingArea.Width <= 0 || targetScreen.WorkingArea.Height <= 0) return;
         var (dpiX, dpiY) = MultiMonitorHelper.GetDpiScale(this);
         ApplyInterfaceScale(targetScreen, dpiX, dpiY);
         bool isNotch = string.Equals(_settings.DockStyle, "Notch", StringComparison.OrdinalIgnoreCase);
@@ -1678,6 +1696,7 @@ public partial class MainWindow : Window
             if (_isDraggingDock)
             {
                 var targetScreen = MultiMonitorHelper.GetTargetScreen(_settings.TargetMonitor);
+        if (targetScreen == null || targetScreen.WorkingArea.Width <= 0 || targetScreen.WorkingArea.Height <= 0) return;
                 var (dpiX, _) = MultiMonitorHelper.GetDpiScale(this);
                 double screenLeftDip = targetScreen.WorkingArea.Left / dpiX;
                 double screenWidthDip = targetScreen.WorkingArea.Width / dpiX;
@@ -1837,6 +1856,7 @@ public partial class MainWindow : Window
         {
             _isDraggingDock = false;
             var targetScreen = MultiMonitorHelper.GetTargetScreen(_settings.TargetMonitor);
+        if (targetScreen == null || targetScreen.WorkingArea.Width <= 0 || targetScreen.WorkingArea.Height <= 0) return;
             var (dpiX, _) = MultiMonitorHelper.GetDpiScale(this);
             double screenLeftDip = targetScreen.WorkingArea.Left / dpiX;
             double screenWidthDip = targetScreen.WorkingArea.Width / dpiX;

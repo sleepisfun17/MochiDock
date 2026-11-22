@@ -37,7 +37,8 @@ UninstallDisplayName={#MyAppName}
 InfoBeforeFile=InfoBefore.txt
 OutputDir=Output
 OutputBaseFilename=MochiDock-Setup-{#MyAppVersion}
-Compression=lzma2
+Compression=lzma2/ultra64
+LZMAUseSeparateProcess=yes
 SolidCompression=yes
 WizardStyle=modern
 CloseApplications=no
@@ -57,7 +58,7 @@ Name: "tools"; Description: "Install Downloads tools (ffmpeg / yt-dlp) into the 
 
 [Files]
 ; GOWA session data lives in %LocalAppData%\MochiDock\GOWA and is never part of the payload.
-Source: "{#PublishDir}\*"; DestDir: "{app}"; Excludes: "*.pdb"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "{#PublishDir}\*"; DestDir: "{app}"; Excludes: "*.pdb,msdia140.dll,Microsoft.DiaSymReader.Native.amd64.dll,libMonoPosixHelper.dll,mscordac*,mscordbi.dll"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "..\THIRD-PARTY-NOTICES.txt"; DestDir: "{app}"; Flags: ignoreversion
 #ifdef HaveFfmpeg
 Source: "redist\ffmpeg.exe"; DestDir: "{app}\Tools"; Flags: ignoreversion; Tasks: tools

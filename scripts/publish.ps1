@@ -70,7 +70,13 @@ try {
             }
         }
     }
-    if ($Installer) { Write-PublishMessage 'Installer mode: skipped (output goes to Publish-Installer).' }
+    if ($Installer) {
+        if (Test-Path -LiteralPath $destination) {
+            Write-PublishMessage "Cleaning stale installer payload in $destination..."
+            Remove-Item -LiteralPath $destination -Recurse -Force
+        }
+        Write-PublishMessage 'Installer mode: skipped process check (output goes to Publish-Installer).'
+    }
     elseif ($matchingInstances -eq 0) { Write-PublishMessage 'No running destination copy found.' }
     $stage = 'Release build and publish'
     Write-PublishMessage '[3/5] Restoring packages, compiling Release and publishing files...'
@@ -91,6 +97,10 @@ try {
         $publishCode = $LASTEXITCODE
     } finally { $ErrorActionPreference = $previousErrorPreference }
     if ($publishCode -ne 0) { throw "Publish failed with exit code $publishCode." }
+    if ($Installer) {
+        # Trim unused native debugger/DIA/Linux-POSIX binaries (keep amd64\KernelTraceControl.dll for ETW).
+        Get-ChildItem -LiteralPath $destination -Recurse -File -Include 'msdia140.dll','Microsoft.DiaSymReader.Native.amd64.dll','libMonoPosixHelper.dll','mscordac*','mscordbi.dll','*.pdb' | Remove-Item -Force
+    }
     # The shared GOWA server's webhook relay (tools\gowa-relay) is published next to its installer, which copies it to the server PC.
     $stage = 'publishing the GOWA webhook relay'
     Write-PublishMessage 'Publishing the GOWA webhook relay (tools\gowa-relay\publish)...'
@@ -99,7 +109,6 @@ try {
     $stage = 'validating published assets'
     Write-PublishMessage '[4/5] Validating required files and runtime configuration...'
     $required = @('MochiDock.exe','MochiDock.dll','MochiDock.deps.json','MochiDock.runtimeconfig.json','icon.ico','GOWA\windows-amd64.exe','GOWA\readme.md','install-startup.ps1','uninstall-startup.ps1','OutlookHelper\MochiDock.OutlookHelper.exe','OutlookHelper\MochiDock.OutlookHelper.dll','OutlookHelper\MochiDock.OutlookHelper.runtimeconfig.json')
-    $required += @(Get-ChildItem -LiteralPath (Join-Path $repo 'MochiDock\Assets\Icons') -Filter '*.png' | ForEach-Object { 'Assets\Icons\' + $_.Name })
     foreach ($relative in $required) {
         $file = Get-Item -LiteralPath (Join-Path $destination $relative)
         if ($file.Length -eq 0) { throw "Empty published file: $relative" }

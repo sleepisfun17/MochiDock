@@ -16,6 +16,7 @@
     <Version>0.1.5-beta</Version>
     <Product>Mochi Dock</Product>
     <Title>Mochi Dock</Title>
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="LibreHardwareMonitorLib" Version="0.9.6" />
@@ -33,9 +34,6 @@
     <EmbeddedResource Include="Assets\ja_readings.tsv.gz" />
     <EmbeddedResource Include="Assets\zh_pinyin.tsv.gz" />
     <EmbeddedResource Include="Assets\emoji.pak" />
-    <Content Include="Assets\Icons\*.png">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
   </ItemGroup>
   <ItemGroup>
     <Content Include="..\GOWA\windows-amd64.exe" Link="GOWA\windows-amd64.exe" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
