@@ -13,7 +13,6 @@ namespace MochiDock.Services;
 /// </summary>
 public static class EmojiImages
 {
-    private const string ResourceName = "MochiDock.Assets.emoji.pak";
     private const int CacheLimit = 600;
 
     private static readonly object Gate = new();
@@ -76,10 +75,12 @@ public static class EmojiImages
         if (_pakTried) return _pak;
         _pakTried = true;
         string filePath = Path.Combine(AppContext.BaseDirectory, "Assets", "emoji.pak");
-        Stream? stream = File.Exists(filePath)
-            ? File.OpenRead(filePath)
-            : typeof(EmojiImages).Assembly.GetManifestResourceStream(ResourceName);
-        if (stream != null) _pak = new ZipArchive(stream, ZipArchiveMode.Read);
+        if (!File.Exists(filePath))
+        {
+            AppLog.Warn("Emoji", "Assets\\emoji.pak is missing; emoji stay as text.");
+            return null;
+        }
+        _pak = new ZipArchive(File.OpenRead(filePath), ZipArchiveMode.Read);
         return _pak;
     }
 }
