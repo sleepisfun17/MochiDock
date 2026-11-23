@@ -444,7 +444,7 @@ public partial class MascotControl : System.Windows.Controls.UserControl
                 break;
             case MascotMood.Music:
                 ShowEyes(Eyes.Happy);
-                HeadphonesLayer.Visibility = Visibility.Visible;
+                ShowHeadset(HeadsetMood.Music);
                 var bounceAnim = new DoubleAnimation(0, -2.5, TimeSpan.FromMilliseconds(380))
                 {
                     AutoReverse = true,
@@ -842,8 +842,21 @@ public partial class MascotControl : System.Windows.Controls.UserControl
 
     // The headset matches the mascot (MascotHeadset); the face is told by marks: red lights on the cups for the gaming faces, the
     // microphone for a meeting. The cats wear the band behind their ears (HeadbandBackLayer), Mochi in front.
-    private void ApplyHeadset(HeadsetMood mood)
+    // Shows the headset of a face. The cats wear none (a human headset sits badly on ears): their Music, Gaming and Meeting faces have a
+    // badge instead (MascotBadge.For(mood, kind)), so every headset layer stays hidden for them.
+    private void ShowHeadset(HeadsetMood mood)
     {
+        ApplyHeadset(mood);
+        if (_isCat)
+        {
+            HeadphonesLayer.Visibility = MicBoom.Visibility = Visibility.Collapsed;
+            return;
+        }
+        HeadphonesLayer.Visibility = Visibility.Visible;
+        if (mood == HeadsetMood.Meeting) MicBoom.Visibility = Visibility.Visible;
+    }
+
+    private void ApplyHeadset(HeadsetMood mood)    {
         var h = MochiDock.Core.MascotHeadset.For(_kind, ThemeName);
         var band = Ink(h.Band);
         var rim = Ink(h.BandRim);
@@ -866,8 +879,7 @@ public partial class MascotControl : System.Windows.Controls.UserControl
     {
         SetTint(new[] { "#E3E8F2", "#C3CCE0", "#5B6B8C", "#40FF7896" }, new[] { "#9DB8A9", "#7A9A8A", "#3F6656", "#40FF7896" }, animate: false);
         ShowEyes(Eyes.Determ);
-        ApplyHeadset(HeadsetMood.Gaming);
-        HeadphonesLayer.Visibility = Visibility.Visible;
+        ShowHeadset(HeadsetMood.Gaming);
     }
 
     private void ResetExtras()
@@ -877,7 +889,7 @@ public partial class MascotControl : System.Windows.Controls.UserControl
             TearDrop, TearDropRight, StartleLines, ConfettiGroup,
             LeftDetermEye, RightDetermEye, LeftFlatEye, RightFlatEye, LeftDroopEye, RightDroopEye, LeftSpiralEye, RightSpiralEye,
             LeftWideEye, RightWideEye, LeftRoundEye, RightRoundEye, LeftLidEye, RightLidEye,
-            SteamLeft, SteamRight, IcicleGroup, StarsGroup,
+            IcicleGroup, StarsGroup,
             StarEyes, CoinEyes, Sunglasses, BoltOrbit, RainGroup, ScarfGroup,
             PartyHat, MicBoom, StatusBadge,
         }) element.Visibility = Visibility.Collapsed;
@@ -906,10 +918,6 @@ public partial class MascotControl : System.Windows.Controls.UserControl
         TearDrop.BeginAnimation(OpacityProperty, null);
         TearT.Y = 0;
         TearDrop.Opacity = 1;
-        SteamLeftT.BeginAnimation(TranslateTransform.YProperty, null);
-        SteamRightT.BeginAnimation(TranslateTransform.YProperty, null);
-        SteamLeft.BeginAnimation(OpacityProperty, null);
-        SteamRight.BeginAnimation(OpacityProperty, null);
         SweatTransform.BeginAnimation(TranslateTransform.YProperty, null);
         SweatDrop.BeginAnimation(OpacityProperty, null);
         LeftSpiralRotate.BeginAnimation(RotateTransform.AngleProperty, null);
@@ -917,8 +925,8 @@ public partial class MascotControl : System.Windows.Controls.UserControl
         foreach (var star in new[] { StarA, StarB, StarC }) star.BeginAnimation(OpacityProperty, null);
         BodyBounceTransform.BeginAnimation(TranslateTransform.XProperty, null);
         BodyBounceTransform.X = 0;
-        SteamLeftT.Y = SteamRightT.Y = SweatTransform.Y = 0;
-        SteamLeft.Opacity = SteamRight.Opacity = SweatDrop.Opacity = 1;
+        SweatTransform.Y = 0;
+        SweatDrop.Opacity = 1;
         StarA.Opacity = StarB.Opacity = StarC.Opacity = 1;
         _electricFace = false;
         _kuroSparkWanted = false;
@@ -1015,20 +1023,23 @@ public partial class MascotControl : System.Windows.Controls.UserControl
         ["exclaim"] = Glyph("M -0.85,-2.9 L 0.85,-2.9 L 0.6,0.9 L -0.6,0.9 Z M 0,1.55 A 0.95,0.95 0 1 1 0,3.45 A 0.95,0.95 0 1 1 0,1.55 Z"),
         ["z"] = Glyph("M -2,-2.3 L 2,-2.3 L 2,-1.2 L -0.5,1.3 L 2.1,1.3 L 2.1,2.5 L -2.1,2.5 L -2.1,1.4 L 0.4,-1.1 L -2,-1.1 Z"),
         ["moon"] = Glyph("M 0.7,-3 A 3.1,3.1 0 1 0 2.8,1.2 A 2.5,2.5 0 0 1 0.7,-3 Z"),
-        ["cup"] = Glyph("M -2.4,-1.2 L 1.3,-1.2 L 1,2.4 L -2.1,2.4 Z M 1.3,-0.5 L 2.7,-0.5 L 2.7,1.3 L 1.1,1.3 L 1.15,0.5 L 2,0.5 L 2,0.2 L 1.25,0.2 Z M -1.6,-3 L -0.9,-3 L -0.9,-1.8 L -1.6,-1.8 Z M -0.1,-3 L 0.6,-3 L 0.6,-1.8 L -0.1,-1.8 Z"),
+        ["cup"] = Glyph("M -2.7,-2 L 1.2,-2 L 1.2,2.6 L -2.7,2.6 Z M 1.2,-1.1 L 3,-1.1 L 3,1.5 L 1.2,1.5 L 1.2,0.6 L 2.1,0.6 L 2.1,-0.2 L 1.2,-0.2 Z"),
         ["bell"] = Glyph("M 0,-3 C -1.9,-3 -2.4,-1.3 -2.4,0.2 L -2.4,1.2 L -3.1,2 L 3.1,2 L 2.4,1.2 L 2.4,0.2 C 2.4,-1.3 1.9,-3 0,-3 Z M -1,2.5 L 1,2.5 A 1,1 0 0 1 -1,2.5 Z"),
         ["pause"] = Glyph("M -2.1,-2.4 L -0.6,-2.4 L -0.6,2.4 L -2.1,2.4 Z M 0.6,-2.4 L 2.1,-2.4 L 2.1,2.4 L 0.6,2.4 Z"),
-        ["trophy"] = Glyph("M -2.1,-2.6 L 2.1,-2.6 L 2.1,-1 C 2.1,0.5 1.1,1.2 0.75,1.4 L 0.75,2.0 L 1.6,2.0 L 1.6,2.9 L -1.6,2.9 L -1.6,2.0 L -0.75,2.0 L -0.75,1.4 C -1.1,1.2 -2.1,0.5 -2.1,-1 Z M -3.2,-2.1 L -2.1,-2.1 L -2.1,-0.9 L -2.6,-0.9 L -2.6,-1.2 L -3.2,-1.2 Z M 3.2,-2.1 L 2.1,-2.1 L 2.1,-0.9 L 2.6,-0.9 L 2.6,-1.2 L 3.2,-1.2 Z"),
+        ["trophy"] = Glyph("M -2.3,-2.8 L 2.3,-2.8 L 2.3,0 C 2.3,1.4 1.3,1.9 0,1.9 C -1.3,1.9 -2.3,1.4 -2.3,0 Z M -3.3,-2.2 L -2.3,-2.2 L -2.3,-0.5 L -3.3,-0.5 Z M 3.3,-2.2 L 2.3,-2.2 L 2.3,-0.5 L 3.3,-0.5 Z M -0.7,1.7 L 0.7,1.7 L 0.7,2.2 L 1.9,2.2 L 1.9,3.1 L -1.9,3.1 L -1.9,2.2 L -0.7,2.2 Z"),
         ["clock"] = Glyph("F0 M 0,-3 A 3,3 0 1 1 0,3 A 3,3 0 1 1 0,-3 Z M 0,-2.1 A 2.1,2.1 0 1 0 0,2.1 A 2.1,2.1 0 1 0 0,-2.1 Z M -0.45,-1.5 L 0.45,-1.5 L 0.45,0.3 L 1.5,0.3 L 1.5,1.1 L -0.45,1.1 Z"),
         ["battery"] = Glyph("F0 M -3,-1.9 L 2.1,-1.9 L 2.1,1.9 L -3,1.9 Z M -2.2,-1.1 L 1.3,-1.1 L 1.3,1.1 L -2.2,1.1 Z M -2,-0.8 L -1.1,-0.8 L -1.1,0.8 L -2,0.8 Z M 2.1,-0.9 L 3.1,-0.9 L 3.1,0.9 L 2.1,0.9 Z"),
         ["up"] = Glyph("M 0,-2.8 L 2.9,2.2 L -2.9,2.2 Z"),
         ["down"] = Glyph("M 0,2.8 L 2.9,-2.2 L -2.9,-2.2 Z"),
         ["sun"] = Glyph("M 0,-1.6 A 1.6,1.6 0 1 1 0,1.6 A 1.6,1.6 0 1 1 0,-1.6 Z M -0.4,-3.1 L 0.4,-3.1 L 0.4,-2.2 L -0.4,-2.2 Z M -0.4,2.2 L 0.4,2.2 L 0.4,3.1 L -0.4,3.1 Z M -3.1,-0.4 L -2.2,-0.4 L -2.2,0.4 L -3.1,0.4 Z M 2.2,-0.4 L 3.1,-0.4 L 3.1,0.4 L 2.2,0.4 Z M 1.6,-2.5 L 2.5,-1.6 L 1.9,-1.0 L 1.0,-1.9 Z M -1.6,-2.5 L -2.5,-1.6 L -1.9,-1.0 L -1.0,-1.9 Z M 1.6,2.5 L 2.5,1.6 L 1.9,1.0 L 1.0,1.9 Z M -1.6,2.5 L -2.5,1.6 L -1.9,1.0 L -1.0,1.9 Z"),
         ["umbrella"] = Glyph("M -3,0.4 A 3,3 0 0 1 3,0.4 Z M -0.25,0.4 L 0.25,0.4 L 0.25,2.3 L -0.25,2.3 Z M -1.3,2.3 L 0.25,2.3 L 0.25,1.9 L -0.9,1.9 L -0.9,2.9 L -1.3,2.9 Z"),
-        ["snow"] = Glyph("M -3,-0.45 L 3,-0.45 L 3,0.45 L -3,0.45 Z M 1.06,2.735 L 1.84,2.285 L -1.06,-2.735 L -1.84,-2.285 Z M -1.06,2.735 L -1.84,2.285 L 1.06,-2.735 L 1.84,-2.285 Z"),
+        ["snow"] = Glyph("M -3,-0.6 L 3,-0.6 L 3,0.6 L -3,0.6 Z M 1.02,2.87 L 1.98,2.32 L -1.02,-2.87 L -1.98,-2.32 Z M -1.02,2.87 L -1.98,2.32 L 1.02,-2.87 L 1.98,-2.32 Z"),
         ["cloud"] = Glyph("M -2.7,1.7 A 1.6,1.6 0 0 1 -2.1,-1.2 A 2.1,2.1 0 0 1 1.9,-1.4 A 1.7,1.7 0 0 1 2.7,1.7 Z"),
         ["timer"] = Glyph("F0 M 0,-2.3 A 2.6,2.6 0 1 1 0,2.9 A 2.6,2.6 0 1 1 0,-2.3 Z M 0,-1.5 A 1.8,1.8 0 1 0 0,2.1 A 1.8,1.8 0 1 0 0,-1.5 Z M -0.35,-1.1 L 0.35,-1.1 L 0.35,0.8 L -0.35,0.8 Z M -0.8,-3.4 L 0.8,-3.4 L 0.8,-2.6 L -0.8,-2.6 Z"),
         ["tick"] = Glyph("M -2.8,0.2 L -1.7,-0.9 L -0.6,0.2 L 1.8,-2.4 L 2.9,-1.3 L -0.6,2.4 Z"),
+        ["note"] = Glyph("M 0.6,-3 L 1.8,-3 L 1.8,2 L 0.6,2 Z M 1.8,-3 L 3.2,-2 L 3.2,-0.6 L 1.8,-1.6 Z M -0.5,0.8 A 1.7,1.3 0 1 1 -0.5,3.4 A 1.7,1.3 0 1 1 -0.5,0.8 Z"),
+        ["controller"] = Glyph("F0 M -3,-0.6 C -3,-1.8 -2.2,-2.3 -1.4,-2.3 L 1.4,-2.3 C 2.2,-2.3 3,-1.8 3,-0.6 L 3.3,1.7 C 3.4,2.6 2.9,3 2.3,3 C 1.7,3 1.4,2.7 1.1,2.2 L 0.7,1.6 L -0.7,1.6 L -1.1,2.2 C -1.4,2.7 -1.7,3 -2.3,3 C -2.9,3 -3.4,2.6 -3.3,1.7 Z M -1.9,-0.35 L -1.25,-0.35 L -1.25,-1 L -0.75,-1 L -0.75,-0.35 L -0.1,-0.35 L -0.1,0.15 L -0.75,0.15 L -0.75,0.8 L -1.25,0.8 L -1.25,0.15 L -1.9,0.15 Z M 1.6,-0.7 A 0.5,0.5 0 1 1 0.6,-0.7 A 0.5,0.5 0 1 1 1.6,-0.7 Z M 2.4,0.3 A 0.5,0.5 0 1 1 1.4,0.3 A 0.5,0.5 0 1 1 2.4,0.3 Z"),
+        ["mic"] = Glyph("M -1.2,-1.9 A 1.2,1.2 0 0 1 1.2,-1.9 L 1.2,0.3 A 1.2,1.2 0 0 1 -1.2,0.3 Z M -2.4,-0.5 L -1.7,-0.5 A 1.7,1.7 0 0 0 1.7,-0.5 L 2.4,-0.5 A 2.4,2.4 0 0 1 -2.4,-0.5 Z M -0.4,1.8 L 0.4,1.8 L 0.4,2.7 L -0.4,2.7 Z M -1.6,2.6 L 1.6,2.6 L 1.6,3.2 L -1.6,3.2 Z"),
     };
 
     private static Geometry Glyph(string data)
@@ -1041,14 +1052,15 @@ public partial class MascotControl : System.Windows.Controls.UserControl
     // Shows the badge of the face (none for the faces the eyes tell). Notice and New message pop it in once and pulse it once, no loop.
     private void ApplyBadge(MascotMood mood)
     {
-        if (MochiDock.Core.MascotBadge.For(mood) is not { } b) { StatusBadge.Visibility = Visibility.Collapsed; return; }
+        if (MochiDock.Core.MascotBadge.For(mood, _kind) is not { } b) { StatusBadge.Visibility = Visibility.Collapsed; return; }
         BadgeDisc.Fill = Ink(b.Fill);
         BadgeGlyph.Fill = Ink(b.Ink);
         BadgeRing.Fill = Ink(MochiDock.Core.MascotBadge.RingFor(ThemeName, b.Fill));
         BadgeGlyph.Data = BadgeGlyphs.TryGetValue(b.Glyph, out var glyph) ? glyph : Geometry.Empty;
-        // The Mochi kinds: the top-right corner. The cats: a little lower, below the right ear.
-        BadgePos.X = _isCat ? 25.6 : 25.2;
-        BadgePos.Y = _isCat ? 3.7 : 3.8;
+        // The Mochi kinds: the top-right corner. The cats: the top centre, between the ears, a little smaller (radius 4.4 with its ring).
+        BadgePos.X = _isCat ? 15 : 25.2;
+        BadgePos.Y = _isCat ? 0.5 : 3.8;
+        BadgeSize.ScaleX = BadgeSize.ScaleY = _isCat ? 0.9 : 1;
         StatusBadge.Visibility = Visibility.Visible;
         if (mood is MascotMood.Alert or MascotMood.Excited && AnimationsEnabled && IsLoaded && IsVisible) PopBadge();
     }
@@ -1083,18 +1095,14 @@ public partial class MascotControl : System.Windows.Controls.UserControl
                 if (animate) BodyBounceTransform.BeginAnimation(TranslateTransform.XProperty, Loop(-0.4, 0.4, 110));
                 break;
             case MascotMood.Hot:
-                // Hot: flat eyes, a sweat drop and steam puffing at both sides of the head.
+                // Hot: an orange body, flat eyes and a sweat drop.
                 SetTint("#F9D2B2", "#F2B089", "#D9622B", "#99E24B4A");
                 ShowEyes(Eyes.Flat);
-                SweatDrop.Visibility = SteamLeft.Visibility = SteamRight.Visibility = Visibility.Visible;
+                SweatDrop.Visibility = Visibility.Visible;
                 if (animate)
                 {
                     SweatTransform.BeginAnimation(TranslateTransform.YProperty, Loop(0, 4, 1000, reverse: false));
                     SweatDrop.BeginAnimation(OpacityProperty, Loop(1, 0.1, 1000, reverse: false));
-                    SteamLeftT.BeginAnimation(TranslateTransform.YProperty, Loop(0, -2.5, 900, reverse: false));
-                    SteamRightT.BeginAnimation(TranslateTransform.YProperty, Loop(0, -2.5, 900, reverse: false));
-                    SteamLeft.BeginAnimation(OpacityProperty, Loop(0.95, 0, 900, reverse: false));
-                    SteamRight.BeginAnimation(OpacityProperty, Loop(0.95, 0, 900, reverse: false));
                 }
                 break;
             case MascotMood.Freezing:
@@ -1187,8 +1195,7 @@ public partial class MascotControl : System.Windows.Controls.UserControl
                 SetTint(new[] { "#E3E8F2", "#C3CCE0", "#5B6B8C", "#40FF7896" }, new[] { "#9DB8A9", "#7A9A8A", "#3F6656", "#40FF7896" });
                 ShowEyes(Eyes.Droop);
                 SweatDrop.Visibility = Visibility.Visible;
-                ApplyHeadset(HeadsetMood.Gaming);
-                HeadphonesLayer.Visibility = Visibility.Visible;
+                ShowHeadset(HeadsetMood.Gaming);
                 if (animate)
                 {
                     SweatTransform.BeginAnimation(TranslateTransform.YProperty, Loop(0, 3, 1000, reverse: false));
@@ -1274,8 +1281,7 @@ public partial class MascotControl : System.Windows.Controls.UserControl
                 break;
             case MascotMood.Meeting:
                 // In a calendar meeting: a calm face and the matching headset with a microphone. Still, so it does not distract.
-                ApplyHeadset(HeadsetMood.Meeting);
-                HeadphonesLayer.Visibility = MicBoom.Visibility = Visibility.Visible;
+                ShowHeadset(HeadsetMood.Meeting);
                 break;
             case MascotMood.Proud:
                 // Every task due today is done: happy eyes and the green tick badge.
@@ -1502,7 +1508,12 @@ public partial class MascotControl : System.Windows.Controls.UserControl
         InnerEarLeft.Fill = InnerEarRight.Fill = Ink(kuro ? "#FFD43B" : "#F4B6C2");
         InnerEarLeft.Opacity = InnerEarRight.Opacity = kuro ? 0.55 : 0.9;
         // The light-bodied mascots need a firmer rim on Matcha's light ground (a thin line is only a fraction of a pixel at the capsule size).
-        MochiBodyBorder.BorderThickness = new Thickness(MochiDock.Core.MascotRim.Thickness(_kind, ThemeName));
+        double rim = MochiDock.Core.MascotRim.Thickness(_kind, ThemeName);
+        MochiBodyBorder.BorderThickness = new Thickness(rim);
+        // One outline: body, ears and tail (round joins). WPF layout rounding would snap the border to whole units (0.8 to 1, 1.3 to 1, 1.5 to 2)
+        // while the ears' strokes stay exact, so the cats' border is drawn exact too; the Mochi kinds keep the rounding (their look is unchanged).
+        MochiBodyBorder.UseLayoutRounding = MochiBodyBorder.SnapsToDevicePixels = !_isCat;
+        EarLeft.StrokeThickness = EarRight.StrokeThickness = TailShape.StrokeThickness = rim;
         TailSpark.Fill = Ink(kuro ? "#FFF3B0" : "#8FD3FF");
         if (!kuro)
         {

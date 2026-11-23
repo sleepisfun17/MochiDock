@@ -11,7 +11,9 @@ public class MascotRimTests
     public void EveryMascotButKuroNeedsItOnMatcha(MascotKind kind, bool needs)
     {
         Assert.Equal(needs, MascotRim.NeedsDarkRim(kind, "Matcha"));
-        Assert.Equal(needs ? 1.5 : 0.8, MascotRim.Thickness(kind, "Matcha"));
+        // the Mochi kinds 1.5; the cats share CatThickness (1.1) on body, ears and tail
+        double expected = kind is MascotKind.Kuro or MascotKind.Shiro ? 1.5 : needs ? 1.5 : 0.8;
+        Assert.Equal(expected, MascotRim.Thickness(kind, "Matcha"));
     }
 
     [Theory]
@@ -23,8 +25,36 @@ public class MascotRimTests
         foreach (var kind in Enum.GetValues<MascotKind>())
         {
             Assert.False(MascotRim.NeedsDarkRim(kind, theme));
-            Assert.Equal(0.8, MascotRim.Thickness(kind, theme));
+            Assert.Equal(kind is MascotKind.Kuro or MascotKind.Shiro ? 1.0 : 0.8, MascotRim.Thickness(kind, theme));
         }
+    }
+
+    [Fact]
+    public void ACatHasOneSharedThicknessOnMatcha()
+    {
+        Assert.Equal(1.5, MascotRim.CatThickness(MascotKind.Kuro, "Matcha"));
+        Assert.Equal(1.5, MascotRim.CatThickness(MascotKind.Shiro, "Matcha"));
+        Assert.Equal(MascotRim.CatThickness(MascotKind.Kuro, "Matcha"), MascotRim.Thickness(MascotKind.Kuro, "Matcha"));
+        Assert.Equal(MascotRim.CatThickness(MascotKind.Shiro, "Matcha"), MascotRim.Thickness(MascotKind.Shiro, "Matcha"));
+    }
+
+    [Theory]
+    [InlineData("Default")]
+    [InlineData("Hojicha")]
+    [InlineData("KuroNight")]
+    public void ACatKeepsTheNormalOutlineOnDarkGrounds(string theme)
+    {
+        Assert.Equal(1.0, MascotRim.CatThickness(MascotKind.Kuro, theme));
+        Assert.Equal(1.0, MascotRim.CatThickness(MascotKind.Shiro, theme));
+    }
+
+    [Fact]
+    public void TheMochiKindsAreNotAffectedByTheCatRule()
+    {
+        Assert.Equal(1.5, MascotRim.Thickness(MascotKind.Mochi, "Matcha"));
+        Assert.Equal(1.5, MascotRim.Thickness(MascotKind.HojichaMochi, "Matcha"));
+        Assert.Equal(1.5, MascotRim.Thickness(MascotKind.MatchaMochi, "Matcha"));
+        Assert.Equal(0.8, MascotRim.Thickness(MascotKind.Mochi, "Default"));
     }
 
     [Fact]

@@ -175,9 +175,9 @@
                                 <Ellipse Width="1" Height="1" Fill="{DynamicResource MascotEyeBrush}" />
                             </Grid>
                             <!-- Wide eye (Notice, New message): a bigger pill with a catchlight -->
-                            <Grid x:Name="LeftWideEye" Visibility="Collapsed" Width="5.8" Height="8.8" HorizontalAlignment="Center" VerticalAlignment="Center" UseLayoutRounding="False" SnapsToDevicePixels="False">
-                                <Rectangle Width="5.8" Height="8.8" RadiusX="2.9" RadiusY="2.9" Fill="{DynamicResource MascotEyeBrush}" UseLayoutRounding="False" SnapsToDevicePixels="False" />
-                                <Ellipse Width="1.7" Height="1.7" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="1.2,1.4,0,0" Fill="#FFFFFF" Opacity="0.95" />
+                            <Grid x:Name="LeftWideEye" Visibility="Collapsed" Width="6.4" Height="8.2" HorizontalAlignment="Center" VerticalAlignment="Center" UseLayoutRounding="False" SnapsToDevicePixels="False">
+                                <Ellipse Width="6.4" Height="8.2" Fill="{DynamicResource MascotEyeBrush}" UseLayoutRounding="False" SnapsToDevicePixels="False" />
+                                <Ellipse Width="1.9" Height="1.9" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="1.2,1.3,0,0" Fill="#FFFFFF" Opacity="0.95" />
                             </Grid>
                             <!-- Round eye, an O (Surprised) -->
                             <Ellipse x:Name="LeftRoundEye" Visibility="Collapsed" Width="6.4" Height="6.4" HorizontalAlignment="Center" VerticalAlignment="Center" Stroke="{DynamicResource MascotEyeBrush}" StrokeThickness="1.8" Fill="Transparent" />
@@ -228,9 +228,9 @@
                                 <Ellipse Width="1" Height="1" Fill="{DynamicResource MascotEyeBrush}" />
                             </Grid>
                             <!-- Wide eye (Notice, New message): a bigger pill with a catchlight -->
-                            <Grid x:Name="RightWideEye" Visibility="Collapsed" Width="5.8" Height="8.8" HorizontalAlignment="Center" VerticalAlignment="Center" UseLayoutRounding="False" SnapsToDevicePixels="False">
-                                <Rectangle Width="5.8" Height="8.8" RadiusX="2.9" RadiusY="2.9" Fill="{DynamicResource MascotEyeBrush}" UseLayoutRounding="False" SnapsToDevicePixels="False" />
-                                <Ellipse Width="1.7" Height="1.7" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="1.2,1.4,0,0" Fill="#FFFFFF" Opacity="0.95" />
+                            <Grid x:Name="RightWideEye" Visibility="Collapsed" Width="6.4" Height="8.2" HorizontalAlignment="Center" VerticalAlignment="Center" UseLayoutRounding="False" SnapsToDevicePixels="False">
+                                <Ellipse Width="6.4" Height="8.2" Fill="{DynamicResource MascotEyeBrush}" UseLayoutRounding="False" SnapsToDevicePixels="False" />
+                                <Ellipse Width="1.9" Height="1.9" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="1.2,1.3,0,0" Fill="#FFFFFF" Opacity="0.95" />
                             </Grid>
                             <!-- Round eye, an O (Surprised) -->
                             <Ellipse x:Name="RightRoundEye" Visibility="Collapsed" Width="6.4" Height="6.4" HorizontalAlignment="Center" VerticalAlignment="Center" Stroke="{DynamicResource MascotEyeBrush}" StrokeThickness="1.8" Fill="Transparent" />
@@ -286,15 +286,9 @@
             </Border>
 
 
-            <!-- Faces: things outside the body (steam at the sides, icicles, dizzy stars, confetti, bolts); every child starts collapsed. The meaning of a face
+            <!-- Faces: things outside the body (icicles, dizzy stars, confetti, bolts); every child starts collapsed. The meaning of a face
                  that used to float above the head as a thin prop now sits in the StatusBadge (the last layer) instead. -->
             <Canvas x:Name="ExtrasLayer" Width="30" Height="26" IsHitTestVisible="False" HorizontalAlignment="Center" VerticalAlignment="Center">
-                <Ellipse x:Name="SteamLeft" Visibility="Collapsed" Width="3.6" Height="3.6" Canvas.Left="-1.9" Canvas.Top="2" Fill="#FFE0CC" Stroke="#E85D24" StrokeThickness="0.8">
-                    <Ellipse.RenderTransform><TranslateTransform x:Name="SteamLeftT" Y="0" /></Ellipse.RenderTransform>
-                </Ellipse>
-                <Ellipse x:Name="SteamRight" Visibility="Collapsed" Width="3.6" Height="3.6" Canvas.Left="27.5" Canvas.Top="2" Fill="#FFE0CC" Stroke="#E85D24" StrokeThickness="0.8">
-                    <Ellipse.RenderTransform><TranslateTransform x:Name="SteamRightT" Y="0" /></Ellipse.RenderTransform>
-                </Ellipse>
                 <!-- The startle lines: three short, bold strokes at the top corners and in the middle -->
                 <Path x:Name="StartleLines" Visibility="Collapsed" Data="M 2.8,-0.4 L 0.8,-3.4 M 27.2,-0.4 L 29.2,-3.4 M 15,-1.2 L 15,-4.4"
                       Stroke="#F2A33A" StrokeThickness="1.8" StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
@@ -362,6 +356,7 @@
             <Canvas x:Name="StatusBadge" Visibility="Collapsed" Width="30" Height="26" IsHitTestVisible="False">
                 <Canvas.RenderTransform>
                     <TransformGroup>
+                        <ScaleTransform x:Name="BadgeSize" ScaleX="1" ScaleY="1" />
                         <ScaleTransform x:Name="BadgeScale" ScaleX="1" ScaleY="1" />
                         <TranslateTransform x:Name="BadgePos" X="25.2" Y="3.8" />
                     </TransformGroup>

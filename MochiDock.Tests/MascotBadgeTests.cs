@@ -34,6 +34,56 @@ public class MascotBadgeTests
             Assert.Null(MascotBadge.For(mood));
     }
 
+    // The cats wear no headset: the faces the headset told get a badge of their own, and the Mochi kinds have none there.
+    [Theory]
+    [InlineData(MascotKind.Kuro)]
+    [InlineData(MascotKind.Shiro)]
+    public void CatsGetBadgesForMusicGamingAndMeetings(MascotKind kind)
+    {
+        Assert.Equal(("note", "#6E4BB8"), Pair(MascotBadge.For(MascotMood.Music, kind)));
+        Assert.Equal(("controller", "#0F6E56"), Pair(MascotBadge.For(MascotMood.Focused, kind)));
+        Assert.Equal(("controller", "#0F6E56"), Pair(MascotBadge.For(MascotMood.Worried, kind)));
+        Assert.Equal(("mic", "#3F4C66"), Pair(MascotBadge.For(MascotMood.Meeting, kind)));
+    }
+
+    [Theory]
+    [InlineData(MascotKind.Mochi)]
+    [InlineData(MascotKind.MatchaMochi)]
+    [InlineData(MascotKind.HojichaMochi)]
+    public void TheMochiKindsKeepTheHeadsetAndHaveNoBadgeThere(MascotKind kind)
+    {
+        foreach (var mood in new[] { MascotMood.Music, MascotMood.Focused, MascotMood.Worried, MascotMood.Meeting })
+            Assert.Null(MascotBadge.For(mood, kind));
+    }
+
+    [Fact]
+    public void EveryOtherFaceHasTheSameBadgeOnEveryMascot()
+    {
+        foreach (var mood in Enum.GetValues<MascotMood>())
+        {
+            if (mood is MascotMood.Music or MascotMood.Focused or MascotMood.Worried or MascotMood.Meeting) continue;
+            foreach (var kind in Enum.GetValues<MascotKind>()) Assert.Equal(MascotBadge.For(mood), MascotBadge.For(mood, kind));
+        }
+    }
+
+    [Theory]
+    [InlineData("Default")]
+    [InlineData("Hojicha")]
+    [InlineData("KuroNight")]
+    [InlineData("Matcha")]
+    public void TheCatBadgesAreReadableAndSeparatedFromTheirRing(string theme)
+    {
+        foreach (var mood in new[] { MascotMood.Music, MascotMood.Focused, MascotMood.Worried, MascotMood.Meeting })
+        {
+            var b = MascotBadge.For(mood, MascotKind.Kuro)!.Value;
+            Assert.True(MascotBadge.Contrast(b.Ink, b.Fill) >= 4.5, $"{mood}: glyph on {b.Fill} is {MascotBadge.Contrast(b.Ink, b.Fill):N2}:1");
+            string ring = MascotBadge.RingFor(theme, b.Fill);
+            Assert.True(MascotBadge.Contrast(ring, b.Fill) >= 3, $"{mood} on {theme}: ring {ring} against {b.Fill} is {MascotBadge.Contrast(ring, b.Fill):N2}:1");
+        }
+    }
+
+    private static (string, string) Pair(BadgeSpec? b) => (b!.Value.Glyph, b.Value.Fill);
+
     [Fact]
     public void NewMessageAndNoticeShareTheRedExclamationMark()
     {

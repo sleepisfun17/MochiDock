@@ -14,14 +14,14 @@ $moodType=$core.GetType('MochiDock.Core.MascotMood')
 $assembly.GetType('MochiDock.Controls.MascotControl').GetProperty('SpinEnabled').SetValue($null,$false)
 $output=Join-Path $repo 'MochiDock/obj/mascot';$null=New-Item -ItemType Directory -Force $output
 
-$extras=@('LeftDetermEye','RightDetermEye','LeftFlatEye','RightFlatEye','LeftDroopEye','RightDroopEye','LeftSpiralEye','RightSpiralEye','LeftWideEye','RightWideEye','LeftRoundEye','RightRoundEye','LeftLidEye','RightLidEye','SteamLeft','SteamRight','IcicleGroup','StarsGroup','TearDrop','TearDropRight','StartleLines','ConfettiGroup','StarEyes','CoinEyes','Sunglasses','BoltOrbit','RainGroup','ScarfGroup','PartyHat','MicBoom')
+$extras=@('LeftDetermEye','RightDetermEye','LeftFlatEye','RightFlatEye','LeftDroopEye','RightDroopEye','LeftSpiralEye','RightSpiralEye','LeftWideEye','RightWideEye','LeftRoundEye','RightRoundEye','LeftLidEye','RightLidEye','IcicleGroup','StarsGroup','TearDrop','TearDropRight','StartleLines','ConfettiGroup','StarEyes','CoinEyes','Sunglasses','BoltOrbit','RainGroup','ScarfGroup','PartyHat','MicBoom')
 # Mochi has no mouth and no eyebrows: none of these layers may exist (they made the face busy).
 $banned=@('BrowLeft','BrowRight','MouthFrown','MouthPant','MouthChatter','MouthWave','MouthFlat','MouthGrin','MouthYawn','MouthSmile')
 $plain=@('Idle','Waiting','Bored','Music','Alert','Sleeping','Happy')
 # What must be visible, besides the pill eyes, in each extra mood.
 $expected=@{
  Angry=@('LeftDetermEye','RightDetermEye');
- Hot=@('LeftFlatEye','RightFlatEye','SteamLeft','SteamRight');
+ Hot=@('LeftFlatEye','RightFlatEye');
  Freezing=@('IcicleGroup');
  Dizzy=@('LeftSpiralEye','RightSpiralEye','StarsGroup');
  Drained=@('LeftDroopEye','RightDroopEye');
@@ -443,6 +443,9 @@ $mascotClass.GetProperty('CurrentIsMatcha').SetValue($null,$false)
 # 150 and 200%. The eyes stay at least 4.5:1 against the body and the body, rim and glow ring at least 3:1 against the ground (WCAG non-text contrast).
 $kindType=$core.GetType('MochiDock.Core.MascotKind')
 $headsetType=$core.GetType('MochiDock.Core.MascotHeadset')
+$badgeType=$core.GetType('MochiDock.Core.MascotBadge')
+$rimType=$core.GetType('MochiDock.Core.MascotRim')
+function Badge-For($moodName,$kindName='Mochi'){return $badgeType.GetMethod('For',[type[]]@($moodType,$kindType)).Invoke($null,@([Enum]::Parse($moodType,$moodName),[Enum]::Parse($kindType,$kindName)))}
 function Kind($n){return [Enum]::Parse($kindType,$n)}
 function Theme-Of($n){return [Enum]::Parse($themeType,$n)}
 function New-Mascot($theme,$kind){$m=[Activator]::CreateInstance($mascotClass);$m.ApplyTheme((Theme-Of $theme),(Kind $kind));return $m}
@@ -562,6 +565,25 @@ foreach($themeName in 'Default','Hojicha','KuroNight','Matcha'){
  if(!(Visible $s 'StarEyes') -or !(Visible $s 'BoltOrbit') -or (Body-Top $s) -ne '#F4F4F8'){throw "Shiro on ${themeName}: the Electric face should keep the white body with star eyes and bolts"}
  $checks+=2
 }
+# One outline for a cat: body, both ears and the tail share one colour and one thickness (Core: MascotRim.CatThickness), on every ground.
+foreach($kindName in 'Kuro','Shiro'){
+ foreach($themeName in 'Default','Hojicha','KuroNight','Matcha'){
+  $o=New-Mascot $themeName $kindName
+  $want=$rimType.GetMethod('CatThickness').Invoke($null,@((Kind $kindName),$themeName))
+  foreach($moodName in 'Idle','Angry','Electric','Sunny'){
+   $o.Mood=[Enum]::Parse($moodType,$moodName)
+   $body=$o.FindName('MochiBodyBorder')
+   foreach($part in 'EarLeft','EarRight','TailShape'){
+    $e=$o.FindName($part)
+    if([math]::Abs($e.StrokeThickness-$body.BorderThickness.Left) -gt 1e-9 -or [math]::Abs($body.BorderThickness.Left-$want) -gt 1e-9){throw "$kindName on ${themeName}, ${moodName}: $part is $($e.StrokeThickness) thick, the body $($body.BorderThickness.Left), expected one shared $want"}
+    if((Hex-Of $e.Stroke.Color) -ne (Hex-Of $body.BorderBrush.Color)){throw "$kindName on ${themeName}, ${moodName}: $part has another outline colour than the body"}
+    if($part -ne 'TailShape' -and $e.StrokeLineJoin -ne [Windows.Media.PenLineJoin]::Round){throw "${kindName}: the $part corners must be round"}
+   }
+   $checks++
+  }
+ }
+}
+if($null -ne $probe.FindName('SteamLeft') -or $null -ne $probe.FindName('SteamRight')){throw 'Hot has side steam puffs again (they read as ear bobbles)'}
 # The three Mochi colours come from the mascot, not the theme: grey, green or tan on every ground, no ears, tail or glow, dark ink; on the Matcha
 # ground the rim is darker and thicker (and only there).
 $mochiBodies=@{Mochi='#EDEDEF';MatchaMochi='#85B957';HojichaMochi='#E9D3B4'}
@@ -610,6 +632,15 @@ foreach($combo in $headsetCombos){
    if((Visible $m 'HeadphonesLayer') -or (Visible $m 'HeadbandBackLayer')){throw "${label}: the headset stayed on after the face changed (layer $(Visible $m 'HeadphonesLayer'), back $(Visible $m 'HeadbandBackLayer'))"}
    continue
   }
+  if($cat){
+   foreach($layer in 'HeadphonesLayer','HeadbandBackLayer','MicBoom'){if(Visible $m $layer){throw "${label}: a cat wears no headset but $layer is shown"}}
+   $spec=Badge-For $mood $kindName
+   if($null -eq $spec -or !(Visible $m 'StatusBadge') -or (Hex-Of $m.FindName('BadgeDisc').Fill.Color) -ne $spec.Fill -or ($spec.Glyph -ne $(@{Music='note';Focused='controller';Worried='controller';Meeting='mic'}[$mood]))){throw "${label}: a cat needs the $(@{Music='note';Focused='controller';Worried='controller';Meeting='mic'}[$mood]) badge instead of the headset"}
+   if($mood -eq 'Worried' -and !(Visible $m 'SweatDrop')){throw "${label}: Worried keeps its sweat drop"}
+   $checks++
+   continue
+  }
+  if($null -ne (Badge-For $mood $kindName)){throw "${label}: a Mochi keeps his headset and has no badge for this face"}
   if(!(Visible $m 'HeadphonesLayer')){throw "${label}: the headset is missing"}
   if((Hex-Of $m.FindName('HeadbandArc').Stroke.Color) -ne $look.Band -or (Hex-Of $m.FindName('HeadbandRim').Stroke.Color) -ne $look.BandRim){throw "${label}: the band is not $($look.Band) with a $($look.BandRim) rim"}
   if((Hex-Of $m.FindName('HeadbandBack').Stroke.Color) -ne $look.Band -or (Hex-Of $m.FindName('HeadbandBackRim').Stroke.Color) -ne $look.BandRim){throw "${label}: the back band is not in the mascot's colours"}
@@ -695,10 +726,9 @@ $checks++
 # mascot and face the badge must exist exactly when the table says, carry the table's colours, stay in its corner (at most 0.6 unit right
 # of the box, 2.1 above it), stay clear of the eyes; and at the capsule size (22 x 19) on every ground at 100/125/150/200% it must be at least
 # 7 px across and stand out from what it covers by at least 3:1 (WCAG non-text contrast).
-$badgeType=$core.GetType('MochiDock.Core.MascotBadge')
-function Badge-For($moodName){return $badgeType.GetMethod('For').Invoke($null,@([Enum]::Parse($moodType,$moodName)))}
 $badgeMoods=@($allMoods|Where-Object{$null -ne (Badge-For $_)})
-if($badgeMoods.Count -ne 18){throw "Expected 18 faces with a badge, found $($badgeMoods.Count): $($badgeMoods -join ', ')"}
+if($badgeMoods.Count -ne 18){throw "Expected 18 faces with a badge for Mochi, found $($badgeMoods.Count): $($badgeMoods -join ', ')"}
+foreach($k in 'Kuro','Shiro'){$n=@($allMoods|Where-Object{$null -ne (Badge-For $_ $k)}).Count;if($n -ne 22){throw "Expected 22 faces with a badge for $k (the headset faces get one), found $n"}}
 $eyeNames='LeftPillEye','RightPillEye','LeftHappyEye','RightHappyEye','LeftSleepyEye','RightSleepyEye','LeftDetermEye','RightDetermEye','LeftFlatEye','RightFlatEye','LeftDroopEye','RightDroopEye','LeftSpiralEye','RightSpiralEye','LeftWideEye','RightWideEye','LeftRoundEye','RightRoundEye','LeftLidEye','RightLidEye','StarEyes','CoinEyes','Sunglasses'
 function Part-Bounds($element,$root){
  # shapes: the bounds of what they draw (a Path's ActualWidth reaches back to the origin); panels: their size
@@ -719,11 +749,15 @@ function Eye-Bounds($m,$root,$name){
  foreach($mood in $allMoods){
   $m.Mood=[Enum]::Parse($moodType,$mood);$m.UpdateLayout()
   $face=$m.FindName('FaceTransform');$face.BeginAnimation([Windows.Media.TranslateTransform]::XProperty,$null);$face.BeginAnimation([Windows.Media.TranslateTransform]::YProperty,$null)
-  $spec=Badge-For $mood
+  $spec=Badge-For $mood $kindName
   if((Visible $m 'StatusBadge') -ne ($null -ne $spec)){throw "${kindName}: the badge should be $(if($spec){'shown'}else{'hidden'}) in $mood"}
   if($null -eq $spec){continue}
-  $pos=$m.FindName('BadgePos');$cx=$pos.X;$cy=$pos.Y;$outer=4.9
-  if($cx+$outer -gt 30.6 -or $cy-$outer -lt -2.1 -or $cx-$outer -lt 17){throw ("{0}: the {1} badge is out of its corner: centre {2},{3}" -f $kindName,$mood,$cx,$cy)}
+  $pos=$m.FindName('BadgePos');$cx=$pos.X;$cy=$pos.Y;$cat=$kindName -eq 'Kuro' -or $kindName -eq 'Shiro'
+  $outer=if($cat){4.9*$m.FindName('BadgeSize').ScaleX}else{4.9}
+  if($cat){
+   # the cats: the top centre, between the ears: radius 4.4 with its ring, nothing above y = -4.5, clear of the tail (left of x = 6) and of the eyes (below y = 9)
+   if([Math]::Abs($cx-15) -gt 1 -or $cy-$outer -lt -4.5 -or $cy+$outer -gt 5.6 -or $outer -gt 4.45 -or $cx-$outer -lt 9 -or $cx+$outer -gt 21){throw ("{0}: the {1} badge is out of the cat slot: centre {2},{3} radius {4:N2}" -f $kindName,$mood,$cx,$cy,$outer)}
+  }elseif($cx+$outer -gt 30.6 -or $cy-$outer -lt -2.1 -or $cx-$outer -lt 17){throw ("{0}: the {1} badge is out of its corner: centre {2},{3}" -f $kindName,$mood,$cx,$cy)}
   if((Hex-Of $m.FindName('BadgeDisc').Fill.Color) -ne $spec.Fill -or (Hex-Of $m.FindName('BadgeGlyph').Fill.Color) -ne $spec.Ink){throw "${kindName}: the $mood badge has the wrong colours"}
   if((Hex-Of $m.FindName('BadgeRing').Fill.Color) -ne $badgeType.GetMethod('RingFor',[type[]]@([string],[string])).Invoke($null,@('Default',$spec.Fill))){throw "${kindName}: the $mood badge ring is not the theme's ring"}
   $glyph=$m.FindName('BadgeGlyph').Data
@@ -751,7 +785,9 @@ foreach($groundName in $grounds.Keys){
     $surface.Measure([Windows.Size]::new(200,200));$surface.Arrange([Windows.Rect]::new(0,0,$surface.DesiredSize.Width,$surface.DesiredSize.Height));$surface.UpdateLayout()
     $w=[int][math]::Ceiling($surface.ActualWidth*$scale);$h=[int][math]::Ceiling($surface.ActualHeight*$scale);$stride=$w*4
     $bubble=$m.FindName('BodyBounceTransform');$badge=$m.FindName('StatusBadge')
-    foreach($mood in $badgeMoods){
+    $catKind=$kindName -eq 'Kuro' -or $kindName -eq 'Shiro'
+    $minAcross=if($catKind){5.8}else{6.9}
+    foreach($mood in $(if($catKind){@($allMoods|Where-Object{$null -ne (Badge-For $_ $kindName)})}else{$badgeMoods})){
      $m.Mood=[Enum]::Parse($moodType,$mood)
      $bubble.BeginAnimation([Windows.Media.TranslateTransform]::XProperty,$null);$bubble.BeginAnimation([Windows.Media.TranslateTransform]::YProperty,$null);$bubble.X=0;$bubble.Y=0
      $face=$m.FindName('FaceTransform');$face.BeginAnimation([Windows.Media.TranslateTransform]::XProperty,$null);$face.BeginAnimation([Windows.Media.TranslateTransform]::YProperty,$null)
@@ -770,7 +806,7 @@ foreach($groundName in $grounds.Keys){
       }}}
      $across=$maxX-$minX+1
      $badgeMetrics+=("{0} on {1} ground, {2} {3}%: {4} px across, {5:N1}:1 against what it covers" -f $kindName,$groundName,$mood,($scale*100),$across,$best)
-     if($across -lt 6.9*$scale){throw ("{0} on the {1} ground: the {2} badge is only {3} px across at {4}% (needs {5:N1})" -f $kindName,$groundName,$mood,$across,($scale*100),(6.9*$scale))}
+     if($across -lt $minAcross*$scale){throw ("{0} on the {1} ground: the {2} badge is only {3} px across at {4}% (needs {5:N1})" -f $kindName,$groundName,$mood,$across,($scale*100),($minAcross*$scale))}
      if($best -lt 3){throw ("{0} on the {1} ground: the {2} badge is only {3:N2}:1 against what it covers at {4}%" -f $kindName,$groundName,$mood,$best,($scale*100))}
      $checks++
     }

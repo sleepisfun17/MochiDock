@@ -6,7 +6,7 @@ All notable changes to MochiDock are documented here. The format follows [Keep a
 
 ### Changed
 
-- **Mascot faces read at capsule size**: one status badge on the corner instead of small props above the head, and faces that looked alike have their own eyes. A new message and a notice show a red "!" badge (it pops in once) and wide eyes; sleeping, up late, coffee, the prayer bell, the break pause, victory, an overdue task, a low battery, money up and down, the weather faces, studying and all tasks done each have their own badge; thinking glances aside, waking, bored, up late and studying have half-lidded eyes, and surprised has round ones.
+- **Mascot faces read at capsule size**: one status badge on the corner instead of small props above the head, and faces that looked alike have their own eyes. A new message and a notice show a red "!" badge (it pops in once) and wide eyes; sleeping, up late, coffee, the prayer bell, the break pause, victory, an overdue task, a low battery, money up and down, the weather faces, studying and all tasks done each have their own badge; thinking glances aside, waking, bored, up late and studying have half-lidded eyes, and surprised has round ones. Kuro and Shiro wear no headset any more: music, gaming and meetings are a note, a controller and a mic badge between their ears, Shiro on Matcha has one even outline on body, ears and tail, and Hot no longer has side puffs.
 
 ### Added
 

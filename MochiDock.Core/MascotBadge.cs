@@ -18,6 +18,29 @@ public static class MascotBadge
     private const string Green = "#1B7F46";
     private const string Navy = "#2F3E8F";
 
+    private const string Purple = "#6E4BB8";
+    private const string GameGreen = "#0F6E56";
+    private const string Slate = "#3F4C66";
+
+    /// <summary>
+    /// The badge of a face for a mascot. The cats (Kuro and Shiro) wear no headset (it sits badly on ears), so the faces the headset told
+    /// (Music, Gaming, Worried, In a meeting) get a badge of their own instead; the Mochi kinds keep the headset and have none for them.
+    /// </summary>
+    public static BadgeSpec? For(MascotMood mood, MascotKind kind)
+    {
+        if (kind is MascotKind.Kuro or MascotKind.Shiro)
+        {
+            switch (mood)
+            {
+                case MascotMood.Music: return new("note", Purple, White);
+                case MascotMood.Focused or MascotMood.Worried: return new("controller", GameGreen, White);
+                case MascotMood.Meeting: return new("mic", Slate, White);
+            }
+        }
+        return For(mood);
+    }
+
+    /// <summary>The badge of a face for the Mochi kinds (the cats' extra badges are in <see cref="For(MascotMood, MascotKind)"/>).</summary>
     public static BadgeSpec? For(MascotMood mood) => mood switch
     {
         MascotMood.Alert or MascotMood.Excited => new("exclaim", Red, White),
