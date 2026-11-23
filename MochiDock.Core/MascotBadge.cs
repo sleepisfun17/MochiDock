@@ -64,6 +64,13 @@ public static class MascotBadge
         _ => null,
     };
 
+    /// <summary>
+    /// The cats (Kuro and Shiro) show their icon without the disc: the glyph alone, bigger, beside the head on the tail side, filled with the
+    /// badge's own colour and outlined like a sticker in the ring colour (<see cref="RingFor(string?)"/>), so it reads on the ground, on Kuro's
+    /// charcoal and on Shiro's white alike. A glyph in a 6 px disc between the ears was too small to read.
+    /// </summary>
+    public static bool IsSideIcon(MascotKind kind) => kind is MascotKind.Kuro or MascotKind.Shiro;
+
     /// <summary>The ring that separates the badge from the body: white on the dark grounds, dark on the light Matcha ground.</summary>
     public static string RingFor(string? theme) => ThemePolicy.Normalize(theme) == ThemePolicy.Matcha ? DarkRing : White;
 

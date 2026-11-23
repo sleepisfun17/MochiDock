@@ -729,7 +729,7 @@ foreach($combo in $headsetCombos){
     continue
    }
    $spec=Badge-For $mood $kindName
-   if($null -eq $spec -or !(Visible $m 'StatusBadge') -or (Hex-Of $m.FindName('BadgeDisc').Fill.Color) -ne $spec.Fill -or ($spec.Glyph -ne $(@{Music='note';Focused='controller';Worried='controller';Meeting='mic'}[$mood]))){throw "${label}: a cat needs the $(@{Music='note';Focused='controller';Worried='controller';Meeting='mic'}[$mood]) badge instead of the headset"}
+   if($null -eq $spec -or !(Visible $m 'StatusBadge') -or (Visible $m 'BadgeDisc') -or (Hex-Of $m.FindName('BadgeGlyph').Fill.Color) -ne $spec.Fill -or ($spec.Glyph -ne $(@{Music='note';Focused='controller';Worried='controller';Meeting='mic'}[$mood]))){throw "${label}: a cat needs the $(@{Music='note';Focused='controller';Worried='controller';Meeting='mic'}[$mood]) badge instead of the headset"}
    if($mood -eq 'Worried' -and !(Visible $m 'SweatDrop')){throw "${label}: Worried keeps its sweat drop"}
    $checks++
    continue
@@ -847,13 +847,15 @@ function Eye-Bounds($m,$root,$name){
   if((Visible $m 'StatusBadge') -ne ($null -ne $spec)){throw "${kindName}: the badge should be $(if($spec){'shown'}else{'hidden'}) in $mood"}
   if($null -eq $spec){continue}
   $pos=$m.FindName('BadgePos');$cx=$pos.X;$cy=$pos.Y;$cat=$kindName -eq 'Kuro' -or $kindName -eq 'Shiro'
-  $outer=if($cat){4.9*$m.FindName('BadgeSize').ScaleX}else{4.9}
+  $outer=if($cat){3.6*$m.FindName('BadgeSize').ScaleX}else{4.9}   # the cats: the glyph alone (its +-3.6 box, scaled); Mochi: the ringed disc
   if($cat){
-   # the cats: the top centre, between the ears: radius 4.4 with its ring, nothing above y = -4.5, clear of the tail (left of x = 6) and of the eyes (below y = 9)
-   if([Math]::Abs($cx-15) -gt 1 -or $cy-$outer -lt -4.5 -or $cy+$outer -gt 5.6 -or $outer -gt 4.45 -or $cx-$outer -lt 9 -or $cx+$outer -gt 21){throw ("{0}: the {1} badge is out of the cat slot: centre {2},{3} radius {4:N2}" -f $kindName,$mood,$cx,$cy,$outer)}
+   # the cats: a side icon by the left ear (no disc): left of the body's middle (the clock is on the right), inside the capsule's room above (9.5)
+   if($cx+$outer -gt 3 -or $cx-$outer -lt -8 -or $cy-$outer -lt -9.5 -or $cy+$outer -gt 8 -or $m.FindName('BadgeSize').ScaleX -lt 1.3){throw ("{0}: the {1} icon is out of the side slot: centre {2},{3} half {4:N2}" -f $kindName,$mood,$cx,$cy,$outer)}
+   if((Visible $m 'BadgeDisc') -or (Visible $m 'BadgeRing')){throw "${kindName}: the $mood icon should have no disc"}
+   if((Hex-Of $m.FindName('BadgeGlyph').Fill.Color) -ne $spec.Fill -or (Brush-Hex $m.FindName('BadgeGlyph').Stroke) -ne $badgeType.GetMethod('RingFor',[type[]]@([string])).Invoke($null,@('Default'))){throw "${kindName}: the $mood icon should be $($spec.Fill) with the ring-coloured outline"}
   }elseif($cx+$outer -gt 30.6 -or $cy-$outer -lt -2.1 -or $cx-$outer -lt 17){throw ("{0}: the {1} badge is out of its corner: centre {2},{3}" -f $kindName,$mood,$cx,$cy)}
-  if((Hex-Of $m.FindName('BadgeDisc').Fill.Color) -ne $spec.Fill -or (Hex-Of $m.FindName('BadgeGlyph').Fill.Color) -ne $spec.Ink){throw "${kindName}: the $mood badge has the wrong colours"}
-  if((Hex-Of $m.FindName('BadgeRing').Fill.Color) -ne $badgeType.GetMethod('RingFor',[type[]]@([string],[string])).Invoke($null,@('Default',$spec.Fill))){throw "${kindName}: the $mood badge ring is not the theme's ring"}
+  if(!$cat -and ((Hex-Of $m.FindName('BadgeDisc').Fill.Color) -ne $spec.Fill -or (Hex-Of $m.FindName('BadgeGlyph').Fill.Color) -ne $spec.Ink)){throw "${kindName}: the $mood badge has the wrong colours"}
+  if(!$cat -and (Hex-Of $m.FindName('BadgeRing').Fill.Color) -ne $badgeType.GetMethod('RingFor',[type[]]@([string],[string])).Invoke($null,@('Default',$spec.Fill))){throw "${kindName}: the $mood badge ring is not the theme's ring"}
   $glyph=$m.FindName('BadgeGlyph').Data
   if($glyph.IsEmpty() -or $glyph.Bounds.Width -lt 1.5 -or $glyph.Bounds.Right -gt 3.6 -or $glyph.Bounds.Left -lt -3.6 -or $glyph.Bounds.Top -lt -3.6 -or $glyph.Bounds.Bottom -gt 3.6){throw "${kindName}: the $mood glyph is missing or does not fit the disc ($($glyph.Bounds))"}
   # the badge must not cover an eye: its outer circle stays clear of every eye shape the face shows
@@ -898,7 +900,7 @@ foreach($groundName in $grounds.Keys){
        if($x -lt $minX){$minX=$x};if($x -gt $maxX){$maxX=$x};if($y -lt $minY){$minY=$y};if($y -gt $maxY){$maxY=$y}
        $c=Contrast (Lum $a[$i+2] $a[$i+1] $a[$i]) (Lum $b[$i+2] $b[$i+1] $b[$i]);if($c -gt $best){$best=$c}
       }}}
-     $across=$maxX-$minX+1
+     $across=$maxX-$minX+1;if($catKind){$across=[Math]::Max($across,$maxY-$minY+1)}   # a cat's side icon has no disc: its larger side (a "!" is tall and narrow)
      $badgeMetrics+=("{0} on {1} ground, {2} {3}%: {4} px across, {5:N1}:1 against what it covers" -f $kindName,$groundName,$mood,($scale*100),$across,$best)
      if($across -lt $minAcross*$scale){throw ("{0} on the {1} ground: the {2} badge is only {3} px across at {4}% (needs {5:N1})" -f $kindName,$groundName,$mood,$across,($scale*100),($minAcross*$scale))}
      if($best -lt 3){throw ("{0} on the {1} ground: the {2} badge is only {3:N2}:1 against what it covers at {4}%" -f $kindName,$groundName,$mood,$best,($scale*100))}

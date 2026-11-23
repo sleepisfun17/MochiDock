@@ -6,7 +6,7 @@ All notable changes to MochiDock are documented here. The format follows [Keep a
 
 ### Changed
 
-- **Kuro and Shiro show music with a floating note**: a bigger violet note drifts up beside the head while music plays, instead of the small badge that was too small to read.
+- **Bigger icons on Kuro and Shiro**: their status icons (new message, sleep, battery, gaming, meeting and the rest) are drawn bigger beside the head, without the small circle that was too small to read, and music shows a violet note that drifts up instead.
 
 ### Fixed
 

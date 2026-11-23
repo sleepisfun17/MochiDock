@@ -1066,6 +1066,9 @@ public partial class MascotControl : System.Windows.Controls.UserControl
         ["mic"] = Glyph("M -1.2,-1.9 A 1.2,1.2 0 0 1 1.2,-1.9 L 1.2,0.3 A 1.2,1.2 0 0 1 -1.2,0.3 Z M -2.4,-0.5 L -1.7,-0.5 A 1.7,1.7 0 0 0 1.7,-0.5 L 2.4,-0.5 A 2.4,2.4 0 0 1 -2.4,-0.5 Z M -0.4,1.8 L 0.4,1.8 L 0.4,2.7 L -0.4,2.7 Z M -1.6,2.6 L 1.6,2.6 L 1.6,3.2 L -1.6,3.2 Z"),
     };
 
+    // The cats' side icon: where its centre sits (left of the head, by the left ear) and how much bigger than the disc glyph it is drawn.
+    private const double CatIconX = -2.6, CatIconY = 1.2, CatIconScale = 1.45;
+
     private static Geometry Glyph(string data)
     {
         var g = Geometry.Parse(data);
@@ -1077,14 +1080,32 @@ public partial class MascotControl : System.Windows.Controls.UserControl
     private void ApplyBadge(MascotMood mood)
     {
         if (MochiDock.Core.MascotBadge.For(mood, _kind) is not { } b) { StatusBadge.Visibility = Visibility.Collapsed; return; }
-        BadgeDisc.Fill = Ink(b.Fill);
-        BadgeGlyph.Fill = Ink(b.Ink);
-        BadgeRing.Fill = Ink(MochiDock.Core.MascotBadge.RingFor(ThemeName, b.Fill));
         BadgeGlyph.Data = BadgeGlyphs.TryGetValue(b.Glyph, out var glyph) ? glyph : Geometry.Empty;
-        // The Mochi kinds: the top-right corner. The cats: the top centre, between the ears, a little smaller (radius 4.4 with its ring).
-        BadgePos.X = _isCat ? 15 : 25.2;
-        BadgePos.Y = _isCat ? 0.5 : 3.8;
-        BadgeSize.ScaleX = BadgeSize.ScaleY = _isCat ? 0.9 : 1;
+        if (MochiDock.Core.MascotBadge.IsSideIcon(_kind))
+        {
+            // The cats: no disc; the glyph alone, about 1.5 times the disc glyph, in the badge's colour with a sticker outline, beside the
+            // head on the tail side (left, away from the clock), where the music note floats.
+            BadgeRing.Visibility = BadgeDisc.Visibility = Visibility.Collapsed;
+            BadgeGlyph.Fill = Ink(b.Fill);
+            BadgeGlyph.Stroke = Ink(MochiDock.Core.MascotBadge.RingFor(ThemeName));
+            BadgeGlyph.StrokeThickness = 0.55;
+            BadgeGlyph.StrokeLineJoin = PenLineJoin.Round;
+            BadgePos.X = CatIconX;
+            BadgePos.Y = CatIconY;
+            BadgeSize.ScaleX = BadgeSize.ScaleY = CatIconScale;
+        }
+        else
+        {
+            // The Mochi kinds: a disc with a ring in the top-right corner.
+            BadgeRing.Visibility = BadgeDisc.Visibility = Visibility.Visible;
+            BadgeDisc.Fill = Ink(b.Fill);
+            BadgeGlyph.Fill = Ink(b.Ink);
+            BadgeGlyph.Stroke = null;
+            BadgeRing.Fill = Ink(MochiDock.Core.MascotBadge.RingFor(ThemeName, b.Fill));
+            BadgePos.X = 25.2;
+            BadgePos.Y = 3.8;
+            BadgeSize.ScaleX = BadgeSize.ScaleY = 1;
+        }
         StatusBadge.Visibility = Visibility.Visible;
         if (mood is MascotMood.Alert or MascotMood.Excited && AnimationsEnabled && IsLoaded && IsVisible) PopBadge();
     }
