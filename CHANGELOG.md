@@ -4,15 +4,15 @@ All notable changes to MochiDock are documented here. The format follows [Keep a
 
 ## [Unreleased]
 
-### Changed
-
-- **Mascot faces read at capsule size**: one status badge on the corner instead of small props above the head, and faces that looked alike have their own eyes. A new message and a notice show a red "!" badge (it pops in once) and wide eyes; sleeping, up late, coffee, the prayer bell, the break pause, victory, an overdue task, a low battery, money up and down, the weather faces, studying and all tasks done each have their own badge; thinking glances aside, waking, bored, up late and studying have half-lidded eyes, and surprised has round ones. Kuro and Shiro wear no headset any more: music, gaming and meetings are a note, a controller and a mic badge between their ears, Shiro on Matcha has one even outline on body, ears and tail, and Hot no longer has side puffs.
-
 ### Added
 
 - **Mascot picker and Shiro**: Settings > Appearance & Dock > Mascot chooses who is drawn: Auto (the theme's own: Mochi on Default, Hojicha Mochi on Hojicha, Matcha Mochi on Matcha, Kuro on Kuro Night), Mochi (grey), Matcha Mochi, Hojicha Mochi, Kuro or **Shiro**, a new white cat with dark eyes, pink cheeks and inner ears and an ice-blue spark on his tail. Any mascot works with any theme, and the choice is also in the dock's quick settings, under Theme. On the light Matcha theme the light mascots get a darker, thicker outline so they stay visible. The fourth theme is called **Kuro Night**; a setting saved by an earlier build still loads. The tail now sways now and then and flicks when a cat is petted. No cat ever turns yellow: on Electric, Victory and the other yellow faces Shiro stays white with the colour in his outline.
 - **Matching headsets**: the music, gaming and meeting headset now matches the mascot (graphite and silver for grey Mochi, roast brown and caramel for Hojicha Mochi, deep matcha and foam for Matcha Mochi; charcoal and yellow for Kuro; white and ice blue for Shiro) instead of bright blue or red. The cats wear the band behind their ears; gaming faces show small red lights on the cups and a meeting a microphone.
 - **Kuro Night theme**: a fourth theme, a storm-night dark (deep indigo, not pure black) with an electric-yellow accent, next to Default, Hojicha and Matcha in Settings > Appearance & Dock. In it Mochi becomes **Kuro**, a black electric cat: the same round body with cat ears, a tapered tail behind him with a small spark at its tip that sways now and then and flicks when he is petted, yellow eyes and a soft glow instead of the shadow. Every face keeps the charcoal body; its own colour (red when angry, orange when hot, blue when freezing) shows in the rim and the glow, and the neutral faces glow electric yellow. The electric face glows brighter, petting him crackles, and his spin whirlwind is electric yellow.
+
+### Changed
+
+- **Mascot faces read at capsule size**: one status badge on the corner instead of small props above the head, and faces that looked alike have their own eyes. A new message and a notice show a red "!" badge (it pops in once) and wide eyes; sleeping, up late, coffee, the prayer bell, the break pause, victory, an overdue task, a low battery, money up and down, the weather faces, studying and all tasks done each have their own badge; thinking glances aside, waking, bored, up late and studying have half-lidded eyes, and surprised has round ones. Kuro and Shiro wear no headset any more: music, gaming and meetings are a note, a controller and a mic badge between their ears, Shiro on Matcha has one even outline on body, ears and tail, and Hot no longer has side puffs.
 
 ### Fixed
 
