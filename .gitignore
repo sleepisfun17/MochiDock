@@ -39,3 +39,6 @@ Oyenza-Studio
 # Local GOWA login storage
 gowa_storages/
 MochiDockDEV.lnk
+
+# WPF temporary project files created during a build
+*_wpftmp.csproj
