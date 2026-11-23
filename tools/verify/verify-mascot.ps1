@@ -449,6 +449,35 @@ function Badge-For($moodName,$kindName='Mochi'){return $badgeType.GetMethod('For
 function Kind($n){return [Enum]::Parse($kindType,$n)}
 function Theme-Of($n){return [Enum]::Parse($themeType,$n)}
 function New-Mascot($theme,$kind){$m=[Activator]::CreateInstance($mascotClass);$m.ApplyTheme((Theme-Of $theme),(Kind $kind));return $m}
+# Changing the mascot (the picker, or Auto on a theme change) turns him into the other one inside the whirlwind: the wind runs, the new mascot
+# comes round only at the swap (no ears before it), and he lands as the new mascot. Without animations he changes at once, with no wind.
+$mascotClass.GetProperty('SpinEnabled').SetValue($null,$true);$animations.SetValue($null,[Nullable[bool]]$true)
+$changer=[Activator]::CreateInstance($mascotClass);$changer.Width=30;$changer.Height=26
+$native,$surface=New-Host $changer 1 ([Windows.Media.Brushes]::Black)
+try{
+ $surface.Measure([Windows.Size]::new(200,200));$surface.Arrange([Windows.Rect]::new(0,0,60,60));$surface.UpdateLayout()
+ $frame=[Windows.Threading.DispatcherFrame]::new();[void][Windows.Threading.Dispatcher]::CurrentDispatcher.BeginInvoke('Background',[Action]{$frame.Continue=$false});[Windows.Threading.Dispatcher]::PushFrame($frame)
+ if(!$changer.IsLoaded -or !$changer.IsVisible){throw 'Mascot-change spin: the test mascot is not loaded and visible'}
+ $changer.ApplyTheme((Theme-Of 'Default'),(Kind 'Mochi'))
+ if((Visible $changer 'WindFront')){throw 'Re-applying the same mascot turned him'}
+ $changer.ApplyTheme((Theme-Of 'Default'),(Kind 'Kuro'))
+ if(!(Visible $changer 'WindFront')){throw 'Changing the mascot (Mochi to Kuro) did not start the whirlwind'}
+ if((Visible $changer 'KuroEars')){throw 'Kuro showed his ears before he came round in the spin'}
+ $deadline=[DateTime]::Now.AddSeconds(3)
+ while([DateTime]::Now -lt $deadline -and ((Visible $changer 'WindFront') -or !(Visible $changer 'KuroEars'))){
+  $frame=[Windows.Threading.DispatcherFrame]::new();[void][Windows.Threading.Dispatcher]::CurrentDispatcher.BeginInvoke('Background',[Action]{$frame.Continue=$false});[Windows.Threading.Dispatcher]::PushFrame($frame)
+  Start-Sleep -Milliseconds 10}
+ if(!(Visible $changer 'KuroEars') -or (Body-Top $changer) -ne '#3B3D52'){throw 'The spin did not land on Kuro'}
+ if((Visible $changer 'WindFront')){throw 'The wind did not settle after the mascot change'}
+ if($changer.FindName('FlipScaleTransform').ScaleX -ne 1){throw 'He did not come back to rest after the mascot change'}
+ $checks+=2
+} finally { $native.Dispose();$mascotClass.GetProperty('SpinEnabled').SetValue($null,$false);$animations.SetValue($null,$null) }
+$still=New-Mascot 'Default' 'Mochi';$animations.SetValue($null,[Nullable[bool]]$false)
+try{
+ $still.ApplyTheme((Theme-Of 'Default'),(Kind 'Shiro'))
+ if((Visible $still 'WindFront') -or !(Visible $still 'KuroEars') -or (Body-Top $still) -ne '#F4F4F8'){throw 'Without animations the mascot change should be instant (no wind, Shiro at once)'}
+ $checks++
+} finally { $animations.SetValue($null,$null) }
 function Lum($r,$g,$b){$f={param($v)$c=$v/255.0;if($c -le 0.03928){$c/12.92}else{[math]::Pow(($c+0.055)/1.055,2.4)}};return 0.2126*(& $f $r)+0.7152*(& $f $g)+0.0722*(& $f $b)}
 function Contrast($l1,$l2){$a=[math]::Max($l1,$l2);$b=[math]::Min($l1,$l2);return ($a+0.05)/($b+0.05)}
 function Render-Pixels($m,$scale,$ground){

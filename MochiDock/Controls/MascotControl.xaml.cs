@@ -589,6 +589,7 @@ public partial class MascotControl : System.Windows.Controls.UserControl
         if (_spinning && !_swapped && angle >= MascotTurn.FaceSwapAt)
         {
             _swapped = true;
+            ApplyPendingKind();   // a mascot change: the new mascot comes round at his back, like a new face
             ApplyMood(_pendingMood);
         }
     }
@@ -611,7 +612,9 @@ public partial class MascotControl : System.Windows.Controls.UserControl
         BeginAnimation(SpinAngleProperty, null);
         ApplyTurnFrame(MascotTurn.At(0));
         ExtrasLayer.Opacity = 1;
-        if (!_swapped || _appliedMood != _pendingMood) ApplyMood(_pendingMood);
+        bool kindPending = _pendingKind != null;
+        ApplyPendingKind();   // a spin cut short (hidden, unloaded) still ends on the chosen mascot
+        if (!_swapped || kindPending || _appliedMood != _pendingMood) ApplyMood(_pendingMood);
         StopWind(fade: landing && AnimationsEnabled);
         if (landing) WobbleDizzy();
     }
@@ -775,11 +778,14 @@ public partial class MascotControl : System.Windows.Controls.UserControl
 
     private void StartWind()
     {
-        bool electricWind = _isKuro;   // Kuro's whirlwind is electric yellow; the others follow their own colours (Matcha, Hojicha or grey)
-        var core = Ink(electricWind ? "#FFF1B0" : _isMatcha ? "#F5F0DF" : _isHojicha ? "#F6EBDC" : "#F4F4F8");
-        var glow = Ink(electricWind ? "#CCFFD43B" : _isMatcha ? "#CC4E6B36" : _isHojicha ? "#CCE0A96D" : "#CCD4BC8E");
-        var inner = Ink(electricWind ? "#FFD43B" : _isMatcha ? "#85B957" : _isHojicha ? "#E8C38A" : "#F3E2BD");
-        var wisp = Ink(electricWind ? "#CC4A5190" : _isMatcha ? "#CC4E6B36" : _isHojicha ? "#CCE8C38A" : "#CCEBEBF0");
+        // The wind takes the colours of the mascot coming round: when the mascot itself changes, the one he turns into.
+        var windKind = _pendingKind ?? _kind;
+        bool electricWind = windKind == MochiDock.Core.MascotKind.Kuro;   // Kuro's whirlwind is electric yellow; the others follow their own colours
+        bool matchaWind = windKind == MochiDock.Core.MascotKind.MatchaMochi, hojichaWind = windKind == MochiDock.Core.MascotKind.HojichaMochi;
+        var core = Ink(electricWind ? "#FFF1B0" : matchaWind ? "#F5F0DF" : hojichaWind ? "#F6EBDC" : "#F4F4F8");
+        var glow = Ink(electricWind ? "#CCFFD43B" : matchaWind ? "#CC4E6B36" : hojichaWind ? "#CCE0A96D" : "#CCD4BC8E");
+        var inner = Ink(electricWind ? "#FFD43B" : matchaWind ? "#85B957" : hojichaWind ? "#E8C38A" : "#F3E2BD");
+        var wisp = Ink(electricWind ? "#CC4A5190" : matchaWind ? "#CC4E6B36" : hojichaWind ? "#CCE8C38A" : "#CCEBEBF0");
         foreach (var s in _windStrokes)
         {
             var fill = s.Strand.Wisp ? wisp : s.Strand.Inner ? inner : core;
@@ -1646,10 +1652,36 @@ public partial class MascotControl : System.Windows.Controls.UserControl
     {
         if (MochiBodyBorder == null || BodyGradStopTop == null || BodyGradStopBottom == null) return;
         _theme = theme;
+        bool kindChanged = kind != (_pendingKind ?? _kind);
+        // A new mascot (the Mascot picker, or Auto on a theme change) turns into the other one inside the whirlwind, like a new face does;
+        // without animations, or while he is not shown, he changes at once.
+        if (kindChanged && (_spinning || (SpinEnabled && AnimationsEnabled && IsLoaded && IsVisible)))
+        {
+            _pendingKind = kind;
+            if (!_spinning) Spin(Mood);   // the same face comes round on the new mascot
+            return;
+        }
+        if (_spinning)
+        {
+            // Only the palette changed during a spin: a mascot change still waits for its swap; otherwise the parts follow the palette now.
+            if (_pendingKind == null) { _kind = kind; ApplyCatParts(); }
+            return;   // the turn applies the face (in the new theme) when it comes round
+        }
+        _pendingKind = null;
         _kind = kind;
         ApplyCatParts();   // right away: the ears and the tail are not part of a face
-        if (_spinning) return;   // the turn applies the face (in the new theme) when it comes round
         ApplyMood(Mood);   // repaint the face being worn, not only the resting body
+    }
+
+    // The mascot a running spin turns into (null when the spin only changes the face).
+    private MochiDock.Core.MascotKind? _pendingKind;
+
+    private void ApplyPendingKind()
+    {
+        if (_pendingKind is not { } kind) return;
+        _pendingKind = null;
+        _kind = kind;
+        ApplyCatParts();
     }
 
     // -x for the badge's counter-offset (BadgeSteady follows BodyBounceTransform, negated).
