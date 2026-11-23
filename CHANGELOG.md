@@ -10,6 +10,10 @@ All notable changes to MochiDock are documented here. The format follows [Keep a
 - **Matching headsets**: the music, gaming and meeting headset now matches the mascot (graphite and silver for grey Mochi, roast brown and caramel for Hojicha Mochi, deep matcha and foam for Matcha Mochi; charcoal and yellow for Kuro; white and ice blue for Shiro) instead of bright blue or red. The cats wear the band behind their ears; gaming faces show small red lights on the cups and a meeting a microphone.
 - **Kuro Night theme**: a fourth theme, a storm-night dark (deep indigo, not pure black) with an electric-yellow accent, next to Default, Hojicha and Matcha in Settings > Appearance & Dock. In it Mochi becomes **Kuro**, a black electric cat: the same round body with cat ears, a tapered tail behind him with a small spark at its tip that sways now and then and flicks when he is petted, yellow eyes and a soft glow instead of the shadow. Every face keeps the charcoal body; its own colour (red when angry, orange when hot, blue when freezing) shows in the rim and the glow, and the neutral faces glow electric yellow. The electric face glows brighter, petting him crackles, and his spin whirlwind is electric yellow.
 
+### Fixed
+
+- **Volume after changing the audio output**: scrolling on the capsule or the volume bar sometimes stopped working right after switching the output (speakers, a Bluetooth headset). The audio endpoint is now rebuilt off Windows' notification thread without holding a lock during the audio calls, a dead endpoint is rebuilt and the call retried once, and a failed read no longer shows an invented 50.
+
 ## [0.2.2-beta]
 
 ### Fixed
