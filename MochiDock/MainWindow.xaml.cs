@@ -73,6 +73,18 @@ public partial class MainWindow : Window
     private double _dragStartLeft;
 
     private readonly DispatcherTimer _mouseLeaveTimer;
+    // The open dock got shorter (a notification dismissed, all cleared) and the still cursor ended up outside it: that leave is not the user
+    // moving away, so the dock waits (CollapseGrace) instead of closing after the usual leave delay.
+    private readonly DispatcherTimer _shrinkGraceTimer;
+    private DateTime _lastShrinkUtc = DateTime.MinValue;
+    private DateTime _shrinkLeaveUtc;
+    private System.Windows.Point _shrinkLeaveCursor;
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct NativePoint { public int X; public int Y; }
+
+    [DllImport("user32.dll")]
+    private static extern bool GetCursorPos(out NativePoint point);
     private readonly DispatcherTimer _volumeOverlayTimer;
     private bool _isAdjustingVolume;
     private readonly DispatcherTimer _topmostWatchdogTimer;
@@ -155,6 +167,13 @@ public partial class MainWindow : Window
             }
         };
 
+        _shrinkGraceTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(100) };
+        _shrinkGraceTimer.Tick += (_, _) => ShrinkGraceTick();
+        ExpandedBorder.SizeChanged += (_, e) =>
+        {
+            if (e.HeightChanged && e.NewSize.Height < e.PreviousSize.Height - 1) _lastShrinkUtc = DateTime.UtcNow;
+        };
+
         // Safety timeout timer for notification marquee takeover during media (12s max)
         _takeoverTimeoutTimer = new DispatcherTimer
         {
@@ -213,7 +232,7 @@ public partial class MainWindow : Window
         FirstRunWelcomeBanner.IsVisibleChanged += (_, _) => ResizeForWelcomeBanner();
         FirstRunWelcomeBanner.SizeChanged += (_, e) => { if (e.HeightChanged) ResizeForWelcomeBanner(); };
         Loaded += (_,_)=>{if(_powerNotifications!=null)return;_powerNotifications=new(new WindowInteropHelper(this).Handle);_powerNotifications.DisplayChanged+=OnConsoleDisplayChanged;_powerNotifications.PowerChanged+=OnSystemPowerChanged;_viewModel.PowerNoticeRequested+=ShowPowerNotice;_viewModel.OnPowerState(MochiDock.Services.BatteryStatus.Read());_policyTimer.Tick+=PolicyTick;_policyTimer.Start();};
-        Closed += (_,_)=>{_batteryWidget?.Dispose();_batteryWidget=null;_powerNoticeTimer?.Stop();_viewModel.PowerNoticeRequested-=ShowPowerNotice;_viewModel.AudioService.MasterVolumeChanged-=OnMasterVolumeChanged;_viewModel.AudioService.Dispose();HeaderPillOverlay.Cancel();_viewModel.StopPresentationTimers();_windowClosed=true;_expansionTransition.Invalidate();_hoverExpandTimer.Stop();_mouseLeaveTimer.Stop();_takeoverTimeoutTimer.Stop();_volumeOverlayTimer?.Stop();_topmostWatchdogTimer?.Stop();SystemEvents.SessionSwitch-=SystemEvents_SessionSwitch;SystemEvents.DisplaySettingsChanged-=SystemEvents_DisplaySettingsChanged;_resolutionNoticeTimer?.Stop();_viewModel.IsDockInteractionActive=null;_viewModel.StopHardwareCapture();_policyTimer.Stop();_policyTimer.Tick-=PolicyTick;if(_powerNotifications!=null){_powerNotifications.DisplayChanged-=OnConsoleDisplayChanged;_powerNotifications.PowerChanged-=OnSystemPowerChanged;_powerNotifications.Dispose();_powerNotifications=null;}};
+        Closed += (_,_)=>{_batteryWidget?.Dispose();_batteryWidget=null;_powerNoticeTimer?.Stop();_viewModel.PowerNoticeRequested-=ShowPowerNotice;_viewModel.AudioService.MasterVolumeChanged-=OnMasterVolumeChanged;_viewModel.AudioService.Dispose();HeaderPillOverlay.Cancel();_viewModel.StopPresentationTimers();_windowClosed=true;_expansionTransition.Invalidate();_hoverExpandTimer.Stop();_mouseLeaveTimer.Stop();_shrinkGraceTimer.Stop();_takeoverTimeoutTimer.Stop();_volumeOverlayTimer?.Stop();_topmostWatchdogTimer?.Stop();SystemEvents.SessionSwitch-=SystemEvents_SessionSwitch;SystemEvents.DisplaySettingsChanged-=SystemEvents_DisplaySettingsChanged;_resolutionNoticeTimer?.Stop();_viewModel.IsDockInteractionActive=null;_viewModel.StopHardwareCapture();_policyTimer.Stop();_policyTimer.Tick-=PolicyTick;if(_powerNotifications!=null){_powerNotifications.DisplayChanged-=OnConsoleDisplayChanged;_powerNotifications.PowerChanged-=OnSystemPowerChanged;_powerNotifications.Dispose();_powerNotifications=null;}};
 
         Closing += MainWindow_Closing;
 
@@ -1150,6 +1169,7 @@ public partial class MainWindow : Window
         if ((DateTime.UtcNow - _lastManualCloseTime).TotalMilliseconds < 1200) return;
 
         _mouseLeaveTimer.Stop();
+        _shrinkGraceTimer.Stop();
 
         if (!_viewModel.IsExpanded)
         {
@@ -1192,8 +1212,51 @@ public partial class MainWindow : Window
         if (!_viewModel.IsPinned && _viewModel.IsExpanded)
         {
             _mouseLeaveTimer.Stop();
-            _mouseLeaveTimer.Start();
+            _shrinkGraceTimer.Stop();
+            if (MochiDock.Core.CollapseGrace.IsShrinkLeave(DateTime.UtcNow - _lastShrinkUtc) && TryCursorDip(out var cursor))
+            {
+                // The dock shrank out from under a still cursor: wait until the user moves away (or a few seconds pass).
+                _shrinkLeaveUtc = DateTime.UtcNow;
+                _shrinkLeaveCursor = cursor;
+                _shrinkGraceTimer.Start();
+            }
+            else
+            {
+                _mouseLeaveTimer.Start();
+            }
         }
+    }
+
+    private void ShrinkGraceTick()
+    {
+        if (_windowClosed || _viewModel.IsPinned || !_viewModel.IsExpanded) { _shrinkGraceTimer.Stop(); return; }
+        if (ExpandedBorder.IsMouseOver || CompactContainer.IsMouseOver) { _shrinkGraceTimer.Stop(); return; }   // back inside: no close
+        if (!TryCursorDip(out var cursor)) return;
+        double moved = (cursor - _shrinkLeaveCursor).Length;
+        double outside = DistanceFromExpanded(cursor);
+        if (MochiDock.Core.CollapseGrace.Decide(DateTime.UtcNow - _shrinkLeaveUtc, moved, outside) != MochiDock.Core.CollapseGraceDecision.Collapse) return;
+        _shrinkGraceTimer.Stop();
+        // The usual close path (it still respects a context menu, a capture or a deferred collapse).
+        _mouseLeaveTimer.Stop();
+        _mouseLeaveTimer.Start();
+    }
+
+    // The cursor in this window's DIP coordinates (screen pixels converted with the window's own DPI).
+    private bool TryCursorDip(out System.Windows.Point cursor)
+    {
+        cursor = default;
+        if (!GetCursorPos(out var p) || PresentationSource.FromVisual(this) == null) return false;
+        cursor = PointFromScreen(new System.Windows.Point(p.X, p.Y));
+        return true;
+    }
+
+    // How far the cursor (window DIP) is outside the expanded dock; 0 when it is over it.
+    private double DistanceFromExpanded(System.Windows.Point cursor)
+    {
+        var bounds = ExpandedBorder.TransformToAncestor(this).TransformBounds(new Rect(ExpandedBorder.RenderSize));
+        double dx = Math.Max(0, Math.Max(bounds.Left - cursor.X, cursor.X - bounds.Right));
+        double dy = Math.Max(0, Math.Max(bounds.Top - cursor.Y, cursor.Y - bounds.Bottom));
+        return Math.Sqrt(dx * dx + dy * dy);
     }
 
     private void CompactView_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)

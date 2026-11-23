@@ -2,6 +2,12 @@
 
 All notable changes to MochiDock are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Fixed
+
+- **The open dock no longer closes right after dismissing a notification**: when a dismissed notification (or Clear all) made the dock shorter, the still cursor ended up outside it and the dock closed at once. It now stays open until you move the mouse away, or for a few seconds.
+
 ## [0.3.0-beta]
 
 ### Added
