@@ -170,6 +170,49 @@ public class AudioEndpointServiceTests
         Assert.Equal(new[] { 70f }, seen);
     }
 
+    // A mic or headset connecting, a device going away, or only the communications default changing rebuilds the endpoint quietly:
+    // the volume bar must not pop up for something that did not change the output being played to.
+    [Theory]
+    [InlineData("state")]
+    [InlineData("removed")]
+    [InlineData("communications")]
+    [InlineData("console")]
+    public void OtherDeviceChangesRebuildWithoutShowingTheVolumeBar(string change)
+    {
+        var rig = new Rig(n => new FakeEndpoint(n == 1 ? 0.2f : 0.7f));
+        var seen = new List<float>();
+        rig.Service.MasterVolumeChanged += (v, _) => { lock (seen) seen.Add(v); };
+        var client = rig.Service.NotificationClientForTests;
+        int builds = rig.Builds;
+
+        switch (change)
+        {
+            case "state": client.OnDeviceStateChanged("usb-mic", 1); break;
+            case "removed": client.OnDeviceRemoved("bt-headset"); break;
+            case "communications": client.OnDefaultDeviceChanged(EDataFlow.eRender, ERole.eCommunications, "bt-headset"); break;
+            default: client.OnDefaultDeviceChanged(EDataFlow.eRender, ERole.eConsole, "bt-headset"); break;
+        }
+        Assert.Single(rig.Queued);
+        rig.Queued[0]();
+
+        Assert.Equal(builds + 1, rig.Builds);   // it still rebuilt, so a dead endpoint recovers
+        Assert.Empty(seen);                     // but nothing was announced
+    }
+
+    [Fact]
+    public void ASwitchIsStillAnnouncedWhenAVolumeCallRebuiltFirst()
+    {
+        var rig = new Rig(n => new FakeEndpoint(n == 1 ? 0.2f : 0.7f));
+        var seen = new List<float>();
+        rig.Service.MasterVolumeChanged += (v, _) => { lock (seen) seen.Add(v); };
+
+        rig.Service.NotificationClientForTests.OnDefaultDeviceChanged(EDataFlow.eRender, ERole.eMultimedia, "d");
+        Assert.Equal(70f, rig.Service.GetMasterVolume());   // the scroll wheel got there before the pool thread
+        rig.Queued[0]();
+
+        Assert.Equal(new[] { 70f }, seen);
+    }
+
     // OnNotify runs on a Windows thread while another thread rebuilds the endpoint. Unregistering the old endpoint waits for the running
     // callback to finish (as the real one does); the callback must therefore never need a lock the rebuild holds. The old code deadlocked.
     [Fact]

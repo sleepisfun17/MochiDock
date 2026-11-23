@@ -181,6 +181,9 @@ public class AudioEndpointService : IDisposable
     private readonly Action<Action> _queueRebuild;
     private volatile bool _endpointStale = true;
     private int _rebuildQueued;
+    // Only a switch of the multimedia output shows the new output's level. Other rebuilds (any device's state changing, a device removed,
+    // the communications or console default changing) are silent, so the volume bar does not pop up when a mic or headset connects.
+    private volatile bool _announcePending;
     private float _lastVolume = -1f;
     private bool _lastMuted;
     private volatile bool _disposed;
@@ -232,28 +235,32 @@ public class AudioEndpointService : IDisposable
         public int OnDefaultDeviceChanged(EDataFlow flow, ERole role, string pwstrDefaultDeviceId)
         {
             // One switch of the output sends a notification per role: they all mark the same endpoint stale and share one rebuild.
-            if (flow == EDataFlow.eRender) owner.MarkStaleAndQueueRebuild();
+            if (flow == EDataFlow.eRender) owner.MarkStaleAndQueueRebuild(announce: role == ERole.eMultimedia);
             return 0;
         }
         public int OnPropertyValueChanged(string pwstrDeviceId, PropertyKey key) => 0;
     }
 
-    private void MarkStaleAndQueueRebuild()
+    private void MarkStaleAndQueueRebuild(bool announce = false)
     {
         if (_disposed) return;
         _endpointStale = true;
+        if (announce) _announcePending = true;
         if (Interlocked.Exchange(ref _rebuildQueued, 1) == 0) _queueRebuild(RunQueuedRebuild);
     }
 
-    // The queued rebuild (a thread-pool thread, never a Windows callback): builds the endpoint of the new output and shows its level once.
+    // The queued rebuild (a thread-pool thread, never a Windows callback): builds the endpoint of the new output and, after a switch of the
+    // multimedia output, shows its level once.
     private void RunQueuedRebuild()
     {
         Volatile.Write(ref _rebuildQueued, 0);
-        if (_disposed || !_endpointStale) return;
+        bool announce = _announcePending;
+        _announcePending = false;
+        if (_disposed || (!_endpointStale && !announce)) return;   // a volume call may already have rebuilt; a switch is still announced
         try
         {
             var endpoint = GetEndpoint();
-            if (endpoint == null) return;
+            if (endpoint == null || !announce) return;
             lock (_levelGate) { _lastVolume = -1f; }   // the new output's level is announced even if it equals the old one
             if (endpoint.GetMasterVolumeLevelScalar(out float level) >= 0 && endpoint.GetMute(out bool muted) >= 0)
                 OnCoreAudioVolumeChanged(level, muted);
@@ -519,7 +526,7 @@ public class AudioEndpointService : IDisposable
             policyConfig.SetDefaultEndpoint(deviceId, ERole.eMultimedia);
             policyConfig.SetDefaultEndpoint(deviceId, ERole.eCommunications);
             // Do not wait for Windows' notification (it can be late or lost): the next volume call rebuilds, and so does the queued rebuild.
-            MarkStaleAndQueueRebuild();
+            MarkStaleAndQueueRebuild(announce: true);
             return true;
         }
         catch
