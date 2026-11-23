@@ -104,13 +104,13 @@ While a game runs, the dock moves to the bottom of the screen, becomes click-thr
 
 ## Mochi's faces
 
-Mochi changes face with what is going on. With **Expressive Mochi** off (Settings > Appearance & Dock) only the basic faces are used.
+Mochi changes face with what is going on. At the small size in the capsule a face is told by its eyes and by one small badge on the corner (a red "!" for a message, a moon for up late, a cloud, sun or umbrella for the weather, and so on), not by little props above his head. With **Expressive Mochi** off (Settings > Appearance & Dock) only the basic faces are used.
 
 | Face | When |
 | --- | --- |
 | Idle, thinking | Nothing special; alternates with the idle thoughts. |
 | Music (headset) | Something is playing. The headset matches the mascot (graphite with a silver rim for Mochi on Default, and so on). |
-| Alert, Excited | A notification or a new message. |
+| Alert, Excited | A notification or a new message: wide eyes and a red "!" badge on the corner. |
 | Sleeping | The PC is locked, the screen is off, or nobody has used the keyboard or mouse for 10 minutes; also a short doze while resting (below). |
 | Waking | Back after four hours away, or MochiDock started in the morning. |
 | Coffee, Bored | Resting while you work elsewhere (below). |
@@ -130,7 +130,7 @@ Mochi changes face with what is going on. With **Expressive Mochi** off (Setting
 | In a meeting | A timed event from your calendar is happening now: a headset with a microphone. (While gaming the headset has small red lights on the cups.) |
 | Birthday | Your birthday (Settings > Appearance & Dock > Your birthday): a party hat and confetti all day. |
 | All tasks done | Every task due today is ticked off (a cheer for the last one, then a green tick). |
-| Up late | Between 23:00 and 05:00: heavy eyes under a crescent moon. |
+| Up late | Between 23:00 and 05:00: heavy eyes and a moon badge on the corner. |
 
 Warnings (hot GPU, overdue task, low battery, overload), notifications, games and sleep always win over the card faces. The day faces (meeting, birthday, all tasks done, up late) show while Mochi is only resting, so music, the card faces and the weather come first. Hover over Mochi for a quick happy glance; click him to pet him.
 
