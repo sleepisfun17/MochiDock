@@ -9,7 +9,14 @@ public sealed class AppLogTests : IDisposable
     public void Dispose() { AppLog.Configure(Path.Combine(Path.GetTempPath(), "AppLogTests-unused")); try { Directory.Delete(dir, true); } catch { } }
     // Other tests exercise services that log too, so assertions look only at this test's own area.
     private static List<AppLog.LogEntry> Mine(string area) => AppLog.Recent().Where(e => e.Area == area).ToList();
-    private string Text() => File.ReadAllText(Path.Combine(dir, "mochidock.log"));
+    // Tests in other collections run in parallel and may be appending to this file through AppLog at the same moment, so read it
+    // without blocking a writer (File.ReadAllText refuses to share with one and failed now and then with "being used by another process").
+    private string Text()
+    {
+        using var stream = new FileStream(Path.Combine(dir, "mochidock.log"), FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+        using var reader = new StreamReader(stream, System.Text.Encoding.UTF8);
+        return reader.ReadToEnd();
+    }
 
     [Fact] public void WarningIsWrittenAndListed()
     {
