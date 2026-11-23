@@ -23,8 +23,9 @@ public static class MascotBadge
     private const string Slate = "#3F4C66";
 
     /// <summary>
-    /// The badge of a face for a mascot. The cats (Kuro and Shiro) wear no headset (it sits badly on ears), so the faces the headset told
-    /// (Music, Gaming, Worried, In a meeting) get a badge of their own instead; the Mochi kinds keep the headset and have none for them.
+    /// The badge of a face for a mascot. The cats (Kuro and Shiro) wear no headset (it sits badly on ears), so Gaming, Worried and In a
+    /// meeting get a badge of their own instead; their Music face shows a floating note beside the head (<see cref="MascotNote"/>), because a
+    /// note in a 6 px disc did not read as music. The Mochi kinds keep the headset and have none of these.
     /// </summary>
     public static BadgeSpec? For(MascotMood mood, MascotKind kind)
     {
@@ -32,7 +33,7 @@ public static class MascotBadge
         {
             switch (mood)
             {
-                case MascotMood.Music: return new("note", Purple, White);
+                case MascotMood.Music: return null;
                 case MascotMood.Focused or MascotMood.Worried: return new("controller", GameGreen, White);
                 case MascotMood.Meeting: return new("mic", Slate, White);
             }

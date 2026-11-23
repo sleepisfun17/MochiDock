@@ -130,8 +130,12 @@ public partial class MascotControl : System.Windows.Controls.UserControl
         // The status badge stays still while the body bounces or sways (Music, a new message, Victory, the overdue shake...): it follows the
         // body's offset, negated, every frame. The badge is only a few pixels wide, and moving it by fractions of a pixel made it shimmer.
         foreach (var axis in new[] { TranslateTransform.XProperty, TranslateTransform.YProperty })
+        {
             System.Windows.Data.BindingOperations.SetBinding(BadgeSteady, axis,
                 new System.Windows.Data.Binding(axis.Name) { Source = BodyBounceTransform, Converter = NegateConverter.Instance });
+            System.Windows.Data.BindingOperations.SetBinding(NoteSteady, axis,
+                new System.Windows.Data.Binding(axis.Name) { Source = BodyBounceTransform, Converter = NegateConverter.Instance });
+        }
         // The cats' back band is shown whenever the headset is (many faces switch HeadphonesLayer; one place keeps the two together).
         System.ComponentModel.DependencyPropertyDescriptor.FromProperty(UIElement.VisibilityProperty, typeof(UIElement))
             .AddValueChanged(HeadphonesLayer, (_, _) => HeadbandBackLayer.Visibility = HeadphonesLayer.Visibility);
@@ -224,6 +228,7 @@ public partial class MascotControl : System.Windows.Controls.UserControl
             _tailSwayTimer.Stop();
             _idleSleepTimer.Stop();
             UpdateKuroSpark();
+            if (MusicNote.Visibility == Visibility.Visible) StartMusicNote();   // hidden: the note rests (still, halfway up)
             return;
         }
 
@@ -232,6 +237,7 @@ public partial class MascotControl : System.Windows.Controls.UserControl
         _tailSwayTimer.Start();
         _idleSleepTimer.Start();
         UpdateKuroSpark();
+        if (MusicNote.Visibility == Visibility.Visible && !_spinning) StartMusicNote();   // shown again (or just loaded): the note floats
         if (IsStill(Mood))
         {
             StopRenderingHook();
@@ -450,6 +456,7 @@ public partial class MascotControl : System.Windows.Controls.UserControl
             case MascotMood.Music:
                 ShowEyes(Eyes.Happy);
                 ShowHeadset(HeadsetMood.Music);
+                if (_isCat) StartMusicNote();   // the cats wear no headset: a note floats up beside the head instead
                 var bounceAnim = new DoubleAnimation(0, -2.5, TimeSpan.FromMilliseconds(380))
                 {
                     AutoReverse = true,
@@ -906,8 +913,9 @@ public partial class MascotControl : System.Windows.Controls.UserControl
             LeftWideEye, RightWideEye, LeftRoundEye, RightRoundEye, LeftLidEye, RightLidEye,
             IcicleGroup, StarsGroup,
             StarEyes, CoinEyes, Sunglasses, BoltOrbit, RainGroup, ScarfGroup,
-            PartyHat, MicBoom, StatusBadge,
+            PartyHat, MicBoom, StatusBadge, MusicNote,
         }) element.Visibility = Visibility.Collapsed;
+        StopMusicNote();
         LeftPillShift.X = RightPillShift.X = LeftPillShift.Y = RightPillShift.Y = 0;
         BadgeScale.BeginAnimation(ScaleTransform.ScaleXProperty, null);
         BadgeScale.BeginAnimation(ScaleTransform.ScaleYProperty, null);
@@ -1602,6 +1610,41 @@ public partial class MascotControl : System.Windows.Controls.UserControl
         foreach (var (ms, angle) in new[] { (0, 0.0), (350, -8.0), (800, 5.0), (1150, -3.0), (1400, 0.0) })
             sway.KeyFrames.Add(new EasingDoubleKeyFrame(angle, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(ms)), new SineEase { EasingMode = EasingMode.EaseInOut }));
         TailSwayRotate.BeginAnimation(RotateTransform.AngleProperty, sway);
+    }
+
+    // The cats' music note: it fades in at the side of the head, drifts up with a slight sway and fades out, every 1.6 seconds. With
+    // animations off (or not shown) it stays still halfway up, fully visible, so the face still says "music".
+    private static readonly TimeSpan NoteCycle = TimeSpan.FromMilliseconds(1600);
+    private const double NoteStartX = -2, NoteStartY = 5, NoteRise = 6.5;   // the note (9.5 tall) stays inside the capsule's room above the head
+
+    private void StartMusicNote()
+    {
+        StopMusicNote();
+        MusicNoteGlyph.Fill = Ink(MochiDock.Core.MascotNote.InkFor(ThemeName));
+        MusicNote.Visibility = Visibility.Visible;
+        if (!AnimationsEnabled || !IsLoaded || !IsVisible)
+        {
+            NoteDrift.X = NoteStartX - 1; NoteDrift.Y = NoteStartY - NoteRise / 2; MusicNote.Opacity = 1;
+            return;
+        }
+        var ease = new SineEase { EasingMode = EasingMode.EaseOut };
+        NoteDrift.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(NoteStartY, NoteStartY - NoteRise, NoteCycle) { EasingFunction = ease, RepeatBehavior = RepeatBehavior.Forever });
+        var sway = new DoubleAnimationUsingKeyFrames { Duration = NoteCycle, RepeatBehavior = RepeatBehavior.Forever };
+        foreach (var (ms, x) in new[] { (0, NoteStartX), (500, NoteStartX - 1.2), (1100, NoteStartX - 0.4), (1600, NoteStartX - 1.8) })
+            sway.KeyFrames.Add(new EasingDoubleKeyFrame(x, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(ms)), new SineEase { EasingMode = EasingMode.EaseInOut }));
+        NoteDrift.BeginAnimation(TranslateTransform.XProperty, sway);
+        var fade = new DoubleAnimationUsingKeyFrames { Duration = NoteCycle, RepeatBehavior = RepeatBehavior.Forever };
+        foreach (var (ms, o) in new[] { (0, 0.0), (150, 1.0), (1200, 1.0), (1600, 0.0) })
+            fade.KeyFrames.Add(new LinearDoubleKeyFrame(o, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(ms))));
+        MusicNote.BeginAnimation(OpacityProperty, fade);
+    }
+
+    private void StopMusicNote()
+    {
+        NoteDrift.BeginAnimation(TranslateTransform.XProperty, null);
+        NoteDrift.BeginAnimation(TranslateTransform.YProperty, null);
+        MusicNote.BeginAnimation(OpacityProperty, null);
+        NoteDrift.X = NoteStartX; NoteDrift.Y = NoteStartY; MusicNote.Opacity = 1;
     }
 
     // A quick flick when he is petted, about 0.45 seconds.

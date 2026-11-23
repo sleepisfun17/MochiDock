@@ -632,9 +632,11 @@ $checks+=4
 foreach($kindName in 'Kuro','Shiro','Mochi'){
  foreach($name in 'Music','Excited','Victory','Angry'){
   $m=New-Mascot 'Default' $kindName;$m.Mood=[Enum]::Parse($moodType,$name)
-  if(!(Visible $m 'StatusBadge')){if($kindName -eq 'Mochi' -and $name -eq 'Music'){continue};throw "$kindName ${name}: no badge to check"}
+  # The cats' music is the floating note (it must not ride the dance either); Mochi's music is the headset (nothing to check).
+  $part=if($name -eq 'Music'){'MusicNote'}else{'StatusBadge'}
+  if(!(Visible $m $part)){if($kindName -eq 'Mochi' -and $name -eq 'Music'){continue};throw "$kindName ${name}: no $part to check"}
   $m.Width=30;$m.Height=26;$m.Measure([Windows.Size]::new(60,60));$m.Arrange([Windows.Rect]::new(0,0,30,26));$m.UpdateLayout()
-  $bounce=$m.FindName('BodyBounceTransform');$badge=$m.FindName('StatusBadge');$body=$m.FindName('MochiBodyBorder')
+  $bounce=$m.FindName('BodyBounceTransform');$badge=$m.FindName($part);$body=$m.FindName('MochiBodyBorder')
   foreach($a in 'X','Y'){$bounce.BeginAnimation([Windows.Media.TranslateTransform]::"$($a)Property",$null)}
   $bounce.X=0;$bounce.Y=0;$m.UpdateLayout()
   $rest=$badge.TransformToAncestor($m).Transform([Windows.Point]::new(0,0));$bodyRest=$body.TransformToAncestor($m).Transform([Windows.Point]::new(0,0))
@@ -647,6 +649,29 @@ foreach($kindName in 'Kuro','Shiro','Mochi'){
   }
  }
 }
+# The cats show music with a note floating up on the tail side, not a badge; Mochi keeps his headset and has no note. The note's whole drift
+# stays left of the body's middle (the clock is on the right) and inside the capsule's room above (9.5) and below the head; its colour
+# follows the ground (MascotNote).
+foreach($kindName in 'Kuro','Shiro'){
+ foreach($themeName in 'Default','Matcha'){
+  $c=New-Mascot $themeName $kindName;$c.Mood=[Enum]::Parse($moodType,'Music')
+  if(!(Visible $c 'MusicNote') -or (Visible $c 'StatusBadge') -or (Visible $c 'HeadphonesLayer')){throw "$kindName on ${themeName}: Music should show the floating note, with no badge and no headset"}
+  $wantInk=if($themeName -eq 'Matcha'){'#6E4BB8'}else{'#B58CFF'}
+  if((Brush-Hex $c.FindName('MusicNoteGlyph').Fill) -ne $wantInk){throw "$kindName on ${themeName}: the note is $(Brush-Hex $c.FindName('MusicNoteGlyph').Fill), not $wantInk"}
+  if([math]::Abs($c.FindName('MusicNote').Opacity-1) -gt 1e-9){throw "$kindName on ${themeName}: the still note (no animation) should be fully visible"}
+  $c.Width=30;$c.Height=26;$c.Measure([Windows.Size]::new(60,60));$c.Arrange([Windows.Rect]::new(0,0,30,26));$c.UpdateLayout()
+  $glyph=$c.FindName('MusicNoteGlyph');$root=$c.FindName('RootGrid');$drift=$c.FindName('NoteDrift')
+  foreach($pos in @(@(-2,5),@(-3.8,-1.5),@(-3,1.75))){
+   $drift.X=$pos[0];$drift.Y=$pos[1];$c.UpdateLayout()
+   $g=$glyph.Data.Clone();$g.Transform=[Windows.Media.Transform]$glyph.TransformToAncestor($root);$b=$g.Bounds
+   if($b.Right -gt 3 -or $b.X -lt -5.5 -or $b.Y -lt -9.5 -or $b.Bottom -gt 8){throw "$kindName on ${themeName}: the note leaves its room at ($($pos[0]), $($pos[1])): $b"}
+  }
+  $checks++
+ }
+}
+$mm=New-Mascot 'Default' 'Mochi';$mm.Mood=[Enum]::Parse($moodType,'Music')
+if((Visible $mm 'MusicNote') -or !(Visible $mm 'HeadphonesLayer')){throw 'Mochi on Music should keep the headset and show no floating note'}
+$checks++
 # The three Mochi colours come from the mascot, not the theme: grey, green or tan on every ground, no ears, tail or glow, dark ink; on the Matcha
 # ground the rim is darker and thicker (and only there).
 $mochiBodies=@{Mochi='#EDEDEF';MatchaMochi='#85B957';HojichaMochi='#E9D3B4'}
@@ -697,6 +722,12 @@ foreach($combo in $headsetCombos){
   }
   if($cat){
    foreach($layer in 'HeadphonesLayer','HeadbandBackLayer','MicBoom'){if(Visible $m $layer){throw "${label}: a cat wears no headset but $layer is shown"}}
+   if($mood -eq 'Music'){
+    # Music on a cat: the floating note (checked in detail above), no badge.
+    if(!(Visible $m 'MusicNote') -or (Visible $m 'StatusBadge') -or $null -ne (Badge-For $mood $kindName)){throw "${label}: a cat shows music with the floating note and no badge"}
+    $checks++
+    continue
+   }
    $spec=Badge-For $mood $kindName
    if($null -eq $spec -or !(Visible $m 'StatusBadge') -or (Hex-Of $m.FindName('BadgeDisc').Fill.Color) -ne $spec.Fill -or ($spec.Glyph -ne $(@{Music='note';Focused='controller';Worried='controller';Meeting='mic'}[$mood]))){throw "${label}: a cat needs the $(@{Music='note';Focused='controller';Worried='controller';Meeting='mic'}[$mood]) badge instead of the headset"}
    if($mood -eq 'Worried' -and !(Visible $m 'SweatDrop')){throw "${label}: Worried keeps its sweat drop"}
@@ -791,7 +822,7 @@ $checks++
 # 7 px across and stand out from what it covers by at least 3:1 (WCAG non-text contrast).
 $badgeMoods=@($allMoods|Where-Object{$null -ne (Badge-For $_)})
 if($badgeMoods.Count -ne 18){throw "Expected 18 faces with a badge for Mochi, found $($badgeMoods.Count): $($badgeMoods -join ', ')"}
-foreach($k in 'Kuro','Shiro'){$n=@($allMoods|Where-Object{$null -ne (Badge-For $_ $k)}).Count;if($n -ne 22){throw "Expected 22 faces with a badge for $k (the headset faces get one), found $n"}}
+foreach($k in 'Kuro','Shiro'){$n=@($allMoods|Where-Object{$null -ne (Badge-For $_ $k)}).Count;if($n -ne 21){throw "Expected 21 faces with a badge for $k (gaming, worried and meetings get one; music is the floating note), found $n"}}
 $eyeNames='LeftPillEye','RightPillEye','LeftHappyEye','RightHappyEye','LeftSleepyEye','RightSleepyEye','LeftDetermEye','RightDetermEye','LeftFlatEye','RightFlatEye','LeftDroopEye','RightDroopEye','LeftSpiralEye','RightSpiralEye','LeftWideEye','RightWideEye','LeftRoundEye','RightRoundEye','LeftLidEye','RightLidEye','StarEyes','CoinEyes','Sunglasses'
 function Part-Bounds($element,$root){
  # shapes: the bounds of what they draw (a Path's ActualWidth reaches back to the origin); panels: their size

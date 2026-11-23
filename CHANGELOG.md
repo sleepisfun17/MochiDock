@@ -4,6 +4,10 @@ All notable changes to MochiDock are documented here. The format follows [Keep a
 
 ## [Unreleased]
 
+### Changed
+
+- **Kuro and Shiro show music with a floating note**: a bigger violet note drifts up beside the head while music plays, instead of the small badge that was too small to read.
+
 ### Fixed
 
 - **The open dock no longer closes right after dismissing a notification**: when a dismissed notification (or Clear all) made the dock shorter, the still cursor ended up outside it and the dock closed at once. It now stays open until you move the mouse away, or for a few seconds.

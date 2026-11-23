@@ -34,13 +34,13 @@ public class MascotBadgeTests
             Assert.Null(MascotBadge.For(mood));
     }
 
-    // The cats wear no headset: the faces the headset told get a badge of their own, and the Mochi kinds have none there.
+    // The cats wear no headset: gaming and meetings get a badge of their own, music a floating note (no badge), and the Mochi kinds have none there.
     [Theory]
     [InlineData(MascotKind.Kuro)]
     [InlineData(MascotKind.Shiro)]
-    public void CatsGetBadgesForMusicGamingAndMeetings(MascotKind kind)
+    public void CatsGetBadgesForGamingAndMeetingsAndNoneForMusic(MascotKind kind)
     {
-        Assert.Equal(("note", "#6E4BB8"), Pair(MascotBadge.For(MascotMood.Music, kind)));
+        Assert.Null(MascotBadge.For(MascotMood.Music, kind));   // the floating note (MascotNote) shows music
         Assert.Equal(("controller", "#0F6E56"), Pair(MascotBadge.For(MascotMood.Focused, kind)));
         Assert.Equal(("controller", "#0F6E56"), Pair(MascotBadge.For(MascotMood.Worried, kind)));
         Assert.Equal(("mic", "#3F4C66"), Pair(MascotBadge.For(MascotMood.Meeting, kind)));
@@ -73,7 +73,7 @@ public class MascotBadgeTests
     [InlineData("Matcha")]
     public void TheCatBadgesAreReadableAndSeparatedFromTheirRing(string theme)
     {
-        foreach (var mood in new[] { MascotMood.Music, MascotMood.Focused, MascotMood.Worried, MascotMood.Meeting })
+        foreach (var mood in new[] { MascotMood.Focused, MascotMood.Worried, MascotMood.Meeting })
         {
             var b = MascotBadge.For(mood, MascotKind.Kuro)!.Value;
             Assert.True(MascotBadge.Contrast(b.Ink, b.Fill) >= 4.5, $"{mood}: glyph on {b.Fill} is {MascotBadge.Contrast(b.Ink, b.Fill):N2}:1");

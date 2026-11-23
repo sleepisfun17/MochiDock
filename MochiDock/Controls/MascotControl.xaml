@@ -353,6 +353,19 @@
             <!-- The status badge (MascotBadge): one disc in the top-right corner whose glyph and colour tell the face (a red "!" for a message, a navy
                  "z" for sleep, ...). Drawn around its own origin so it scales about its centre; BadgePos puts it in the corner (a little lower for the
                  cats, below the right ear). The ring separates the disc from the body. -->
+            <!-- The cats' music: one eighth note that drifts up on the tail side (left, away from the clock) and fades, again and again while
+                 music plays (MascotControl.StartMusicNote). Drawn around its head; NoteSteady cancels the body's dance like BadgeSteady, so it
+                 moves only by its own drift. Its colour is read against the capsule ground (MascotNote.InkFor). -->
+            <Canvas x:Name="MusicNote" Visibility="Collapsed" Width="30" Height="26" IsHitTestVisible="False">
+                <Canvas.RenderTransform>
+                    <TransformGroup>
+                        <TranslateTransform x:Name="NoteDrift" X="-2" Y="5" />
+                        <TranslateTransform x:Name="NoteSteady" X="0" Y="0" />
+                    </TransformGroup>
+                </Canvas.RenderTransform>
+                <Path x:Name="MusicNoteGlyph" Fill="#B58CFF"
+                      Data="M -1.2,0 A 1.9,1.5 -20 1 0 2.6,0 A 1.9,1.5 -20 1 0 -1.2,0 Z M 1.75,-0.4 L 1.75,-8 L 2.75,-8 C 4.6,-7.2 5.4,-5.6 4.4,-3.6 C 4.4,-5.2 3.8,-6.1 2.75,-6.4 L 2.75,-0.4 Z" />
+            </Canvas>
             <Canvas x:Name="StatusBadge" Visibility="Collapsed" Width="30" Height="26" IsHitTestVisible="False">
                 <Canvas.RenderTransform>
                     <TransformGroup>
