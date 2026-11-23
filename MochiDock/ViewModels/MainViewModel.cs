@@ -1472,9 +1472,17 @@ public partial class MainViewModel : INotifyPropertyChanged
         UpdateSettings(x => x.CapsuleScrollSpeed = CapsuleScrollSpeed);
     }
 
+    /// <summary>The Mascot setting (Auto, Mochi, Kuro or Shiro): saves it and redraws every mascot.</summary>
+    public void ApplyMascotChoice(string choice)
+    {
+        choice = MochiDock.Core.MascotChoice.Normalize(choice);
+        UpdateSettings(x => x.Mascot = choice, SettingsApply.Theme);
+    }
+
     public void ApplyCapsuleTheme(string theme)
     {
         theme = MochiDock.Core.ThemePolicy.Normalize(theme);
+        Controls.MascotControl.CurrentChoice = _settings.Mascot;   // the mascot picker; ThemeService resolves Auto against the theme
         bool changed = !string.Equals(_settings.CapsuleTheme, theme, StringComparison.Ordinal);
         CapsuleTheme = theme;
         if (changed)

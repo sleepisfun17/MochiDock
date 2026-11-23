@@ -12,7 +12,7 @@ foreach($name in @("CompactPillBorder","ExpandedBorder","CompanionBubble")){
  if($node.Background -ne '{DynamicResource IslandGroundBrush}'){throw "Outer background is not shared: $name"}
 }
 $output=Join-Path $repo "MochiDock/obj/chrome";$null=New-Item -ItemType Directory -Force $output
-foreach($theme in @("Default","Matcha")){
+foreach($theme in @("Default","Matcha","Hojicha","KuroNight")){
  $window=[Windows.Window]::new();$assembly.GetType("MochiDock.Services.ThemeService").GetMethod("ApplyTheme").Invoke($null,@($window,$theme))
  foreach($notch in @($false,$true)){foreach($scale in @(1,1.25,1.5,2)){foreach($state in @(@(125,36),@(300,32),@(315,48),@(420,200),@(620,360))){
   $w=$state[0];$h=$state[1]
@@ -30,4 +30,4 @@ foreach($theme in @("Default","Matcha")){
  }}}
 }
 $application.Shutdown()
-Write-Output "Verified production chrome, pure-black pixels, shoulders and resize dimensions in both themes at four scales."
+Write-Output "Verified production chrome, pure-black pixels, shoulders and resize dimensions in all four themes at four scales."

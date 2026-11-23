@@ -178,7 +178,7 @@ public partial class AdvancedSettingsWindow : Window
         {
             var handle = new WindowInteropHelper(this).Handle;
             if (handle == IntPtr.Zero) return;
-            int dark = MochiDock.Core.ThemePolicy.IsDark(theme) ? 1 : 0;   // Default and Hojicha get the dark caption
+            int dark = MochiDock.Core.ThemePolicy.IsDark(theme) ? 1 : 0;   // Default, Hojicha and KuroNight get the dark caption
             DwmSetWindowAttribute(handle, DWMWA_USE_IMMERSIVE_DARK_MODE, ref dark, sizeof(int));
         }
         catch (Exception ex) { AppLog.Warn("Settings", ex); }

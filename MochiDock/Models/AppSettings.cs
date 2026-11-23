@@ -158,6 +158,9 @@ public class AppSettings
     // Capsule customization and hardware alerts
     private string capsuleTheme = "Default";
     public string CapsuleTheme { get => capsuleTheme; set => capsuleTheme = MochiDock.Core.ThemePolicy.Normalize(value); }
+    // Who is drawn: Auto (Kuro in KuroNight, Mochi elsewhere), Mochi, Kuro or Shiro. Old settings files without the key load as Auto.
+    private string mascot = "Auto";
+    public string Mascot { get => mascot; set => mascot = MochiDock.Core.MascotChoice.Normalize(value); }
     public double CapsuleScrollSpeed { get; set; } = 35;
     public double CpuAlertThreshold { get; set; } = 90;
     public double GpuAlertThreshold { get; set; } = 90;

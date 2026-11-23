@@ -95,6 +95,7 @@ public partial class MascotControl : System.Windows.Controls.UserControl
 
     private readonly DispatcherTimer _idleSleepTimer;
     private readonly DispatcherTimer _winkTimer;
+    private readonly DispatcherTimer _tailSwayTimer;   // Kuro's slow tail sway, now and then (KuroTailSway)
     private readonly DispatcherTimer _cursorWatchTimer;
 
     private readonly Random _random = new();
@@ -126,7 +127,11 @@ public partial class MascotControl : System.Windows.Controls.UserControl
     {
 
         InitializeComponent();
-        if (_theme != MascotTheme.Default) ApplyMood(Mood);   // the XAML body is the grey one
+        // The cats' back band is shown whenever the headset is (many faces switch HeadphonesLayer; one place keeps the two together).
+        System.ComponentModel.DependencyPropertyDescriptor.FromProperty(UIElement.VisibilityProperty, typeof(UIElement))
+            .AddValueChanged(HeadphonesLayer, (_, _) => HeadbandBackLayer.Visibility = HeadphonesLayer.Visibility);
+        ApplyCatParts();   // the ears, the tail and (for Kuro) the light face ink, when the mascot is a cat
+        if (_kind != MochiDock.Core.MascotKind.Mochi || _theme != MascotTheme.Default) ApplyMood(Mood);   // the XAML body is the grey Mochi
         BuildWind();
         Unloaded += (_, _) => { if (_spinning) EndSpin(landing: false); };
         IsVisibleChanged += (_, _) =>
@@ -161,6 +166,14 @@ public partial class MascotControl : System.Windows.Controls.UserControl
             if (IsVisible && MochiWink.CanWink(Mood) && AnimationsEnabled) PerformWink();
         };
 
+        // Kuro's tail sways once every 6 to 12 seconds while he rests: a one-shot animation, never a loop, so nothing renders between sways.
+        _tailSwayTimer = new DispatcherTimer { Interval = KuroTailSway.NextDelay(_random.NextDouble()) };
+        _tailSwayTimer.Tick += (s, e) =>
+        {
+            _tailSwayTimer.Interval = KuroTailSway.NextDelay(_random.NextDouble());
+            if (_isCat && AnimationsEnabled && IsVisible && !_spinning && KuroTailSway.CanSway(Mood)) SwayTail();
+        };
+
         // Lightweight cursor-movement check when gaze has converged so CompositionTarget.Rendering stays unhooked at idle
         _cursorWatchTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(100) };
         _cursorWatchTimer.Tick += CursorWatchTimer_Tick;
@@ -185,6 +198,7 @@ public partial class MascotControl : System.Windows.Controls.UserControl
 
             _blinkTimer.Stop();
             _winkTimer.Stop();
+            _tailSwayTimer.Stop();
 
             _idleSleepTimer.Stop();
 
@@ -202,13 +216,17 @@ public partial class MascotControl : System.Windows.Controls.UserControl
             _cursorWatchTimer.Stop();
             _blinkTimer.Stop();
             _winkTimer.Stop();
+            _tailSwayTimer.Stop();
             _idleSleepTimer.Stop();
+            UpdateKuroSpark();
             return;
         }
 
         _blinkTimer.Start();
         _winkTimer.Start();
+        _tailSwayTimer.Start();
         _idleSleepTimer.Start();
+        UpdateKuroSpark();
         if (IsStill(Mood))
         {
             StopRenderingHook();
@@ -924,10 +942,11 @@ public partial class MascotControl : System.Windows.Controls.UserControl
 
     private void StartWind()
     {
-        var core = Ink(_isMatcha ? "#F5F0DF" : _isHojicha ? "#F6EBDC" : "#F4F4F8");
-        var glow = Ink(_isMatcha ? "#CC4E6B36" : _isHojicha ? "#CCE0A96D" : "#CCD4BC8E");
-        var inner = Ink(_isMatcha ? "#85B957" : _isHojicha ? "#E8C38A" : "#F3E2BD");
-        var wisp = Ink(_isMatcha ? "#CC4E6B36" : _isHojicha ? "#CCE8C38A" : "#CCEBEBF0");
+        bool electricWind = _isKuro;   // Kuro's whirlwind is electric yellow; the others follow their own colours (Matcha, Hojicha or grey)
+        var core = Ink(electricWind ? "#FFF1B0" : _isMatcha ? "#F5F0DF" : _isHojicha ? "#F6EBDC" : "#F4F4F8");
+        var glow = Ink(electricWind ? "#CCFFD43B" : _isMatcha ? "#CC4E6B36" : _isHojicha ? "#CCE0A96D" : "#CCD4BC8E");
+        var inner = Ink(electricWind ? "#FFD43B" : _isMatcha ? "#85B957" : _isHojicha ? "#E8C38A" : "#F3E2BD");
+        var wisp = Ink(electricWind ? "#CC4A5190" : _isMatcha ? "#CC4E6B36" : _isHojicha ? "#CCE8C38A" : "#CCEBEBF0");
         foreach (var s in _windStrokes)
         {
             var fill = s.Strand.Wisp ? wisp : s.Strand.Inner ? inner : core;
@@ -940,7 +959,7 @@ public partial class MascotControl : System.Windows.Controls.UserControl
         }
         _windCurl[0].Fill = glow;
         _windCurl[1].Fill = core;
-        DustA.Fill = DustB.Fill = DustC.Fill = Ink(_isMatcha ? "#554E6B36" : _isHojicha ? "#55E0A96D" : "#55D4BC8E");
+        DustA.Fill = DustB.Fill = DustC.Fill = Ink(electricWind ? "#55FFD43B" : _isMatcha ? "#554E6B36" : _isHojicha ? "#55E0A96D" : "#55D4BC8E");
         UpdateWind(0);
 
         WindBack.Visibility = WindFront.Visibility = Visibility.Visible;
@@ -981,10 +1000,35 @@ public partial class MascotControl : System.Windows.Controls.UserControl
         WindFront.BeginAnimation(OpacityProperty, fadeOut);
     }
 
-    private void SetHeadset(string band, string cup)
+    private enum HeadsetMood { Music, Gaming, Meeting }
+
+    private string ThemeName => ThemeNameOf(_theme);
+
+    private static string ThemeNameOf(MascotTheme theme) => theme switch
     {
-        HeadbandArc.Stroke = Ink(band);
-        EarCupLeft.Background = EarCupRight.Background = Ink(cup);
+        MascotTheme.Matcha => MochiDock.Core.ThemePolicy.Matcha,
+        MascotTheme.Hojicha => MochiDock.Core.ThemePolicy.Hojicha,
+        MascotTheme.KuroNight => MochiDock.Core.ThemePolicy.KuroNight,
+        _ => MochiDock.Core.ThemePolicy.Default,
+    };
+
+    // The headset matches the mascot (MascotHeadset); the face is told by marks: red lights on the cups for the gaming faces, the
+    // microphone for a meeting. The cats wear the band behind their ears (HeadbandBackLayer), Mochi in front.
+    private void ApplyHeadset(HeadsetMood mood)
+    {
+        var h = MochiDock.Core.MascotHeadset.For(_kind, ThemeName);
+        var band = Ink(h.Band);
+        var rim = Ink(h.BandRim);
+        HeadbandArc.Stroke = HeadbandBack.Stroke = band;
+        HeadbandRim.Stroke = HeadbandBackRim.Stroke = rim;
+        HeadbandArc.Visibility = HeadbandRim.Visibility = _isCat ? Visibility.Collapsed : Visibility.Visible;
+        HeadbandBackLayer.Opacity = _isCat ? 1 : 0;
+        EarCupLeft.Background = EarCupRight.Background = Ink(h.Cup);
+        var ring = Ink(h.CupRing);
+        EarCupLeft.BorderBrush = EarCupRight.BorderBrush = ring;
+        HeadsetLedLeft.Visibility = HeadsetLedRight.Visibility = mood == HeadsetMood.Gaming ? Visibility.Visible : Visibility.Collapsed;
+        MicBoomArm.Stroke = ring;
+        MicBoomTip.Fill = ring;
     }
 
     // Gaming: a determined face. The eyes are cut slanted at the top (the cartoon way to look focused; Mochi has no eyebrows and no mouth),
@@ -995,7 +1039,7 @@ public partial class MascotControl : System.Windows.Controls.UserControl
         SetTint(new[] { "#E3E8F2", "#C3CCE0", "#5B6B8C", "#40FF7896" }, new[] { "#9DB8A9", "#7A9A8A", "#3F6656", "#40FF7896" }, animate: false);
         UseEyes(pill: false, flat: false, droop: false, spiral: false);
         LeftDetermEye.Visibility = RightDetermEye.Visibility = Visibility.Visible;
-        SetHeadset("#E5484D", "#B3261E");
+        ApplyHeadset(HeadsetMood.Gaming);
         HeadphonesLayer.Visibility = Visibility.Visible;
     }
 
@@ -1037,7 +1081,7 @@ public partial class MascotControl : System.Windows.Controls.UserControl
         WorryDrop.BeginAnimation(OpacityProperty, null);
         WorryDrop.Opacity = 1;
         WorryDropT.Y = 0;
-        SetHeadset("#0A84FF", "#0062D6");   // the headset is blue for music; the gaming faces make it red
+        ApplyHeadset(HeadsetMood.Music);   // the plain matching headset; the gaming faces add red lights, a meeting the microphone
         AngerMark.BeginAnimation(OpacityProperty, null);
         AngerMark.Opacity = 1;
         TearRightT.BeginAnimation(TranslateTransform.YProperty, null);
@@ -1076,12 +1120,32 @@ public partial class MascotControl : System.Windows.Controls.UserControl
         SteamLeftT.Y = SteamRightT.Y = HeatT.Y = SweatTransform.Y = 0;
         SteamLeft.Opacity = SteamRight.Opacity = SweatDrop.Opacity = 1;
         StarA.Opacity = StarB.Opacity = StarC.Opacity = 1;
+        _electricFace = false;
+        _kuroSparkWanted = false;
+        TailSpark.BeginAnimation(OpacityProperty, null);
+        TailSpark.Opacity = KuroSparkRest;
         SetThemeBaseTint();
     }
 
     // Body colours: the gradient eases to the new tint; the edge and the cheeks switch at once.
     private void SetTint(string top, string bottom, string edge, string cheek, bool animate = true)
     {
+        // Kuro: the body is always charcoal; the face's own colour goes into the rim and the glow instead.
+        KuroTint? kuro = null;
+        if (_isKuro)
+        {
+            kuro = MochiDock.Core.MascotTint.KuroNight(new[] { top, bottom, edge, cheek });
+            top = kuro.Value.BodyTop;
+            bottom = kuro.Value.BodyBottom;
+        }
+        else if (_isShiro)
+        {
+            // Shiro: Mochi's normal tints on every theme with a white body for the neutral faces; the Electric face stays white too.
+            var shiro = MochiDock.Core.ShiroTint.For(new[] { top, bottom, edge, cheek }, ThemeName, forceNeutral: _electricFace);
+            (top, bottom, edge, cheek) = (shiro.Top, shiro.Bottom, shiro.Edge, shiro.Cheek);
+        }
+        // Grey Mochi, Hojicha Mochi and Shiro on the Matcha ground: a darker rim (and a thicker one, see ApplyCatParts) so they stay visible there.
+        if (!_isKuro && MochiDock.Core.MascotRim.NeedsDarkRim(_kind, ThemeName)) edge = MochiDock.Core.MascotRim.OnLightGround(edge);
         var topColor = (System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(top);
         var bottomColor = (System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(bottom);
         BodyGradStopTop.BeginAnimation(GradientStop.ColorProperty, null);
@@ -1096,9 +1160,16 @@ public partial class MascotControl : System.Windows.Controls.UserControl
             BodyGradStopTop.Color = topColor;
             BodyGradStopBottom.Color = bottomColor;
         }
+        if (kuro is KuroTint look) { ApplyKuroLook(look); return; }
         MochiBodyBorder.BorderBrush = Ink(edge);
         LeftCheek.Fill = Ink(cheek);
         RightCheek.Fill = Ink(cheek);
+        if (_isShiro)
+        {
+            // The ears and the tail take the body's top colour and its edge colour, so a red Angry Shiro has red ears too.
+            EarLeft.Fill = EarRight.Fill = TailShape.Fill = Ink(top);
+            EarLeft.Stroke = EarRight.Stroke = TailShape.Stroke = Ink(edge);
+        }
     }
 
     // The plain starting point of every extra face: pill eyes visible, the other eye shapes and the accessories hidden.
@@ -1297,11 +1368,11 @@ public partial class MascotControl : System.Windows.Controls.UserControl
                 break;
 
             case MascotMood.Worried:
-                // Gaming, but it is going badly (the frame rate fell or the ping is high): wide eyes, a sweat drop and the red gaming headset.
+                // Gaming, but it is going badly (the frame rate fell or the ping is high): wide eyes, a sweat drop and the matching headset with red lights.
                 SetTint(new[] { "#E3E8F2", "#C3CCE0", "#5B6B8C", "#40FF7896" }, new[] { "#9DB8A9", "#7A9A8A", "#3F6656", "#40FF7896" });
                 UseEyes(pill: true, flat: false, droop: false, spiral: false);
                 WorryDrop.Visibility = Visibility.Visible;   // the drop flies off above the head, clear of the face and the headset
-                SetHeadset("#E5484D", "#B3261E");
+                ApplyHeadset(HeadsetMood.Gaming);
                 HeadphonesLayer.Visibility = Visibility.Visible;
                 if (animate)
                 {
@@ -1336,7 +1407,11 @@ public partial class MascotControl : System.Windows.Controls.UserControl
 
             case MascotMood.Electric:
                 // The Stats Battery page: a charged yellow Mochi with star eyes and lightning bolts circling and flickering.
+                // Kuro stays charcoal (never yellow): his glow is brighter instead, and his tail spark flickers with the bolts.
+                _electricFace = true;
+                _kuroSparkWanted = true;
                 SetTint(new[] { "#FFF4C2", "#F5D96B", "#C9A227", "#66FFB347" }, new[] { "#F3E7A8", "#DCC45E", "#A88A1E", "#66FFB347" });
+                UpdateKuroSpark();
                 UseEyes(pill: false, flat: false, droop: false, spiral: false);
                 StarEyes.Visibility = BoltOrbit.Visibility = Visibility.Visible;
                 if (animate)
@@ -1445,7 +1520,7 @@ public partial class MascotControl : System.Windows.Controls.UserControl
             case MascotMood.Meeting:
                 // In a calendar meeting: a calm face and a grey headset with a microphone. Still, so it does not distract.
                 UseEyes(pill: true, flat: false, droop: false, spiral: false);
-                SetHeadset("#5B6B8C", "#3F4C66");
+                ApplyHeadset(HeadsetMood.Meeting);
                 HeadphonesLayer.Visibility = MicBoom.Visibility = Visibility.Visible;
                 break;
 
@@ -1526,6 +1601,7 @@ public partial class MascotControl : System.Windows.Controls.UserControl
         // Interactive Petting reaction: Coucou love sound + Happy squint eye arcs + elastic squish spring!
 
         SoundService.PlayPetSound();
+        if (_isCat) CatPet();
 
         LeftPillEye.Visibility = Visibility.Collapsed;
 
@@ -1616,10 +1692,22 @@ public partial class MascotControl : System.Windows.Controls.UserControl
     }
 
 
-    public enum MascotTheme { Default, Matcha, Hojicha }
+    public enum MascotTheme { Default, Matcha, Hojicha, KuroNight }
 
-    /// <summary>The theme the app is using; set by ThemeService so a Mochi created later starts with the right body.</summary>
-    public static MascotTheme CurrentTheme { get; set; }
+    /// <summary>The theme the app is using; set by ThemeService so a Mochi created later starts with the right body. Setting it clears <see cref="CurrentKind"/> back to Auto.</summary>
+    public static MascotTheme CurrentTheme { get => _currentTheme; set { _currentTheme = value; _currentKind = null; } }
+    private static MascotTheme _currentTheme;
+    private static MochiDock.Core.MascotKind? _currentKind;
+
+    /// <summary>Who a mascot created later is (ThemeService sets it after the theme; until then Auto: Kuro in KuroNight, Mochi elsewhere).</summary>
+    public static MochiDock.Core.MascotKind CurrentKind
+    {
+        get => _currentKind ?? MochiDock.Core.MascotChoice.Resolve(MochiDock.Core.MascotChoice.Auto, ThemeNameOf(_currentTheme));
+        set => _currentKind = value;
+    }
+
+    /// <summary>The Mascot setting (Auto, Mochi, Kuro or Shiro), set by the view model; ThemeService resolves it against the theme.</summary>
+    public static string CurrentChoice { get; set; } = MochiDock.Core.MascotChoice.Auto;
 
     /// <summary>Kept for the render harnesses: true means Matcha, false Default.</summary>
     public static bool CurrentIsMatcha
@@ -1629,8 +1717,16 @@ public partial class MascotControl : System.Windows.Controls.UserControl
     }
 
     private MascotTheme _theme = CurrentTheme;
-    private bool _isMatcha => _theme == MascotTheme.Matcha;
-    private bool _isHojicha => _theme == MascotTheme.Hojicha;
+    // The mascot decides the body colours, not the theme: Matcha Mochi is green and Hojicha Mochi tan on every theme. The theme (_theme) only
+    // gives the ground, which matters for the rim on Matcha and for grey Mochi's headset on Kuro Night.
+    private bool _isMatcha => _kind == MochiDock.Core.MascotKind.MatchaMochi;
+    private bool _isHojicha => _kind == MochiDock.Core.MascotKind.HojichaMochi;
+
+    // Who is drawn (the theme above is only the palette): Mochi, Kuro (the black electric cat) or Shiro (the white cat).
+    private MochiDock.Core.MascotKind _kind = CurrentKind;
+    private bool _isKuro => _kind == MochiDock.Core.MascotKind.Kuro;
+    private bool _isShiro => _kind == MochiDock.Core.MascotKind.Shiro;
+    private bool _isCat => _kind is MochiDock.Core.MascotKind.Kuro or MochiDock.Core.MascotKind.Shiro;
 
     // Hojicha's roasted kinako-tan body, worn instead of the neutral (grey-white) faces; the cheek colour is kept.
     private static readonly string[] HojichaBody = { "#E9D3B4", "#CFAF86", "#B08A60" };
@@ -1641,7 +1737,7 @@ public partial class MascotControl : System.Windows.Controls.UserControl
     /// </summary>
     private void SetTint(string[] normal, string[] matcha, bool animate = true)
     {
-        var tint = _isMatcha ? matcha : normal;
+        var tint = _isMatcha ? matcha : normal;   // Matcha Mochi has his own tints; grey Mochi and the cats use the normal ones
         // The faces Matcha shows in its plain green body are Hojicha's plain tan body; faces with a tint of their own keep it.
         if (_isHojicha && string.Equals(matcha[0], MatchaBodyTop, StringComparison.OrdinalIgnoreCase))
             tint = new[] { HojichaBody[0], HojichaBody[1], HojichaBody[2], normal[3] };
@@ -1654,6 +1750,115 @@ public partial class MascotControl : System.Windows.Controls.UserControl
     private void SetThemeBaseTint() =>
         SetTint(new[] { "#EDEDEF", "#C4C5CA", "#B8B9C0", "#73FF7896" }, new[] { "#85B957", "#54863B", "#365D2A", "#73FF7896" }, animate: false);
 
+    // ---- Kuro: the KuroNight form of Mochi (the same squircle body with ears, a tail, light face ink and a glow in place of the shadow) ----
+
+    private const double KuroSparkRest = 0.85;
+    private bool _electricFace;           // the Electric face: a brighter glow
+    private bool _kuroSparkWanted;     // the Electric face: the tail spark flickers
+
+    /// <summary>
+    /// Shows or hides the ears and the tail (Kuro and Shiro), sets the light face ink and the glow for Kuro and puts the black shadow
+    /// back for Mochi and Shiro. Inner ears and the tail spark take the cat's colours.
+    /// </summary>
+    private void ApplyCatParts()
+    {
+        if (KuroEars == null || KuroTail == null) return;
+        bool kuro = _isKuro, cat = _isCat;
+        KuroEars.Visibility = KuroTail.Visibility = cat ? Visibility.Visible : Visibility.Collapsed;
+        BodyGlow.Visibility = kuro ? Visibility.Visible : Visibility.Collapsed;
+        InnerEarLeft.Fill = InnerEarRight.Fill = Ink(kuro ? "#FFD43B" : "#F4B6C2");
+        InnerEarLeft.Opacity = InnerEarRight.Opacity = kuro ? 0.55 : 0.9;
+        // The light-bodied mascots need a firmer rim on Matcha's light ground (a thin line is only a fraction of a pixel at the capsule size).
+        MochiBodyBorder.BorderThickness = new Thickness(MochiDock.Core.MascotRim.Thickness(_kind, ThemeName));
+        TailSpark.Fill = Ink(kuro ? "#FFF3B0" : "#8FD3FF");
+        if (!kuro)
+        {
+            // Mochi's and Shiro's ears and tail keep the black shadow (Shiro has no glow)
+            UseShadow(EarGlow, System.Windows.Media.Colors.Black, 4, 1, 0.25);
+            UseShadow(TailGlow, System.Windows.Media.Colors.Black, 4, 1, 0.25);
+        }
+        Resources["MascotEyeBrush"] = Ink(kuro ? "#FFD43B" : "#1A1412");
+        Resources["MascotInkBrush"] = Ink(kuro ? "#F3EEDC" : "#1A1412");
+        Resources["MascotSleepyBrush"] = Ink(kuro ? "#D9B433" : "#2C2422");
+        BodySheen.Opacity = kuro ? 0.3 : 1;
+        // The black drop shadow goes in KuroNight (the glow replaces it); the glow's colour comes with the face (ApplyKuroLook).
+        UseShadow(BodyShadow, System.Windows.Media.Colors.Black, 4, 1, kuro ? 0 : 0.25);
+        if (!cat) TailSwayRotate.BeginAnimation(RotateTransform.AngleProperty, null);
+        ApplyHeadset(HeadsetMood.Music);   // the band moves in front of or behind the ears with the mascot; the face adds its marks later
+    }
+
+    private static void UseShadow(System.Windows.Media.Effects.DropShadowEffect fx, System.Windows.Media.Color color, double blur, double depth, double opacity)
+    {
+        fx.BeginAnimation(System.Windows.Media.Effects.DropShadowEffect.BlurRadiusProperty, null);
+        fx.BeginAnimation(System.Windows.Media.Effects.DropShadowEffect.OpacityProperty, null);
+        fx.Color = color;
+        fx.BlurRadius = blur;
+        fx.ShadowDepth = depth;
+        fx.Opacity = opacity;
+    }
+
+    // The rim, the glow, the ears and the tail for one face (the body itself is charcoal for every face). The glow sits on BodyGlow, not on the body.
+    private void ApplyKuroLook(KuroTint k)
+    {
+        var rim = Ink(k.Rim);
+        var body = Ink(k.BodyTop);
+        MochiBodyBorder.BorderBrush = rim;
+        LeftCheek.Fill = RightCheek.Fill = System.Windows.Media.Brushes.Transparent;   // a black cat has no pink cheeks
+        var glow = (System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(_electricFace ? MochiDock.Core.MascotTint.ElectricYellow : k.Glow);
+        double blur = _electricFace ? 8 : 5, opacity = _electricFace ? 0.95 : 0.55;
+        UseShadow(BodyGlowFx, glow, blur, 0, opacity);
+        UseShadow(EarGlow, glow, blur, 0, opacity);
+        UseShadow(TailGlow, glow, blur, 0, opacity);
+        EarLeft.Fill = EarRight.Fill = body;
+        TailShape.Fill = body;
+        EarLeft.Stroke = EarRight.Stroke = TailShape.Stroke = rim;
+    }
+
+    // The tail spark flickers while the Electric face is worn, with animations on and the control shown.
+    private void UpdateKuroSpark()
+    {
+        if (!_isCat) return;
+        TailSpark.BeginAnimation(OpacityProperty, null);
+        TailSpark.Opacity = KuroSparkRest;
+        if (_kuroSparkWanted && AnimationsEnabled && IsLoaded && IsVisible)
+            TailSpark.BeginAnimation(OpacityProperty, Loop(1, 0.25, 260));
+    }
+
+    // One slow sway of the tail from the hip, about 1.4 seconds; the animation stops by itself (FillBehavior.Stop).
+    private void SwayTail()
+    {
+        var sway = new DoubleAnimationUsingKeyFrames { FillBehavior = FillBehavior.Stop };
+        foreach (var (ms, angle) in new[] { (0, 0.0), (350, -8.0), (800, 5.0), (1150, -3.0), (1400, 0.0) })
+            sway.KeyFrames.Add(new EasingDoubleKeyFrame(angle, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(ms)), new SineEase { EasingMode = EasingMode.EaseInOut }));
+        TailSwayRotate.BeginAnimation(RotateTransform.AngleProperty, sway);
+    }
+
+    // A quick flick when he is petted, about 0.45 seconds.
+    private void FlickTail()
+    {
+        var flick = new DoubleAnimationUsingKeyFrames { FillBehavior = FillBehavior.Stop };
+        foreach (var (ms, angle) in new[] { (0, 0.0), (120, -14.0), (300, 6.0), (450, 0.0) })
+            flick.KeyFrames.Add(new EasingDoubleKeyFrame(angle, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(ms)), new SineEase { EasingMode = EasingMode.EaseInOut }));
+        TailSwayRotate.BeginAnimation(RotateTransform.AngleProperty, flick);
+    }
+
+    // Petting a cat: the tail flicks and the spark flashes; Kuro's glow also pulses once, like a short static crackle (Shiro has no glow).
+    private void CatPet()
+    {
+        if (!AnimationsEnabled || !IsVisible) return;
+        var flash = new DoubleAnimationUsingKeyFrames { FillBehavior = FillBehavior.Stop };
+        foreach (var (ms, value) in new[] { (0, 0.85), (60, 1.0), (120, 0.1), (190, 1.0), (260, 0.2), (400, 0.85) })
+            flash.KeyFrames.Add(new LinearDoubleKeyFrame(value, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(ms))));
+        TailSpark.BeginAnimation(OpacityProperty, flash);
+        FlickTail();
+        if (!_isKuro) return;
+        foreach (var fx in new[] { BodyGlowFx, EarGlow, TailGlow })
+        {
+            fx.BeginAnimation(System.Windows.Media.Effects.DropShadowEffect.OpacityProperty, new DoubleAnimation(fx.Opacity, 1, TimeSpan.FromMilliseconds(140)) { AutoReverse = true, FillBehavior = FillBehavior.Stop });
+            fx.BeginAnimation(System.Windows.Media.Effects.DropShadowEffect.BlurRadiusProperty, new DoubleAnimation(fx.BlurRadius, fx.BlurRadius + 5, TimeSpan.FromMilliseconds(140)) { AutoReverse = true, FillBehavior = FillBehavior.Stop });
+        }
+    }
+
     /// <summary>Default or Matcha (kept for the render harnesses).</summary>
     public void ApplyTheme(bool isMatcha) => ApplyTheme(isMatcha ? MascotTheme.Matcha : MascotTheme.Default);
 
@@ -1663,13 +1868,21 @@ public partial class MascotControl : System.Windows.Controls.UserControl
     {
         MochiDock.Core.ThemePolicy.Matcha => MascotTheme.Matcha,
         MochiDock.Core.ThemePolicy.Hojicha => MascotTheme.Hojicha,
+        MochiDock.Core.ThemePolicy.KuroNight => MascotTheme.KuroNight,
         _ => MascotTheme.Default,
     };
 
-    public void ApplyTheme(MascotTheme theme)
+    /// <summary>The palette with the mascot Auto would pick (Kuro in KuroNight, Mochi elsewhere); kept for the render harnesses.</summary>
+    public void ApplyTheme(MascotTheme theme) =>
+        ApplyTheme(theme, MochiDock.Core.MascotChoice.Resolve(MochiDock.Core.MascotChoice.Auto, ThemeNameOf(theme)));
+
+    /// <summary>The palette (theme) and who is drawn (kind) are separate: any mascot works with any theme.</summary>
+    public void ApplyTheme(MascotTheme theme, MochiDock.Core.MascotKind kind)
     {
         if (MochiBodyBorder == null || BodyGradStopTop == null || BodyGradStopBottom == null) return;
         _theme = theme;
+        _kind = kind;
+        ApplyCatParts();   // right away: the ears and the tail are not part of a face
         if (_spinning) return;   // the turn applies the face (in the new theme) when it comes round
         ApplyMood(Mood);   // repaint the face being worn, not only the resting body
     }

@@ -36,5 +36,10 @@ try {
   Apply 'Hojicha';                         Expect 3 3 'switch to Hojicha (dark to dark)'
   Apply 'hojicha';                         Expect 3 3 'Hojicha again, other spelling'
   Apply 'Default';                         Expect 4 4 'Hojicha back to Default'
+  Apply 'KuroNight';                        Expect 5 5 'switch to KuroNight (dark to dark)'
+  Apply 'Kuro Night';                      Expect 5 5 'KuroNight again, other spelling'
+  Apply 'Hojicha';                         Expect 6 6 'KuroNight to Hojicha (dark to dark)'
+  Apply 'KuroNight';                        Expect 7 7 'Hojicha to KuroNight'
+  Apply 'Default';                         Expect 8 8 'KuroNight back to Default'
   'Theme redraw checks passed.'
 } finally { $window.Close() }

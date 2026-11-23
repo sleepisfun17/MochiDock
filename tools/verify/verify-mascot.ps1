@@ -164,9 +164,10 @@ foreach($scale in 1,1.25,1.5,2){
      $top=$mascot.FindName('BodyGradStopTop').Color.ToString()
      if($top -ne '#FFE3E8F2'){throw "Serious gaming face lost its slate tint ($top)"}
      if(!(Visible $mascot 'HeadphonesLayer')){throw 'The gaming face lost its headset'}
-     if($mascot.FindName('HeadbandArc').Stroke.Color.ToString() -ne '#FFE5484D'){throw 'The gaming headset is not red'}
+     if(!(Visible $mascot 'HeadsetLedLeft') -or !(Visible $mascot 'HeadsetLedRight')){throw 'The gaming headset lost its red lights'}
     }
-    if($name -eq 'Worried' -and !(Visible $mascot 'HeadphonesLayer')){throw 'Worried needs the headset'}
+    if($name -eq 'Worried' -and (!(Visible $mascot 'HeadphonesLayer') -or !(Visible $mascot 'HeadsetLedLeft'))){throw 'Worried needs the headset with its red lights'}
+    if($name -eq 'Meeting' -and ((Visible $mascot 'HeadsetLedLeft') -or !(Visible $mascot 'MicBoom'))){throw 'The meeting headset needs the microphone and no red lights'}
     if($mascot.FindName('FlipScaleTransform').ScaleX -ne 1){throw "Mochi was left turned in mood $name"}
     foreach($part in 'FaceLayer','FaceGrid','LeftCheek','FaceExtras','ExtrasLayer'){if($mascot.FindName($part).Opacity -ne 1){throw "The $part of mood $name stayed hidden (back of a turn)"}}
     if($mascot.FindName('FaceTurnScale').ScaleX -ne 1 -or $mascot.FindName('FaceTurnShift').X -ne 0){throw "The face of mood $name stayed turned"}
@@ -184,7 +185,7 @@ foreach($scale in 1,1.25,1.5,2){
     if($name -eq 'Hot' -and !(Visible $mascot 'SweatDrop')){throw 'Sweat drop is missing in mood Hot'}
    }else{
     if(Visible $mascot 'SweatDrop'){throw "Sweat drop leaked into plain mood $name"}
-    if($name -eq 'Music' -and $mascot.FindName('HeadbandArc').Stroke.Color.ToString() -ne '#FF0A84FF'){throw 'The music headset did not return to blue after a gaming face'}
+    if($name -eq 'Music' -and ((Visible $mascot 'HeadsetLedLeft') -or $mascot.FindName('HeadbandArc').Stroke.Color.ToString() -ne '#FF3A3D4A')){throw 'The music headset did not return to the plain graphite one after a gaming face'}
     $top=$mascot.FindName('BodyGradStopTop').Color;$bottom=$mascot.FindName('BodyGradStopBottom').Color
     if($top.ToString() -ne '#FFEDEDEF' -or $bottom.ToString() -ne '#FFC4C5CA'){throw "Body colours did not return to normal in mood $name ($top / $bottom)"}
     $cheek=$mascot.FindName('LeftCheek').Fill.Color.ToString()
@@ -243,9 +244,9 @@ function Ink-Metrics($mood){
   $origin=10 # the host's padding, in pixels at 1x
   $sums=@{L=@(0.0,0.0,0);R=@(0.0,0.0,0)}
   for($py=[int](8.6*6+$origin);$py -le [int](16.6*6+$origin);$py++){
-   for($px=[int](4*6+$origin);$px -le [int](26*6+$origin);$px++){
+   for($px=[int](5.5*6+$origin);$px -le [int](24.5*6+$origin);$px++){
     $i=$py*$stride+$px*4;$b=$pixels[$i];$g=$pixels[$i+1];$r=$pixels[$i+2]
-    if($r -lt 80 -and $g -lt 80 -and $b -lt 80){ # the dark ink of the eyes (brows are dark red, ear cups blue: not counted)
+    if($r -lt 80 -and $g -lt 80 -and $b -lt 80){ # the dark ink of the eyes (brows are dark red, the dark headset cups sit outside this band)
      $dx=($px-$origin+.5)/6;$dy=($py-$origin+.5)/6
      $side=if($dx -lt 15){'L'}else{'R'}
      $sums[$side][0]+=$dx;$sums[$side][1]+=$dy;$sums[$side][2]++
@@ -371,6 +372,328 @@ foreach($sheet in @(@('default',$false,'#000000','#F2F2F5'),@('matcha',$true,'#E
 }
 $checks++
 
+$sheetFacesKuro=$sheetFaces
+# ---- KuroNight: Mochi becomes Kuro, a black electric cat. The body is charcoal for every face (never yellow); a face's own colour goes
+# into the rim and the glow, the neutral faces glow electric yellow; the ears and the tail show only in this theme; the face ink is light.
+$kuroNightTheme=[Enum]::Parse($themeType,'KuroNight')
+$kuroGround=[Windows.Media.Color]::FromRgb(0x0C,0x0D,0x18)
+function Hex-Of($c){return ('#{0:X2}{1:X2}{2:X2}' -f $c.R,$c.G,$c.B)}
+function Brush-Hex($b){return (Hex-Of $b.Color)}
+$kuro=[Activator]::CreateInstance($mascotClass);$kuro.ApplyTheme($kuroNightTheme)
+foreach($part in 'KuroEars','KuroTail'){if(!(Visible $kuro $part)){throw "KuroNight: $part should be visible"}}
+$allMoods=[Enum]::GetNames($moodType)
+foreach($name in $allMoods){
+ $kuro.Mood=[Enum]::Parse($moodType,'Angry');$kuro.Mood=[Enum]::Parse($moodType,$name)
+ if((Body-Top $kuro) -ne '#3B3D52'){throw "KuroNight: $name should keep the charcoal body but is $(Body-Top $kuro)"}
+ $bottom=$kuro.FindName('BodyGradStopBottom').Color;if((Hex-Of $bottom) -ne '#23253A'){throw "KuroNight: $name bottom is $(Hex-Of $bottom), not charcoal"}
+ if($kuro.FindName('LeftCheek').Fill.Color.A -ne 0){throw "KuroNight: $name has cheek circles (Kuro has none)"}
+ if(!(Visible $kuro 'KuroEars') -or !(Visible $kuro 'KuroTail')){throw "KuroNight: $name lost the ears or the tail"}
+ if((Brush-Hex $kuro.FindResource('MascotEyeBrush')) -ne '#FFD43B'){throw "KuroNight: the eye ink is not electric yellow in $name"}
+ $glow=$kuro.FindName('BodyGlowFx');if(!(Visible $kuro 'BodyGlow') -or $glow.ShadowDepth -ne 0 -or $glow.Color.ToString() -eq '#FF000000' -or $kuro.FindName('BodyShadow').Opacity -ne 0){throw "KuroNight: $name has the black drop shadow instead of a glow"}
+ if($kuro.FindName('TailShape').Stroke.Color.ToString() -ne $kuro.FindName('MochiBodyBorder').BorderBrush.Color.ToString()){throw "KuroNight: the tail rim of $name does not match the body rim"}
+ $checks++
+}
+$kuro.Mood=[Enum]::Parse($moodType,'Idle')
+if((Brush-Hex $kuro.FindName('MochiBodyBorder').BorderBrush) -ne '#FFD43B' -or (Hex-Of $kuro.FindName('BodyGlowFx').Color) -ne '#FFD43B'){throw 'KuroNight: the neutral Idle face should have an electric-yellow rim and glow'}
+$kuro.Mood=[Enum]::Parse($moodType,'Angry')
+if((Hex-Of $kuro.FindName('BodyGlowFx').Color) -eq '#FFD43B' -or (Hex-Of $kuro.FindName('BodyGlowFx').Color) -ne '#C0392B'){throw "KuroNight: Angry should glow red, not $(Hex-Of $kuro.FindName('BodyGlowFx').Color)"}
+$kuro.Mood=[Enum]::Parse($moodType,'Electric')
+if((Body-Top $kuro) -ne '#3B3D52'){throw 'KuroNight: the Electric face turned Kuro yellow'}
+if($kuro.FindName('BodyGlowFx').Opacity -le 0.55){throw 'KuroNight: the Electric glow should be brighter'}
+if(!(Visible $kuro 'StarEyes') -or !(Visible $kuro 'BoltOrbit')){throw 'KuroNight: the Electric face lost its star eyes or its bolts'}
+# The ears may poke about 3 DIPs above the box; the tail is checked below.
+$kuro.Width=30;$kuro.Height=26;$kuro.Measure([Windows.Size]::new(60,60));$kuro.Arrange([Windows.Rect]::new(0,0,30,26));$kuro.UpdateLayout()
+# The tail is one filled shape behind the body: on the left half only (away from the clock), poking out at most 4.5 units on the left and never
+# above or below the box or past the middle, so the capsule balance does not change.
+$tailPath=$kuro.FindName('TailShape');$pen=[Windows.Media.Pen]::new([Windows.Media.Brushes]::Black,$tailPath.StrokeThickness);$pen.LineJoin='Round'
+$r=$tailPath.Data.GetRenderBounds($pen)
+if($r.X -lt -4.5 -or $r.Y -lt 0 -or $r.Bottom -gt 26 -or $r.Right -gt 15){throw "KuroNight: TailShape is out of its room (X >= -4.5, Y >= 0, Bottom <= 26, Right <= 15): $r"}
+$rootGrid=$kuro.FindName('RootGrid')
+if($rootGrid.Children.IndexOf($kuro.FindName('KuroTail')) -ge $rootGrid.Children.IndexOf($kuro.FindName('MochiBodyBorder'))){throw 'KuroNight: the tail must sit behind the body'}
+if(!$tailPath.Effect -or $kuro.FindName('TailGlow') -eq $null -or $kuro.FindName('TailSwayRotate') -eq $null){throw 'KuroNight: the tail lost its glow or its sway transform'}
+# The tail pivots on its base and is at rest (no running animation) after the face is drawn.
+if($kuro.FindName('TailSwayRotate').HasAnimatedProperties){throw 'KuroNight: the tail is animating at rest (it must only move in one-shot sways and flicks)'}
+$checks+=3
+foreach($ear in 'EarLeft','EarRight'){
+ $p=$kuro.FindName($ear);$pen=[Windows.Media.Pen]::new([Windows.Media.Brushes]::Black,$p.StrokeThickness);$r=$p.Data.GetRenderBounds($pen)
+ if($r.Y -lt -3.6 -or $r.X -lt 0 -or $r.Right -gt 30){throw "KuroNight: $ear pokes out too far ($r)"}
+}
+$checks+=2
+# Ears and tail, the light ink and the black shadow belong to KuroNight only.
+foreach($other in 'Default','Hojicha','Matcha'){
+ $o=[Activator]::CreateInstance($mascotClass);$o.ApplyTheme($kuroNightTheme);$o.ApplyTheme($other)
+ foreach($part in 'KuroEars','KuroTail'){if(Visible $o $part){throw "$other shows $part"}}
+ if(Visible $o 'BodyGlow'){throw "$other shows the Kuro glow"}
+ if((Brush-Hex $o.FindResource('MascotEyeBrush')) -ne '#1A1412' -or (Brush-Hex $o.FindResource('MascotInkBrush')) -ne '#1A1412'){throw "$other lost its dark face ink after KuroNight"}
+ if((Brush-Hex $o.FindResource('MascotSleepyBrush')) -ne '#2C2422'){throw "$other lost its sleepy ink after KuroNight"}
+ $s=$o.FindName('BodyShadow');if($s.Color.ToString() -ne '#FF000000' -or $s.ShadowDepth -ne 1 -or $s.BlurRadius -ne 4 -or [math]::Abs($s.Opacity-0.25) -gt 1e-9){throw "$other did not get the black shadow back ($($s.Color) $($s.ShadowDepth) $($s.BlurRadius) $($s.Opacity))"}
+ if($o.FindName('BodySheen').Opacity -ne 1){throw "$other lost its body highlight"}
+ if((Body-Top $o) -eq '#3B3D52'){throw "$other kept the charcoal body"}
+ $checks++
+}
+# A Kuro created after the theme switch starts as a cat; switching back restores Mochi.
+$mascotClass.GetProperty('CurrentTheme').SetValue($null,$kuroNightTheme)
+$lateKuro=[Activator]::CreateInstance($mascotClass)
+if((Body-Top $lateKuro) -ne '#3B3D52' -or !(Visible $lateKuro 'KuroEars') -or !(Visible $lateKuro 'KuroTail')){throw 'KuroNight: a Mochi created after the theme should start as Kuro'}
+$lateKuro.ApplyTheme('Default')
+if((Body-Top $lateKuro) -ne '#EDEDEF' -or (Visible $lateKuro 'KuroEars')){throw 'Default: switching back from KuroNight should restore Mochi'}
+$lateKuro.ApplyTheme('kuro night')
+if(!(Visible $lateKuro 'KuroEars')){throw 'ApplyTheme("kuro night") should make Kuro'}
+$checks+=3
+$mascotClass.GetProperty('CurrentIsMatcha').SetValue($null,$false)
+
+# ---- No mascot may vanish on any capsule: Mochi, Matcha Mochi, Hojicha Mochi, Kuro and Shiro (Auto is the theme's own one of these) rendered at the capsule size (22 x 19) on the ground of every theme at 100, 125,
+# 150 and 200%. The eyes stay at least 4.5:1 against the body and the body, rim and glow ring at least 3:1 against the ground (WCAG non-text contrast).
+$kindType=$core.GetType('MochiDock.Core.MascotKind')
+$headsetType=$core.GetType('MochiDock.Core.MascotHeadset')
+function Kind($n){return [Enum]::Parse($kindType,$n)}
+function Theme-Of($n){return [Enum]::Parse($themeType,$n)}
+function New-Mascot($theme,$kind){$m=[Activator]::CreateInstance($mascotClass);$m.ApplyTheme((Theme-Of $theme),(Kind $kind));return $m}
+function Lum($r,$g,$b){$f={param($v)$c=$v/255.0;if($c -le 0.03928){$c/12.92}else{[math]::Pow(($c+0.055)/1.055,2.4)}};return 0.2126*(& $f $r)+0.7152*(& $f $g)+0.0722*(& $f $b)}
+function Contrast($l1,$l2){$a=[math]::Max($l1,$l2);$b=[math]::Min($l1,$l2);return ($a+0.05)/($b+0.05)}
+function Render-Pixels($m,$scale,$ground){
+ $native,$surface=New-Host $m $scale ([Windows.Media.SolidColorBrush]::new($ground))
+ try{
+  $surface.Measure([Windows.Size]::new(200,200));$surface.Arrange([Windows.Rect]::new(0,0,$surface.DesiredSize.Width,$surface.DesiredSize.Height));$surface.UpdateLayout()
+  $w=[int][math]::Ceiling($surface.ActualWidth*$scale);$h=[int][math]::Ceiling($surface.ActualHeight*$scale)
+  $bitmap=[Windows.Media.Imaging.RenderTargetBitmap]::new($w,$h,96*$scale,96*$scale,[Windows.Media.PixelFormats]::Pbgra32);$bitmap.Render($surface)
+  $stride=$w*4;$pixels=[byte[]]::new($stride*$h);$bitmap.CopyPixels($pixels,$stride,0)
+  return @{Pixels=$pixels;Stride=$stride;Width=$w;Height=$h;Bitmap=$bitmap}
+ } finally { $native.Dispose() }
+}
+$grounds=[ordered]@{Default='#000000';Hojicha='#14100D';KuroNight='#0C0D18';Matcha='#EFE6CF'}
+$catMetrics=@();$catFailures=@()
+foreach($groundName in $grounds.Keys){
+ $groundColor=[Windows.Media.ColorConverter]::ConvertFromString($grounds[$groundName])
+ $groundLum=Lum $groundColor.R $groundColor.G $groundColor.B
+ foreach($kindName in 'Mochi','MatchaMochi','HojichaMochi','Kuro','Shiro'){
+  foreach($face in 'Idle','Angry','Freezing','Sleeping','Electric'){
+   foreach($scale in 1,1.25,1.5,2){
+    $m=New-Mascot $groundName $kindName;$m.Width=22;$m.Height=19;$m.Mood=[Enum]::Parse($moodType,$face)
+    foreach($n in 'BoltA','BoltB','BoltC'){$e=$m.FindName($n);$e.BeginAnimation([Windows.UIElement]::OpacityProperty,$null);$e.Opacity=1}
+    $bounce=$m.FindName('BodyBounceTransform');$bounce.BeginAnimation([Windows.Media.TranslateTransform]::XProperty,$null);$bounce.BeginAnimation([Windows.Media.TranslateTransform]::YProperty,$null);$bounce.X=0;$bounce.Y=0   # headless renders do not run the shake: measure the drawn geometry
+    $img=Render-Pixels $m $scale $groundColor
+    $px=$img.Pixels;$stride=$img.Stride
+    $unit=22.0/30*$scale   # pixels per drawing unit
+    $origin=10*$scale      # the host's padding, in pixels
+    $bodyX=[int][math]::Floor($origin+4.5*$unit);$bodyY=[int][math]::Floor($origin+15*$unit);$bi=$bodyY*$stride+$bodyX*4
+    $bodyLum=Lum $px[$bi+2] $px[$bi+1] $px[$bi]
+    # the eyes: the pixel in the eye band that differs most from the body next to it
+    $eyeContrast=1.0
+    for($y=[int]($origin+8.5*$unit);$y -le [int]($origin+17*$unit);$y++){for($x=[int]($origin+6*$unit);$x -le [int]($origin+24*$unit);$x++){
+     $i=$y*$stride+$x*4;$c=Contrast (Lum $px[$i+2] $px[$i+1] $px[$i]) $bodyLum;if($c -gt $eyeContrast){$eyeContrast=$c}}}
+    # the body, rim and glow ring: the pixel that differs most from the ground in a band across the right edge (6 units inside to 3.5 outside)
+    $ringContrast=1.0
+    for($y=[int]($origin+9*$unit);$y -le [int]($origin+17*$unit);$y++){for($x=[int]($origin+24*$unit);$x -le [int]($origin+33.5*$unit);$x++){
+     $i=$y*$stride+$x*4;$c=Contrast (Lum $px[$i+2] $px[$i+1] $px[$i]) $groundLum;if($c -gt $ringContrast){$ringContrast=$c}}}
+    $catMetrics+=("{0} on {1} ground, {2} {3}%: eyes {4:N1}:1, body/rim/glow {5:N1}:1" -f $kindName,$groundName,$face,($scale*100),$eyeContrast,$ringContrast)
+    if($face -ne 'Electric' -and $face -ne 'Sleeping' -and $eyeContrast -lt 4.5){$catFailures+=("{0} {1} on the {2} ground at {3}%: the eyes are only {4:N2}:1 against the body" -f $kindName,$face,$groundName,($scale*100),$eyeContrast)}
+    if($ringContrast -lt 3){$catFailures+=("{0} {1} on the {2} ground at {3}%: the body, rim and glow ring is only {4:N2}:1 against the ground" -f $kindName,$face,$groundName,($scale*100),$ringContrast)}
+    if($face -eq 'Idle' -and ($scale -eq 1 -or $scale -eq 2)){
+     $encoder=[Windows.Media.Imaging.PngBitmapEncoder]::new();$encoder.Frames.Add([Windows.Media.Imaging.BitmapFrame]::Create($img.Bitmap))
+     $file="{0}-22x19-{1}-{2}.png" -f $kindName.ToLower(),$groundName.ToLower(),([int]($scale*100))
+     $stream=[IO.File]::Create((Join-Path $output $file));$encoder.Save($stream);$stream.Dispose()
+    }
+    $checks++
+   }
+  }
+ }
+}
+$catMetrics|Set-Content (Join-Path $output 'mascot-contrast.txt')
+if($catFailures.Count -gt 0){throw ($catFailures -join "; ")}
+
+# ---- A contact sheet of every face on the KuroNight ground: moods-kuro.png (big) and moods-kuro-capsule.png (22 x 19, 4x zoom of the real size).
+$grid=[Windows.Controls.Primitives.UniformGrid]::new();$grid.Columns=8;$grid.Background=[Windows.Media.SolidColorBrush]::new($kuroGround)
+foreach($key in $sheetFacesKuro.Keys){
+ $cell=[Windows.Controls.StackPanel]::new();$cell.Margin=[Windows.Thickness]::new(6,30,6,14)
+ $m=[Activator]::CreateInstance($mascotClass);$m.Width=96;$m.Height=83;$m.ApplyTheme($kuroNightTheme)
+ $m.Mood=[Enum]::Parse($moodType,$(if($key -eq 'Turning'){'Idle'}else{$key}));if($key -eq 'Turning'){Show-Turn $m 400}
+ $label=[Windows.Controls.TextBlock]::new();$label.Text=$sheetFacesKuro[$key];$label.FontFamily=[Windows.Media.FontFamily]::new('Segoe UI Semibold');$label.FontSize=12.5
+ $label.Foreground=[Windows.Media.BrushConverter]::new().ConvertFromString('#F2F3F8');$label.HorizontalAlignment='Center';$label.Margin=[Windows.Thickness]::new(0,10,0,0)
+ [void]$cell.Children.Add($m);[void]$cell.Children.Add($label);[void]$grid.Children.Add($cell)
+}
+$native,$host2=New-Host $grid 1 $grid.Background
+try{
+ $host2.Measure([Windows.Size]::new(1200,2000));$host2.Arrange([Windows.Rect]::new(0,0,$host2.DesiredSize.Width,$host2.DesiredSize.Height));$host2.UpdateLayout()
+ $bitmap=[Windows.Media.Imaging.RenderTargetBitmap]::new([int]($host2.ActualWidth*2),[int]($host2.ActualHeight*2),192,192,[Windows.Media.PixelFormats]::Pbgra32);$bitmap.Render($host2)
+ $encoder=[Windows.Media.Imaging.PngBitmapEncoder]::new();$encoder.Frames.Add([Windows.Media.Imaging.BitmapFrame]::Create($bitmap))
+ $stream=[IO.File]::Create((Join-Path $output 'moods-kuro.png'));$encoder.Save($stream);$stream.Dispose()
+} finally { $native.Dispose() }
+$checks++
+
+# ---- Shiro, the white cat: Mochi's normal face tints on every theme with a white body for the neutral faces (never Matcha green), dark ink,
+# pink cheeks and inner ears, an ice-blue tail spark, the black shadow and no glow; the ears and the tail take the body's colours.
+# A colour counts as yellow when its hue is from 35 to 70 degrees with some colour in it: no cat may wear a yellow face's body.
+function Is-Yellow($hex){$c=[Windows.Media.ColorConverter]::ConvertFromString($hex);$r=$c.R;$g=$c.G;$b=$c.B;$max=[math]::Max($r,[math]::Max($g,$b));$min=[math]::Min($r,[math]::Min($g,$b));$d=$max-$min
+ if($max -eq 0 -or $d -eq 0 -or ($d/$max) -lt 0.08){return $false}
+ $h=if($max -eq $r){60*((($g-$b)/$d+6)%6)}elseif($max -eq $g){60*(($b-$r)/$d+2)}else{60*(($r-$g)/$d+4)}
+ return ($h -ge 35 -and $h -le 70)}
+$shiroNeutral=@('Idle','Waiting','Music','Alert','Sleeping','Happy','Money','Snowy','Cloudy','Studying','Coffee','Yawning','Birthday','Meeting','Proud','Electric')
+foreach($themeName in 'Default','Hojicha','KuroNight','Matcha'){
+ $s=New-Mascot $themeName 'Shiro'
+ foreach($part in 'KuroEars','KuroTail'){if(!(Visible $s $part)){throw "Shiro on ${themeName}: $part should be visible"}}
+ if(Visible $s 'BodyGlow'){throw "Shiro on ${themeName} has a glow"}
+ foreach($name in $allMoods){
+  $s.Mood=[Enum]::Parse($moodType,'Angry');$s.Mood=[Enum]::Parse($moodType,$name)
+  $top=Body-Top $s
+  if($top -eq '#85B957'){throw "Shiro on ${themeName}: $name turned Matcha green"}
+  # A coloured body is judged by its edge, as ShiroTint does (Break reminder's peach has an orange edge); a yellow edge must come with the white body.
+  $faceEdge=Hex-Of $s.FindName('MochiBodyBorder').BorderBrush.Color
+  if($top -ne '#F4F4F8' -and (Is-Yellow $faceEdge)){throw "Shiro on ${themeName}: $name turned yellow ($top, edge $faceEdge)"}
+  if($shiroNeutral -contains $name -and $top -ne '#F4F4F8'){throw "Shiro on ${themeName}: $name should keep the white body but is $top"}
+  if($name -eq 'Angry' -and $top -eq '#F4F4F8'){throw "Shiro on ${themeName}: Angry lost its own colour"}
+  $edge=Hex-Of $s.FindName('MochiBodyBorder').BorderBrush.Color
+  foreach($ear in 'EarLeft','EarRight'){
+   if((Hex-Of $s.FindName($ear).Fill.Color) -ne $top){throw "Shiro on ${themeName}: the $ear of $name is not the body colour ($top)"}
+   if((Hex-Of $s.FindName($ear).Stroke.Color) -ne $edge){throw "Shiro on ${themeName}: the $ear rim of $name is not the body edge ($edge)"}
+  }
+  if((Hex-Of $s.FindName('TailShape').Fill.Color) -ne $top -or (Hex-Of $s.FindName('TailShape').Stroke.Color) -ne $edge){throw "Shiro on ${themeName}: the tail of $name does not match the body"}
+  if((Brush-Hex $s.FindResource('MascotEyeBrush')) -ne '#1A1412'){throw "Shiro on ${themeName}: the eye ink is not dark in $name"}
+  if($s.FindName('LeftCheek').Fill.Color.A -eq 0){throw "Shiro on ${themeName}: $name lost the pink cheeks"}
+  if((Hex-Of $s.FindName('TailSpark').Fill.Color) -ne '#8FD3FF'){throw "Shiro on ${themeName}: the tail spark is not ice blue"}
+  if((Hex-Of $s.FindName('InnerEarLeft').Fill.Color) -ne '#F4B6C2'){throw "Shiro on ${themeName}: the inner ears are not pink"}
+  $sh=$s.FindName('BodyShadow');if($sh.Color.ToString() -ne '#FF000000' -or $sh.ShadowDepth -ne 1 -or [math]::Abs($sh.Opacity-0.25) -gt 1e-9){throw "Shiro on ${themeName}: the black shadow is gone in $name"}
+  $checks++
+ }
+ $s.Mood=[Enum]::Parse($moodType,'Idle')
+ $wantRim=if($themeName -eq 'Matcha'){'#70727E'}else{'#B8B9C0'}
+ if((Hex-Of $s.FindName('MochiBodyBorder').BorderBrush.Color) -ne $wantRim){throw "Shiro on ${themeName}: the neutral rim should be $wantRim"}
+ $s.Mood=[Enum]::Parse($moodType,'Victory')
+ $wantGold=if($themeName -eq 'Matcha'){'#8F6B0E'}else{'#D9A21C'}
+ if((Body-Top $s) -ne '#F4F4F8' -or (Hex-Of $s.FindName('MochiBodyBorder').BorderBrush.Color) -ne $wantGold){throw "Shiro on ${themeName}: Victory should keep the white body with a $wantGold rim"}
+ $s.Mood=[Enum]::Parse($moodType,'Electric')
+ if(!(Visible $s 'StarEyes') -or !(Visible $s 'BoltOrbit') -or (Body-Top $s) -ne '#F4F4F8'){throw "Shiro on ${themeName}: the Electric face should keep the white body with star eyes and bolts"}
+ $checks+=2
+}
+# The three Mochi colours come from the mascot, not the theme: grey, green or tan on every ground, no ears, tail or glow, dark ink; on the Matcha
+# ground the rim is darker and thicker (and only there).
+$mochiBodies=@{Mochi='#EDEDEF';MatchaMochi='#85B957';HojichaMochi='#E9D3B4'}
+foreach($kindName in $mochiBodies.Keys){
+ foreach($themeName in 'Default','Hojicha','KuroNight','Matcha'){
+  $o=New-Mascot $themeName $kindName
+  foreach($part in 'KuroEars','KuroTail','BodyGlow'){if(Visible $o $part){throw "$kindName on ${themeName} shows $part"}}
+  if((Body-Top $o) -ne $mochiBodies[$kindName]){throw "$kindName on ${themeName} has the body $(Body-Top $o), not $($mochiBodies[$kindName])"}
+  if((Brush-Hex $o.FindResource('MascotEyeBrush')) -ne '#1A1412'){throw "$kindName on ${themeName} lost the dark ink"}
+  $thick=$o.FindName('MochiBodyBorder').BorderThickness.Left;$wantThick=if($themeName -eq 'Matcha'){1.5}else{0.8}
+  if([math]::Abs($thick-$wantThick) -gt 1e-9){throw "$kindName on ${themeName}: the rim is $thick thick, expected $wantThick"}
+  $o.Mood=[Enum]::Parse($moodType,'Angry');$o.Mood=[Enum]::Parse($moodType,'Idle')
+  if((Body-Top $o) -ne $mochiBodies[$kindName]){throw "$kindName on ${themeName} lost its body after a face change"}
+  $checks+=2
+ }
+}
+# Auto is the theme's own mascot, with exactly the old look: grey on Default, tan on Hojicha, green on Matcha.
+foreach($pair in @(@('Default','#EDEDEF'),@('Hojicha','#E9D3B4'),@('Matcha','#85B957'))){
+ $o=[Activator]::CreateInstance($mascotClass);$o.ApplyTheme((Theme-Of $pair[0]))
+ if((Body-Top $o) -ne $pair[1]){throw "Auto on $($pair[0]) should be $($pair[1]) but is $(Body-Top $o)"}
+ $checks++
+}
+# Switching the kind: Shiro back to Mochi gets his body, ink and shadow back; Auto picks Kuro only in KuroNight.
+$sw=New-Mascot 'Matcha' 'Shiro';$sw.ApplyTheme((Theme-Of 'Matcha'),(Kind 'MatchaMochi'))
+if((Body-Top $sw) -ne '#85B957' -or (Visible $sw 'KuroEars')){throw 'Matcha Mochi did not come back after Shiro'}
+$sw.ApplyTheme((Theme-Of 'Default'),(Kind 'Kuro'));$sw.ApplyTheme((Theme-Of 'Default'),(Kind 'Shiro'))
+if((Brush-Hex $sw.FindResource('MascotEyeBrush')) -ne '#1A1412' -or (Body-Top $sw) -ne '#F4F4F8'){throw 'Shiro after Kuro kept the light ink or the charcoal body'}
+$mascotClass.GetProperty('CurrentTheme').SetValue($null,(Theme-Of 'Matcha'))
+$mascotClass.GetProperty('CurrentKind').SetValue($null,(Kind 'Shiro'))
+$lateShiro=[Activator]::CreateInstance($mascotClass)
+if((Body-Top $lateShiro) -ne '#F4F4F8' -or !(Visible $lateShiro 'KuroEars')){throw 'A Mochi created after the theme and the choice should start as Shiro'}
+$mascotClass.GetProperty('CurrentTheme').SetValue($null,(Theme-Of 'Default'))   # clears the explicit kind back to Auto
+$checks+=3
+
+# ---- The headset matches the mascot (MascotHeadset): band and cups in the mascot's colours, a rimmed band, a ring on the cups; the cats wear the
+# band behind their ears; gaming and worried show red lights, a meeting the microphone in the ring colour.
+$headsetCombos=@();foreach($k in 'Mochi','MatchaMochi','HojichaMochi','Kuro','Shiro'){foreach($th in 'Default','Hojicha','Matcha','KuroNight'){$headsetCombos+=,@($k,$th)}}
+foreach($combo in $headsetCombos){
+ $kindName=$combo[0];$themeName=$combo[1];$cat=$kindName -eq 'Kuro' -or $kindName -eq 'Shiro'
+ $look=$headsetType.GetMethod('For').Invoke($null,@((Kind $kindName),$themeName))
+ $m=New-Mascot $themeName $kindName
+ foreach($mood in 'Music','Focused','Worried','Meeting','Idle','Music'){
+  $m.Mood=[Enum]::Parse($moodType,$mood)
+  $label="$kindName on $themeName, $mood"
+  if($mood -eq 'Idle'){
+   if((Visible $m 'HeadphonesLayer') -or (Visible $m 'HeadbandBackLayer')){throw "${label}: the headset stayed on after the face changed (layer $(Visible $m 'HeadphonesLayer'), back $(Visible $m 'HeadbandBackLayer'))"}
+   continue
+  }
+  if(!(Visible $m 'HeadphonesLayer')){throw "${label}: the headset is missing"}
+  if((Hex-Of $m.FindName('HeadbandArc').Stroke.Color) -ne $look.Band -or (Hex-Of $m.FindName('HeadbandRim').Stroke.Color) -ne $look.BandRim){throw "${label}: the band is not $($look.Band) with a $($look.BandRim) rim"}
+  if((Hex-Of $m.FindName('HeadbandBack').Stroke.Color) -ne $look.Band -or (Hex-Of $m.FindName('HeadbandBackRim').Stroke.Color) -ne $look.BandRim){throw "${label}: the back band is not in the mascot's colours"}
+  foreach($cup in 'EarCupLeft','EarCupRight'){
+   $c=$m.FindName($cup)
+   if((Hex-Of $c.Background.Color) -ne $look.Cup -or (Hex-Of $c.BorderBrush.Color) -ne $look.CupRing){throw "${label}: $cup is not $($look.Cup) with a $($look.CupRing) ring"}
+  }
+  if($cat){
+   if(!(Visible $m 'HeadbandBackLayer') -or $m.FindName('HeadbandBackLayer').Opacity -ne 1){throw "${label}: a cat wears the band behind the ears"}
+   if(Visible $m 'HeadbandArc'){throw "${label}: a cat must not wear the front band across the ears"}
+   $rootGrid=$m.FindName('RootGrid')
+   if($rootGrid.Children.IndexOf($m.FindName('HeadbandBackLayer')) -ge $rootGrid.Children.IndexOf($m.FindName('KuroEars'))){throw "${label}: the back band must be behind the ears"}
+  }else{
+   if(!(Visible $m 'HeadbandArc') -or $m.FindName('HeadbandBackLayer').Opacity -ne 0){throw "${label}: Mochi wears the band in front"}
+  }
+  $gaming=$mood -eq 'Focused' -or $mood -eq 'Worried'
+  if((Visible $m 'HeadsetLedLeft') -ne $gaming -or (Visible $m 'HeadsetLedRight') -ne $gaming){throw "${label}: the red lights should be $(if($gaming){'on'}else{'off'})"}
+  if($gaming -and (Hex-Of $m.FindName('HeadsetLedLeft').Fill.Color) -ne '#E5484D'){throw "${label}: the lights are not red"}
+  if((Visible $m 'MicBoom') -ne ($mood -eq 'Meeting')){throw "${label}: the microphone should be $(if($mood -eq 'Meeting'){'shown'}else{'hidden'})"}
+  if($mood -eq 'Meeting' -and ((Hex-Of $m.FindName('MicBoomArm').Stroke.Color) -ne $look.CupRing -or (Hex-Of $m.FindName('MicBoomTip').Fill.Color) -ne $look.CupRing)){throw "${label}: the microphone is not in the ring colour"}
+  $checks++
+ }
+}
+
+# ---- Contact sheets: moods-shiro.png (Shiro on the Default ground), moods-shiro-matcha.png (on the Matcha ground) and headsets.png
+# (Music, Gaming, Worried and Meeting for Mochi on four palettes, Kuro and Shiro).
+function Save-Sheet($element,$name,$scale){
+ $native,$host2=New-Host $element 1 $element.Background
+ try{
+  $host2.Measure([Windows.Size]::new(1600,2400));$host2.Arrange([Windows.Rect]::new(0,0,$host2.DesiredSize.Width,$host2.DesiredSize.Height));$host2.UpdateLayout()
+  $bitmap=[Windows.Media.Imaging.RenderTargetBitmap]::new([int]($host2.ActualWidth*$scale),[int]($host2.ActualHeight*$scale),96*$scale,96*$scale,[Windows.Media.PixelFormats]::Pbgra32);$bitmap.Render($host2)
+  $encoder=[Windows.Media.Imaging.PngBitmapEncoder]::new();$encoder.Frames.Add([Windows.Media.Imaging.BitmapFrame]::Create($bitmap))
+  $stream=[IO.File]::Create((Join-Path $output $name));$encoder.Save($stream);$stream.Dispose()
+ } finally { $native.Dispose() }
+}
+function Label-Brush($ground){$c=[Windows.Media.ColorConverter]::ConvertFromString($ground);if((Lum $c.R $c.G $c.B) -gt 0.4){return [Windows.Media.Brushes]::Black}else{return [Windows.Media.BrushConverter]::new().ConvertFromString('#F2F3F8')}}
+foreach($sheetInfo in @(@('moods-shiro.png','Default'),@('moods-shiro-matcha.png','Matcha'))){
+ $groundHex=$grounds[$sheetInfo[1]]
+ $grid=[Windows.Controls.Primitives.UniformGrid]::new();$grid.Columns=8;$grid.Background=[Windows.Media.BrushConverter]::new().ConvertFromString($groundHex)
+ foreach($key in $sheetFaces.Keys){
+  $cell=[Windows.Controls.StackPanel]::new();$cell.Margin=[Windows.Thickness]::new(6,30,6,14)
+  $m=New-Mascot $sheetInfo[1] 'Shiro';$m.Width=96;$m.Height=83
+  $m.Mood=[Enum]::Parse($moodType,$(if($key -eq 'Turning'){'Idle'}else{$key}));if($key -eq 'Turning'){Show-Turn $m 400}
+  $label=[Windows.Controls.TextBlock]::new();$label.Text=$sheetFaces[$key];$label.FontFamily=[Windows.Media.FontFamily]::new('Segoe UI Semibold');$label.FontSize=12.5
+  $label.Foreground=Label-Brush $groundHex;$label.HorizontalAlignment='Center';$label.Margin=[Windows.Thickness]::new(0,10,0,0)
+  [void]$cell.Children.Add($m);[void]$cell.Children.Add($label);[void]$grid.Children.Add($cell)
+ }
+ Save-Sheet $grid $sheetInfo[0] 2
+}
+$rows=@(@('Mochi','Default'),@('HojichaMochi','Hojicha'),@('MatchaMochi','Matcha'),@('Mochi','KuroNight'),@('Kuro','KuroNight'),@('Shiro','Default'),@('Shiro','Matcha'),@('Mochi','Matcha'),@('HojichaMochi','Matcha'))
+$stack=[Windows.Controls.StackPanel]::new();$stack.Background=[Windows.Media.Brushes]::Black
+foreach($row in $rows){
+ $line=[Windows.Controls.StackPanel]::new();$line.Orientation='Horizontal';$line.Background=[Windows.Media.BrushConverter]::new().ConvertFromString($grounds[$row[1]])
+ $title=[Windows.Controls.TextBlock]::new();$title.Text="$($row[0])`n$($row[1])";$title.Width=80;$title.VerticalAlignment='Center';$title.Margin=[Windows.Thickness]::new(8,0,0,0);$title.FontFamily=[Windows.Media.FontFamily]::new('Segoe UI Semibold');$title.FontSize=12.5;$title.Foreground=Label-Brush $grounds[$row[1]]
+ [void]$line.Children.Add($title)
+ foreach($mood in 'Music','Focused','Worried','Meeting'){
+  $m=New-Mascot $row[1] $row[0];$m.Width=96;$m.Height=83;$m.Margin=[Windows.Thickness]::new(14,22,14,14);$m.Mood=[Enum]::Parse($moodType,$mood)
+  [void]$line.Children.Add($m)
+ }
+ [void]$stack.Children.Add($line)
+}
+Save-Sheet $stack 'headsets.png' 2
+# mascots-on-themes.png: every mascot (rows) on every theme's ground (columns), with the Idle, Music and Angry faces.
+$matrix=[Windows.Controls.StackPanel]::new();$matrix.Background=[Windows.Media.Brushes]::Black
+foreach($kindName in 'Mochi','MatchaMochi','HojichaMochi','Kuro','Shiro'){
+ $line=[Windows.Controls.StackPanel]::new();$line.Orientation='Horizontal'
+ $title=[Windows.Controls.TextBlock]::new();$title.Text=$kindName;$title.Width=110;$title.VerticalAlignment='Center';$title.Margin=[Windows.Thickness]::new(8,0,0,0);$title.FontFamily=[Windows.Media.FontFamily]::new('Segoe UI Semibold');$title.FontSize=12.5;$title.Foreground=[Windows.Media.Brushes]::White
+ [void]$line.Children.Add($title)
+ foreach($groundName in $grounds.Keys){
+  $cellBox=[Windows.Controls.StackPanel]::new();$cellBox.Orientation='Horizontal';$cellBox.Background=[Windows.Media.BrushConverter]::new().ConvertFromString($grounds[$groundName])
+  foreach($mood in 'Idle','Music','Angry'){
+   $m=New-Mascot $groundName $kindName;$m.Width=64;$m.Height=56;$m.Margin=[Windows.Thickness]::new(10,16,10,10);$m.Mood=[Enum]::Parse($moodType,$mood)
+   [void]$cellBox.Children.Add($m)
+  }
+  [void]$line.Children.Add($cellBox)
+ }
+ [void]$matrix.Children.Add($line)
+}
+Save-Sheet $matrix 'mascots-on-themes.png' 2
+$checks++
+
 # ---- Winking closes one eye only, and the Music face sways sideways while it bounces.
 $wink=[Activator]::CreateInstance($mascotType)
 $wink.PerformWink()
@@ -379,4 +702,4 @@ if($wink.FindName('LeftEyeBlinkTransform').HasAnimatedProperties){throw 'A wink 
 $dance=[Activator]::CreateInstance($mascotType);$dance.Mood=[Enum]::Parse($moodType,'Music')
 if(!$dance.FindName('BodyBounceTransform').HasAnimatedProperties){throw 'The Music face does not move'}
 $checks++
-Write-Output "Verified $checks mascot checks: layers per mood at four scales, plain moods restore the colours, extras stay near the body, the eyes of every face are centred and mirrored (measured from pixels), face strokes stay visible at 22 x 19. Strips: $output"
+Write-Output "Verified $checks mascot checks: layers per mood at four scales, plain moods restore the colours, extras stay near the body, the eyes of every face are centred and mirrored (measured from pixels), face strokes stay visible at 22 x 19, Kuro keeps the charcoal body with light ink, Shiro the white body, every mascot (Mochi, Matcha Mochi, Hojicha Mochi, Kuro, Shiro) stays visible on every theme ground, and the headset matches each mascot. Strips: $output"

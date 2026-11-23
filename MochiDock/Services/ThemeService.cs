@@ -20,6 +20,7 @@ public static class ThemeService
     private static readonly ConditionalWeakTable<DependencyObject, MediaBrush> _originalBorderBrushes = new();
 
     private static string? _appliedTheme;
+    private static MochiDock.Core.MascotKind _appliedKind;
 
     /// <summary>Raised on the UI thread after the palette switched to another theme (not on every re-apply).</summary>
     public static event Action? ThemeChanged;
@@ -44,6 +45,9 @@ public static class ThemeService
     public static bool IsHojichaTheme(string? theme) =>
         string.Equals(theme, "Hojicha", StringComparison.OrdinalIgnoreCase);
 
+    public static bool IsKuroNightTheme(string? theme) =>
+        string.Equals(theme, "KuroNight", StringComparison.OrdinalIgnoreCase);
+
     private static SolidColorBrush FrozenBrush(MediaColor color)
     {
         var b = new SolidColorBrush(color);
@@ -58,19 +62,23 @@ public static class ThemeService
         bool isMatcha = IsMatchaTheme(_appliedTheme);
         var mascotTheme = Controls.MascotControl.ToMascotTheme(_appliedTheme);
         ApplyElementStyle(element, isMatcha);
-        UpdateVisualTree(element, isMatcha, mascotTheme);
+        UpdateVisualTree(element, isMatcha, mascotTheme, _appliedKind);
     }
 
     public static void ApplyTheme(Window window, string theme)
     {
         theme = MochiDock.Core.ThemePolicy.Normalize(theme);
-        if (_appliedTheme == theme) return;
+        // Who is drawn: the Mascot setting resolved against the theme (Auto follows it), so a change of either redraws every mascot.
+        var kind = MochiDock.Core.MascotChoice.Resolve(Controls.MascotControl.CurrentChoice, theme);
+        if (_appliedTheme == theme && _appliedKind == kind) return;
         bool isMatcha = IsMatchaTheme(theme);
         bool isHojicha = IsHojichaTheme(theme);
+        bool isKuroNight = IsKuroNightTheme(theme);
         var app = WpfApplication.Current;
         if (app == null) return;
         var mascotTheme = Controls.MascotControl.ToMascotTheme(theme);
         Controls.MascotControl.CurrentTheme = mascotTheme;   // a Mochi created later starts with the right body
+        Controls.MascotControl.CurrentKind = kind;           // and the right cat (set after the theme, which clears the default)
 
         var uiFont = (System.Windows.Media.FontFamily)app.FindResource("QuicksandFont");
         if (!ReferenceEquals(app.Resources["IslandUiFont"], uiFont)) app.Resources["IslandUiFont"] = uiFont;
@@ -227,14 +235,17 @@ public static class ThemeService
 
             // Hojicha is the Default dark palette with warm roasted-tea surfaces and a caramel accent on top.
             if (isHojicha) ApplyHojichaPalette(app);
+            // KuroNight is the same idea: a storm-night indigo dark with an electric-yellow accent.
+            else if (isKuroNight) ApplyKuroNightPalette(app);
         }
 
         // 2. Recursively style / restore elements across the visual tree (Hojicha keeps the XAML's own dark colours)
         if (window != null)
         {
-            UpdateVisualTree(window, isMatcha, mascotTheme);
+            UpdateVisualTree(window, isMatcha, mascotTheme, kind);
         }
 
+        _appliedKind = kind;
         if (_appliedTheme != theme)
         {
             _appliedTheme = theme;
@@ -307,12 +318,78 @@ public static class ThemeService
         SetBrushes(app, "#9A8875", "WeatherMistBrush");
     }
 
+    /// <summary>
+    /// KuroNight: a storm-night dark (deep indigo-black, not pure black) with an electric-yellow accent and electric-blue highlights,
+    /// layered over the Default palette like Hojicha (brand colours stay as they are). Every text brush is at least 4.5:1 on the
+    /// sub-card (#151827); verify-theme-contrast checks it.
+    /// </summary>
+    private static void ApplyKuroNightPalette(WpfApplication app)
+    {
+        SetBrushes(app, "#0C0D18", "IslandGroundBrush");
+        SetBrushes(app, "#11131F", "IslandSurfaceBrush");
+        SetBrushes(app, "#151827", "IslandSubCardBackgroundBrush");
+        SetBrushes(app, "#1A1D2E", "IslandChipBackgroundBrush");
+        SetBrushes(app, "#23273B", "IslandChipActiveBrush");
+        SetBrushes(app, "#262A40", "IslandTabActiveBrush");
+        SetBrushes(app, "#14F2F3F8", "IslandTabHoverBrush");
+        SetBrushes(app, "#181B2A", "IslandControlBackgroundBrush");
+        SetBrushes(app, "#1E2133", "IslandIconButtonBackgroundBrush", "IslandPrayerBadgeBackgroundBrush", "IslandEmailBadgeBackgroundBrush");
+        SetBrushes(app, "#2A2E45", "IslandIconButtonHoverBrush");
+        SetBrushes(app, "#383E5E", "IslandIconButtonPressedBrush", "IslandControlBorderBrush");
+        SetBrushes(app, "#1F2336", "IslandActionButtonBackgroundBrush");
+        SetBrushes(app, "#2D3250", "IslandActionButtonHoverBrush");
+        SetBrushes(app, "#3A4064", "IslandActionButtonPressedBrush");
+        SetBrushes(app, "#2E3350", "IslandBorderBrush", "IslandSubCardBorderBrush", "IslandGaugeTrackBrush", "IslandTrackBrush", "IslandVolumeTrackBrush");
+        SetBrushes(app, "#3A4064", "IslandChipBorderBrush");
+        SetBrushes(app, "#474E74", "IslandScrollBarThumbBrush");
+        SetBrushes(app, "#6B73A0", "IslandScrollBarThumbHoverBrush");
+        SetBrushes(app, "#F2F3F8", "IslandInkBrush");
+        SetBrushes(app, "#A3A8C2", "IslandSecondaryInkBrush");
+        SetBrushes(app, "#8A90AE", "IslandMutedInkBrush");
+        SetBrushes(app, "#DDE0EE", "IslandEmailBadgeInkBrush");
+        SetBrushes(app, "#FFD43B", "IslandAccentBrush", "IslandAccentFillBrush", "IslandVolumeBrush", "IslandPrayerBadgeStrokeBrush", "IslandSelectionBorderBrush");
+        SetBrushes(app, "#14121A", "IslandAccentButtonInkBrush", "IslandMediaGlyphBrush");
+        SetBrushes(app, "#FFF6D0", "IslandSliderThumbBrush");
+        app.Resources["IslandAccentColor"] = MediaColor.FromRgb(255, 212, 59);
+        app.Resources["IslandSelectionColor"] = MediaColor.FromRgb(255, 212, 59);
+        SetBrushes(app, "#26FFD43B", "IslandSelectionFillBrush");
+        SetBrushes(app, "#2EFFD43B", "IslandAccentSubtleBrush");
+        SetBrushes(app, "#8FB8FF", "IslandHighlightBrush", "IslandQiblaBrush");
+        SetBrushes(app, "#268FB8FF", "IslandHighlightSubtleBrush");
+        SetBrushes(app, "#F5C84A", "IslandStatusBrush");
+        SetBrushes(app, "#7CC4E8", "IslandSaturdayBrush");
+        SetBrushes(app, "#8FD18B", "IslandGreenBrush");
+        SetBrushes(app, "#F0A04B", "IslandOrangeBrush");
+        SetBrushes(app, "#FF7A6B", "IslandRedBrush");
+        SetBrushes(app, "#6FA8FF", "IslandBlueBrush");
+        SetBrushes(app, "#8EC1F0", "IslandInfoBrush");
+        SetBrushes(app, "#C9A0F0", "IslandPurpleBrush");
+        SetBrushes(app, "#6CD4A0", "IslandPositiveBrush");
+        SetBrushes(app, "#266CD4A0", "IslandPositiveSubtleBrush");
+        SetBrushes(app, "#FF8FA0", "IslandNegativeBrush");
+        SetBrushes(app, "#26FF8FA0", "IslandNegativeSubtleBrush");
+        SetBrushes(app, "#F2B13C", "IslandWarningBrush");
+        SetBrushes(app, "#26F2B13C", "IslandWarningSubtleBrush");
+        SetBrushes(app, "#16F2F3F8", "IslandChartGridBrush");
+        SetBrushes(app, "#28F2F3F8", "IslandChartGridStrongBrush");
+
+        SetBrushes(app, "#FFFFFF", "ActiveLyricBrush");
+        SetBrushes(app, "#D0F2F3F8", "ActiveLyricRomajiBrush");
+        SetBrushes(app, "#8CF2F3F8", "InactiveLyricBrush");
+        SetBrushes(app, "#6EF2F3F8", "InactiveLyricRomajiBrush");
+
+        SetBrushes(app, "#A9AECB", "WeatherCloudBrush");
+        SetBrushes(app, "#F4F6FF", "WeatherClearCloudBrush");
+        SetBrushes(app, "#D6DAF0", "WeatherPartlyCloudBrush");
+        SetBrushes(app, "#8A90AE", "WeatherMistBrush");
+    }
+
     private static void SetBrushes(WpfApplication app, string color, params string[] keys)
     {
         foreach (var key in keys) app.Resources[key] = FrozenBrush((MediaColor)System.Windows.Media.ColorConverter.ConvertFromString(color));
     }
 
-    private static void UpdateVisualTree(DependencyObject parent, bool isMatcha, Controls.MascotControl.MascotTheme mascotTheme)
+    private static void UpdateVisualTree(DependencyObject parent, bool isMatcha, Controls.MascotControl.MascotTheme mascotTheme, MochiDock.Core.MascotKind kind)
     {
         int count = VisualTreeHelper.GetChildrenCount(parent);
         for (int i = 0; i < count; i++)
@@ -320,7 +397,7 @@ public static class ThemeService
             var child = VisualTreeHelper.GetChild(parent, i);
             if (child is Controls.MascotControl mascot)
             {
-                mascot.ApplyTheme(mascotTheme);
+                mascot.ApplyTheme(mascotTheme, kind);
                 continue; // Never step into MascotControl children so eyes stay #1A1412!
             }
             if (child.GetType().Name.Contains("MascotControl"))
@@ -329,7 +406,7 @@ public static class ThemeService
             }
 
             ApplyElementStyle(child, isMatcha);
-            UpdateVisualTree(child, isMatcha, mascotTheme);
+            UpdateVisualTree(child, isMatcha, mascotTheme, kind);
         }
     }
 

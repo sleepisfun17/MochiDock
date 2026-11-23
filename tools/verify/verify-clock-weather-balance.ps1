@@ -13,7 +13,7 @@ $sheet=[Collections.Generic.List[object]]::new();$checked=0
 function Get-Bounds($element,$root){$p=$element.TransformToAncestor($root).Transform([Windows.Point]::new(0,0));[Windows.Rect]::new($p.X,$p.Y,$element.ActualWidth,$element.ActualHeight)}
 $alignmentType=$assembly.GetType('MochiDock.Core.CapsuleClockAlignment',$false) ?? [Reflection.Assembly]::LoadFrom((Join-Path (Split-Path $assembly.Location) 'MochiDock.Core.dll')).GetType('MochiDock.Core.CapsuleClockAlignment')
 foreach($alignmentName in @('EqualEdges','EvenSpacing')){$alignment=[Enum]::Parse($alignmentType,$alignmentName)
-foreach($theme in @('Dark','Matcha')){foreach($scale in @(1,1.5,2)){foreach($case in @(@('20:50',11),@('23:58',-12),@('08:08',104),@('11:11',7))){
+foreach($theme in @('Dark','Matcha','KuroNight')){foreach($scale in @(1,1.5,2)){foreach($case in @(@('20:50',11),@('23:58',-12),@('08:08',104),@('11:11',7))){
  $reading=$case[0];$temperature=$case[1]
  $vm=New-Model $true 'Maghrib';Set-Field $vm '_pomodoroService' $null
  $settings=$vmType.GetField('_settings',$flags).GetValue($vm);$settings.EnablePrayerPreNotification=$false;$settings.ShowPrayerInCapsule=$false
@@ -31,7 +31,7 @@ foreach($theme in @('Dark','Matcha')){foreach($scale in @(1,1.5,2)){foreach($cas
   [Windows.Threading.Dispatcher]::CurrentDispatcher.Invoke([Windows.Threading.DispatcherPriority]::Loaded,[Action]{})
   $visuals=[Collections.Generic.List[object]]::new();Find-Visuals $grid $visuals
   foreach($visual in $visuals){$assembly.GetType('MochiDock.Services.ThemeService').GetMethod('ApplyElementStyle').Invoke($null,@($visual.PSObject.BaseObject,($theme -eq 'Matcha')))}
-  foreach($m in $visuals){if($m.GetType().FullName -eq 'MochiDock.Controls.MascotControl'){$m.ApplyTheme($theme -eq 'Matcha')}}
+  foreach($m in $visuals){if($m.GetType().FullName -eq 'MochiDock.Controls.MascotControl'){$m.ApplyTheme($(if($theme -eq 'Dark'){'Default'}else{$theme}))}}
   if(!$vm.IsWeatherInMainPill){throw 'Fixture is not in the weather capsule state'}
   $marquee=$grid.FindName('CapsuleMarquee');$mascot=$grid.FindName('PillMascot');$badge=$grid.FindName('PillWeatherBadge')
   $border=$surface.BorderThickness.Left+$surface.BorderThickness.Right

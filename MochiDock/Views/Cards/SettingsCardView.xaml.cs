@@ -102,7 +102,15 @@ public partial class SettingsCardView : UserControl
             string theme = MochiDock.Core.ThemePolicy.Normalize(settings.CapsuleTheme);
             ThemeMatchaRadio.IsChecked = theme == MochiDock.Core.ThemePolicy.Matcha;
             ThemeHojichaRadio.IsChecked = theme == MochiDock.Core.ThemePolicy.Hojicha;
+            ThemeKuroNightRadio.IsChecked = theme == MochiDock.Core.ThemePolicy.KuroNight;
             ThemeClassicRadio.IsChecked = theme == MochiDock.Core.ThemePolicy.Default;
+            string mascot = MochiDock.Core.MascotChoice.Normalize(settings.Mascot);
+            MascotAutoRadio.IsChecked = mascot == MochiDock.Core.MascotChoice.Auto;
+            MascotMochiRadio.IsChecked = mascot == MochiDock.Core.MascotChoice.Mochi;
+            MascotMatchaMochiRadio.IsChecked = mascot == MochiDock.Core.MascotChoice.MatchaMochi;
+            MascotHojichaMochiRadio.IsChecked = mascot == MochiDock.Core.MascotChoice.HojichaMochi;
+            MascotKuroRadio.IsChecked = mascot == MochiDock.Core.MascotChoice.Kuro;
+            MascotShiroRadio.IsChecked = mascot == MochiDock.Core.MascotChoice.Shiro;
             bool notch = string.Equals(settings.DockStyle, "Notch", StringComparison.OrdinalIgnoreCase);
             DockNotchRadio.IsChecked = notch;
             DockFloatingRadio.IsChecked = !notch;
@@ -115,11 +123,25 @@ public partial class SettingsCardView : UserControl
         }
     }
 
+    // The Mascot row mirrors the Mascot dropdown in Advanced Settings: both save the same setting and both reload when it changes.
+    private void MascotRadio_Checked(object sender, RoutedEventArgs e)
+    {
+        if (!IsLoaded || _isLoadingPreferences) return;
+        string chosen = MascotMochiRadio.IsChecked == true ? MochiDock.Core.MascotChoice.Mochi
+                      : MascotMatchaMochiRadio.IsChecked == true ? MochiDock.Core.MascotChoice.MatchaMochi
+                      : MascotHojichaMochiRadio.IsChecked == true ? MochiDock.Core.MascotChoice.HojichaMochi
+                      : MascotKuroRadio.IsChecked == true ? MochiDock.Core.MascotChoice.Kuro
+                      : MascotShiroRadio.IsChecked == true ? MochiDock.Core.MascotChoice.Shiro
+                      : MochiDock.Core.MascotChoice.Auto;
+        ViewModel?.ApplyMascotChoice(chosen);
+    }
+
     private void ThemeRadio_Checked(object sender, RoutedEventArgs e)
     {
         if (!IsLoaded || _isLoadingPreferences) return;
         string chosen = ThemeMatchaRadio.IsChecked == true ? MochiDock.Core.ThemePolicy.Matcha
                       : ThemeHojichaRadio.IsChecked == true ? MochiDock.Core.ThemePolicy.Hojicha
+                      : ThemeKuroNightRadio.IsChecked == true ? MochiDock.Core.ThemePolicy.KuroNight
                       : MochiDock.Core.ThemePolicy.Default;
         ViewModel?.UpdateSettings(x => x.CapsuleTheme = chosen, SettingsApply.Theme);
     }

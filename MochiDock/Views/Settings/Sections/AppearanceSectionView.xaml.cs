@@ -29,6 +29,7 @@ public partial class AppearanceSectionView : SettingsSectionBase
             string theme = MochiDock.Core.ThemePolicy.Normalize(settings.CapsuleTheme);
             ThemeMatchaRadio.IsChecked = theme == MochiDock.Core.ThemePolicy.Matcha;
             ThemeHojichaRadio.IsChecked = theme == MochiDock.Core.ThemePolicy.Hojicha;
+            ThemeKuroNightRadio.IsChecked = theme == MochiDock.Core.ThemePolicy.KuroNight;
             ThemeDefaultRadio.IsChecked = theme == MochiDock.Core.ThemePolicy.Default;
             bool notch = string.Equals(settings.DockStyle, "Notch", StringComparison.OrdinalIgnoreCase);
             DockNotchRadio.IsChecked = notch;
@@ -43,6 +44,17 @@ public partial class AppearanceSectionView : SettingsSectionBase
             ClockEvenRadio.IsChecked = even;
             ClockEdgesRadio.IsChecked = !even;
             ExpressiveCheck.IsChecked = settings.ExpressiveMochi;
+            string mascot = MochiDock.Core.MascotChoice.Normalize(settings.Mascot);
+            if (MascotCombo.Items.Count == 0)
+            {
+                MascotCombo.Items.Add(new ComboBoxItem { Content = "Auto", Tag = MochiDock.Core.MascotChoice.Auto });
+                MascotCombo.Items.Add(new ComboBoxItem { Content = "Mochi (grey)", Tag = MochiDock.Core.MascotChoice.Mochi });
+                MascotCombo.Items.Add(new ComboBoxItem { Content = "Matcha Mochi (green)", Tag = MochiDock.Core.MascotChoice.MatchaMochi });
+                MascotCombo.Items.Add(new ComboBoxItem { Content = "Hojicha Mochi (tan)", Tag = MochiDock.Core.MascotChoice.HojichaMochi });
+                MascotCombo.Items.Add(new ComboBoxItem { Content = "Kuro (black cat)", Tag = MochiDock.Core.MascotChoice.Kuro });
+                MascotCombo.Items.Add(new ComboBoxItem { Content = "Shiro (white cat)", Tag = MochiDock.Core.MascotChoice.Shiro });
+            }
+            MascotCombo.SelectedItem = MascotCombo.Items.OfType<ComboBoxItem>().FirstOrDefault(i => (string)i.Tag == mascot);
             LoadBirthday(settings.BirthdayMonthDay);
             // Labels carry today's date as the example, so rebuild them each time the page is shown.
             var chosenDate = DateDisplay.Parse(settings.DateFormat);
@@ -51,6 +63,12 @@ public partial class AppearanceSectionView : SettingsSectionBase
                 DateFormatCombo.Items.Add(new ComboBoxItem { Content = DateDisplay.Label(style, DateTime.Today), Tag = style });
             DateFormatCombo.SelectedItem = DateFormatCombo.Items.OfType<ComboBoxItem>().FirstOrDefault(i => i.Tag is DateStyle s && s == chosenDate);
         }
+    }
+
+    private void Mascot_Changed(object sender, SelectionChangedEventArgs e)
+    {
+        if (!IsLoaded || Loading) return;
+        if (MascotCombo.SelectedItem is ComboBoxItem { Tag: string choice }) ViewModel?.ApplyMascotChoice(choice);
     }
 
     private void DateFormat_Changed(object sender, SelectionChangedEventArgs e)
@@ -73,6 +91,7 @@ public partial class AppearanceSectionView : SettingsSectionBase
         if (!IsLoaded || Loading) return;
         string theme = ThemeMatchaRadio.IsChecked == true ? MochiDock.Core.ThemePolicy.Matcha
                      : ThemeHojichaRadio.IsChecked == true ? MochiDock.Core.ThemePolicy.Hojicha
+                     : ThemeKuroNightRadio.IsChecked == true ? MochiDock.Core.ThemePolicy.KuroNight
                      : MochiDock.Core.ThemePolicy.Default;
         ViewModel?.UpdateSettings(x => x.CapsuleTheme = theme, SettingsApply.Theme);
     }

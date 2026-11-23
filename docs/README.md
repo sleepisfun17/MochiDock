@@ -69,7 +69,7 @@ Captures and reports are written under `MochiDock/obj/`. Capturing the README sc
 | Feature | Status | Notes |
 | --- | --- | --- |
 | Dock, capsule, hover and navigation | Implemented | Mutually exclusive capsule content; manual card selection persists |
-| Themes, typography, Advanced Settings window | Implemented | Default, Hojicha and Matcha; settings saved atomically; window not runtime-verified; Hojicha render-verified only |
+| Themes, typography, Advanced Settings window | Implemented | Default, Hojicha, Kuro Night and Matcha; a Mascot picker (Auto, Mochi, Matcha Mochi, Hojicha Mochi, Kuro the black cat, Shiro the white cat) in the quick settings card and in Advanced Settings works with every theme; the headset matches each mascot; settings saved atomically; window not runtime-verified; Hojicha and Kuro Night render-verified only |
 | Date format (Automatic, year/day/month first, ISO) | Implemented | `DateDisplay` unit-tested across regions; header, Today, tasks, prayer, power and FX dates follow it |
 | Interface size (80-200%) | Not runtime-verified | `InterfaceScalePercent` |
 | Startup (logon task) and publish/installer scripts | Implemented | Installer not run on a clean machine; unsigned |
@@ -124,7 +124,7 @@ Record date, build/commit, Windows version, monitor layout/DPI, hardware, prereq
 | Gaming transitions | Dock moves to the bottom, click-through, end-of-session summary |
 | Lock and display wake | Summary correct; no replayed stale actions or sounds |
 | Monitors | Mixed DPI, negative coordinates, removal and reconnection keep the dock reachable |
-| Themes and cards | All 18 cards readable in Default, Hojicha and Matcha at 100/125/150% |
+| Themes and cards | All 18 cards readable in Default, Hojicha, Kuro Night and Matcha at 100/125/150%; in Kuro Night the capsule, the gaming capsule and the card header show Kuro with ears and a tail on the left (Shiro the same, in white; pick each in the quick settings Mascot row or Settings > Appearance & Dock > Mascot with each theme, and check Auto follows the theme; the headset matches each mascot, with red lights on the cups for gaming and a microphone in a meeting) (it sways now and then, never while he sleeps or the dock is hidden), petting him crackles and flicks the tail, the Stats Battery page gives the electric face and FX/Weather the spin |
 | Startup | Enable and disable the logon task; only one launch at logon |
 | Phone drop | Old or invalid links rejected, approval required, limits enforced, Stop/lock removes staging files |
 | FX rates | Quotes, 24-hour badges, trajectory, fallback labels, refresh cooldown, lock/resume |

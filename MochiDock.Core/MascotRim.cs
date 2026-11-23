@@ -1,0 +1,51 @@
+namespace MochiDock.Core;
+
+/// <summary>
+/// The rim of every mascot but Kuro on the Matcha theme: its ground is a light oat colour, so the thin light rims of grey Mochi, Hojicha
+/// Mochi and Shiro all but vanish at the capsule size, and even the green Matcha Mochi's coloured faces (Electric, Freezing, Angry) fall
+/// under 3:1 there. On that ground the rim is darker and thicker.
+/// Kuro (he has a glow) and every dark ground are unchanged.
+/// </summary>
+public static class MascotRim
+{
+    public const string DarkNeutral = "#70727E";
+    public const double NormalThickness = 0.8;
+    public const double LightGroundThickness = 1.5;
+    /// <summary>The darkest-needed relative luminance of a rim on the light ground (about 3.8:1 against Matcha's #EFE6CF).</summary>
+    public const double MaxLuminance = 0.17;
+
+    public static bool NeedsDarkRim(MascotKind kind, string? theme) =>
+        ThemePolicy.Normalize(theme) == ThemePolicy.Matcha && kind is not MascotKind.Kuro;
+
+    public static double Thickness(MascotKind kind, string? theme) =>
+        NeedsDarkRim(kind, theme) ? LightGroundThickness : NormalThickness;
+
+    /// <summary>The rim colour for the light ground: a neutral grey becomes <see cref="DarkNeutral"/>, a coloured edge is darkened until it is dark enough.</summary>
+    public static string OnLightGround(string edge)
+    {
+        if (!TryParse(edge, out int r, out int g, out int b)) return DarkNeutral;
+        if (MascotTint.Luminance(r, g, b) <= MaxLuminance) return Hex(r, g, b);
+        int max = Math.Max(r, Math.Max(g, b)), min = Math.Min(r, Math.Min(g, b));
+        if (max == 0 || (max - min) / (double)max < 0.12) return DarkNeutral;
+        for (int i = 0; i < 40 && MascotTint.Luminance(r, g, b) > MaxLuminance; i++)
+        {
+            r = r * 9 / 10; g = g * 9 / 10; b = b * 9 / 10;
+        }
+        return Hex(r, g, b);
+    }
+
+    private static bool TryParse(string? hex, out int r, out int g, out int b)
+    {
+        r = g = b = 0;
+        if (hex == null) return false;
+        string h = hex.Trim().TrimStart('#');
+        if (h.Length == 8) h = h.Substring(2);
+        if (h.Length != 6) return false;
+        var style = System.Globalization.NumberStyles.HexNumber;
+        var culture = System.Globalization.CultureInfo.InvariantCulture;
+        return int.TryParse(h.Substring(0, 2), style, culture, out r) && int.TryParse(h.Substring(2, 2), style, culture, out g)
+            && int.TryParse(h.Substring(4, 2), style, culture, out b);
+    }
+
+    private static string Hex(int r, int g, int b) => $"#{r:X2}{g:X2}{b:X2}";
+}

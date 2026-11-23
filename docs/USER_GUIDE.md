@@ -36,7 +36,7 @@ A new install shows three tabs: **Media**, **Stats** and **Weather**. Everything
 | Section | What you set there |
 | --- | --- |
 | General | Start with Windows, hide in fullscreen, hide from screen capture. |
-| Appearance & Dock | Theme (Default, Hojicha or Matcha), dock style, date format (Automatic follows the Windows region; or year first `2026/11/19 木`, day first `Thu 19 Nov 2026`, month first `Thu, Nov 19, 2026`, ISO `2026-11-19 Thu`), monitor, capsule content, interface size. |
+| Appearance & Dock | Theme (Default, Hojicha, Kuro Night or Matcha), dock style, date format (Automatic follows the Windows region; or year first `2026/11/19 木`, day first `Thu 19 Nov 2026`, month first `Thu, Nov 19, 2026`, ISO `2026-11-19 Thu`), monitor, capsule content, interface size, Mascot (Auto is the theme's own: Mochi on Default, Hojicha Mochi on Hojicha, Matcha Mochi on Matcha and Kuro, the black electric cat, on Kuro Night; or choose grey Mochi, Matcha Mochi, Hojicha Mochi, Kuro or Shiro, the white cat, with any theme; the same choice is in the dock's quick settings under Theme). |
 | Tabs | Which tabs the dock shows. |
 | WhatsApp | Enable WhatsApp, pairing, engine (local or remote), ports, read sync, muted and listed chats. |
 | Email | Mail accounts (Gmail, Yahoo, iCloud, Fastmail or any IMAP server), which Outlook folders to watch (empty by default) and ad filtering. |
@@ -109,7 +109,7 @@ Mochi changes face with what is going on. With **Expressive Mochi** off (Setting
 | Face | When |
 | --- | --- |
 | Idle, thinking | Nothing special; alternates with the idle thoughts. |
-| Music (headset) | Something is playing. |
+| Music (headset) | Something is playing. The headset matches the mascot (graphite with a silver rim for Mochi on Default, and so on). |
 | Alert, Excited | A notification or a new message. |
 | Sleeping | The PC is locked, the screen is off, or nobody has used the keyboard or mouse for 10 minutes; also a short doze while resting (below). |
 | Waking | Back after four hours away, or MochiDock started in the morning. |
@@ -127,7 +127,7 @@ Mochi changes face with what is going on. With **Expressive Mochi** off (Setting
 | Money | The FX Rates card is open: coin eyes, sadder when the rate fell. |
 | Sunny, Rainy, Snowy, Cloudy | The Weather card is open: the current sky (a clear night is cloudy). |
 | Studying | A Pomodoro focus session is running (coffee during its break). |
-| In a meeting | A timed event from your calendar is happening now: a headset with a microphone. |
+| In a meeting | A timed event from your calendar is happening now: a headset with a microphone. (While gaming the headset has small red lights on the cups.) |
 | Birthday | Your birthday (Settings > Appearance & Dock > Your birthday): a party hat and confetti all day. |
 | All tasks done | Every task due today is ticked off (a cheer for the last one, then a green tick). |
 | Up late | Between 23:00 and 05:00: heavy eyes under a crescent moon. |
@@ -136,7 +136,7 @@ Warnings (hot GPU, overdue task, low battery, overload), notifications, games an
 
 **Resting while you work.** Typing counts as being there. When you are busy at the PC but have not touched the dock for a minute and a half, Mochi rests instead of falling asleep: every 2 minutes he moves on through his idle thoughts, a coffee, a bored sigh and a short doze. He only really sleeps once nobody has used the keyboard or mouse for 10 minutes, and he looks up as soon as you come to the dock.
 
-When his face changes, Mochi spins round three times in about 0.6 seconds inside a little anime whirlwind (glowing brush strokes, gold on Default, caramel on Hojicha and green on Matcha) and comes round wearing the new face; he turns as a rounded body, not a flat card. He does not turn for the small blink between thoughts while idle, or for swaps between the gaming faces during a game, and not at all when Windows animations are off.
+When his face changes, Mochi spins round three times in about 0.6 seconds inside a little anime whirlwind (glowing brush strokes, gold for grey Mochi, caramel for Hojicha Mochi, electric yellow for Kuro and green for Matcha Mochi) and comes round wearing the new face; he turns as a rounded body, not a flat card. He does not turn for the small blink between thoughts while idle, or for swaps between the gaming faces during a game, and not at all when Windows animations are off.
 
 ## Updating and uninstalling
 

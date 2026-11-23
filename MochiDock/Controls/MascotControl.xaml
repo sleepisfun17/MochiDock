@@ -10,6 +10,14 @@
              MouseLeftButtonDown="Mascot_MouseLeftButtonDown"
              MouseEnter="Mascot_MouseEnter">
 
+    <UserControl.Resources>
+        <!-- The face ink: the eyes, the happy and slanted eyes, the spiral and star eyes (MascotEyeBrush), the sunglasses (MascotInkBrush) and
+             the closed sleepy arcs (MascotSleepyBrush). Dark in every theme except KuroNight, where Kuro wears light ink (MascotControl.ApplyTheme). -->
+        <SolidColorBrush x:Key="MascotEyeBrush" Color="#1A1412" />
+        <SolidColorBrush x:Key="MascotInkBrush" Color="#1A1412" />
+        <SolidColorBrush x:Key="MascotSleepyBrush" Color="#2C2422" />
+    </UserControl.Resources>
+
     <Viewbox Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center">
     <Grid Width="30" Height="26" ClipToBounds="False" UseLayoutRounding="True" SnapsToDevicePixels="True">
         <!-- The turn's wind (an anime transformation whirlwind), behind Mochi: the far halves of the brush-stroke rings, built in code
@@ -27,6 +35,47 @@
                 </TransformGroup>
             </Grid.RenderTransform>
 
+            <!-- The cats' headband (Kuro and Shiro): drawn behind the ears and the body, so the ears sit in front of it. It follows HeadphonesLayer's
+                 visibility (set in code, MascotControl constructor); Mochi hides it (opacity 0) and uses the front band instead. -->
+            <Canvas x:Name="HeadbandBackLayer" Width="30" Height="26" IsHitTestVisible="False" Opacity="0"
+                    Visibility="Collapsed">
+                <Path x:Name="HeadbandBackRim" Data="M 1.5,9 C 1.5,-4.5 28.5,-4.5 28.5,9" Stroke="#EBEBF0" StrokeThickness="3.2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
+                <Path x:Name="HeadbandBack" Data="M 1.5,9 C 1.5,-4.5 28.5,-4.5 28.5,9" Stroke="#3A3D4A" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
+            </Canvas>
+
+            <!-- Kuro (KuroNight theme only): the ears behind the body, tips about 3 units above the box; one glow effect for both -->
+            <Canvas x:Name="KuroEars" Visibility="Collapsed" Width="30" Height="26" IsHitTestVisible="False">
+                <Canvas.Effect>
+                    <DropShadowEffect x:Name="EarGlow" BlurRadius="5" ShadowDepth="0" Color="#FFD43B" Opacity="0.55" />
+                </Canvas.Effect>
+                <Path x:Name="EarLeft" Data="M 2.6,9 L 3.4,-0.6 Q 3.7,-3 5.6,-2.2 L 12.6,2.6 L 12.6,8 Z"
+                      Fill="#3B3D52" Stroke="#FFD43B" StrokeThickness="0.6" StrokeLineJoin="Round" />
+                <Path x:Name="EarRight" Data="M 27.4,9 L 26.6,-0.6 Q 26.3,-3 24.4,-2.2 L 17.4,2.6 L 17.4,8 Z"
+                      Fill="#3B3D52" Stroke="#FFD43B" StrokeThickness="0.6" StrokeLineJoin="Round" />
+                <Path x:Name="InnerEarLeft" Data="M 5.2,6 L 5.4,0.6 L 9.6,3.4 Z" Fill="#FFD43B" Opacity="0.55" />
+                <Path x:Name="InnerEarRight" Data="M 24.8,6 L 24.6,0.6 L 20.4,3.4 Z" Fill="#FFD43B" Opacity="0.55" />
+            </Canvas>
+
+            <!-- Kuro's tail (KuroNight theme only): a filled tail tapering to a curled tip, behind the body so the body hides its base. It pokes out
+                 about 4 units on the left (away from the clock), sways from the hip now and then and flicks when he is petted. -->
+            <Canvas x:Name="KuroTail" Visibility="Collapsed" Width="30" Height="26" IsHitTestVisible="False">
+                <Canvas.RenderTransform>
+                    <RotateTransform x:Name="TailSwayRotate" CenterX="5" CenterY="21" Angle="0" />
+                </Canvas.RenderTransform>
+                <Path x:Name="TailShape" Data="M 6,24.2 C 0,25 -4.1,21.5 -4,16 C -3.9,12.5 -3,10 -3.4,7.6 C -2.2,8.6 -1.2,10.8 -1.2,14 C -1.2,17.6 0.8,19.6 6,19.8 Z"
+                      Fill="#3B3D52" Stroke="#FFD43B" StrokeThickness="0.6" StrokeLineJoin="Round">
+                    <Path.Effect>
+                        <DropShadowEffect x:Name="TailGlow" BlurRadius="5" ShadowDepth="0" Color="#FFD43B" Opacity="0.55" />
+                    </Path.Effect>
+                </Path>
+                <Path x:Name="TailSpark" Data="M -3,5.4 L -2.4,6.8 L -1,7.4 L -2.4,8 L -3,9.4 L -3.6,8 L -5,7.4 L -3.6,6.8 Z" Fill="#FFF3B0" Opacity="0.85" />
+            </Canvas>
+            <!-- Kuro's glow: a charcoal squircle under the body that carries the glow, because the body itself clips its own effect to its box -->
+            <Border x:Name="BodyGlow" Visibility="Collapsed" CornerRadius="9" Background="#23253A" IsHitTestVisible="False">
+                <Border.Effect>
+                    <DropShadowEffect x:Name="BodyGlowFx" BlurRadius="5" ShadowDepth="0" Color="#FFD43B" Opacity="0.55" />
+                </Border.Effect>
+            </Border>
             <!-- Coucou Authentic Mochi Squircle Body (#EDEDEF to #C4C5CA) -->
             <Border x:Name="MochiBodyBorder"
                     CornerRadius="9" 
@@ -40,12 +89,12 @@
                     </LinearGradientBrush>
                 </Border.Background>
                 <Border.Effect>
-                    <DropShadowEffect BlurRadius="4" ShadowDepth="1" Direction="270" Color="#000000" Opacity="0.25" />
+                    <DropShadowEffect x:Name="BodyShadow" BlurRadius="4" ShadowDepth="1" Direction="270" Color="#000000" Opacity="0.25" />
                 </Border.Effect>
 
                 <Grid HorizontalAlignment="Stretch" VerticalAlignment="Stretch" UseLayoutRounding="True" SnapsToDevicePixels="True">
                     <!-- Subtle Top-Left Specular Highlight -->
-                    <Ellipse Width="16" Height="10" 
+                    <Ellipse x:Name="BodySheen" Width="16" Height="10"
                              HorizontalAlignment="Left" VerticalAlignment="Top" 
                              Margin="3,2,0,0" 
                              IsHitTestVisible="False">
@@ -102,32 +151,32 @@
                             <Rectangle x:Name="LeftPillEye" 
                                        Width="4.8" Height="7.2" 
                                        RadiusX="2.4" RadiusY="2.4"
-                                       Fill="#1A1412"
+                                       Fill="{DynamicResource MascotEyeBrush}"
                                        UseLayoutRounding="False" SnapsToDevicePixels="False" />
 
                             <!-- Happy Eye Arc (Shown when playing music / happy mood) -->
                             <Path x:Name="LeftHappyEye" 
                                   Visibility="Collapsed"
                                   Data="M 0,5.5 A 2.9,2.9 0 0 1 4.8,5.5" 
-                                  Stroke="#1A1412" 
+                                  Stroke="{DynamicResource MascotEyeBrush}"
                                   StrokeThickness="1.5" 
                                   StrokeStartLineCap="Round" 
                                   StrokeEndLineCap="Round" />
                             <!-- Faces: flat eye (hot), droopy eye (drained) and spiral eye (dizzy) -->
-                            <Path x:Name="LeftDetermEye" Visibility="Collapsed" Data="M 0,0.6 L 4.8,2.2 L 4.8,4.2 A 2.4,2.4 0 0 1 0,4.2 Z" Fill="#1A1412" />
-                            <Path x:Name="LeftFlatEye" Visibility="Collapsed" Data="M 0,3.6 L 4.8,3.6" Stroke="#1A1412" StrokeThickness="1.5" StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
-                            <Path x:Name="LeftDroopEye" Visibility="Collapsed" Data="M 0,4.6 L 4.8,2.6" Stroke="#1A1412" StrokeThickness="1.5" StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
+                            <Path x:Name="LeftDetermEye" Visibility="Collapsed" Data="M 0,0.6 L 4.8,2.2 L 4.8,4.2 A 2.4,2.4 0 0 1 0,4.2 Z" Fill="{DynamicResource MascotEyeBrush}" />
+                            <Path x:Name="LeftFlatEye" Visibility="Collapsed" Data="M 0,3.6 L 4.8,3.6" Stroke="{DynamicResource MascotEyeBrush}" StrokeThickness="1.5" StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
+                            <Path x:Name="LeftDroopEye" Visibility="Collapsed" Data="M 0,4.6 L 4.8,2.6" Stroke="{DynamicResource MascotEyeBrush}" StrokeThickness="1.5" StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
                             <Grid x:Name="LeftSpiralEye" Visibility="Collapsed" Width="6" Height="6" HorizontalAlignment="Center" VerticalAlignment="Center" RenderTransformOrigin="0.5,0.5">
                                 <Grid.RenderTransform><RotateTransform x:Name="LeftSpiralRotate" Angle="0" /></Grid.RenderTransform>
-                                <Ellipse Width="6" Height="6" Stroke="#1A1412" StrokeThickness="1.15" Fill="Transparent" />
-                                <Ellipse Width="2.6" Height="2.6" Stroke="#1A1412" StrokeThickness="1.15" Fill="Transparent" />
-                                <Ellipse Width="1" Height="1" Fill="#1A1412" />
+                                <Ellipse Width="6" Height="6" Stroke="{DynamicResource MascotEyeBrush}" StrokeThickness="1.15" Fill="Transparent" />
+                                <Ellipse Width="2.6" Height="2.6" Stroke="{DynamicResource MascotEyeBrush}" StrokeThickness="1.15" Fill="Transparent" />
+                                <Ellipse Width="1" Height="1" Fill="{DynamicResource MascotEyeBrush}" />
                             </Grid>
                             <!-- Sleepy Closed Eye Arc -->
                             <Path x:Name="LeftSleepyEye" 
                                   Visibility="Collapsed"
                                   Data="M 0,3.5 A 2.9,2.9 0 0 0 4.8,3.5" 
-                                  Stroke="#2C2422" 
+                                  Stroke="{DynamicResource MascotSleepyBrush}"
                                   StrokeThickness="1.5" 
                                   StrokeStartLineCap="Round" 
                                   StrokeEndLineCap="Round" />
@@ -144,32 +193,32 @@
                             <Rectangle x:Name="RightPillEye" 
                                        Width="4.8" Height="7.2" 
                                        RadiusX="2.4" RadiusY="2.4"
-                                       Fill="#1A1412"
+                                       Fill="{DynamicResource MascotEyeBrush}"
                                        UseLayoutRounding="False" SnapsToDevicePixels="False" />
 
                             <!-- Happy Eye Arc (Shown when playing music / happy mood) -->
                             <Path x:Name="RightHappyEye" 
                                   Visibility="Collapsed"
                                   Data="M 0,5.5 A 2.9,2.9 0 0 1 4.8,5.5" 
-                                  Stroke="#1A1412" 
+                                  Stroke="{DynamicResource MascotEyeBrush}"
                                   StrokeThickness="1.5" 
                                   StrokeStartLineCap="Round" 
                                   StrokeEndLineCap="Round" />
                             <!-- Faces: flat eye (hot), droopy eye (drained) and spiral eye (dizzy) -->
-                            <Path x:Name="RightDetermEye" Visibility="Collapsed" Data="M 4.8,0.6 L 0,2.2 L 0,4.2 A 2.4,2.4 0 0 0 4.8,4.2 Z" Fill="#1A1412" />
-                            <Path x:Name="RightFlatEye" Visibility="Collapsed" Data="M 0,3.6 L 4.8,3.6" Stroke="#1A1412" StrokeThickness="1.5" StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
-                            <Path x:Name="RightDroopEye" Visibility="Collapsed" Data="M 0,2.6 L 4.8,4.6" Stroke="#1A1412" StrokeThickness="1.5" StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
+                            <Path x:Name="RightDetermEye" Visibility="Collapsed" Data="M 4.8,0.6 L 0,2.2 L 0,4.2 A 2.4,2.4 0 0 0 4.8,4.2 Z" Fill="{DynamicResource MascotEyeBrush}" />
+                            <Path x:Name="RightFlatEye" Visibility="Collapsed" Data="M 0,3.6 L 4.8,3.6" Stroke="{DynamicResource MascotEyeBrush}" StrokeThickness="1.5" StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
+                            <Path x:Name="RightDroopEye" Visibility="Collapsed" Data="M 0,2.6 L 4.8,4.6" Stroke="{DynamicResource MascotEyeBrush}" StrokeThickness="1.5" StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
                             <Grid x:Name="RightSpiralEye" Visibility="Collapsed" Width="6" Height="6" HorizontalAlignment="Center" VerticalAlignment="Center" RenderTransformOrigin="0.5,0.5">
                                 <Grid.RenderTransform><RotateTransform x:Name="RightSpiralRotate" Angle="0" /></Grid.RenderTransform>
-                                <Ellipse Width="6" Height="6" Stroke="#1A1412" StrokeThickness="1.15" Fill="Transparent" />
-                                <Ellipse Width="2.6" Height="2.6" Stroke="#1A1412" StrokeThickness="1.15" Fill="Transparent" />
-                                <Ellipse Width="1" Height="1" Fill="#1A1412" />
+                                <Ellipse Width="6" Height="6" Stroke="{DynamicResource MascotEyeBrush}" StrokeThickness="1.15" Fill="Transparent" />
+                                <Ellipse Width="2.6" Height="2.6" Stroke="{DynamicResource MascotEyeBrush}" StrokeThickness="1.15" Fill="Transparent" />
+                                <Ellipse Width="1" Height="1" Fill="{DynamicResource MascotEyeBrush}" />
                             </Grid>
                             <!-- Sleepy Closed Eye Arc -->
                             <Path x:Name="RightSleepyEye" 
                                   Visibility="Collapsed"
                                   Data="M 0,3.5 A 2.9,2.9 0 0 0 4.8,3.5" 
-                                  Stroke="#2C2422" 
+                                  Stroke="{DynamicResource MascotSleepyBrush}"
                                   StrokeThickness="1.5" 
                                   StrokeStartLineCap="Round" 
                                   StrokeEndLineCap="Round" />
@@ -186,8 +235,8 @@
                         </Path>
                         <!-- Activity faces drawn over the eyes (they follow the gaze): star eyes (Electric), coin eyes (Money), sunglasses (Sunny) -->
                         <Canvas x:Name="StarEyes" Visibility="Collapsed" Canvas.Left="-1" Canvas.Top="-1" UseLayoutRounding="False" SnapsToDevicePixels="False">
-                            <Path Data="M 9.6,8.9 L 10.6,11.5 L 13.2,12.5 L 10.6,13.5 L 9.6,16.1 L 8.6,13.5 L 6,12.5 L 8.6,11.5 Z" Fill="#1A1412" />
-                            <Path Data="M 20.4,8.9 L 21.4,11.5 L 24,12.5 L 21.4,13.5 L 20.4,16.1 L 19.4,13.5 L 16.8,12.5 L 19.4,11.5 Z" Fill="#1A1412" />
+                            <Path Data="M 9.6,8.9 L 10.6,11.5 L 13.2,12.5 L 10.6,13.5 L 9.6,16.1 L 8.6,13.5 L 6,12.5 L 8.6,11.5 Z" Fill="{DynamicResource MascotEyeBrush}" />
+                            <Path Data="M 20.4,8.9 L 21.4,11.5 L 24,12.5 L 21.4,13.5 L 20.4,16.1 L 19.4,13.5 L 16.8,12.5 L 19.4,11.5 Z" Fill="{DynamicResource MascotEyeBrush}" />
                             <Ellipse Canvas.Left="9.9" Canvas.Top="11.2" Width="1" Height="1" Fill="#FFF3B0" />
                             <Ellipse Canvas.Left="20.7" Canvas.Top="11.2" Width="1" Height="1" Fill="#FFF3B0" />
                         </Canvas>
@@ -198,9 +247,9 @@
                             <Path Data="M 19.41,11.15 L 20.4,12.41 L 21.39,11.15 M 20.4,12.41 L 20.4,13.94 M 19.59,12.68 L 21.21,12.68 M 19.59,13.31 L 21.21,13.31" Stroke="#7A5200" StrokeThickness="0.55" StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
                         </Canvas>
                         <Canvas x:Name="Sunglasses" Visibility="Collapsed" Canvas.Left="-1" Canvas.Top="-1" UseLayoutRounding="False" SnapsToDevicePixels="False">
-                            <Rectangle Canvas.Left="6.4" Canvas.Top="10.4" Width="6.4" Height="4.4" RadiusX="1.8" RadiusY="1.8" Fill="#1A1412" />
-                            <Rectangle Canvas.Left="17.2" Canvas.Top="10.4" Width="6.4" Height="4.4" RadiusX="1.8" RadiusY="1.8" Fill="#1A1412" />
-                            <Path Data="M 12.8,11.4 Q 15,10.4 17.2,11.4" Stroke="#1A1412" StrokeThickness="0.8" StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
+                            <Rectangle Canvas.Left="6.4" Canvas.Top="10.4" Width="6.4" Height="4.4" RadiusX="1.8" RadiusY="1.8" Fill="{DynamicResource MascotInkBrush}" />
+                            <Rectangle Canvas.Left="17.2" Canvas.Top="10.4" Width="6.4" Height="4.4" RadiusX="1.8" RadiusY="1.8" Fill="{DynamicResource MascotInkBrush}" />
+                            <Path Data="M 12.8,11.4 Q 15,10.4 17.2,11.4" Stroke="{DynamicResource MascotInkBrush}" StrokeThickness="0.8" StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
                             <Path Data="M 7.6,11.4 L 9.2,11.4 M 18.4,11.4 L 20,11.4" Stroke="#9CC9FF" StrokeThickness="0.6" StrokeStartLineCap="Round" StrokeEndLineCap="Round" Opacity="0.85" />
                         </Canvas>
                     </Canvas>
@@ -213,6 +262,7 @@
                     </Grid>
                 </Grid>
             </Border>
+
 
             <!-- Faces: things outside the body (steam, heat lines, icicles, stars, battery); every child starts collapsed -->
             <Canvas x:Name="ExtrasLayer" Width="30" Height="26" IsHitTestVisible="False" HorizontalAlignment="Center" VerticalAlignment="Center">
@@ -345,16 +395,20 @@
                     <Path Data="M 23,-4.5 L 24.2,-3.2 L 26.4,-5.8" Stroke="#FFFFFF" StrokeThickness="0.9" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" />
                 </Canvas>
                 <Canvas x:Name="MicBoom" Visibility="Collapsed">
-                    <Path Data="M 2.6,16.2 Q 3.4,21.4 8.4,21.2" Stroke="#3A3F4A" StrokeThickness="1" StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
-                    <Ellipse Canvas.Left="7.8" Canvas.Top="20" Width="2.6" Height="2.4" Fill="#3A3F4A" />
+                    <Path x:Name="MicBoomArm" Data="M 2.6,16.2 Q 3.4,21.4 8.4,21.2" Stroke="#3A3F4A" StrokeThickness="1" StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
+                    <Ellipse x:Name="MicBoomTip" Canvas.Left="7.8" Canvas.Top="20" Width="2.6" Height="2.4" Fill="#3A3F4A" />
                 </Canvas>
             </Canvas>
             <!-- Vector Headphones Layer (OUTSIDE the clipped body so the band is never clipped), drawn in the body's 30 x 26 space:
                  the band rests on top of the head and runs down both sides into the ear cups, which sit on the edge of the body at ear height and stay inside its 30 unit width (anything wider is cut by the capsule) -->
             <Canvas x:Name="HeadphonesLayer" Visibility="Collapsed" IsHitTestVisible="False" Width="30" Height="26" HorizontalAlignment="Center" VerticalAlignment="Center">
-                <Path x:Name="HeadbandArc" Data="M 1.5,9 C 1.5,-4.5 28.5,-4.5 28.5,9" Stroke="#0A84FF" StrokeThickness="2.2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
-                <Border x:Name="EarCupLeft" Canvas.Left="0" Canvas.Top="7.6" Width="4.8" Height="8.8" Background="#0062D6" BorderBrush="#FFFFFF" BorderThickness="0.6" CornerRadius="2.2" />
-                <Border x:Name="EarCupRight" Canvas.Left="25.2" Canvas.Top="7.6" Width="4.8" Height="8.8" Background="#0062D6" BorderBrush="#FFFFFF" BorderThickness="0.6" CornerRadius="2.2" />
+                <Path x:Name="HeadbandRim" Data="M 1.5,9 C 1.5,-4.5 28.5,-4.5 28.5,9" Stroke="#EBEBF0" StrokeThickness="3.2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
+                <Path x:Name="HeadbandArc" Data="M 1.5,9 C 1.5,-4.5 28.5,-4.5 28.5,9" Stroke="#3A3D4A" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
+                <Border x:Name="EarCupLeft" Canvas.Left="0" Canvas.Top="7.6" Width="4.8" Height="8.8" Background="#3A3D4A" BorderBrush="#EBEBF0" BorderThickness="0.7" CornerRadius="2.2" />
+                <Border x:Name="EarCupRight" Canvas.Left="25.2" Canvas.Top="7.6" Width="4.8" Height="8.8" Background="#3A3D4A" BorderBrush="#EBEBF0" BorderThickness="0.7" CornerRadius="2.2" />
+                <!-- Gaming and Worried: a small red light on each cup -->
+                <Ellipse x:Name="HeadsetLedLeft" Visibility="Collapsed" Canvas.Left="1.5" Canvas.Top="11.1" Width="1.8" Height="1.8" Fill="#E5484D" />
+                <Ellipse x:Name="HeadsetLedRight" Visibility="Collapsed" Canvas.Left="26.7" Canvas.Top="11.1" Width="1.8" Height="1.8" Fill="#E5484D" />
             </Canvas>
         </Grid>
 

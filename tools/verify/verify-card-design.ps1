@@ -165,7 +165,7 @@ foreach($file in Get-ChildItem (Join-Path $repo "MochiDock/Views/Cards") -Filter
  $xml.DocumentElement.RemoveAttribute("Class","http://schemas.microsoft.com/winfx/2006/xaml")
  foreach($attribute in @($xml.SelectNodes('//@*'))){if($attribute.LocalName -match ('^(?:[A-Za-z]+\.)?(?:'+$events+')$')){$null=$attribute.OwnerElement.RemoveAttributeNode($attribute)}}
  $markup=$xml.OuterXml -replace 'clr-namespace:(MochiDock[.A-Za-z]+)(?=")','clr-namespace:$1;assembly=MochiDock'
- foreach($theme in @("Dark","Matcha","Hojicha")){foreach($scale in @(1,1.25,1.5,2)){
+ foreach($theme in @("Dark","Matcha","Hojicha","KuroNight")){foreach($scale in @(1,1.25,1.5,2)){
  $script:fixtureTheme=$theme;$script:fixtureScale=$scale
   $view=[Windows.Markup.XamlReader]::Parse($markup,$context);$view.DataContext=$data;$view.SetResourceReference([Windows.Controls.Control]::FontFamilyProperty,"IslandUiFont")
   if($name -eq "Today"){
@@ -216,6 +216,19 @@ foreach($file in Get-ChildItem (Join-Path $repo "MochiDock/Views/Cards") -Filter
   [Windows.Media.VisualTreeHelper]::SetRootDpi($surface,[Windows.DpiScale]::new($scale,$scale))
   if($name -eq "Today"){& $renderToday}
   if($name -eq "AiUsage"){& $renderAi}
+  if($name -eq "Settings"){
+   # The quick settings Mascot row sits under the Theme row, has all six choices and wraps inside the card (nothing cut off at any scale).
+   $surface.Measure([Windows.Size]::new($surface.Width,$surface.Height));$surface.Arrange([Windows.Rect]::new(0,0,$surface.Width,$surface.Height));$surface.UpdateLayout()
+   $themeTop=$view.FindName("ThemeClassicRadio").TransformToAncestor($surface).Transform([Windows.Point]::new(0,0)).Y
+   $dockTop=$view.FindName("DockFloatingRadio").TransformToAncestor($surface).Transform([Windows.Point]::new(0,0)).Y
+   foreach($radioName in "MascotAutoRadio","MascotMochiRadio","MascotMatchaMochiRadio","MascotHojichaMochiRadio","MascotKuroRadio","MascotShiroRadio"){
+    $radio=$view.FindName($radioName);if($null -eq $radio){throw "Settings card has no $radioName"}
+    if($radio.ActualWidth -le 0 -or !$radio.IsVisible){throw "$radioName is not shown ($theme, $scale)"}
+    $b=$radio.TransformToAncestor($surface).TransformBounds([Windows.Rect]::new(0,0,$radio.ActualWidth,$radio.ActualHeight))
+    if($b.Left -lt -0.5 -or $b.Right -gt $surface.Width+0.5){throw "$radioName is cut off: $b, $theme, $scale"}
+    if($b.Top -le $themeTop -or $b.Bottom -ge $dockTop+$radio.ActualHeight){throw "$radioName is not between the Theme row and the Dock style row: $b, $theme, $scale"}
+   }
+  }
   if($name -eq "Summary"){
    # Every row, the graph and the buttons must sit inside the card: nothing may be cut off, and the rows must stay left of the graph.
    $surface.Measure([Windows.Size]::new($surface.Width,$surface.Height));$surface.Arrange([Windows.Rect]::new(0,0,$surface.Width,$surface.Height));$surface.UpdateLayout()

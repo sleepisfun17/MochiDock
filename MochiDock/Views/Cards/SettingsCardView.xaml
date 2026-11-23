@@ -55,22 +55,33 @@
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
                             </Grid.RowDefinitions>
                             <TextBlock Grid.Row="0" Text="Theme" Style="{StaticResource CardBodyText}" VerticalAlignment="Center" Margin="0,0,0,6"/>
                             <WrapPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,0,6">
                                 <RadioButton x:Name="ThemeClassicRadio" Style="{StaticResource ModernDarkRadioButton}" Content="Default" GroupName="CapsuleThemeGroup" Margin="0,0,14,0" Checked="ThemeRadio_Checked" />
                                 <RadioButton x:Name="ThemeHojichaRadio" Style="{StaticResource ModernDarkRadioButton}" Content="Hojicha" GroupName="CapsuleThemeGroup" Margin="0,0,14,0" Checked="ThemeRadio_Checked" />
+                                <RadioButton x:Name="ThemeKuroNightRadio" Style="{StaticResource ModernDarkRadioButton}" Content="Kuro Night" GroupName="CapsuleThemeGroup" Margin="0,0,14,0" Checked="ThemeRadio_Checked" />
                                 <RadioButton x:Name="ThemeMatchaRadio" Style="{StaticResource ModernDarkRadioButton}" Content="Matcha" GroupName="CapsuleThemeGroup" Margin="0,0,14,0" Checked="ThemeRadio_Checked" />
                             </WrapPanel>
-                            <TextBlock Grid.Row="1" Text="Dock style" Style="{StaticResource CardBodyText}" VerticalAlignment="Center" Margin="0,0,0,6" ToolTip="Floating is a pill below the top edge; Notch attaches to the top edge of the screen."/>
+                            <TextBlock Grid.Row="1" Text="Mascot" Style="{StaticResource CardBodyText}" VerticalAlignment="Center" Margin="0,0,0,6" ToolTip="Who is drawn: Auto is the theme's own mascot (Kuro in Kuro Night); the others work with every theme."/>
                             <WrapPanel Grid.Row="1" Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,0,6">
+                                <RadioButton x:Name="MascotAutoRadio" Style="{StaticResource ModernDarkRadioButton}" Content="Auto" ToolTip="The theme's own mascot" GroupName="QuickMascotGroup" Margin="0,0,14,0" Checked="MascotRadio_Checked" />
+                                <RadioButton x:Name="MascotMochiRadio" Style="{StaticResource ModernDarkRadioButton}" Content="Mochi" ToolTip="Grey Mochi" GroupName="QuickMascotGroup" Margin="0,0,14,0" Checked="MascotRadio_Checked" />
+                                <RadioButton x:Name="MascotMatchaMochiRadio" Style="{StaticResource ModernDarkRadioButton}" Content="Matcha" ToolTip="Matcha Mochi (green)" GroupName="QuickMascotGroup" Margin="0,0,14,0" Checked="MascotRadio_Checked" />
+                                <RadioButton x:Name="MascotHojichaMochiRadio" Style="{StaticResource ModernDarkRadioButton}" Content="Hojicha" ToolTip="Hojicha Mochi (tan)" GroupName="QuickMascotGroup" Margin="0,0,14,0" Checked="MascotRadio_Checked" />
+                                <RadioButton x:Name="MascotKuroRadio" Style="{StaticResource ModernDarkRadioButton}" Content="Kuro" ToolTip="Kuro, the black cat" GroupName="QuickMascotGroup" Margin="0,0,14,0" Checked="MascotRadio_Checked" />
+                                <RadioButton x:Name="MascotShiroRadio" Style="{StaticResource ModernDarkRadioButton}" Content="Shiro" ToolTip="Shiro, the white cat" GroupName="QuickMascotGroup" Margin="0,0,14,0" Checked="MascotRadio_Checked" />
+                            </WrapPanel>
+                            <TextBlock Grid.Row="2" Text="Dock style" Style="{StaticResource CardBodyText}" VerticalAlignment="Center" Margin="0,0,0,6" ToolTip="Floating is a pill below the top edge; Notch attaches to the top edge of the screen."/>
+                            <WrapPanel Grid.Row="2" Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,0,6">
                                 <RadioButton x:Name="DockFloatingRadio" Style="{StaticResource ModernDarkRadioButton}" Content="Floating" GroupName="QuickDockStyleGroup" Margin="0,0,14,0" Checked="DockStyle_Checked" />
                                 <RadioButton x:Name="DockNotchRadio" Style="{StaticResource ModernDarkRadioButton}" Content="Notch" GroupName="QuickDockStyleGroup" Margin="0,0,14,0" Checked="DockStyle_Checked" />
                             </WrapPanel>
-                            <TextBlock Grid.Row="2" Text="Display" Style="{StaticResource CardBodyText}" VerticalAlignment="Top" Margin="0,5,0,0" ToolTip="Which display the dock appears on."/>
-                            <controls:MonitorPicker Grid.Row="2" Grid.Column="1"/>
-                            <TextBlock Grid.Row="3" Text="Size" Style="{StaticResource CardBodyText}" VerticalAlignment="Center" Margin="0,2,0,0" ToolTip="Interface size: makes MochiDock bigger or smaller (80% to 200%)."/>
-                            <StackPanel Grid.Row="3" Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,2,0,0">
+                            <TextBlock Grid.Row="3" Text="Display" Style="{StaticResource CardBodyText}" VerticalAlignment="Top" Margin="0,5,0,0" ToolTip="Which display the dock appears on."/>
+                            <controls:MonitorPicker Grid.Row="3" Grid.Column="1"/>
+                            <TextBlock Grid.Row="4" Text="Size" Style="{StaticResource CardBodyText}" VerticalAlignment="Center" Margin="0,2,0,0" ToolTip="Interface size: makes MochiDock bigger or smaller (80% to 200%)."/>
+                            <StackPanel Grid.Row="4" Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,2,0,0">
                                 <Button Style="{StaticResource IslandSecondaryButtonStyle}" Content="&#x2212;" Width="28" Padding="0,3" Click="ScaleDown_Click" ToolTip="Smaller" AutomationProperties.Name="Smaller interface"/>
                                 <TextBlock x:Name="QuickScaleText" Style="{StaticResource CardBodyText}" MinWidth="64" TextAlignment="Center" VerticalAlignment="Center" Margin="8,0,0,0"/>
                                 <Button Style="{StaticResource IslandSecondaryButtonStyle}" Content="+" Width="28" Padding="0,3" Margin="8,0,0,0" Click="ScaleUp_Click" ToolTip="Bigger" AutomationProperties.Name="Bigger interface"/>
