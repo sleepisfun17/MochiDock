@@ -1,10 +1,10 @@
 ; MochiDock beta installer (Inno Setup 6). Build with scripts\build_installer.bat, or:
-;   ISCC.exe /DMyAppVersion=0.3.0-beta installer\MochiDock.iss
+;   ISCC.exe /DMyAppVersion=0.3.1-beta installer\MochiDock.iss
 ; The payload is the self-contained publish in ..\Publish-Installer (scripts\publish.ps1 -Installer).
 ; Optional Downloads tools: put ffmpeg.exe and/or yt-dlp.exe in installer\redist before compiling.
 
 #ifndef MyAppVersion
-  #define MyAppVersion "0.3.0-beta"
+  #define MyAppVersion "0.3.1-beta"
 #endif
 #define MyAppName "MochiDock"
 #define MyAppExe "MochiDock.exe"
