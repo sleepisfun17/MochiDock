@@ -359,6 +359,9 @@
                         <ScaleTransform x:Name="BadgeSize" ScaleX="1" ScaleY="1" />
                         <ScaleTransform x:Name="BadgeScale" ScaleX="1" ScaleY="1" />
                         <TranslateTransform x:Name="BadgePos" X="25.2" Y="3.8" />
+                        <!-- Cancels the body's bounce and sway (bound, negated, to BodyBounceTransform in code), so the small glyph stays sharp
+                             while the mascot dances: moved by fractions of a pixel every frame it shimmered into a blob -->
+                        <TranslateTransform x:Name="BadgeSteady" X="0" Y="0" />
                     </TransformGroup>
                 </Canvas.RenderTransform>
                 <Ellipse x:Name="BadgeRing" Canvas.Left="-4.9" Canvas.Top="-4.9" Width="9.8" Height="9.8" Fill="#FFFFFF" />

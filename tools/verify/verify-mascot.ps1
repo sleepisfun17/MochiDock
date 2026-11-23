@@ -598,6 +598,26 @@ if($angryRim -eq '#8F6B0E' -or $angryRim -eq '#FFD43B' -or (Visible $kl 'BodyGlo
 $kl.Mood=[Enum]::Parse($moodType,'Electric')
 if((Visible $kl 'BodyGlow') -or (Body-Top $kl) -ne '#3B3D52'){throw 'Kuro on Matcha: Electric must stay charcoal and glow-free'}
 $checks+=4
+# The status badge stays still while the body bounces or sways (Music, a new message, Victory, the overdue shake): moved by fractions of a
+# pixel every frame, the few-pixel glyph shimmered into a blob. The body's offset is set by hand here; the badge must not follow it.
+foreach($kindName in 'Kuro','Shiro','Mochi'){
+ foreach($name in 'Music','Excited','Victory','Angry'){
+  $m=New-Mascot 'Default' $kindName;$m.Mood=[Enum]::Parse($moodType,$name)
+  if(!(Visible $m 'StatusBadge')){if($kindName -eq 'Mochi' -and $name -eq 'Music'){continue};throw "$kindName ${name}: no badge to check"}
+  $m.Width=30;$m.Height=26;$m.Measure([Windows.Size]::new(60,60));$m.Arrange([Windows.Rect]::new(0,0,30,26));$m.UpdateLayout()
+  $bounce=$m.FindName('BodyBounceTransform');$badge=$m.FindName('StatusBadge');$body=$m.FindName('MochiBodyBorder')
+  foreach($a in 'X','Y'){$bounce.BeginAnimation([Windows.Media.TranslateTransform]::"$($a)Property",$null)}
+  $bounce.X=0;$bounce.Y=0;$m.UpdateLayout()
+  $rest=$badge.TransformToAncestor($m).Transform([Windows.Point]::new(0,0));$bodyRest=$body.TransformToAncestor($m).Transform([Windows.Point]::new(0,0))
+  foreach($o in @(@(1.3,-2.5),@(-1.3,0),@(0.4,-1.5))){
+   $bounce.X=$o[0];$bounce.Y=$o[1];$m.UpdateLayout()
+   $p=$badge.TransformToAncestor($m).Transform([Windows.Point]::new(0,0));$b=$body.TransformToAncestor($m).Transform([Windows.Point]::new(0,0))
+   if([math]::Abs($p.X-$rest.X) -gt 0.01 -or [math]::Abs($p.Y-$rest.Y) -gt 0.01){throw "$kindName ${name}: the badge moved with the body by ($([math]::Round($p.X-$rest.X,3)), $([math]::Round($p.Y-$rest.Y,3)))"}
+   if([math]::Abs($b.X-$bodyRest.X) -lt 0.1 -and [math]::Abs($b.Y-$bodyRest.Y) -lt 0.1){throw "$kindName ${name}: the body did not move, so the check proves nothing"}
+   $checks++
+  }
+ }
+}
 # The three Mochi colours come from the mascot, not the theme: grey, green or tan on every ground, no ears, tail or glow, dark ink; on the Matcha
 # ground the rim is darker and thicker (and only there).
 $mochiBodies=@{Mochi='#EDEDEF';MatchaMochi='#85B957';HojichaMochi='#E9D3B4'}

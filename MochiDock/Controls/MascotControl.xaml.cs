@@ -127,6 +127,11 @@ public partial class MascotControl : System.Windows.Controls.UserControl
     {
 
         InitializeComponent();
+        // The status badge stays still while the body bounces or sways (Music, a new message, Victory, the overdue shake...): it follows the
+        // body's offset, negated, every frame. The badge is only a few pixels wide, and moving it by fractions of a pixel made it shimmer.
+        foreach (var axis in new[] { TranslateTransform.XProperty, TranslateTransform.YProperty })
+            System.Windows.Data.BindingOperations.SetBinding(BadgeSteady, axis,
+                new System.Windows.Data.Binding(axis.Name) { Source = BodyBounceTransform, Converter = NegateConverter.Instance });
         // The cats' back band is shown whenever the headset is (many faces switch HeadphonesLayer; one place keeps the two together).
         System.ComponentModel.DependencyPropertyDescriptor.FromProperty(UIElement.VisibilityProperty, typeof(UIElement))
             .AddValueChanged(HeadphonesLayer, (_, _) => HeadbandBackLayer.Visibility = HeadphonesLayer.Visibility);
@@ -1645,5 +1650,13 @@ public partial class MascotControl : System.Windows.Controls.UserControl
         ApplyCatParts();   // right away: the ears and the tail are not part of a face
         if (_spinning) return;   // the turn applies the face (in the new theme) when it comes round
         ApplyMood(Mood);   // repaint the face being worn, not only the resting body
+    }
+
+    // -x for the badge's counter-offset (BadgeSteady follows BodyBounceTransform, negated).
+    private sealed class NegateConverter : System.Windows.Data.IValueConverter
+    {
+        public static readonly NegateConverter Instance = new();
+        public object Convert(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture) => value is double d ? -d : 0.0;
+        public object ConvertBack(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture) => value is double d ? -d : 0.0;
     }
 }
