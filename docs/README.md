@@ -69,7 +69,7 @@ Captures and reports are written under `MochiDock/obj/`. Capturing the README sc
 | Feature | Status | Notes |
 | --- | --- | --- |
 | Dock, capsule, hover and navigation | Implemented | Mutually exclusive capsule content; manual card selection persists |
-| Themes, typography, Advanced Settings window | Implemented | Default, Hojicha, Kuro Night and Matcha; a Mascot picker (Auto, Mochi, Matcha Mochi, Hojicha Mochi, Kuro the black cat, Shiro the white cat) in the quick settings card and in Advanced Settings works with every theme; the headset matches each mascot; settings saved atomically; window not runtime-verified; Hojicha and Kuro Night render-verified only |
+| Themes, typography, Advanced Settings window | Implemented | Default, Hojicha, Kuro Night and Matcha; a Mascot picker (Auto, Mochi, Matcha Mochi, Hojicha Mochi, Kuro the black cat, Shiro the white cat) in the quick settings card and in Advanced Settings works with every theme; the headset matches each mascot; faces tell themselves at capsule size by one corner status badge (`MascotBadge`) and distinct eyes (wide, round, half-lidded, glancing); settings saved atomically; window not runtime-verified; Hojicha and Kuro Night render-verified only |
 | Date format (Automatic, year/day/month first, ISO) | Implemented | `DateDisplay` unit-tested across regions; header, Today, tasks, prayer, power and FX dates follow it |
 | Interface size (80-200%) | Not runtime-verified | `InterfaceScalePercent` |
 | Startup (logon task) and publish/installer scripts | Implemented | Installer not run on a clean machine; unsigned |

@@ -421,65 +421,43 @@ public partial class MascotControl : System.Windows.Controls.UserControl
 
 
 
+    // The plain faces (Idle, Thinking, Notice, Music, Sleeping, Gaming, Happy): pill eyes and nothing else unless the case changes it. The faces
+    // that look alike are told apart by their eyes (Thinking glances, Notice is wide-eyed, Sleeping has closed arcs) and, for Notice and
+    // Sleeping, by the status badge (ApplyBadge).
     private void ApplyBaseMood(MascotMood mood)
-
     {
-
+        ShowEyes(Eyes.Pill);
+        HeadphonesLayer.Visibility = Visibility.Collapsed;
+        SweatDrop.Visibility = Visibility.Collapsed;
+        BodyBounceTransform.BeginAnimation(TranslateTransform.YProperty, null);
         switch (mood)
-
         {
-
+            case MascotMood.Waiting:
+                // Thinking: both pills glance up and to the side.
+                LeftPillShift.X = RightPillShift.X = 1.7;
+                LeftPillShift.Y = RightPillShift.Y = -1.9;
+                break;
+            case MascotMood.Alert:
+                // A notice: wide eyes (the red "!" badge says what it is).
+                ShowEyes(Eyes.Wide);
+                PerformBlink();
+                break;
             case MascotMood.Music:
-
-                LeftPillEye.Visibility = Visibility.Collapsed;
-
-                RightPillEye.Visibility = Visibility.Collapsed;
-
-                LeftHappyEye.Visibility = Visibility.Visible;
-
-                RightHappyEye.Visibility = Visibility.Visible;
-                LeftSleepyEye.Visibility = Visibility.Collapsed;
-                RightSleepyEye.Visibility = Visibility.Collapsed;
-                SleepyParticle.BeginAnimation(OpacityProperty, null);
-                SleepyParticle.Opacity = 0;
-
-                HeadphonesLayer.Visibility = Visibility.Visible;
-
-                SweatDrop.Visibility = Visibility.Collapsed;
-
-
-
+                ShowEyes(Eyes.Happy);
+                ShowHeadset(HeadsetMood.Music);
                 var bounceAnim = new DoubleAnimation(0, -2.5, TimeSpan.FromMilliseconds(380))
-
                 {
-
                     AutoReverse = true,
-
                     RepeatBehavior = RepeatBehavior.Forever,
-
                     EasingFunction = new SineEase { EasingMode = EasingMode.EaseInOut }
-
                 };
-
                 BodyBounceTransform.BeginAnimation(TranslateTransform.YProperty, bounceAnim);
                 // Dancing: a side sway at half the bounce rate (a canned rhythm; the app has no audio level to follow).
                 if (AnimationsEnabled) BodyBounceTransform.BeginAnimation(TranslateTransform.XProperty, Loop(-1.3, 1.3, 760, easing: new SineEase { EasingMode = EasingMode.EaseInOut }));
-
                 break;
-
-
-
             case MascotMood.Sleeping:
-                LeftPillEye.Visibility = Visibility.Collapsed;
-                RightPillEye.Visibility = Visibility.Collapsed;
-                LeftHappyEye.Visibility = Visibility.Collapsed;
-                RightHappyEye.Visibility = Visibility.Collapsed;
-                LeftSleepyEye.Visibility = Visibility.Visible;
-                RightSleepyEye.Visibility = Visibility.Visible;
-                HeadphonesLayer.Visibility = Visibility.Collapsed;
-                SweatDrop.Visibility = Visibility.Collapsed;
-
-                // Deep relaxed sleeping breathing sway
+                ShowEyes(Eyes.Sleepy);
+                // Deep relaxed sleeping breathing sway (the "z" is the status badge)
                 var sleepBreathing = new DoubleAnimation(0, 1.8, TimeSpan.FromMilliseconds(1600))
                 {
                     AutoReverse = true,
@@ -487,172 +465,23 @@ public partial class MascotControl : System.Windows.Controls.UserControl
                     EasingFunction = new SineEase { EasingMode = EasingMode.EaseInOut }
                 };
                 BodyBounceTransform.BeginAnimation(TranslateTransform.YProperty, sleepBreathing);
-
-                // Floating Zzz animation
-                var zzzOpacity = new DoubleAnimation(0, 0.9, TimeSpan.FromMilliseconds(1600))
-                {
-                    AutoReverse = true,
-                    RepeatBehavior = RepeatBehavior.Forever
-                };
-                var zzzTranslate = new DoubleAnimation(0, -5, TimeSpan.FromMilliseconds(1600))
-                {
-                    AutoReverse = true,
-                    RepeatBehavior = RepeatBehavior.Forever,
-                    EasingFunction = new SineEase { EasingMode = EasingMode.EaseOut }
-                };
-                SleepyParticle.BeginAnimation(OpacityProperty, zzzOpacity);
-                SleepyTranslate.BeginAnimation(TranslateTransform.YProperty, zzzTranslate);
                 break;
-
-
-
-            case MascotMood.Alert:
-
-                LeftPillEye.Visibility = Visibility.Visible;
-
-                RightPillEye.Visibility = Visibility.Visible;
-
-                LeftHappyEye.Visibility = Visibility.Collapsed;
-
-                RightHappyEye.Visibility = Visibility.Collapsed;
-                LeftSleepyEye.Visibility = Visibility.Collapsed;
-                RightSleepyEye.Visibility = Visibility.Collapsed;
-                SleepyParticle.BeginAnimation(OpacityProperty, null);
-                SleepyParticle.Opacity = 0;
-
-                HeadphonesLayer.Visibility = Visibility.Collapsed;
-
-                SweatDrop.Visibility = Visibility.Collapsed;
-
-
-
-                BodyBounceTransform.BeginAnimation(TranslateTransform.YProperty, null);
-
-                PerformBlink();
-
-                break;
-
-
-
             case MascotMood.Focused:
-
-                LeftPillEye.Visibility = Visibility.Visible;
-
-                RightPillEye.Visibility = Visibility.Visible;
-
-                LeftHappyEye.Visibility = Visibility.Collapsed;
-
-                RightHappyEye.Visibility = Visibility.Collapsed;
-                LeftSleepyEye.Visibility = Visibility.Collapsed;
-                RightSleepyEye.Visibility = Visibility.Collapsed;
-                SleepyParticle.BeginAnimation(OpacityProperty, null);
-                SleepyParticle.Opacity = 0;
-
-                HeadphonesLayer.Visibility = Visibility.Collapsed;
-
-                SweatDrop.Visibility = Visibility.Collapsed;
-
-
-
-                BodyBounceTransform.BeginAnimation(TranslateTransform.YProperty, null);
-
                 FaceTransform.X = 0;
-
                 FaceTransform.Y = 0;
-
                 _curX = 0;
-
                 _curY = 0;
-
                 _targetX = 0;
-
                 _targetY = 0;
-
                 break;
-
-
-
             case MascotMood.Happy:
-
-                LeftPillEye.Visibility = Visibility.Collapsed;
-
-                RightPillEye.Visibility = Visibility.Collapsed;
-
-                LeftHappyEye.Visibility = Visibility.Visible;
-
-                RightHappyEye.Visibility = Visibility.Visible;
-                LeftSleepyEye.Visibility = Visibility.Collapsed;
-                RightSleepyEye.Visibility = Visibility.Collapsed;
-                SleepyParticle.BeginAnimation(OpacityProperty, null);
-                SleepyParticle.Opacity = 0;
-
-                HeadphonesLayer.Visibility = Visibility.Collapsed;
-
-                SweatDrop.Visibility = Visibility.Collapsed;
-
+                ShowEyes(Eyes.Happy);
                 BodyBounceTransform.BeginAnimation(TranslateTransform.YProperty,
-
                     new DoubleAnimation(0, -1.5, TimeSpan.FromMilliseconds(300))
-
                     { AutoReverse = true, RepeatBehavior = new RepeatBehavior(2) });
-
                 break;
-
-
-
-            case MascotMood.Hot:
-
-                LeftPillEye.Visibility = Visibility.Visible;
-
-                RightPillEye.Visibility = Visibility.Visible;
-
-                LeftHappyEye.Visibility = Visibility.Collapsed;
-
-                RightHappyEye.Visibility = Visibility.Collapsed;
-                LeftSleepyEye.Visibility = Visibility.Collapsed;
-                RightSleepyEye.Visibility = Visibility.Collapsed;
-                SleepyParticle.BeginAnimation(OpacityProperty, null);
-                SleepyParticle.Opacity = 0;
-
-                HeadphonesLayer.Visibility = Visibility.Collapsed;
-
-                SweatDrop.Visibility = Visibility.Visible;
-
-                BodyBounceTransform.BeginAnimation(TranslateTransform.YProperty, null);
-
-                break;
-
-
-
-            default:
-
-                LeftPillEye.Visibility = Visibility.Visible;
-
-                RightPillEye.Visibility = Visibility.Visible;
-
-                LeftHappyEye.Visibility = Visibility.Collapsed;
-
-                RightHappyEye.Visibility = Visibility.Collapsed;
-                LeftSleepyEye.Visibility = Visibility.Collapsed;
-                RightSleepyEye.Visibility = Visibility.Collapsed;
-                SleepyParticle.BeginAnimation(OpacityProperty, null);
-                SleepyParticle.Opacity = 0;
-
-                HeadphonesLayer.Visibility = Visibility.Collapsed;
-
-                SweatDrop.Visibility = Visibility.Collapsed;
-
-
-
-                BodyBounceTransform.BeginAnimation(TranslateTransform.YProperty, null);
-
-                break;
-
         }
-
     }
-
-
 
     // ---------------- Faces: angry, hot, freezing, dizzy and drained ----------------
     // Every mood first goes through ResetExtras, which hides all extra layers, stops their animations and restores the body colours,
@@ -698,6 +527,7 @@ public partial class MascotControl : System.Windows.Controls.UserControl
         if (IsExtraMood(mood)) ApplyExtraMood(mood);
         else ApplyBaseMood(mood);
         if (mood == MascotMood.Focused) ApplyFocusedFace();
+        ApplyBadge(mood);
         _appliedMood = mood;
     }
 
@@ -735,7 +565,6 @@ public partial class MascotControl : System.Windows.Controls.UserControl
         _spinning = true;
         _swapped = false;
         _pendingMood = mood;
-        SleepyParticle.Visibility = Visibility.Hidden;   // its own opacity is animated (Zzz), so it is hidden for the spin
         StartWind();
         // Slow start, very fast middle, soft landing.
         var turn = new DoubleAnimation(0, MascotTurn.TotalDegrees, TurnDuration) { EasingFunction = new SineEase { EasingMode = EasingMode.EaseInOut }, FillBehavior = FillBehavior.Stop };
@@ -777,7 +606,6 @@ public partial class MascotControl : System.Windows.Controls.UserControl
         BeginAnimation(SpinAngleProperty, null);
         ApplyTurnFrame(MascotTurn.At(0));
         ExtrasLayer.Opacity = 1;
-        SleepyParticle.Visibility = Visibility.Visible;
         if (!_swapped || _appliedMood != _pendingMood) ApplyMood(_pendingMood);
         StopWind(fade: landing && AnimationsEnabled);
         if (landing) WobbleDizzy();
@@ -1014,8 +842,21 @@ public partial class MascotControl : System.Windows.Controls.UserControl
 
     // The headset matches the mascot (MascotHeadset); the face is told by marks: red lights on the cups for the gaming faces, the
     // microphone for a meeting. The cats wear the band behind their ears (HeadbandBackLayer), Mochi in front.
-    private void ApplyHeadset(HeadsetMood mood)
+    // Shows the headset of a face. The cats wear none (a human headset sits badly on ears): their Music, Gaming and Meeting faces have a
+    // badge instead (MascotBadge.For(mood, kind)), so every headset layer stays hidden for them.
+    private void ShowHeadset(HeadsetMood mood)
     {
+        ApplyHeadset(mood);
+        if (_isCat)
+        {
+            HeadphonesLayer.Visibility = MicBoom.Visibility = Visibility.Collapsed;
+            return;
+        }
+        HeadphonesLayer.Visibility = Visibility.Visible;
+        if (mood == HeadsetMood.Meeting) MicBoom.Visibility = Visibility.Visible;
+    }
+
+    private void ApplyHeadset(HeadsetMood mood)    {
         var h = MochiDock.Core.MascotHeadset.For(_kind, ThemeName);
         var band = Ink(h.Band);
         var rim = Ink(h.BandRim);
@@ -1037,79 +878,46 @@ public partial class MascotControl : System.Windows.Controls.UserControl
     private void ApplyFocusedFace()
     {
         SetTint(new[] { "#E3E8F2", "#C3CCE0", "#5B6B8C", "#40FF7896" }, new[] { "#9DB8A9", "#7A9A8A", "#3F6656", "#40FF7896" }, animate: false);
-        UseEyes(pill: false, flat: false, droop: false, spiral: false);
-        LeftDetermEye.Visibility = RightDetermEye.Visibility = Visibility.Visible;
-        ApplyHeadset(HeadsetMood.Gaming);
-        HeadphonesLayer.Visibility = Visibility.Visible;
+        ShowEyes(Eyes.Determ);
+        ShowHeadset(HeadsetMood.Gaming);
     }
 
     private void ResetExtras()
     {
         foreach (UIElement element in new UIElement[]
         {
-            TearDrop, TearDropRight, AngerMark, StartleLines, WorryDrop, SparkleGroup, CoffeeGroup, ExclaimGroup, ConfettiGroup, SighGroup,
+            TearDrop, TearDropRight, StartleLines, ConfettiGroup,
             LeftDetermEye, RightDetermEye, LeftFlatEye, RightFlatEye, LeftDroopEye, RightDroopEye, LeftSpiralEye, RightSpiralEye,
-            SteamLeft, SteamRight, HeatLines, IcicleGroup, StarsGroup, BatteryGroup,
-            StarEyes, CoinEyes, Sunglasses, BoltOrbit, CoinFloat, UmbrellaGroup, RainGroup, ScarfGroup, SnowGroup, CloudGroup, SunGroup, TimerBadge,
-            MoonGroup, PartyHat, CheckBadge, MicBoom,
+            LeftWideEye, RightWideEye, LeftRoundEye, RightRoundEye, LeftLidEye, RightLidEye,
+            IcicleGroup, StarsGroup,
+            StarEyes, CoinEyes, Sunglasses, BoltOrbit, RainGroup, ScarfGroup,
+            PartyHat, MicBoom, StatusBadge,
         }) element.Visibility = Visibility.Collapsed;
-        MoonStar.BeginAnimation(OpacityProperty, null);
-        MoonStar.Opacity = 1;
+        LeftPillShift.X = RightPillShift.X = LeftPillShift.Y = RightPillShift.Y = 0;
+        BadgeScale.BeginAnimation(ScaleTransform.ScaleXProperty, null);
+        BadgeScale.BeginAnimation(ScaleTransform.ScaleYProperty, null);
+        BadgeScale.ScaleX = BadgeScale.ScaleY = 1;
 
         BoltOrbitRotate.BeginAnimation(RotateTransform.AngleProperty, null);
         BoltOrbitRotate.Angle = 0;
         foreach (var bolt in new[] { BoltA, BoltB, BoltC }) { bolt.BeginAnimation(OpacityProperty, null); bolt.Opacity = 1; }
-        CoinT.BeginAnimation(TranslateTransform.YProperty, null);
-        CoinFloat.BeginAnimation(OpacityProperty, null);
-        CoinT.Y = 0;
-        CoinFloat.Opacity = 1;
         RainT.BeginAnimation(TranslateTransform.YProperty, null);
         RainGroup.BeginAnimation(OpacityProperty, null);
         RainT.Y = 0;
         RainGroup.Opacity = 1;
-        SnowT.BeginAnimation(TranslateTransform.YProperty, null);
-        SnowGroup.BeginAnimation(OpacityProperty, null);
-        SnowT.Y = 0;
-        SnowGroup.Opacity = 1;
-        CloudT.BeginAnimation(TranslateTransform.XProperty, null);
-        CloudT.X = 0;
-        SunRaysRotate.BeginAnimation(RotateTransform.AngleProperty, null);
-        TimerHandRotate.BeginAnimation(RotateTransform.AngleProperty, null);
-        SunRaysRotate.Angle = TimerHandRotate.Angle = 0;
-
-        WorryDropT.BeginAnimation(TranslateTransform.YProperty, null);
-        WorryDrop.BeginAnimation(OpacityProperty, null);
-        WorryDrop.Opacity = 1;
-        WorryDropT.Y = 0;
         ApplyHeadset(HeadsetMood.Music);   // the plain matching headset; the gaming faces add red lights, a meeting the microphone
-        AngerMark.BeginAnimation(OpacityProperty, null);
-        AngerMark.Opacity = 1;
         TearRightT.BeginAnimation(TranslateTransform.YProperty, null);
         TearDropRight.BeginAnimation(OpacityProperty, null);
         TearRightT.Y = 0;
         TearDropRight.Opacity = 1;
-        CoffeeSteam.BeginAnimation(OpacityProperty, null);
-        CoffeeSteam.Opacity = 1;
-        ExclaimGroup.BeginAnimation(OpacityProperty, null);
-        ExclaimGroup.Opacity = 1;
-        SighT.BeginAnimation(TranslateTransform.YProperty, null);
-        SighGroup.BeginAnimation(OpacityProperty, null);
-        SighGroup.Opacity = 1;
-        SighT.Y = 0;
         ConfettiT.BeginAnimation(TranslateTransform.YProperty, null);
         ConfettiGroup.BeginAnimation(OpacityProperty, null);
         ConfettiGroup.Opacity = 1;
         ConfettiT.Y = 0;
         TearT.BeginAnimation(TranslateTransform.YProperty, null);
         TearDrop.BeginAnimation(OpacityProperty, null);
-        foreach (var sparkle in new[] { SparkleA, SparkleB, SparkleC }) sparkle.BeginAnimation(OpacityProperty, null);
         TearT.Y = 0;
-        TearDrop.Opacity = SparkleA.Opacity = SparkleB.Opacity = SparkleC.Opacity = 1;
-        SteamLeftT.BeginAnimation(TranslateTransform.YProperty, null);
-        SteamRightT.BeginAnimation(TranslateTransform.YProperty, null);
-        SteamLeft.BeginAnimation(OpacityProperty, null);
-        SteamRight.BeginAnimation(OpacityProperty, null);
-        HeatT.BeginAnimation(TranslateTransform.YProperty, null);
+        TearDrop.Opacity = 1;
         SweatTransform.BeginAnimation(TranslateTransform.YProperty, null);
         SweatDrop.BeginAnimation(OpacityProperty, null);
         LeftSpiralRotate.BeginAnimation(RotateTransform.AngleProperty, null);
@@ -1117,8 +925,8 @@ public partial class MascotControl : System.Windows.Controls.UserControl
         foreach (var star in new[] { StarA, StarB, StarC }) star.BeginAnimation(OpacityProperty, null);
         BodyBounceTransform.BeginAnimation(TranslateTransform.XProperty, null);
         BodyBounceTransform.X = 0;
-        SteamLeftT.Y = SteamRightT.Y = HeatT.Y = SweatTransform.Y = 0;
-        SteamLeft.Opacity = SteamRight.Opacity = SweatDrop.Opacity = 1;
+        SweatTransform.Y = 0;
+        SweatDrop.Opacity = 1;
         StarA.Opacity = StarB.Opacity = StarC.Opacity = 1;
         _electricFace = false;
         _kuroSparkWanted = false;
@@ -1172,28 +980,32 @@ public partial class MascotControl : System.Windows.Controls.UserControl
         }
     }
 
-    // The plain starting point of every extra face: pill eyes visible, the other eye shapes and the accessories hidden.
+    // The plain starting point of every extra face: pill eyes visible and the accessories hidden.
     private void ResetEyesForExtraMood()
     {
-        LeftPillEye.Visibility = Visibility.Visible;
-        RightPillEye.Visibility = Visibility.Visible;
-        LeftHappyEye.Visibility = Visibility.Collapsed;
-        RightHappyEye.Visibility = Visibility.Collapsed;
-        LeftSleepyEye.Visibility = Visibility.Collapsed;
-        RightSleepyEye.Visibility = Visibility.Collapsed;
-        SleepyParticle.BeginAnimation(OpacityProperty, null);
-        SleepyParticle.Opacity = 0;
+        ShowEyes(Eyes.Pill);
         HeadphonesLayer.Visibility = Visibility.Collapsed;
         SweatDrop.Visibility = Visibility.Collapsed;
         BodyBounceTransform.BeginAnimation(TranslateTransform.YProperty, null);
     }
 
-    private void UseEyes(bool pill, bool flat, bool droop, bool spiral)
+    // The eye shapes a face can wear (all drawn with MascotEyeBrush, so Kuro's yellow ink works). The overlays for Electric (star eyes), Money
+    // (coin eyes) and Sunny (sunglasses) are separate canvases that the face shows on top of None.
+    private enum Eyes { Pill, Happy, Sleepy, Determ, Flat, Droop, Spiral, Wide, Round, Lid, None }
+
+    private void ShowEyes(Eyes kind)
     {
-        LeftPillEye.Visibility = RightPillEye.Visibility = pill ? Visibility.Visible : Visibility.Collapsed;
-        LeftFlatEye.Visibility = RightFlatEye.Visibility = flat ? Visibility.Visible : Visibility.Collapsed;
-        LeftDroopEye.Visibility = RightDroopEye.Visibility = droop ? Visibility.Visible : Visibility.Collapsed;
-        LeftSpiralEye.Visibility = RightSpiralEye.Visibility = spiral ? Visibility.Visible : Visibility.Collapsed;
+        static Visibility V(bool on) => on ? Visibility.Visible : Visibility.Collapsed;
+        LeftPillEye.Visibility = RightPillEye.Visibility = V(kind == Eyes.Pill);
+        LeftHappyEye.Visibility = RightHappyEye.Visibility = V(kind == Eyes.Happy);
+        LeftSleepyEye.Visibility = RightSleepyEye.Visibility = V(kind == Eyes.Sleepy);
+        LeftDetermEye.Visibility = RightDetermEye.Visibility = V(kind == Eyes.Determ);
+        LeftFlatEye.Visibility = RightFlatEye.Visibility = V(kind == Eyes.Flat);
+        LeftDroopEye.Visibility = RightDroopEye.Visibility = V(kind == Eyes.Droop);
+        LeftSpiralEye.Visibility = RightSpiralEye.Visibility = V(kind == Eyes.Spiral);
+        LeftWideEye.Visibility = RightWideEye.Visibility = V(kind == Eyes.Wide);
+        LeftRoundEye.Visibility = RightRoundEye.Visibility = V(kind == Eyes.Round);
+        LeftLidEye.Visibility = RightLidEye.Visibility = V(kind == Eyes.Lid);
     }
 
     private static DoubleAnimation Loop(double from, double to, int milliseconds, bool reverse = true, IEasingFunction? easing = null) => new(from, to, TimeSpan.FromMilliseconds(milliseconds))
@@ -1202,6 +1014,67 @@ public partial class MascotControl : System.Windows.Controls.UserControl
         RepeatBehavior = RepeatBehavior.Forever,
         EasingFunction = easing,
     };
+
+    // ---------------- The status badge ----------------
+    // One disc in the top-right corner (MascotBadge says which glyph and colour each face gets). The glyph shapes are filled paths drawn for
+    // about 7 px, in a box of about -3..3 units around the disc's centre.
+    private static readonly Dictionary<string, Geometry> BadgeGlyphs = new()
+    {
+        ["exclaim"] = Glyph("M -0.85,-2.9 L 0.85,-2.9 L 0.6,0.9 L -0.6,0.9 Z M 0,1.55 A 0.95,0.95 0 1 1 0,3.45 A 0.95,0.95 0 1 1 0,1.55 Z"),
+        ["z"] = Glyph("M -2,-2.3 L 2,-2.3 L 2,-1.2 L -0.5,1.3 L 2.1,1.3 L 2.1,2.5 L -2.1,2.5 L -2.1,1.4 L 0.4,-1.1 L -2,-1.1 Z"),
+        ["moon"] = Glyph("M 0.7,-3 A 3.1,3.1 0 1 0 2.8,1.2 A 2.5,2.5 0 0 1 0.7,-3 Z"),
+        ["cup"] = Glyph("M -2.7,-2 L 1.2,-2 L 1.2,2.6 L -2.7,2.6 Z M 1.2,-1.1 L 3,-1.1 L 3,1.5 L 1.2,1.5 L 1.2,0.6 L 2.1,0.6 L 2.1,-0.2 L 1.2,-0.2 Z"),
+        ["bell"] = Glyph("M 0,-3 C -1.9,-3 -2.4,-1.3 -2.4,0.2 L -2.4,1.2 L -3.1,2 L 3.1,2 L 2.4,1.2 L 2.4,0.2 C 2.4,-1.3 1.9,-3 0,-3 Z M -1,2.5 L 1,2.5 A 1,1 0 0 1 -1,2.5 Z"),
+        ["pause"] = Glyph("M -2.1,-2.4 L -0.6,-2.4 L -0.6,2.4 L -2.1,2.4 Z M 0.6,-2.4 L 2.1,-2.4 L 2.1,2.4 L 0.6,2.4 Z"),
+        ["trophy"] = Glyph("M -2.3,-2.8 L 2.3,-2.8 L 2.3,0 C 2.3,1.4 1.3,1.9 0,1.9 C -1.3,1.9 -2.3,1.4 -2.3,0 Z M -3.3,-2.2 L -2.3,-2.2 L -2.3,-0.5 L -3.3,-0.5 Z M 3.3,-2.2 L 2.3,-2.2 L 2.3,-0.5 L 3.3,-0.5 Z M -0.7,1.7 L 0.7,1.7 L 0.7,2.2 L 1.9,2.2 L 1.9,3.1 L -1.9,3.1 L -1.9,2.2 L -0.7,2.2 Z"),
+        ["clock"] = Glyph("F0 M 0,-3 A 3,3 0 1 1 0,3 A 3,3 0 1 1 0,-3 Z M 0,-2.1 A 2.1,2.1 0 1 0 0,2.1 A 2.1,2.1 0 1 0 0,-2.1 Z M -0.45,-1.5 L 0.45,-1.5 L 0.45,0.3 L 1.5,0.3 L 1.5,1.1 L -0.45,1.1 Z"),
+        ["battery"] = Glyph("F0 M -3,-1.9 L 2.1,-1.9 L 2.1,1.9 L -3,1.9 Z M -2.2,-1.1 L 1.3,-1.1 L 1.3,1.1 L -2.2,1.1 Z M -2,-0.8 L -1.1,-0.8 L -1.1,0.8 L -2,0.8 Z M 2.1,-0.9 L 3.1,-0.9 L 3.1,0.9 L 2.1,0.9 Z"),
+        ["up"] = Glyph("M 0,-2.8 L 2.9,2.2 L -2.9,2.2 Z"),
+        ["down"] = Glyph("M 0,2.8 L 2.9,-2.2 L -2.9,-2.2 Z"),
+        ["sun"] = Glyph("M 0,-1.6 A 1.6,1.6 0 1 1 0,1.6 A 1.6,1.6 0 1 1 0,-1.6 Z M -0.4,-3.1 L 0.4,-3.1 L 0.4,-2.2 L -0.4,-2.2 Z M -0.4,2.2 L 0.4,2.2 L 0.4,3.1 L -0.4,3.1 Z M -3.1,-0.4 L -2.2,-0.4 L -2.2,0.4 L -3.1,0.4 Z M 2.2,-0.4 L 3.1,-0.4 L 3.1,0.4 L 2.2,0.4 Z M 1.6,-2.5 L 2.5,-1.6 L 1.9,-1.0 L 1.0,-1.9 Z M -1.6,-2.5 L -2.5,-1.6 L -1.9,-1.0 L -1.0,-1.9 Z M 1.6,2.5 L 2.5,1.6 L 1.9,1.0 L 1.0,1.9 Z M -1.6,2.5 L -2.5,1.6 L -1.9,1.0 L -1.0,1.9 Z"),
+        ["umbrella"] = Glyph("M -3,0.4 A 3,3 0 0 1 3,0.4 Z M -0.25,0.4 L 0.25,0.4 L 0.25,2.3 L -0.25,2.3 Z M -1.3,2.3 L 0.25,2.3 L 0.25,1.9 L -0.9,1.9 L -0.9,2.9 L -1.3,2.9 Z"),
+        ["snow"] = Glyph("M -3,-0.6 L 3,-0.6 L 3,0.6 L -3,0.6 Z M 1.02,2.87 L 1.98,2.32 L -1.02,-2.87 L -1.98,-2.32 Z M -1.02,2.87 L -1.98,2.32 L 1.02,-2.87 L 1.98,-2.32 Z"),
+        ["cloud"] = Glyph("M -2.7,1.7 A 1.6,1.6 0 0 1 -2.1,-1.2 A 2.1,2.1 0 0 1 1.9,-1.4 A 1.7,1.7 0 0 1 2.7,1.7 Z"),
+        ["timer"] = Glyph("F0 M 0,-2.3 A 2.6,2.6 0 1 1 0,2.9 A 2.6,2.6 0 1 1 0,-2.3 Z M 0,-1.5 A 1.8,1.8 0 1 0 0,2.1 A 1.8,1.8 0 1 0 0,-1.5 Z M -0.35,-1.1 L 0.35,-1.1 L 0.35,0.8 L -0.35,0.8 Z M -0.8,-3.4 L 0.8,-3.4 L 0.8,-2.6 L -0.8,-2.6 Z"),
+        ["tick"] = Glyph("M -2.8,0.2 L -1.7,-0.9 L -0.6,0.2 L 1.8,-2.4 L 2.9,-1.3 L -0.6,2.4 Z"),
+        ["note"] = Glyph("M 0.6,-3 L 1.8,-3 L 1.8,2 L 0.6,2 Z M 1.8,-3 L 3.2,-2 L 3.2,-0.6 L 1.8,-1.6 Z M -0.5,0.8 A 1.7,1.3 0 1 1 -0.5,3.4 A 1.7,1.3 0 1 1 -0.5,0.8 Z"),
+        ["controller"] = Glyph("F0 M -3,-0.6 C -3,-1.8 -2.2,-2.3 -1.4,-2.3 L 1.4,-2.3 C 2.2,-2.3 3,-1.8 3,-0.6 L 3.3,1.7 C 3.4,2.6 2.9,3 2.3,3 C 1.7,3 1.4,2.7 1.1,2.2 L 0.7,1.6 L -0.7,1.6 L -1.1,2.2 C -1.4,2.7 -1.7,3 -2.3,3 C -2.9,3 -3.4,2.6 -3.3,1.7 Z M -1.9,-0.35 L -1.25,-0.35 L -1.25,-1 L -0.75,-1 L -0.75,-0.35 L -0.1,-0.35 L -0.1,0.15 L -0.75,0.15 L -0.75,0.8 L -1.25,0.8 L -1.25,0.15 L -1.9,0.15 Z M 1.6,-0.7 A 0.5,0.5 0 1 1 0.6,-0.7 A 0.5,0.5 0 1 1 1.6,-0.7 Z M 2.4,0.3 A 0.5,0.5 0 1 1 1.4,0.3 A 0.5,0.5 0 1 1 2.4,0.3 Z"),
+        ["mic"] = Glyph("M -1.2,-1.9 A 1.2,1.2 0 0 1 1.2,-1.9 L 1.2,0.3 A 1.2,1.2 0 0 1 -1.2,0.3 Z M -2.4,-0.5 L -1.7,-0.5 A 1.7,1.7 0 0 0 1.7,-0.5 L 2.4,-0.5 A 2.4,2.4 0 0 1 -2.4,-0.5 Z M -0.4,1.8 L 0.4,1.8 L 0.4,2.7 L -0.4,2.7 Z M -1.6,2.6 L 1.6,2.6 L 1.6,3.2 L -1.6,3.2 Z"),
+    };
+
+    private static Geometry Glyph(string data)
+    {
+        var g = Geometry.Parse(data);
+        g.Freeze();
+        return g;
+    }
+
+    // Shows the badge of the face (none for the faces the eyes tell). Notice and New message pop it in once and pulse it once, no loop.
+    private void ApplyBadge(MascotMood mood)
+    {
+        if (MochiDock.Core.MascotBadge.For(mood, _kind) is not { } b) { StatusBadge.Visibility = Visibility.Collapsed; return; }
+        BadgeDisc.Fill = Ink(b.Fill);
+        BadgeGlyph.Fill = Ink(b.Ink);
+        BadgeRing.Fill = Ink(MochiDock.Core.MascotBadge.RingFor(ThemeName, b.Fill));
+        BadgeGlyph.Data = BadgeGlyphs.TryGetValue(b.Glyph, out var glyph) ? glyph : Geometry.Empty;
+        // The Mochi kinds: the top-right corner. The cats: the top centre, between the ears, a little smaller (radius 4.4 with its ring).
+        BadgePos.X = _isCat ? 15 : 25.2;
+        BadgePos.Y = _isCat ? 0.5 : 3.8;
+        BadgeSize.ScaleX = BadgeSize.ScaleY = _isCat ? 0.9 : 1;
+        StatusBadge.Visibility = Visibility.Visible;
+        if (mood is MascotMood.Alert or MascotMood.Excited && AnimationsEnabled && IsLoaded && IsVisible) PopBadge();
+    }
+
+    private void PopBadge()
+    {
+        foreach (var property in new[] { ScaleTransform.ScaleXProperty, ScaleTransform.ScaleYProperty })
+        {
+            var pop = new DoubleAnimationUsingKeyFrames { FillBehavior = FillBehavior.Stop };
+            foreach (var (ms, value) in new[] { (0, 0.0), (150, 1.15), (250, 1.0), (420, 1.14), (560, 1.0) })
+                pop.KeyFrames.Add(new EasingDoubleKeyFrame(value, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(ms)), new SineEase { EasingMode = EasingMode.EaseOut }));
+            BadgeScale.BeginAnimation(property, pop);
+        }
+    }
 
     private void ApplyExtraMood(MascotMood mood)
     {
@@ -1216,46 +1089,31 @@ public partial class MascotControl : System.Windows.Controls.UserControl
         switch (mood)
         {
             case MascotMood.Angry:
+                // Overdue task: sharp slanted eyes on the red body, and the red clock badge. The body trembles a little.
                 SetTint("#F8C9C2", "#EFA79C", "#C0392B", "#99E24B4A");
-                // Sharp slanted eyes, the anger mark above the head and a puff on each side.
-                UseEyes(pill: false, flat: false, droop: false, spiral: false);
-                LeftDetermEye.Visibility = RightDetermEye.Visibility = AngerMark.Visibility = Visibility.Visible;
-                SteamLeft.Visibility = SteamRight.Visibility = Visibility.Visible;
-                if (animate)
-                {
-                    AngerMark.BeginAnimation(OpacityProperty, Loop(1, 0.35, 380));
-                    // Puffs rise from the top corners and fade; the body trembles a little.
-                    SteamLeftT.BeginAnimation(TranslateTransform.YProperty, Loop(0, -3, 900, reverse: false));
-                    SteamRightT.BeginAnimation(TranslateTransform.YProperty, Loop(0, -3, 900, reverse: false));
-                    SteamLeft.BeginAnimation(OpacityProperty, Loop(0.95, 0, 900, reverse: false));
-                    SteamRight.BeginAnimation(OpacityProperty, Loop(0.95, 0, 900, reverse: false));
-                    BodyBounceTransform.BeginAnimation(TranslateTransform.XProperty, Loop(-0.4, 0.4, 110));
-                }
+                ShowEyes(Eyes.Determ);
+                if (animate) BodyBounceTransform.BeginAnimation(TranslateTransform.XProperty, Loop(-0.4, 0.4, 110));
                 break;
-
             case MascotMood.Hot:
+                // Hot: an orange body, flat eyes and a sweat drop.
                 SetTint("#F9D2B2", "#F2B089", "#D9622B", "#99E24B4A");
-                UseEyes(pill: false, flat: true, droop: false, spiral: false);
+                ShowEyes(Eyes.Flat);
                 SweatDrop.Visibility = Visibility.Visible;
-                HeatLines.Visibility = Visibility.Visible;
                 if (animate)
                 {
                     SweatTransform.BeginAnimation(TranslateTransform.YProperty, Loop(0, 4, 1000, reverse: false));
                     SweatDrop.BeginAnimation(OpacityProperty, Loop(1, 0.1, 1000, reverse: false));
-                    HeatT.BeginAnimation(TranslateTransform.YProperty, Loop(0, -1.2, 700, easing: new SineEase()));
                 }
                 break;
-
             case MascotMood.Freezing:
+                // Freezing: a blue body, icicles hanging from the top edge and a shiver.
                 SetTint(new[] { "#9CCBEA", "#72AEDB", "#3F7FB5", "#997FB5E8" }, new[] { "#9CCBEA", "#72AEDB", "#3F7FB5", "#997FB5E8" });
-                UseEyes(pill: true, flat: false, droop: false, spiral: false);
                 IcicleGroup.Visibility = Visibility.Visible;
                 if (animate) BodyBounceTransform.BeginAnimation(TranslateTransform.XProperty, Loop(-0.7, 0.7, 60));
                 break;
-
             case MascotMood.Dizzy:
                 SetTint(new[] { "#B9AEE0", "#9C8FD0", "#6F63B8", "#66B9A6E6" }, new[] { "#B9AEE0", "#9C8FD0", "#6F63B8", "#66B9A6E6" });
-                UseEyes(pill: false, flat: false, droop: false, spiral: true);
+                ShowEyes(Eyes.Spiral);
                 StarsGroup.Visibility = Visibility.Visible;
                 if (animate)
                 {
@@ -1266,26 +1124,16 @@ public partial class MascotControl : System.Windows.Controls.UserControl
                     StarC.BeginAnimation(OpacityProperty, Loop(1, 0.2, 650));
                 }
                 break;
-
             case MascotMood.Victory:
-                // Won the match: a gold glow, happy arc eyes and twinkling sparkles.
+                // Won the match: a gold body, happy arc eyes and the gold trophy badge (Shiro keeps white with a gold rim).
                 SetTint(new[] { "#FCEFC4", "#F4D98A", "#D9A21C", "#99FF7896" }, new[] { "#F2D56A", "#E6BC3A", "#B58A10", "#99FF7896" });
-                UseEyes(pill: false, flat: false, droop: false, spiral: false);
-                LeftHappyEye.Visibility = RightHappyEye.Visibility = Visibility.Visible;
-                SparkleGroup.Visibility = Visibility.Visible;
-                if (animate)
-                {
-                    SparkleA.BeginAnimation(OpacityProperty, Loop(1, 0.25, 450));
-                    SparkleB.BeginAnimation(OpacityProperty, Loop(0.25, 1, 450));
-                    SparkleC.BeginAnimation(OpacityProperty, Loop(1, 0.25, 600));
-                    BodyBounceTransform.BeginAnimation(TranslateTransform.YProperty, Loop(0, -1.5, 300, easing: new SineEase { EasingMode = EasingMode.EaseOut }));
-                }
+                ShowEyes(Eyes.Happy);
+                if (animate) BodyBounceTransform.BeginAnimation(TranslateTransform.YProperty, Loop(0, -1.5, 300, easing: new SineEase { EasingMode = EasingMode.EaseOut }));
                 break;
-
             case MascotMood.Defeat:
                 // Lost the match: a cool grey-blue tint, sad drooping eyes and a tear from each eye; the body sinks a little.
                 SetTint(new[] { "#9FB0CC", "#7F93B5", "#566A8E", "#40FF7896" }, new[] { "#9FB0CC", "#7F93B5", "#566A8E", "#40FF7896" });
-                UseEyes(pill: false, flat: false, droop: true, spiral: false);
+                ShowEyes(Eyes.Droop);
                 TearDrop.Visibility = TearDropRight.Visibility = Visibility.Visible;
                 if (animate)
                 {
@@ -1296,32 +1144,23 @@ public partial class MascotControl : System.Windows.Controls.UserControl
                     BodyBounceTransform.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(0, 1.2, TimeSpan.FromMilliseconds(700)) { FillBehavior = FillBehavior.HoldEnd });
                 }
                 break;
-
             case MascotMood.Excited:
-                // A new message: wide eyes, a bouncing body and an exclamation mark.
+                // A new message: wide eyes, a bouncing blue body and the red "!" badge that pops in.
                 SetTint(new[] { "#8FB0F2", "#6E94E6", "#3F62C8", "#80FF7896" }, new[] { "#8FB0F2", "#6E94E6", "#3F62C8", "#80FF7896" });
-                UseEyes(pill: true, flat: false, droop: false, spiral: false);
-                ExclaimGroup.Visibility = Visibility.Visible;
-                if (animate)
-                {
-                    ExclaimGroup.BeginAnimation(OpacityProperty, Loop(1, 0.35, 350));
-                    BodyBounceTransform.BeginAnimation(TranslateTransform.YProperty, Loop(0, -2, 260, easing: new SineEase { EasingMode = EasingMode.EaseOut }));
-                }
+                ShowEyes(Eyes.Wide);
+                if (animate) BodyBounceTransform.BeginAnimation(TranslateTransform.YProperty, Loop(0, -2, 260, easing: new SineEase { EasingMode = EasingMode.EaseOut }));
                 break;
-
             case MascotMood.Surprised:
-                // Something just arrived: wide eyes and startle lines above the head; one jump.
+                // Something just arrived: round "O" eyes and bold startle lines at the top corners; one jump.
                 SetTint(new[] { "#FFF6E0", "#F5E2B8", "#D9B35C", "#80FF7896" }, new[] { "#F2D98A", "#E5C05E", "#B8902A", "#80FF7896" });
-                UseEyes(pill: true, flat: false, droop: false, spiral: false);
+                ShowEyes(Eyes.Round);
                 StartleLines.Visibility = Visibility.Visible;
                 if (animate) BodyBounceTransform.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(0, -3, TimeSpan.FromMilliseconds(180)) { AutoReverse = true, EasingFunction = new SineEase { EasingMode = EasingMode.EaseOut } });
                 break;
-
             case MascotMood.Cheering:
-                // A cheer (a Pomodoro finished): the happy face with confetti falling.
+                // A cheer (a Pomodoro finished): the happy face with confetti falling at the sides of the head.
                 SetTint(new[] { "#FFE4EC", "#F7B8CC", "#E0709A", "#99FF7896" }, new[] { "#F2A9C4", "#E98AAE", "#C25581", "#99FF7896" });
-                UseEyes(pill: false, flat: false, droop: false, spiral: false);
-                LeftHappyEye.Visibility = RightHappyEye.Visibility = Visibility.Visible;
+                ShowEyes(Eyes.Happy);
                 ConfettiGroup.Visibility = Visibility.Visible;
                 if (animate)
                 {
@@ -1330,81 +1169,48 @@ public partial class MascotControl : System.Windows.Controls.UserControl
                     BodyBounceTransform.BeginAnimation(TranslateTransform.YProperty, Loop(0, -1.6, 320, easing: new SineEase { EasingMode = EasingMode.EaseOut }));
                 }
                 break;
-
             case MascotMood.Praying:
-                // The prayer time: calm closed eyes and a warm tint. Nothing else is drawn.
+                // The prayer time: calm closed eyes, a warm tint and the teal reminder bell.
                 SetTint(new[] { "#FFF3DC", "#F6DFA8", "#C9A24A", "#66FF7896" }, new[] { "#E8D08A", "#D6B866", "#A8873A", "#66FF7896" });
-                UseEyes(pill: false, flat: false, droop: false, spiral: false);
-                LeftSleepyEye.Visibility = RightSleepyEye.Visibility = Visibility.Visible;
+                ShowEyes(Eyes.Sleepy);
                 if (animate) BodyBounceTransform.BeginAnimation(TranslateTransform.YProperty, Loop(0, 1.2, 2400, easing: new SineEase { EasingMode = EasingMode.EaseInOut }));
                 break;
-
             case MascotMood.Bored:
-                // Lonely (nobody has touched the PC for a long while): a faded body, eyes looking down and a sigh.
+                // Lonely (nobody has touched the PC for a long while): a faded body and heavy half-lidded eyes looking down and aside.
                 SetTint(new[] { "#EBEBEE", "#D3D4DA", "#A9ABB4", "#40FF7896" }, new[] { "#B3C79F", "#98AE86", "#647D55", "#40FF7896" });
-                UseEyes(pill: true, flat: false, droop: false, spiral: false);
-                FaceTransform.Y = 1.6;
-                SighGroup.Visibility = Visibility.Visible;
-                if (animate)
-                {
-                    SighT.BeginAnimation(TranslateTransform.YProperty, Loop(0, -3, 2200, reverse: false));
-                    SighGroup.BeginAnimation(OpacityProperty, Loop(0.9, 0, 2200, reverse: false));
-                    BodyBounceTransform.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(900)) { FillBehavior = FillBehavior.HoldEnd });
-                }
+                ShowEyes(Eyes.Lid);
+                FaceTransform.X = 1.7;
+                FaceTransform.Y = 1.2;
+                if (animate) BodyBounceTransform.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(900)) { FillBehavior = FillBehavior.HoldEnd });
                 break;
-
             case MascotMood.Waking:
-                // Just woke up: closed eyes, a slow stretch and a drifting "z".
+                // Just woke up: half-lidded eyes and a slow stretch (no longer the same as sleeping).
                 SetTint(new[] { "#F0EAF7", "#D9CDEA", "#8E7BC4", "#80FF7896" }, new[] { "#A7C58A", "#8BAA70", "#5B7E48", "#80FF7896" });
-                UseEyes(pill: false, flat: false, droop: false, spiral: false);
-                LeftSleepyEye.Visibility = RightSleepyEye.Visibility = Visibility.Visible;
-                if (animate)
-                {
-                    BodyBounceTransform.BeginAnimation(TranslateTransform.YProperty, Loop(0, -1.4, 1500, easing: new SineEase { EasingMode = EasingMode.EaseInOut }));
-                    SleepyParticle.BeginAnimation(OpacityProperty, Loop(0, 0.8, 1500));
-                    SleepyTranslate.BeginAnimation(TranslateTransform.YProperty, Loop(0, -4, 1500, easing: new SineEase { EasingMode = EasingMode.EaseOut }));
-                }
-                else SleepyParticle.Opacity = 0.8;
+                ShowEyes(Eyes.Lid);
+                if (animate) BodyBounceTransform.BeginAnimation(TranslateTransform.YProperty, Loop(0, -1.4, 1500, easing: new SineEase { EasingMode = EasingMode.EaseInOut }));
                 break;
-
             case MascotMood.Worried:
-                // Gaming, but it is going badly (the frame rate fell or the ping is high): wide eyes, a sweat drop and the matching headset with red lights.
+                // Gaming, but it is going badly (the frame rate fell or the ping is high): drooping eyes, a sweat drop on the side of the head and the
+                // matching headset with red lights.
                 SetTint(new[] { "#E3E8F2", "#C3CCE0", "#5B6B8C", "#40FF7896" }, new[] { "#9DB8A9", "#7A9A8A", "#3F6656", "#40FF7896" });
-                UseEyes(pill: true, flat: false, droop: false, spiral: false);
-                WorryDrop.Visibility = Visibility.Visible;   // the drop flies off above the head, clear of the face and the headset
-                ApplyHeadset(HeadsetMood.Gaming);
-                HeadphonesLayer.Visibility = Visibility.Visible;
+                ShowEyes(Eyes.Droop);
+                SweatDrop.Visibility = Visibility.Visible;
+                ShowHeadset(HeadsetMood.Gaming);
                 if (animate)
                 {
-                    WorryDropT.BeginAnimation(TranslateTransform.YProperty, Loop(0, 3, 1000, reverse: false));
-                    WorryDrop.BeginAnimation(OpacityProperty, Loop(1, 0.1, 1000, reverse: false));
+                    SweatTransform.BeginAnimation(TranslateTransform.YProperty, Loop(0, 3, 1000, reverse: false));
+                    SweatDrop.BeginAnimation(OpacityProperty, Loop(1, 0.1, 1000, reverse: false));
                 }
                 break;
-
             case MascotMood.BreakTime:
-                // The break reminder: sleepy closed eyes and a slow stretch, with a cup of coffee.
+                // The break reminder: awake, a slow stretch and the green pause badge (Coffee has the cup).
                 SetTint(new[] { "#FBEBD3", "#F3D3A6", "#C98A5B", "#80FF7896" }, new[] { "#F0C27A", "#E3A456", "#B07430", "#80FF7896" });
-                UseEyes(pill: false, flat: false, droop: false, spiral: false);
-                LeftSleepyEye.Visibility = RightSleepyEye.Visibility = Visibility.Visible;
-                CoffeeGroup.Visibility = Visibility.Visible;
-                if (animate)
-                {
-                    CoffeeSteam.BeginAnimation(OpacityProperty, Loop(1, 0.2, 700));
-                    BodyBounceTransform.BeginAnimation(TranslateTransform.YProperty, Loop(0, -1.2, 1400, easing: new SineEase { EasingMode = EasingMode.EaseInOut }));
-                }
+                if (animate) BodyBounceTransform.BeginAnimation(TranslateTransform.YProperty, Loop(0, -1.2, 1400, easing: new SineEase { EasingMode = EasingMode.EaseInOut }));
                 break;
-
             case MascotMood.Coffee:
-                // Resting while you work: awake, a cup of coffee with steam rising, a gentle sway. No headset, no tint.
-                UseEyes(pill: true, flat: false, droop: false, spiral: false);
-                CoffeeGroup.Visibility = Visibility.Visible;
-                if (animate)
-                {
-                    CoffeeSteam.BeginAnimation(OpacityProperty, Loop(1, 0.2, 900));
-                    BodyBounceTransform.BeginAnimation(TranslateTransform.YProperty, Loop(0, -0.8, 1800, easing: new SineEase { EasingMode = EasingMode.EaseInOut }));
-                }
+                // Resting while you work: awake, a gentle sway and the brown cup badge. No headset, no tint.
+                if (animate) BodyBounceTransform.BeginAnimation(TranslateTransform.YProperty, Loop(0, -0.8, 1800, easing: new SineEase { EasingMode = EasingMode.EaseInOut }));
                 break;
-
             case MascotMood.Electric:
                 // The Stats Battery page: a charged yellow Mochi with star eyes and lightning bolts circling and flickering.
                 // Kuro stays charcoal (never yellow): his glow is brighter instead, and his tail spark flickers with the bolts.
@@ -1412,7 +1218,7 @@ public partial class MascotControl : System.Windows.Controls.UserControl
                 _kuroSparkWanted = true;
                 SetTint(new[] { "#FFF4C2", "#F5D96B", "#C9A227", "#66FFB347" }, new[] { "#F3E7A8", "#DCC45E", "#A88A1E", "#66FFB347" });
                 UpdateKuroSpark();
-                UseEyes(pill: false, flat: false, droop: false, spiral: false);
+                ShowEyes(Eyes.None);
                 StarEyes.Visibility = BoltOrbit.Visibility = Visibility.Visible;
                 if (animate)
                 {
@@ -1422,125 +1228,68 @@ public partial class MascotControl : System.Windows.Controls.UserControl
                     BoltC.BeginAnimation(OpacityProperty, Loop(1, 0.35, 360));
                 }
                 break;
-
             case MascotMood.Money:
-                // FX with the rate up or flat: coin eyes and a coin bobbing above the head.
-                UseEyes(pill: false, flat: false, droop: false, spiral: false);
-                CoinEyes.Visibility = CoinFloat.Visibility = Visibility.Visible;
-                if (animate)
-                {
-                    CoinT.BeginAnimation(TranslateTransform.YProperty, Loop(0, -1.2, 700, easing: new SineEase { EasingMode = EasingMode.EaseInOut }));
-                    BodyBounceTransform.BeginAnimation(TranslateTransform.YProperty, Loop(0, -0.8, 700, easing: new SineEase { EasingMode = EasingMode.EaseInOut }));
-                }
+                // FX with the rate up or flat: coin eyes and a green up arrow badge.
+                ShowEyes(Eyes.None);
+                CoinEyes.Visibility = Visibility.Visible;
+                if (animate) BodyBounceTransform.BeginAnimation(TranslateTransform.YProperty, Loop(0, -0.8, 700, easing: new SineEase { EasingMode = EasingMode.EaseInOut }));
                 break;
-
             case MascotMood.MoneyDown:
-                // FX with the rate down: the same coin eyes on a cooler body, the coin slipping away and the body sinking a little.
+                // FX with the rate down: the same coin eyes on a cooler body, a red down arrow badge and the body sinking a little.
                 SetTint(new[] { "#DCE3EE", "#BCC8DA", "#7D8FAE", "#40FF7896" }, new[] { "#A9B8A0", "#8C9D82", "#5E6E55", "#40FF7896" });
-                UseEyes(pill: false, flat: false, droop: false, spiral: false);
-                CoinEyes.Visibility = CoinFloat.Visibility = Visibility.Visible;
-                if (animate)
-                {
-                    CoinT.BeginAnimation(TranslateTransform.YProperty, Loop(0, 3, 1500, reverse: false));
-                    CoinFloat.BeginAnimation(OpacityProperty, Loop(1, 0.1, 1500, reverse: false));
-                    BodyBounceTransform.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(0, 0.8, TimeSpan.FromMilliseconds(600)) { FillBehavior = FillBehavior.HoldEnd });
-                }
+                ShowEyes(Eyes.None);
+                CoinEyes.Visibility = Visibility.Visible;
+                if (animate) BodyBounceTransform.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(0, 0.8, TimeSpan.FromMilliseconds(600)) { FillBehavior = FillBehavior.HoldEnd });
                 break;
-
             case MascotMood.Sunny:
-                // Weather, sunny: sunglasses on a warm body and a turning sun.
+                // Weather, sunny: sunglasses on a warm body and the sun badge.
                 SetTint(new[] { "#FFF6E0", "#F5E2B8", "#D9B35C", "#80FF7896" }, new[] { "#F2D98A", "#E5C05E", "#B8902A", "#80FF7896" });
-                UseEyes(pill: false, flat: false, droop: false, spiral: false);
-                Sunglasses.Visibility = SunGroup.Visibility = Visibility.Visible;
-                if (animate) SunRaysRotate.BeginAnimation(RotateTransform.AngleProperty, Loop(0, 360, 6000, reverse: false));
+                ShowEyes(Eyes.None);
+                Sunglasses.Visibility = Visibility.Visible;
                 break;
-
             case MascotMood.Rainy:
-                // Weather, rain: an umbrella over the head and drops falling past it.
+                // Weather, rain: a blue body, rain drops falling at the sides and the umbrella badge.
                 SetTint(new[] { "#E3ECF7", "#C3D3EA", "#7F98BD", "#40FF7896" }, new[] { "#A9C1CC", "#8AA6B4", "#5A7786", "#40FF7896" });
-                UseEyes(pill: true, flat: false, droop: false, spiral: false);
-                UmbrellaGroup.Visibility = RainGroup.Visibility = Visibility.Visible;
+                RainGroup.Visibility = Visibility.Visible;
                 if (animate)
                 {
                     RainT.BeginAnimation(TranslateTransform.YProperty, Loop(0, 5, 900, reverse: false));
                     RainGroup.BeginAnimation(OpacityProperty, Loop(1, 0.1, 900, reverse: false));
                 }
                 break;
-
             case MascotMood.Snowy:
-                // Weather, snow: a red scarf and snowflakes drifting down.
-                UseEyes(pill: true, flat: false, droop: false, spiral: false);
-                ScarfGroup.Visibility = SnowGroup.Visibility = Visibility.Visible;
-                if (animate)
-                {
-                    SnowT.BeginAnimation(TranslateTransform.YProperty, Loop(0, 4, 2200, reverse: false));
-                    SnowGroup.BeginAnimation(OpacityProperty, Loop(1, 0.2, 2200, reverse: false));
-                }
+                // Weather, snow: a red scarf and the snowflake badge.
+                ScarfGroup.Visibility = Visibility.Visible;
                 break;
-
             case MascotMood.Cloudy:
-                // Weather, cloud or fog (or a clear night): a small cloud drifting above.
-                UseEyes(pill: true, flat: false, droop: false, spiral: false);
-                CloudGroup.Visibility = Visibility.Visible;
-                if (animate) CloudT.BeginAnimation(TranslateTransform.XProperty, Loop(-1.5, 1.5, 2600, easing: new SineEase { EasingMode = EasingMode.EaseInOut }));
+                // Weather, cloud or fog (or a clear night): the cloud badge.
                 break;
-
             case MascotMood.Studying:
-                // A Pomodoro focus session: determined eyes and a tomato timer whose hand goes round once a minute.
-                UseEyes(pill: false, flat: false, droop: false, spiral: false);
-                LeftDetermEye.Visibility = RightDetermEye.Visibility = Visibility.Visible;
-                TimerBadge.Visibility = Visibility.Visible;
-                if (animate) TimerHandRotate.BeginAnimation(RotateTransform.AngleProperty, Loop(0, 360, 60000, reverse: false));
+                // A Pomodoro focus session: half-lidded, concentrating eyes and the red timer badge.
+                ShowEyes(Eyes.Lid);
                 break;
-
             case MascotMood.Yawning:
-                // Up late: heavy, half-closed eyes under a crescent moon whose little star twinkles; a slow, sleepy sway.
-                UseEyes(pill: false, flat: false, droop: true, spiral: false);
-                MoonGroup.Visibility = Visibility.Visible;
-                if (animate)
-                {
-                    MoonStar.BeginAnimation(OpacityProperty, Loop(1, 0.25, 1100));
-                    BodyBounceTransform.BeginAnimation(TranslateTransform.YProperty, Loop(0, 1, 2600, easing: new SineEase { EasingMode = EasingMode.EaseInOut }));
-                }
+                // Up late: heavy half-lidded eyes and the navy moon badge; a slow, sleepy sway.
+                ShowEyes(Eyes.Lid);
+                if (animate) BodyBounceTransform.BeginAnimation(TranslateTransform.YProperty, Loop(0, 1, 2600, easing: new SineEase { EasingMode = EasingMode.EaseInOut }));
                 break;
-
             case MascotMood.Birthday:
-                // The user's birthday: happy eyes, a party hat and confetti falling all day.
-                UseEyes(pill: false, flat: false, droop: false, spiral: false);
-                LeftHappyEye.Visibility = RightHappyEye.Visibility = Visibility.Visible;
-                PartyHat.Visibility = ConfettiGroup.Visibility = Visibility.Visible;
-                if (animate)
-                {
-                    ConfettiT.BeginAnimation(TranslateTransform.YProperty, Loop(0, 4, 1200, reverse: false));
-                    ConfettiGroup.BeginAnimation(OpacityProperty, Loop(1, 0.2, 1200, reverse: false));
-                    BodyBounceTransform.BeginAnimation(TranslateTransform.YProperty, Loop(0, -1.2, 700, easing: new SineEase { EasingMode = EasingMode.EaseOut }));
-                }
+                // The user's birthday: happy eyes and a small party hat all day.
+                ShowEyes(Eyes.Happy);
+                PartyHat.Visibility = Visibility.Visible;
+                if (animate) BodyBounceTransform.BeginAnimation(TranslateTransform.YProperty, Loop(0, -1.2, 700, easing: new SineEase { EasingMode = EasingMode.EaseOut }));
                 break;
-
             case MascotMood.Meeting:
-                // In a calendar meeting: a calm face and a grey headset with a microphone. Still, so it does not distract.
-                UseEyes(pill: true, flat: false, droop: false, spiral: false);
-                ApplyHeadset(HeadsetMood.Meeting);
-                HeadphonesLayer.Visibility = MicBoom.Visibility = Visibility.Visible;
+                // In a calendar meeting: a calm face and the matching headset with a microphone. Still, so it does not distract.
+                ShowHeadset(HeadsetMood.Meeting);
                 break;
-
             case MascotMood.Proud:
-                // Every task due today is done: happy eyes, a green tick and twinkling sparkles.
-                UseEyes(pill: false, flat: false, droop: false, spiral: false);
-                LeftHappyEye.Visibility = RightHappyEye.Visibility = Visibility.Visible;
-                CheckBadge.Visibility = SparkleGroup.Visibility = Visibility.Visible;
-                if (animate)
-                {
-                    SparkleA.BeginAnimation(OpacityProperty, Loop(1, 0.25, 700));
-                    SparkleB.BeginAnimation(OpacityProperty, Loop(0.25, 1, 700));
-                    SparkleC.BeginAnimation(OpacityProperty, Loop(1, 0.25, 900));
-                }
+                // Every task due today is done: happy eyes and the green tick badge.
+                ShowEyes(Eyes.Happy);
                 break;
-
             case MascotMood.Drained:
                 SetTint(new[] { "#E4E4E8", "#C9C9CF", "#A0A0A8", "#40FF7896" }, new[] { "#9CB08C", "#82976F", "#58694B", "#40FF7896" });
-                UseEyes(pill: false, flat: false, droop: true, spiral: false);
-                BatteryGroup.Visibility = Visibility.Visible;
+                ShowEyes(Eyes.Droop);
                 if (animate) BodyBounceTransform.BeginAnimation(TranslateTransform.YProperty, Loop(0, 1.2, 2400, easing: new SineEase { EasingMode = EasingMode.EaseInOut }));
                 break;
         }
@@ -1631,17 +1380,7 @@ public partial class MascotControl : System.Windows.Controls.UserControl
 
             {
 
-                LeftPillEye.Visibility = Visibility.Visible;
-
-                RightPillEye.Visibility = Visibility.Visible;
-
-                LeftHappyEye.Visibility = Visibility.Collapsed;
-
-                RightHappyEye.Visibility = Visibility.Collapsed;
-                LeftSleepyEye.Visibility = Visibility.Collapsed;
-                RightSleepyEye.Visibility = Visibility.Collapsed;
-                SleepyParticle.BeginAnimation(OpacityProperty, null);
-                SleepyParticle.Opacity = 0;
+                ApplyMood(Mood);   // back to the eyes of the face he wears (wide, glancing or plain)
 
             }
 
@@ -1769,7 +1508,12 @@ public partial class MascotControl : System.Windows.Controls.UserControl
         InnerEarLeft.Fill = InnerEarRight.Fill = Ink(kuro ? "#FFD43B" : "#F4B6C2");
         InnerEarLeft.Opacity = InnerEarRight.Opacity = kuro ? 0.55 : 0.9;
         // The light-bodied mascots need a firmer rim on Matcha's light ground (a thin line is only a fraction of a pixel at the capsule size).
-        MochiBodyBorder.BorderThickness = new Thickness(MochiDock.Core.MascotRim.Thickness(_kind, ThemeName));
+        double rim = MochiDock.Core.MascotRim.Thickness(_kind, ThemeName);
+        MochiBodyBorder.BorderThickness = new Thickness(rim);
+        // One outline: body, ears and tail (round joins). WPF layout rounding would snap the border to whole units (0.8 to 1, 1.3 to 1, 1.5 to 2)
+        // while the ears' strokes stay exact, so the cats' border is drawn exact too; the Mochi kinds keep the rounding (their look is unchanged).
+        MochiBodyBorder.UseLayoutRounding = MochiBodyBorder.SnapsToDevicePixels = !_isCat;
+        EarLeft.StrokeThickness = EarRight.StrokeThickness = TailShape.StrokeThickness = rim;
         TailSpark.Fill = Ink(kuro ? "#FFF3B0" : "#8FD3FF");
         if (!kuro)
         {

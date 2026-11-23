@@ -14,44 +14,44 @@ $moodType=$core.GetType('MochiDock.Core.MascotMood')
 $assembly.GetType('MochiDock.Controls.MascotControl').GetProperty('SpinEnabled').SetValue($null,$false)
 $output=Join-Path $repo 'MochiDock/obj/mascot';$null=New-Item -ItemType Directory -Force $output
 
-$extras=@('LeftDetermEye','RightDetermEye','LeftFlatEye','RightFlatEye','LeftDroopEye','RightDroopEye','LeftSpiralEye','RightSpiralEye','SteamLeft','SteamRight','HeatLines','IcicleGroup','StarsGroup','BatteryGroup','TearDrop','TearDropRight','AngerMark','StartleLines','SparkleGroup','CoffeeGroup','ExclaimGroup','ConfettiGroup','SighGroup','WorryDrop','StarEyes','CoinEyes','Sunglasses','BoltOrbit','CoinFloat','UmbrellaGroup','RainGroup','ScarfGroup','SnowGroup','CloudGroup','SunGroup','TimerBadge','MoonGroup','PartyHat','CheckBadge','MicBoom')
+$extras=@('LeftDetermEye','RightDetermEye','LeftFlatEye','RightFlatEye','LeftDroopEye','RightDroopEye','LeftSpiralEye','RightSpiralEye','LeftWideEye','RightWideEye','LeftRoundEye','RightRoundEye','LeftLidEye','RightLidEye','IcicleGroup','StarsGroup','TearDrop','TearDropRight','StartleLines','ConfettiGroup','StarEyes','CoinEyes','Sunglasses','BoltOrbit','RainGroup','ScarfGroup','PartyHat','MicBoom')
 # Mochi has no mouth and no eyebrows: none of these layers may exist (they made the face busy).
 $banned=@('BrowLeft','BrowRight','MouthFrown','MouthPant','MouthChatter','MouthWave','MouthFlat','MouthGrin','MouthYawn','MouthSmile')
 $plain=@('Idle','Waiting','Bored','Music','Alert','Sleeping','Happy')
 # What must be visible, besides the pill eyes, in each extra mood.
 $expected=@{
- Angry=@('LeftDetermEye','RightDetermEye','AngerMark','SteamLeft','SteamRight');
- Hot=@('LeftFlatEye','RightFlatEye','HeatLines');
+ Angry=@('LeftDetermEye','RightDetermEye');
+ Hot=@('LeftFlatEye','RightFlatEye');
  Freezing=@('IcicleGroup');
  Dizzy=@('LeftSpiralEye','RightSpiralEye','StarsGroup');
- Drained=@('LeftDroopEye','RightDroopEye','BatteryGroup');
+ Drained=@('LeftDroopEye','RightDroopEye');
  Focused=@('LeftDetermEye','RightDetermEye');
- Victory=@('SparkleGroup');
+ Victory=@();
  Defeat=@('LeftDroopEye','RightDroopEye','TearDrop','TearDropRight');
- Worried=@('WorryDrop');
- BreakTime=@('CoffeeGroup');
- Excited=@('ExclaimGroup');
- Surprised=@('StartleLines');
+ Worried=@('LeftDroopEye','RightDroopEye');
+ BreakTime=@();
+ Excited=@('LeftWideEye','RightWideEye');
+ Surprised=@('LeftRoundEye','RightRoundEye','StartleLines');
  Cheering=@('ConfettiGroup');
  Praying=@();
- Bored=@('SighGroup');
- Waking=@();
+ Bored=@('LeftLidEye','RightLidEye');
+ Waking=@('LeftLidEye','RightLidEye');
  Electric=@('StarEyes','BoltOrbit');
- Money=@('CoinEyes','CoinFloat');
- MoneyDown=@('CoinEyes','CoinFloat');
- Sunny=@('Sunglasses','SunGroup');
- Rainy=@('UmbrellaGroup','RainGroup');
- Snowy=@('ScarfGroup','SnowGroup');
- Cloudy=@('CloudGroup');
- Studying=@('LeftDetermEye','RightDetermEye','TimerBadge');
- Coffee=@('CoffeeGroup');
- Yawning=@('LeftDroopEye','RightDroopEye','MoonGroup');
- Birthday=@('PartyHat','ConfettiGroup');
+ Money=@('CoinEyes');
+ MoneyDown=@('CoinEyes');
+ Sunny=@('Sunglasses');
+ Rainy=@('RainGroup');
+ Snowy=@('ScarfGroup');
+ Cloudy=@();
+ Studying=@('LeftLidEye','RightLidEye');
+ Coffee=@();
+ Yawning=@('LeftLidEye','RightLidEye');
+ Birthday=@('PartyHat');
  Meeting=@('MicBoom');
- Proud=@('CheckBadge','SparkleGroup')
+ Proud=@()
 }
-$pillEyes=@{Angry=$false;Hot=$false;Freezing=$true;Dizzy=$false;Drained=$false;Focused=$false;Victory=$false;Defeat=$false;Worried=$true;BreakTime=$false;Excited=$true;Surprised=$true;Cheering=$false;Praying=$false;Bored=$true;Waking=$false;Electric=$false;Money=$false;MoneyDown=$false;Sunny=$false;Rainy=$true;Snowy=$true;Cloudy=$true;Studying=$false;Coffee=$true;Yawning=$false;Birthday=$false;Meeting=$true;Proud=$false}
-$sweat=@{Hot=$true}
+$pillEyes=@{Angry=$false;Hot=$false;Freezing=$true;Dizzy=$false;Drained=$false;Focused=$false;Victory=$false;Defeat=$false;Worried=$false;BreakTime=$true;Excited=$false;Surprised=$false;Cheering=$false;Praying=$false;Bored=$false;Waking=$false;Electric=$false;Money=$false;MoneyDown=$false;Sunny=$false;Rainy=$true;Snowy=$true;Cloudy=$true;Studying=$false;Coffee=$true;Yawning=$false;Birthday=$false;Meeting=$true;Proud=$false}
+$sweat=@{Hot=$true;Worried=$true}
 $order=@('Idle','Angry','Hot','Freezing','Dizzy','Drained','Music','Hot','Idle','Dizzy','Alert','Drained','Sleeping','Angry','Happy','Freezing','Focused','Waiting','Angry','Bored','Victory','Defeat','Angry','Victory','Idle','Defeat','Focused','Worried','BreakTime','Worried','Angry','BreakTime','Focused','Music','Worried','Music','Excited','Surprised','Cheering','Praying','Angry','Surprised','Idle','Praying','Idle','Bored','Waking','Bored','Angry','Waking','Idle','Electric','Money','Electric','MoneyDown','Sunny','Rainy','Snowy','Cloudy','Studying','Electric','Idle','Rainy','Dizzy','Sunny','Music','Studying','Focused','Money','Idle','Coffee','Bored','Coffee','Sleeping','Coffee','Electric','Coffee','Idle','Yawning','Birthday','Idle','Meeting','Proud','Coffee','Meeting','Music','Yawning','Proud','Birthday','Angry','Idle')
 
 function Visible($mascot,$name){$e=$mascot.FindName($name);if($null -eq $e){throw "Layer $name not found"};return $e.Visibility -eq [Windows.Visibility]::Visible}
@@ -93,12 +93,12 @@ foreach($canvas in 'WindBack','WindFront'){
 }
 if($strokes -lt 20){throw "The whirlwind has only $strokes strokes; expected the three rings (front and back), wisps and the curl"}
 $checks++
-# The click heart and the sleeping Zzz must be vector shapes: WPF text cannot draw colour emoji, so an emoji would be black and white.
+# The click heart must be a vector shape: WPF text cannot draw colour emoji, so an emoji would be black and white.
 $probe=[Activator]::CreateInstance($assembly.GetType('MochiDock.Controls.MascotControl'))
 foreach($gone in $banned){if($null -ne $probe.FindName($gone)){throw "$gone exists again: Mochi has no mouth and no eyebrows"}}
 # The ear cups must stay inside the 30 unit body width: the capsule cuts everything wider, which showed as a cropped left cup.
 foreach($cup in 'EarCupLeft','EarCupRight'){$e=$probe.FindName($cup);$left=[Windows.Controls.Canvas]::GetLeft($e);if($left -lt 0 -or ($left+$e.Width) -gt 30){throw "$cup sticks out of the 30 unit body ($left + $($e.Width))"};$checks++}
-foreach($name in 'FloatingHeart','SleepyParticle'){
+foreach($name in 'FloatingHeart'){
  $element=$probe.FindName($name)
  if($null -eq $element){throw "$name not found"}
  if($element -is [Windows.Controls.TextBlock]){throw "$name is text again; it must be a vector shape (colour emoji render black and white in WPF)"}
@@ -152,7 +152,7 @@ foreach($scale in 1,1.25,1.5,2){
   $surface.Measure([Windows.Size]::new(200,200));$surface.Arrange([Windows.Rect]::new(0,0,$surface.DesiredSize.Width,$surface.DesiredSize.Height));$surface.UpdateLayout()
   foreach($name in $order){
    $mascot.Mood=[Enum]::Parse($moodType,$name);$surface.UpdateLayout()
-   $want=if($expected.ContainsKey($name)){$expected[$name]}else{@()}
+   $want=if($expected.ContainsKey($name)){$expected[$name]}elseif($name -eq 'Alert'){@('LeftWideEye','RightWideEye')}else{@()}
    foreach($layer in $extras){
     $shown=Visible $mascot $layer
     if($shown -and $want -notcontains $layer){throw "Layer $layer leaked into mood $name (scale $scale, after a previous mood)"}
@@ -173,13 +173,11 @@ foreach($scale in 1,1.25,1.5,2){
     if($mascot.FindName('FaceTurnScale').ScaleX -ne 1 -or $mascot.FindName('FaceTurnShift').X -ne 0){throw "The face of mood $name stayed turned"}
     foreach($wind in 'WindBack','WindFront'){if((Visible $mascot $wind)){throw "The turn's wind stayed on in mood $name"}}
     if($name -eq 'Electric' -and $mascot.FindName('BodyGradStopTop').Color.ToString() -eq '#FFEDEDEF' -and !$mascot.FindName('BodyGradStopTop').HasAnimatedProperties){throw 'Electric lost its charged tint'}
-    if($name -eq 'Waking' -and !(Visible $mascot 'LeftSleepyEye')){throw 'Waking is missing its closed eyes'}
+    if($name -eq 'Waking' -and !(Visible $mascot 'LeftLidEye')){throw 'Waking is missing its half-lidded eyes'}
     if($name -eq 'Cheering' -and !(Visible $mascot 'LeftHappyEye')){throw 'Cheering is missing its happy eyes'}
     if($name -eq 'Praying' -and !(Visible $mascot 'LeftSleepyEye')){throw 'Praying is missing its closed eyes'}
-    if($name -eq 'BreakTime' -and !(Visible $mascot 'LeftSleepyEye')){throw 'Break time is missing its closed eyes'}
-    if($name -eq 'Worried' -and !(Visible $mascot 'WorryDrop')){throw 'Worried is missing its sweat drop'}
+    if($name -eq 'Worried' -and !(Visible $mascot 'SweatDrop')){throw 'Worried is missing its sweat drop'}
     if($name -eq 'Victory' -and !(Visible $mascot 'LeftHappyEye')){throw 'Victory is missing its happy eyes'}
-    if($name -eq 'Angry' -and $mascot.FindName('AngerMark').Opacity -ne 1 -and !$mascot.FindName('AngerMark').HasAnimatedProperties){throw 'The anger mark stayed faded'}
     if($name -eq 'Defeat' -and !(Visible $mascot 'TearDropRight')){throw 'Defeat is missing its second tear'}
     if((Visible $mascot 'SweatDrop') -ne [bool]$sweat[$name] -and !($name -eq 'Hot')){throw "Sweat drop wrong in mood $name"}
     if($name -eq 'Hot' -and !(Visible $mascot 'SweatDrop')){throw 'Sweat drop is missing in mood Hot'}
@@ -208,15 +206,14 @@ foreach($scale in 1,1.25,1.5,2){
 }
 
 # A strip of every face, on the black capsule and on the cream capsule, at 6x for a human look.
-$all=@('Turning','Idle','Music','Alert','Sleeping','Focused','Happy','Angry','Hot','Freezing','Dizzy','Drained','Victory','Defeat','Worried','BreakTime','Excited','Surprised','Cheering','Praying','Bored','Waking','Electric','Money','MoneyDown','Sunny','Rainy','Snowy','Cloudy','Studying','Petted','Zzz')
+$all=@('Turning','Idle','Music','Alert','Sleeping','Focused','Happy','Angry','Hot','Freezing','Dizzy','Drained','Victory','Defeat','Worried','BreakTime','Excited','Surprised','Cheering','Praying','Bored','Waking','Electric','Money','MoneyDown','Sunny','Rainy','Snowy','Cloudy','Studying','Petted')
 foreach($style in @(@('black',[Windows.Media.Brushes]::Black),@('cream',[Windows.Media.SolidColorBrush]::new([Windows.Media.Color]::FromRgb(0xF3,0xEF,0xE0))))){
  $panel=[Windows.Controls.StackPanel]::new();$panel.Orientation=[Windows.Controls.Orientation]::Horizontal;$panel.Background=$style[1]
- foreach($name in $all){$m=[Activator]::CreateInstance($assembly.GetType('MochiDock.Controls.MascotControl'));$m.Width=150;$m.Height=130;$m.Margin=[Windows.Thickness]::new(8,60,16,12);$mood=switch($name){'Petted'{'Idle'}'Zzz'{'Sleeping'}'Turning'{'Idle'}default{$name}}
+ foreach($name in $all){$m=[Activator]::CreateInstance($assembly.GetType('MochiDock.Controls.MascotControl'));$m.Width=150;$m.Height=130;$m.Margin=[Windows.Thickness]::new(8,60,16,12);$mood=switch($name){'Petted'{'Idle'}'Turning'{'Idle'}default{$name}}
   $m.Mood=[Enum]::Parse($moodType,$mood)
-  # Headless renders do not run animations, so show the heart and the Zzz at a mid-animation state by hand.
+  # Headless renders do not run animations, so show the heart at a mid-animation state by hand.
   if($name -eq 'Petted'){$heart=$m.FindName('FloatingHeart');$heart.BeginAnimation([Windows.UIElement]::OpacityProperty,$null);$heart.Opacity=1;$m.FindName('HeartTranslate').Y=-6}
   if($name -eq 'Turning'){Show-Turn $m 600}
-  if($name -eq 'Zzz'){$zzz=$m.FindName('SleepyParticle');$zzz.BeginAnimation([Windows.UIElement]::OpacityProperty,$null);$zzz.Opacity=0.95;$m.FindName('SleepyTranslate').Y=-2}
   $panel.Children.Add($m)|Out-Null}
  $native,$surface=New-Host $panel 1 $style[1]
  try{
@@ -256,9 +253,9 @@ function Ink-Metrics($mood){
   return $sums
  } finally { $native.Dispose() }
 }
-# Where the eyes' vertical centre must lie (DIPs): the pill, flat, droopy and spiral eyes are centred on 12.5; the happy and sleepy
+# Where the eyes' vertical centre must lie (DIPs): the pill, wide, round, flat, droopy and spiral eyes are centred on 12.5, the half-lidded ones (Waking, Studying, Up late) lower; Bored looks aside on purpose, so it is not centred and is left out; the happy and sleepy
 # arcs sit a little lower by design.
-$band=@{Yawning=@(11.9,13.1);Birthday=@(12.6,14.6);Meeting=@(11.9,13.1);Proud=@(12.6,14.6);Idle=@(11.9,13.1);Music=@(12.6,14.6);Alert=@(11.9,13.1);Sleeping=@(12.4,14.2);Focused=@(12.0,13.4);Happy=@(12.6,14.6);Angry=@(11.9,13.1);Hot=@(11.9,13.1);Freezing=@(11.9,13.1);Dizzy=@(11.9,13.1);Drained=@(11.9,13.1);Victory=@(12.6,14.6);Defeat=@(11.9,13.1);Worried=@(11.9,13.1);BreakTime=@(12.4,14.2);Excited=@(11.9,13.1);Surprised=@(11.9,13.1);Cheering=@(12.6,14.6);Praying=@(12.4,14.2);Bored=@(13.5,14.8);Waking=@(12.4,14.2);Electric=@(11.9,13.1);Sunny=@(11.9,13.3);Rainy=@(11.9,13.1);Snowy=@(11.9,13.1);Cloudy=@(11.9,13.1);Studying=@(12.0,13.4);Coffee=@(11.9,13.1)}
+$band=@{Yawning=@(13.4,15.0);Birthday=@(12.6,14.6);Meeting=@(11.9,13.1);Proud=@(12.6,14.6);Idle=@(11.9,13.1);Music=@(12.6,14.6);Alert=@(11.9,13.1);Sleeping=@(12.4,14.2);Focused=@(12.0,13.4);Happy=@(12.6,14.6);Angry=@(11.9,13.1);Hot=@(11.9,13.1);Freezing=@(11.9,13.1);Dizzy=@(11.9,13.1);Drained=@(11.9,13.1);Victory=@(12.6,14.6);Defeat=@(11.9,13.1);Worried=@(11.9,13.1);BreakTime=@(11.9,13.1);Excited=@(11.9,13.1);Surprised=@(11.9,13.1);Cheering=@(12.6,14.6);Praying=@(12.4,14.2);Waking=@(13.4,15.0);Electric=@(11.9,13.1);Sunny=@(11.9,13.3);Rainy=@(11.9,13.1);Snowy=@(11.9,13.1);Cloudy=@(11.9,13.1);Studying=@(13.4,15.0);Coffee=@(11.9,13.1)}
 foreach($mood in $band.Keys){
  $ink=Ink-Metrics $mood
  if($ink.L[2] -lt 20 -or $ink.R[2] -lt 20){throw "No eye ink found in mood $mood (left $($ink.L[2]) pixels, right $($ink.R[2]))"}
@@ -446,6 +443,9 @@ $mascotClass.GetProperty('CurrentIsMatcha').SetValue($null,$false)
 # 150 and 200%. The eyes stay at least 4.5:1 against the body and the body, rim and glow ring at least 3:1 against the ground (WCAG non-text contrast).
 $kindType=$core.GetType('MochiDock.Core.MascotKind')
 $headsetType=$core.GetType('MochiDock.Core.MascotHeadset')
+$badgeType=$core.GetType('MochiDock.Core.MascotBadge')
+$rimType=$core.GetType('MochiDock.Core.MascotRim')
+function Badge-For($moodName,$kindName='Mochi'){return $badgeType.GetMethod('For',[type[]]@($moodType,$kindType)).Invoke($null,@([Enum]::Parse($moodType,$moodName),[Enum]::Parse($kindType,$kindName)))}
 function Kind($n){return [Enum]::Parse($kindType,$n)}
 function Theme-Of($n){return [Enum]::Parse($themeType,$n)}
 function New-Mascot($theme,$kind){$m=[Activator]::CreateInstance($mascotClass);$m.ApplyTheme((Theme-Of $theme),(Kind $kind));return $m}
@@ -565,6 +565,25 @@ foreach($themeName in 'Default','Hojicha','KuroNight','Matcha'){
  if(!(Visible $s 'StarEyes') -or !(Visible $s 'BoltOrbit') -or (Body-Top $s) -ne '#F4F4F8'){throw "Shiro on ${themeName}: the Electric face should keep the white body with star eyes and bolts"}
  $checks+=2
 }
+# One outline for a cat: body, both ears and the tail share one colour and one thickness (Core: MascotRim.CatThickness), on every ground.
+foreach($kindName in 'Kuro','Shiro'){
+ foreach($themeName in 'Default','Hojicha','KuroNight','Matcha'){
+  $o=New-Mascot $themeName $kindName
+  $want=$rimType.GetMethod('CatThickness').Invoke($null,@((Kind $kindName),$themeName))
+  foreach($moodName in 'Idle','Angry','Electric','Sunny'){
+   $o.Mood=[Enum]::Parse($moodType,$moodName)
+   $body=$o.FindName('MochiBodyBorder')
+   foreach($part in 'EarLeft','EarRight','TailShape'){
+    $e=$o.FindName($part)
+    if([math]::Abs($e.StrokeThickness-$body.BorderThickness.Left) -gt 1e-9 -or [math]::Abs($body.BorderThickness.Left-$want) -gt 1e-9){throw "$kindName on ${themeName}, ${moodName}: $part is $($e.StrokeThickness) thick, the body $($body.BorderThickness.Left), expected one shared $want"}
+    if((Hex-Of $e.Stroke.Color) -ne (Hex-Of $body.BorderBrush.Color)){throw "$kindName on ${themeName}, ${moodName}: $part has another outline colour than the body"}
+    if($part -ne 'TailShape' -and $e.StrokeLineJoin -ne [Windows.Media.PenLineJoin]::Round){throw "${kindName}: the $part corners must be round"}
+   }
+   $checks++
+  }
+ }
+}
+if($null -ne $probe.FindName('SteamLeft') -or $null -ne $probe.FindName('SteamRight')){throw 'Hot has side steam puffs again (they read as ear bobbles)'}
 # The three Mochi colours come from the mascot, not the theme: grey, green or tan on every ground, no ears, tail or glow, dark ink; on the Matcha
 # ground the rim is darker and thicker (and only there).
 $mochiBodies=@{Mochi='#EDEDEF';MatchaMochi='#85B957';HojichaMochi='#E9D3B4'}
@@ -613,6 +632,15 @@ foreach($combo in $headsetCombos){
    if((Visible $m 'HeadphonesLayer') -or (Visible $m 'HeadbandBackLayer')){throw "${label}: the headset stayed on after the face changed (layer $(Visible $m 'HeadphonesLayer'), back $(Visible $m 'HeadbandBackLayer'))"}
    continue
   }
+  if($cat){
+   foreach($layer in 'HeadphonesLayer','HeadbandBackLayer','MicBoom'){if(Visible $m $layer){throw "${label}: a cat wears no headset but $layer is shown"}}
+   $spec=Badge-For $mood $kindName
+   if($null -eq $spec -or !(Visible $m 'StatusBadge') -or (Hex-Of $m.FindName('BadgeDisc').Fill.Color) -ne $spec.Fill -or ($spec.Glyph -ne $(@{Music='note';Focused='controller';Worried='controller';Meeting='mic'}[$mood]))){throw "${label}: a cat needs the $(@{Music='note';Focused='controller';Worried='controller';Meeting='mic'}[$mood]) badge instead of the headset"}
+   if($mood -eq 'Worried' -and !(Visible $m 'SweatDrop')){throw "${label}: Worried keeps its sweat drop"}
+   $checks++
+   continue
+  }
+  if($null -ne (Badge-For $mood $kindName)){throw "${label}: a Mochi keeps his headset and has no badge for this face"}
   if(!(Visible $m 'HeadphonesLayer')){throw "${label}: the headset is missing"}
   if((Hex-Of $m.FindName('HeadbandArc').Stroke.Color) -ne $look.Band -or (Hex-Of $m.FindName('HeadbandRim').Stroke.Color) -ne $look.BandRim){throw "${label}: the band is not $($look.Band) with a $($look.BandRim) rim"}
   if((Hex-Of $m.FindName('HeadbandBack').Stroke.Color) -ne $look.Band -or (Hex-Of $m.FindName('HeadbandBackRim').Stroke.Color) -ne $look.BandRim){throw "${label}: the back band is not in the mascot's colours"}
@@ -692,6 +720,151 @@ foreach($kindName in 'Mochi','MatchaMochi','HojichaMochi','Kuro','Shiro'){
  [void]$matrix.Children.Add($line)
 }
 Save-Sheet $matrix 'mascots-on-themes.png' 2
+$checks++
+
+# ---- The status badge (MascotBadge): the meaning that used to float above the head as a thin prop sits in one disc in the corner. For every
+# mascot and face the badge must exist exactly when the table says, carry the table's colours, stay in its corner (at most 0.6 unit right
+# of the box, 2.1 above it), stay clear of the eyes; and at the capsule size (22 x 19) on every ground at 100/125/150/200% it must be at least
+# 7 px across and stand out from what it covers by at least 3:1 (WCAG non-text contrast).
+$badgeMoods=@($allMoods|Where-Object{$null -ne (Badge-For $_)})
+if($badgeMoods.Count -ne 18){throw "Expected 18 faces with a badge for Mochi, found $($badgeMoods.Count): $($badgeMoods -join ', ')"}
+foreach($k in 'Kuro','Shiro'){$n=@($allMoods|Where-Object{$null -ne (Badge-For $_ $k)}).Count;if($n -ne 22){throw "Expected 22 faces with a badge for $k (the headset faces get one), found $n"}}
+$eyeNames='LeftPillEye','RightPillEye','LeftHappyEye','RightHappyEye','LeftSleepyEye','RightSleepyEye','LeftDetermEye','RightDetermEye','LeftFlatEye','RightFlatEye','LeftDroopEye','RightDroopEye','LeftSpiralEye','RightSpiralEye','LeftWideEye','RightWideEye','LeftRoundEye','RightRoundEye','LeftLidEye','RightLidEye','StarEyes','CoinEyes','Sunglasses'
+function Part-Bounds($element,$root){
+ # shapes: the bounds of what they draw (a Path's ActualWidth reaches back to the origin); panels: their size
+ if($element -is [Windows.Shapes.Shape]){return $element.TransformToAncestor($root).TransformBounds($element.RenderedGeometry.Bounds)}
+ return $element.TransformToAncestor($root).TransformBounds([Windows.Rect]::new(0,0,$element.ActualWidth,$element.ActualHeight))
+}
+function Eye-Bounds($m,$root,$name){
+ $e=$m.FindName($name)
+ if($e -is [Windows.Controls.Canvas]){
+  $union=[Windows.Rect]::Empty
+  foreach($c in $e.Children){$union=[Windows.Rect]::Union($union,(Part-Bounds $c $root))}
+  return $union
+ }
+ return Part-Bounds $e $root
+}foreach($kindName in 'Mochi','MatchaMochi','HojichaMochi','Kuro','Shiro'){
+ $m=New-Mascot 'Default' $kindName;$m.Width=30;$m.Height=26;$m.Measure([Windows.Size]::new(60,60));$m.Arrange([Windows.Rect]::new(0,0,30,26));$m.UpdateLayout()
+ $root=$m.FindName('RootGrid')
+ foreach($mood in $allMoods){
+  $m.Mood=[Enum]::Parse($moodType,$mood);$m.UpdateLayout()
+  $face=$m.FindName('FaceTransform');$face.BeginAnimation([Windows.Media.TranslateTransform]::XProperty,$null);$face.BeginAnimation([Windows.Media.TranslateTransform]::YProperty,$null)
+  $spec=Badge-For $mood $kindName
+  if((Visible $m 'StatusBadge') -ne ($null -ne $spec)){throw "${kindName}: the badge should be $(if($spec){'shown'}else{'hidden'}) in $mood"}
+  if($null -eq $spec){continue}
+  $pos=$m.FindName('BadgePos');$cx=$pos.X;$cy=$pos.Y;$cat=$kindName -eq 'Kuro' -or $kindName -eq 'Shiro'
+  $outer=if($cat){4.9*$m.FindName('BadgeSize').ScaleX}else{4.9}
+  if($cat){
+   # the cats: the top centre, between the ears: radius 4.4 with its ring, nothing above y = -4.5, clear of the tail (left of x = 6) and of the eyes (below y = 9)
+   if([Math]::Abs($cx-15) -gt 1 -or $cy-$outer -lt -4.5 -or $cy+$outer -gt 5.6 -or $outer -gt 4.45 -or $cx-$outer -lt 9 -or $cx+$outer -gt 21){throw ("{0}: the {1} badge is out of the cat slot: centre {2},{3} radius {4:N2}" -f $kindName,$mood,$cx,$cy,$outer)}
+  }elseif($cx+$outer -gt 30.6 -or $cy-$outer -lt -2.1 -or $cx-$outer -lt 17){throw ("{0}: the {1} badge is out of its corner: centre {2},{3}" -f $kindName,$mood,$cx,$cy)}
+  if((Hex-Of $m.FindName('BadgeDisc').Fill.Color) -ne $spec.Fill -or (Hex-Of $m.FindName('BadgeGlyph').Fill.Color) -ne $spec.Ink){throw "${kindName}: the $mood badge has the wrong colours"}
+  if((Hex-Of $m.FindName('BadgeRing').Fill.Color) -ne $badgeType.GetMethod('RingFor',[type[]]@([string],[string])).Invoke($null,@('Default',$spec.Fill))){throw "${kindName}: the $mood badge ring is not the theme's ring"}
+  $glyph=$m.FindName('BadgeGlyph').Data
+  if($glyph.IsEmpty() -or $glyph.Bounds.Width -lt 1.5 -or $glyph.Bounds.Right -gt 3.6 -or $glyph.Bounds.Left -lt -3.6 -or $glyph.Bounds.Top -lt -3.6 -or $glyph.Bounds.Bottom -gt 3.6){throw "${kindName}: the $mood glyph is missing or does not fit the disc ($($glyph.Bounds))"}
+  # the badge must not cover an eye: its outer circle stays clear of every eye shape the face shows
+  foreach($eye in $eyeNames){
+   if(!(Visible $m $eye)){continue}
+   $b=Eye-Bounds $m $root $eye
+   if($b.IsEmpty -or $b.Width -le 0){continue}
+   $dx=[Math]::Max([Math]::Max($b.Left-$cx,0),$cx-$b.Right);$dy=[Math]::Max([Math]::Max($b.Top-$cy,0),$cy-$b.Bottom)
+   if([Math]::Sqrt($dx*$dx+$dy*$dy) -lt $outer-0.3){throw ("{0}: the {1} badge covers the {2} (distance {3:N2} < {4})" -f $kindName,$mood,$eye,[Math]::Sqrt($dx*$dx+$dy*$dy),($outer-0.3))}
+  }
+  $checks++
+ }
+}
+# a face without a badge never shows one, on any mascot (checked above); now the pixels at the capsule size
+$badgeMetrics=@()
+foreach($groundName in $grounds.Keys){
+ $groundColor=[Windows.Media.ColorConverter]::ConvertFromString($grounds[$groundName])
+ foreach($kindName in 'Mochi','MatchaMochi','HojichaMochi','Kuro','Shiro'){
+  foreach($scale in 1,1.25,1.5,2){
+   $m=New-Mascot $groundName $kindName;$m.Width=22;$m.Height=19
+   $native,$surface=New-Host $m $scale ([Windows.Media.SolidColorBrush]::new($groundColor))
+   try{
+    $surface.Measure([Windows.Size]::new(200,200));$surface.Arrange([Windows.Rect]::new(0,0,$surface.DesiredSize.Width,$surface.DesiredSize.Height));$surface.UpdateLayout()
+    $w=[int][math]::Ceiling($surface.ActualWidth*$scale);$h=[int][math]::Ceiling($surface.ActualHeight*$scale);$stride=$w*4
+    $bubble=$m.FindName('BodyBounceTransform');$badge=$m.FindName('StatusBadge')
+    $catKind=$kindName -eq 'Kuro' -or $kindName -eq 'Shiro'
+    $minAcross=if($catKind){5.8}else{6.9}
+    foreach($mood in $(if($catKind){@($allMoods|Where-Object{$null -ne (Badge-For $_ $kindName)})}else{$badgeMoods})){
+     $m.Mood=[Enum]::Parse($moodType,$mood)
+     $bubble.BeginAnimation([Windows.Media.TranslateTransform]::XProperty,$null);$bubble.BeginAnimation([Windows.Media.TranslateTransform]::YProperty,$null);$bubble.X=0;$bubble.Y=0
+     $face=$m.FindName('FaceTransform');$face.BeginAnimation([Windows.Media.TranslateTransform]::XProperty,$null);$face.BeginAnimation([Windows.Media.TranslateTransform]::YProperty,$null)
+     $surface.UpdateLayout()
+     $with=[Windows.Media.Imaging.RenderTargetBitmap]::new($w,$h,96*$scale,96*$scale,[Windows.Media.PixelFormats]::Pbgra32);$with.Render($surface)
+     $badge.Visibility=[Windows.Visibility]::Collapsed;$surface.UpdateLayout()
+     $without=[Windows.Media.Imaging.RenderTargetBitmap]::new($w,$h,96*$scale,96*$scale,[Windows.Media.PixelFormats]::Pbgra32);$without.Render($surface)
+     $badge.Visibility=[Windows.Visibility]::Visible
+     $a=[byte[]]::new($stride*$h);$b=[byte[]]::new($stride*$h);$with.CopyPixels($a,$stride,0);$without.CopyPixels($b,$stride,0)
+     $minX=$w;$maxX=-1;$minY=$h;$maxY=-1;$best=1.0
+     for($y=0;$y -lt $h;$y++){for($x=0;$x -lt $w;$x++){
+      $i=$y*$stride+$x*4
+      if([Math]::Abs($a[$i]-$b[$i])+[Math]::Abs($a[$i+1]-$b[$i+1])+[Math]::Abs($a[$i+2]-$b[$i+2]) -gt 30){
+       if($x -lt $minX){$minX=$x};if($x -gt $maxX){$maxX=$x};if($y -lt $minY){$minY=$y};if($y -gt $maxY){$maxY=$y}
+       $c=Contrast (Lum $a[$i+2] $a[$i+1] $a[$i]) (Lum $b[$i+2] $b[$i+1] $b[$i]);if($c -gt $best){$best=$c}
+      }}}
+     $across=$maxX-$minX+1
+     $badgeMetrics+=("{0} on {1} ground, {2} {3}%: {4} px across, {5:N1}:1 against what it covers" -f $kindName,$groundName,$mood,($scale*100),$across,$best)
+     if($across -lt $minAcross*$scale){throw ("{0} on the {1} ground: the {2} badge is only {3} px across at {4}% (needs {5:N1})" -f $kindName,$groundName,$mood,$across,($scale*100),($minAcross*$scale))}
+     if($best -lt 3){throw ("{0} on the {1} ground: the {2} badge is only {3:N2}:1 against what it covers at {4}%" -f $kindName,$groundName,$mood,$best,($scale*100))}
+     $checks++
+    }
+   } finally { $native.Dispose() }
+  }
+ }
+}
+$badgeMetrics|Set-Content (Join-Path $output 'badge-contrast.txt')
+
+# ---- Look-alike faces: with the badges hidden, the faces that used to share their eyes (Idle, Thinking, Notice, Bored and Sleeping, Waking,
+# Prayer) must still differ at the capsule size. Rendered at 22 x 19 and 200% on the Default ground; each pair needs at least 12 differing
+# pixels (3 at 100%).
+function Face-Pixels($mood){
+ $m=New-Mascot 'Default' 'Mochi';$m.Width=22;$m.Height=19;$m.Mood=[Enum]::Parse($moodType,$mood)
+ $m.FindName('StatusBadge').Visibility=[Windows.Visibility]::Collapsed
+ foreach($t in 'BodyBounceTransform','FaceTransform'){$tr=$m.FindName($t);$tr.BeginAnimation([Windows.Media.TranslateTransform]::XProperty,$null);$tr.BeginAnimation([Windows.Media.TranslateTransform]::YProperty,$null)}
+ $m.FindName('BodyBounceTransform').X=0;$m.FindName('BodyBounceTransform').Y=0
+ $img=Render-Pixels $m 2 ([Windows.Media.Color]::FromRgb(0,0,0))
+ return $img
+}
+$faceCache=@{}
+$lookAlikes=@()
+foreach($pair in @(@('Idle','Waiting'),@('Idle','Alert'),@('Idle','Bored'),@('Waiting','Alert'),@('Waiting','Bored'),@('Alert','Bored'),@('Sleeping','Waking'),@('Sleeping','Praying'),@('Waking','Praying'))){
+ foreach($n in $pair){if(!$faceCache.ContainsKey($n)){$faceCache[$n]=Face-Pixels $n}}
+ $pa=$faceCache[$pair[0]];$pb=$faceCache[$pair[1]];$diff=0
+ for($i=0;$i -lt $pa.Pixels.Length;$i+=4){if([Math]::Abs($pa.Pixels[$i]-$pb.Pixels[$i])+[Math]::Abs($pa.Pixels[$i+1]-$pb.Pixels[$i+1])+[Math]::Abs($pa.Pixels[$i+2]-$pb.Pixels[$i+2]) -gt 60){$diff++}}
+ $lookAlikes+=("{0} vs {1}: {2} px differ" -f $pair[0],$pair[1],$diff)
+ if($diff -lt 12){throw ("{0} and {1} look alike at the capsule size (only {2} pixels differ at 200%)" -f $pair[0],$pair[1],$diff)}
+ $checks++
+}
+$lookAlikes|Set-Content (Join-Path $output 'lookalike.txt')
+
+# ---- moods-capsule-size.png: every face at the real capsule size (22 x 19 at 100%), one row per mascot and ground, magnified x4 with
+# nearest-neighbour so the pixels can be judged by eye. The faces run in the order of the README sheet (left to right, then the rows).
+$sizeRows=@(@('Mochi','Default'),@('HojichaMochi','Hojicha'),@('MatchaMochi','Matcha'),@('Kuro','KuroNight'),@('Shiro','Default'),@('Shiro','Matcha'),@('Mochi','Matcha'),@('HojichaMochi','Matcha'),@('Kuro','Default'))
+$sizeStack=[Windows.Controls.StackPanel]::new();$sizeStack.Background=[Windows.Media.Brushes]::Black
+foreach($row in $sizeRows){
+ $line=[Windows.Controls.StackPanel]::new();$line.Orientation='Horizontal';$line.Background=[Windows.Media.BrushConverter]::new().ConvertFromString($grounds[$row[1]])
+ foreach($key in $sheetFaces.Keys){
+  if($key -eq 'Turning'){continue}
+  $m=New-Mascot $row[1] $row[0];$m.Width=22;$m.Height=19;$m.Margin=[Windows.Thickness]::new(5,7,5,5);$m.Mood=[Enum]::Parse($moodType,$key)
+  foreach($t in 'BodyBounceTransform','FaceTransform'){$tr=$m.FindName($t);$tr.BeginAnimation([Windows.Media.TranslateTransform]::XProperty,$null);$tr.BeginAnimation([Windows.Media.TranslateTransform]::YProperty,$null)}
+  $m.FindName('BodyBounceTransform').X=0;$m.FindName('BodyBounceTransform').Y=0
+  [void]$line.Children.Add($m)
+ }
+ [void]$sizeStack.Children.Add($line)
+}
+$native,$sizeHost=New-Host $sizeStack 1 $sizeStack.Background
+try{
+ $sizeHost.Measure([Windows.Size]::new(4000,2000));$sizeHost.Arrange([Windows.Rect]::new(0,0,$sizeHost.DesiredSize.Width,$sizeHost.DesiredSize.Height));$sizeHost.UpdateLayout()
+ $small=[Windows.Media.Imaging.RenderTargetBitmap]::new([int]$sizeHost.ActualWidth,[int]$sizeHost.ActualHeight,96,96,[Windows.Media.PixelFormats]::Pbgra32);$small.Render($sizeHost)
+} finally { $native.Dispose() }
+$image=[Windows.Controls.Image]::new();$image.Source=$small;$image.Width=$small.PixelWidth*4;$image.Height=$small.PixelHeight*4;$image.Stretch='Fill'
+[Windows.Media.RenderOptions]::SetBitmapScalingMode($image,[Windows.Media.BitmapScalingMode]::NearestNeighbor)
+$image.Measure([Windows.Size]::new($image.Width,$image.Height));$image.Arrange([Windows.Rect]::new(0,0,$image.Width,$image.Height));$image.UpdateLayout()
+$big=[Windows.Media.Imaging.RenderTargetBitmap]::new([int]$image.Width,[int]$image.Height,96,96,[Windows.Media.PixelFormats]::Pbgra32);$big.Render($image)
+$encoder=[Windows.Media.Imaging.PngBitmapEncoder]::new();$encoder.Frames.Add([Windows.Media.Imaging.BitmapFrame]::Create($big))
+$stream=[IO.File]::Create((Join-Path $output 'moods-capsule-size.png'));$encoder.Save($stream);$stream.Dispose()
 $checks++
 
 # ---- Winking closes one eye only, and the Music face sways sideways while it bounces.
