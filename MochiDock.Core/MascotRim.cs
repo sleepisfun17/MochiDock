@@ -19,7 +19,10 @@ public static class MascotRim
     public const double MaxLuminance = 0.17;
 
     public static bool NeedsDarkRim(MascotKind kind, string? theme) =>
-        ThemePolicy.Normalize(theme) == ThemePolicy.Matcha && kind is not MascotKind.Kuro;
+        IsLightGround(theme) && kind is not MascotKind.Kuro;
+
+    /// <summary>True for the light Matcha ground, where a glow has nothing dark to shine against (Kuro drops his there; see <see cref="MascotTint.OnLightGround"/>).</summary>
+    public static bool IsLightGround(string? theme) => ThemePolicy.Normalize(theme) == ThemePolicy.Matcha;
 
     /// <summary>The Mochi kinds: 1.5 on Matcha, 0.8 elsewhere. The cats: <see cref="CatThickness"/>.</summary>
     public static double Thickness(MascotKind kind, string? theme) =>
@@ -28,10 +31,12 @@ public static class MascotRim
 
     /// <summary>
     /// The one outline thickness a cat (Kuro or Shiro) uses on his body, both ears and the tail, so he reads as one silhouette and not a ring
-    /// with thin ears: <see cref="CatNormalThickness"/> on the dark grounds, <see cref="CatLightGroundThickness"/> on the light Matcha ground.
+    /// with thin ears: <see cref="CatNormalThickness"/> on the dark grounds, and <see cref="CatLightGroundThickness"/> for Shiro on the light
+    /// Matcha ground. Kuro keeps <see cref="CatNormalThickness"/> there: his dark body is the contrast on a light ground, so a thick rim would only
+    /// make a heavy ring.
     /// </summary>
     public static double CatThickness(MascotKind kind, string? theme) =>
-        kind is MascotKind.Kuro or MascotKind.Shiro && ThemePolicy.Normalize(theme) == ThemePolicy.Matcha ? CatLightGroundThickness : CatNormalThickness;
+        kind is MascotKind.Shiro && IsLightGround(theme) ? CatLightGroundThickness : CatNormalThickness;
 
     /// <summary>The rim colour for the light ground: a neutral grey becomes <see cref="DarkNeutral"/>, a coloured edge is darkened until it is dark enough.</summary>
     public static string OnLightGround(string edge)

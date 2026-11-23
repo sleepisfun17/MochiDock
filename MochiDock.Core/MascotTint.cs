@@ -30,6 +30,17 @@ public static class MascotTint
 
     private static KuroTint Neutral() => new(CharcoalTop, CharcoalBottom, ElectricYellow, ElectricYellow);
 
+    /// <summary>Kuro's neutral rim on the light Matcha ground: a deep gold (about 3.9:1 on #EFE6CF) instead of the bright yellow, which fades on oat.</summary>
+    public const string GoldOnLight = "#8F6B0E";
+
+    /// <summary>
+    /// Kuro on the light Matcha ground: the glow is dropped (a glow only shows against a dark ground; on oat it smears into a muddy halo), so
+    /// the rim alone carries the accent. The neutral rim becomes <see cref="GoldOnLight"/>; a face's own colour (red, blue...) is darkened from
+    /// the face's colour (not the lifted dark-ground rim) until it reads on the light ground. The body stays charcoal.
+    /// </summary>
+    public static KuroTint OnLightGround(KuroTint k) =>
+        k with { Rim = string.Equals(k.Rim, ElectricYellow, StringComparison.OrdinalIgnoreCase) ? GoldOnLight : MascotRim.OnLightGround(k.Glow) };
+
     private static bool TryParse(string? hex, out int r, out int g, out int b)
     {
         r = g = b = 0;

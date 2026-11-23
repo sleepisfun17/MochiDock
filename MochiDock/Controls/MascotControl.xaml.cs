@@ -832,6 +832,10 @@ public partial class MascotControl : System.Windows.Controls.UserControl
 
     private string ThemeName => ThemeNameOf(_theme);
 
+    // The light Matcha ground: Kuro shows no glow there (it would smear into a muddy halo on oat) and wears the soft black shadow instead.
+    private bool _onLightGround => MochiDock.Core.MascotRim.IsLightGround(ThemeName);
+    private bool _kuroGlows => _isKuro && !_onLightGround;
+
     private static string ThemeNameOf(MascotTheme theme) => theme switch
     {
         MascotTheme.Matcha => MochiDock.Core.ThemePolicy.Matcha,
@@ -943,6 +947,7 @@ public partial class MascotControl : System.Windows.Controls.UserControl
         if (_isKuro)
         {
             kuro = MochiDock.Core.MascotTint.KuroNight(new[] { top, bottom, edge, cheek });
+            if (_onLightGround) kuro = MochiDock.Core.MascotTint.OnLightGround(kuro.Value);   // no glow on Matcha: a deep gold rim instead
             top = kuro.Value.BodyTop;
             bottom = kuro.Value.BodyBottom;
         }
@@ -1504,7 +1509,7 @@ public partial class MascotControl : System.Windows.Controls.UserControl
         if (KuroEars == null || KuroTail == null) return;
         bool kuro = _isKuro, cat = _isCat;
         KuroEars.Visibility = KuroTail.Visibility = cat ? Visibility.Visible : Visibility.Collapsed;
-        BodyGlow.Visibility = kuro ? Visibility.Visible : Visibility.Collapsed;
+        BodyGlow.Visibility = _kuroGlows ? Visibility.Visible : Visibility.Collapsed;
         InnerEarLeft.Fill = InnerEarRight.Fill = Ink(kuro ? "#FFD43B" : "#F4B6C2");
         InnerEarLeft.Opacity = InnerEarRight.Opacity = kuro ? 0.55 : 0.9;
         // The light-bodied mascots need a firmer rim on Matcha's light ground (a thin line is only a fraction of a pixel at the capsule size).
@@ -1515,9 +1520,9 @@ public partial class MascotControl : System.Windows.Controls.UserControl
         MochiBodyBorder.UseLayoutRounding = MochiBodyBorder.SnapsToDevicePixels = !_isCat;
         EarLeft.StrokeThickness = EarRight.StrokeThickness = TailShape.StrokeThickness = rim;
         TailSpark.Fill = Ink(kuro ? "#FFF3B0" : "#8FD3FF");
-        if (!kuro)
+        if (!_kuroGlows)
         {
-            // Mochi's and Shiro's ears and tail keep the black shadow (Shiro has no glow)
+            // Mochi's and Shiro's ears and tail keep the black shadow (Shiro has no glow), and so do Kuro's on the light ground
             UseShadow(EarGlow, System.Windows.Media.Colors.Black, 4, 1, 0.25);
             UseShadow(TailGlow, System.Windows.Media.Colors.Black, 4, 1, 0.25);
         }
@@ -1525,8 +1530,9 @@ public partial class MascotControl : System.Windows.Controls.UserControl
         Resources["MascotInkBrush"] = Ink(kuro ? "#F3EEDC" : "#1A1412");
         Resources["MascotSleepyBrush"] = Ink(kuro ? "#D9B433" : "#2C2422");
         BodySheen.Opacity = kuro ? 0.3 : 1;
-        // The black drop shadow goes in KuroNight (the glow replaces it); the glow's colour comes with the face (ApplyKuroLook).
-        UseShadow(BodyShadow, System.Windows.Media.Colors.Black, 4, 1, kuro ? 0 : 0.25);
+        // Kuro's glow replaces the black drop shadow on the dark grounds (its colour comes with the face, ApplyKuroLook); on the light ground he
+        // keeps the soft black shadow like the others.
+        UseShadow(BodyShadow, System.Windows.Media.Colors.Black, 4, 1, _kuroGlows ? 0 : 0.25);
         if (!cat) TailSwayRotate.BeginAnimation(RotateTransform.AngleProperty, null);
         ApplyHeadset(HeadsetMood.Music);   // the band moves in front of or behind the ears with the mascot; the face adds its marks later
     }
@@ -1548,11 +1554,21 @@ public partial class MascotControl : System.Windows.Controls.UserControl
         var body = Ink(k.BodyTop);
         MochiBodyBorder.BorderBrush = rim;
         LeftCheek.Fill = RightCheek.Fill = System.Windows.Media.Brushes.Transparent;   // a black cat has no pink cheeks
-        var glow = (System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(_electricFace ? MochiDock.Core.MascotTint.ElectricYellow : k.Glow);
-        double blur = _electricFace ? 8 : 5, opacity = _electricFace ? 0.95 : 0.55;
-        UseShadow(BodyGlowFx, glow, blur, 0, opacity);
-        UseShadow(EarGlow, glow, blur, 0, opacity);
-        UseShadow(TailGlow, glow, blur, 0, opacity);
+        if (_kuroGlows)
+        {
+            var glow = (System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(_electricFace ? MochiDock.Core.MascotTint.ElectricYellow : k.Glow);
+            double blur = _electricFace ? 8 : 5, opacity = _electricFace ? 0.95 : 0.55;
+            UseShadow(BodyGlowFx, glow, blur, 0, opacity);
+            UseShadow(EarGlow, glow, blur, 0, opacity);
+            UseShadow(TailGlow, glow, blur, 0, opacity);
+        }
+        else
+        {
+            // The light ground: no glow, the same soft black shadow as the other mascots.
+            UseShadow(BodyGlowFx, System.Windows.Media.Colors.Black, 0, 0, 0);
+            UseShadow(EarGlow, System.Windows.Media.Colors.Black, 4, 1, 0.25);
+            UseShadow(TailGlow, System.Windows.Media.Colors.Black, 4, 1, 0.25);
+        }
         EarLeft.Fill = EarRight.Fill = body;
         TailShape.Fill = body;
         EarLeft.Stroke = EarRight.Stroke = TailShape.Stroke = rim;
@@ -1595,7 +1611,7 @@ public partial class MascotControl : System.Windows.Controls.UserControl
             flash.KeyFrames.Add(new LinearDoubleKeyFrame(value, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(ms))));
         TailSpark.BeginAnimation(OpacityProperty, flash);
         FlickTail();
-        if (!_isKuro) return;
+        if (!_kuroGlows) return;   // Shiro has no glow, and neither has Kuro on the light ground
         foreach (var fx in new[] { BodyGlowFx, EarGlow, TailGlow })
         {
             fx.BeginAnimation(System.Windows.Media.Effects.DropShadowEffect.OpacityProperty, new DoubleAnimation(fx.Opacity, 1, TimeSpan.FromMilliseconds(140)) { AutoReverse = true, FillBehavior = FillBehavior.Stop });

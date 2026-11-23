@@ -584,6 +584,20 @@ foreach($kindName in 'Kuro','Shiro'){
  }
 }
 if($null -ne $probe.FindName('SteamLeft') -or $null -ne $probe.FindName('SteamRight')){throw 'Hot has side steam puffs again (they read as ear bobbles)'}
+# Kuro on the light Matcha ground: no glow (it smears into a muddy halo on oat), the soft black shadow instead, a deep gold rim on the neutral
+# faces and a darkened face colour on the coloured ones, the normal 1.0 outline on body, ears and tail; on the dark grounds he still glows.
+$kl=New-Mascot 'Matcha' 'Kuro'
+if(Visible $kl 'BodyGlow'){throw 'Kuro on Matcha still shows the glow'}
+if([math]::Abs($kl.FindName('BodyShadow').Opacity-0.25) -gt 1e-9){throw 'Kuro on Matcha lost the soft black shadow'}
+if((Brush-Hex $kl.FindName('MochiBodyBorder').BorderBrush) -ne '#8F6B0E'){throw "Kuro on Matcha: the Idle rim is $(Brush-Hex $kl.FindName('MochiBodyBorder').BorderBrush), not the deep gold #8F6B0E"}
+foreach($t in 'EarLeft','EarRight','TailShape'){if([math]::Abs($kl.FindName($t).StrokeThickness-1.0) -gt 1e-9){throw "Kuro on Matcha: $t is not the 1.0 outline"}}
+if([math]::Abs($kl.FindName('MochiBodyBorder').BorderThickness.Left-1.0) -gt 1e-9){throw 'Kuro on Matcha: the body outline is not 1.0'}
+$kl.Mood=[Enum]::Parse($moodType,'Angry')
+$angryRim=Brush-Hex $kl.FindName('MochiBodyBorder').BorderBrush
+if($angryRim -eq '#8F6B0E' -or $angryRim -eq '#FFD43B' -or (Visible $kl 'BodyGlow')){throw "Kuro on Matcha: Angry should have a darkened red rim and no glow, not $angryRim"}
+$kl.Mood=[Enum]::Parse($moodType,'Electric')
+if((Visible $kl 'BodyGlow') -or (Body-Top $kl) -ne '#3B3D52'){throw 'Kuro on Matcha: Electric must stay charcoal and glow-free'}
+$checks+=4
 # The three Mochi colours come from the mascot, not the theme: grey, green or tan on every ground, no ears, tail or glow, dark ink; on the Matcha
 # ground the rim is darker and thicker (and only there).
 $mochiBodies=@{Mochi='#EDEDEF';MatchaMochi='#85B957';HojichaMochi='#E9D3B4'}
