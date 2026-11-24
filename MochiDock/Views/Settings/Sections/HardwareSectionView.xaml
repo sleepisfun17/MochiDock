@@ -64,11 +64,8 @@
         <s:SettingRow Label="Wireless device batteries" Description="Read mouse and keyboard battery levels (Rongyuan/Monsgeek, LAMZU, Bluetooth, standard HID). Shown on the Battery page; a low device gives a silent notice at 15%.">
             <CheckBox IsChecked="{Binding EnableDeviceBatteries, Mode=TwoWay}" Style="{StaticResource ModernDarkCheckBox}"/>
         </s:SettingRow>
-        <s:SettingRow Label="Show on taskbar" Description="Show the device batteries next to the system tray. Needs a horizontal taskbar on the primary monitor.">
-            <CheckBox IsChecked="{Binding ShowDeviceBatteriesOnTaskbar, Mode=TwoWay}" IsEnabled="{Binding EnableDeviceBatteries}" Style="{StaticResource ModernDarkCheckBox}"/>
-        </s:SettingRow>
-        <s:SettingRow Label="Background behind taskbar text" Description="Draw a plate behind the taskbar readout so it stays readable on transparent or restyled taskbars.">
-            <CheckBox IsChecked="{Binding ShowDeviceBatteryBackground, Mode=TwoWay}" IsEnabled="{Binding ShowDeviceBatteriesOnTaskbar}" Style="{StaticResource ModernDarkCheckBox}"/>
+        <s:SettingRow Label="Device batteries on the taskbar" Description="The taskbar readout (and its plate) now lives in Settings > Taskbar.">
+            <Button Style="{StaticResource ActionButton}" Content="Open Taskbar settings" Click="OpenTaskbarSettings_Click" Margin="0"/>
         </s:SettingRow>
 
         <!-- Power use -->

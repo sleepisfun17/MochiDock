@@ -22,6 +22,7 @@ public static class SettingsTransfer
         "RemoteWebhookToken", "TargetMonitor", "TopMargin", "GamingTopOffset", "IslandHorizontalRatio",
         "SettingsWindowWidth", "SettingsWindowHeight", "PrayerAudioWavPath", "StartWithWindows", "LastUpdateCheckUtc", "LastAnnouncedUpdate",
         "SnoozeUntilTicks", "GowaPort", "WebhookPort", "PowerComponents", "HiddenDeviceBatteryKeys", "PreferredGamingResolution",
+        "TaskbarShowSystem", "TaskbarShowMemoryDisk", "TaskbarShowNetwork", "TaskbarShowPrayer", "TaskbarShowWeather",
     };
 
     /// <summary>Removes the local-only keys from <paramref name="settings"/> and returns it.</summary>

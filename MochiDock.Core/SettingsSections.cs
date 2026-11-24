@@ -20,6 +20,7 @@ public static class SettingsSections
     public const string Tabs = "tabs";
     public const string Gaming = "gaming";
     public const string Hardware = "hardware";
+    public const string Taskbar = "taskbar";
     public const string Music = "music";
     public const string AiUsage = "ai";
     public const string Data = "data";
@@ -40,6 +41,7 @@ public static class SettingsSections
         new(Notifications, "Notifications", "Mutes, quiet hours, snooze, reminders and sounds.", GroupFeatures),
         new(Gaming, "Gaming & Display", "Resolution presets, window-size shortcuts, click-through, gaming offset and session summary.", GroupFeatures),
         new(Hardware, "Hardware & power", "Alerts, wireless device batteries and power estimate.", GroupFeatures),
+        new(Taskbar, "Taskbar", "CPU, GPU, memory, disk, network, prayer, weather and device batteries beside the tray.", GroupFeatures),
         new(Music, "Music & lyrics", "Synced lyrics, pronunciation and timing.", GroupFeatures),
         new(AiUsage, "AI usage", "Which AI providers are tracked and alerts.", GroupFeatures),
         new(Data, "Data & diagnostics", "Export, import, reload, files, logs and integration status.", GroupData),
@@ -55,6 +57,7 @@ public static class SettingsSections
         ["outlook"] = Email,
         ["logs"] = Data,
         ["import-export"] = Data,
+        ["taskbar-readouts"] = Taskbar,
     };
 
     public static SettingsSection? Find(string? id) =>

@@ -6,6 +6,7 @@ All notable changes to MochiDock are documented here. The format follows [Keep a
 
 ### Added
 
+- **Taskbar readouts**: Settings > Taskbar puts small two-line blocks beside the system tray, like Traffic Monitor: CPU and GPU (load and temperature, a ~ marks the CPU estimate), memory and disk, network up and down, the next prayer and the weather, next to the wireless device batteries. Each block is off until you switch it on and is kept per PC (importing settings never changes it). Warnings turn red at your alert thresholds, a click opens the matching card (Stats on the CPU, Memory or Network page, Prayer, Weather or Battery), the right-click menu and a per-block tooltip stay, and a small-icons taskbar gets one line per block. The numbers come from a light sampler that runs once a second only while a CPU, memory/disk or network block is on, and pauses while the PC is locked. The device-battery taskbar options moved from Hardware & power to the new Taskbar section.
 - **Short names for WhatsApp accounts**: Settings > WhatsApp > Account names gives each linked account a short name (for example JP or ID), shown after the sender instead of the long account name when several accounts are linked.
 
 ### Changed

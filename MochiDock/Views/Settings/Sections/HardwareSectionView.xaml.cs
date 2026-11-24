@@ -31,6 +31,8 @@ public partial class HardwareSectionView : SettingsSectionBase
         }
     }
 
+    private void OpenTaskbarSettings_Click(object sender, RoutedEventArgs e) => App.OpenSettings(MochiDock.Core.SettingsSections.Taskbar);
+
     private void UpdatePawnIoStatus()
     {
         bool installed = MochiDock.Services.SensorService.IsPawnIoInstalled;

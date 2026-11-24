@@ -14,6 +14,12 @@ public class AppSettings
     public List<MochiDock.Core.PowerComponent> PowerComponents { get; set; } = new();
     public List<string> HiddenDeviceBatteryKeys { get; set; } = new();
     public bool ShowDeviceBatteriesOnTaskbar { get; set; } = true;
+    // The taskbar readout blocks (Settings > Taskbar), all off until chosen and kept per PC (SettingsTransfer.LocalOnlyKeys).
+    public bool TaskbarShowSystem { get; set; }
+    public bool TaskbarShowMemoryDisk { get; set; }
+    public bool TaskbarShowNetwork { get; set; }
+    public bool TaskbarShowPrayer { get; set; }
+    public bool TaskbarShowWeather { get; set; }
     public bool ShowAiUsageTab { get; set; } = false;
     public bool ShowScriptTab { get; set; } = false;
     public bool ShowDownloadsTab { get; set; } = false;

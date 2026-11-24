@@ -365,6 +365,8 @@ public partial class MainViewModel : INotifyPropertyChanged
         OnPropertyChanged(nameof(FxPairs));
         OnPropertyChanged(nameof(EnableDeviceBatteries));OnPropertyChanged(nameof(ShowDeviceBatteriesOnTaskbar));OnPropertyChanged(nameof(ShowDeviceBatteryBackground));
         ApplyDeviceBatteryConfiguration();DeviceBatterySettingsChanged?.Invoke();
+        OnPropertyChanged(nameof(TaskbarShowSystem));OnPropertyChanged(nameof(TaskbarShowMemoryDisk));OnPropertyChanged(nameof(TaskbarShowNetwork));OnPropertyChanged(nameof(TaskbarShowPrayer));OnPropertyChanged(nameof(TaskbarShowWeather));
+        ApplyTaskbarSampler();RefreshTaskbarBlocks();
         OnPropertyChanged(nameof(EnablePowerLogging));_powerComponentItems=null;OnPropertyChanged(nameof(PowerComponentItems));RecomputePowerAllowance();ApplyPowerLogConfiguration();
         OnPropertyChanged(nameof(HideInFullscreen));
         OnPropertyChanged(nameof(EnableHardwareAlerts));
@@ -612,6 +614,7 @@ public partial class MainViewModel : INotifyPropertyChanged
         CapsuleTheme = _settings.CapsuleTheme;
         CapsuleScrollSpeed = _settings.CapsuleScrollSpeed;
         ApplyCapsuleTheme(_settings.CapsuleTheme);
+        InitializeTaskbar();
 
         _ = Task.Run(async () =>
         {
@@ -931,7 +934,7 @@ public partial class MainViewModel : INotifyPropertyChanged
     public bool EnableHardwareAlerts { get=>_settings.EnableHardwareAlerts; set { UpdateSettings(x => x.EnableHardwareAlerts = value, SettingsApply.HardwareAlerts); OnPropertyChanged();_hardwareNoticeUntil=default;NotifyHardwareNotice(); } }
     private bool _displayAwake=true;
     public void StopHardwareCapture(){EndPlaytimeSession();EndGameProfile();_lol.Stop();StopPubgFetch();_hardwareService.SetGameCapture(false);_hardwareService.Dispose();}
-    public void SetDisplayAwake(bool awake){Fx?.Configure(ShowFxRatesTab,_isWorkstationLocked||!awake);_deviceBatteries?.Configure(EnableDeviceBatteries,_isWorkstationLocked||!awake);if(!awake){_hardwareNoticeUntil=default;_hardwareAlerts.ResetContinuity();NotifyHardwareNotice();DismissPrayerArrival();}_displayAwake=awake;_hardwareService.ResetSamplingBaseline();if(!awake)_hardwareService.SetGameCapture(false);}
+    public void SetDisplayAwake(bool awake){Fx?.Configure(ShowFxRatesTab,_isWorkstationLocked||!awake);_deviceBatteries?.Configure(EnableDeviceBatteries,_isWorkstationLocked||!awake);if(!awake){_hardwareNoticeUntil=default;_hardwareAlerts.ResetContinuity();NotifyHardwareNotice();DismissPrayerArrival();}_displayAwake=awake;ApplyTaskbarSampler();_hardwareService.ResetSamplingBaseline();if(!awake)_hardwareService.SetGameCapture(false);}
     public bool IsBatteryModuleActive => ActiveSystemModule=="Battery";
     public FxRatesService? Fx {get;private set;}
     public void ConfigureFx(FxRatesService service){Fx=service;OnPropertyChanged(nameof(Fx));}
@@ -1413,7 +1416,7 @@ public partial class MainViewModel : INotifyPropertyChanged
 
     private readonly MochiDock.Core.HardwareAlertPolicy _hardwareAlerts=new();
     private readonly DispatcherTimer _hardwareNoticeTimer=new(){Interval=TimeSpan.FromSeconds(8)};
-    public void StopPresentationTimers(){_aiUsageService.Dispose();_hardwareNoticeTimer.Stop();StopStatsHistory();_prayerArrivalTimer.Stop();_autoCollapseTimer.Stop();_hardwarePollTimer.Stop();}
+    public void StopPresentationTimers(){StopTaskbarSampler();_aiUsageService.Dispose();_hardwareNoticeTimer.Stop();StopStatsHistory();_prayerArrivalTimer.Stop();_autoCollapseTimer.Stop();_hardwarePollTimer.Stop();}
     private DateTimeOffset _hardwareNoticeUntil;
     private string _hardwareNoticeText="";
     private bool _noticeIsWelcome;
@@ -1808,6 +1811,7 @@ public partial class MainViewModel : INotifyPropertyChanged
         _hardwareNoticeUntil=default;_hardwareAlerts.ResetContinuity();NotifyHardwareNotice();DismissPrayerArrival();
         Fx?.Configure(ShowFxRatesTab,true);_deviceBatteries?.Configure(EnableDeviceBatteries,true);
         _isWorkstationLocked = true;
+        ApplyTaskbarSampler();   // the readout sampler pauses while the PC is locked
         NotifyPrayerPresentation();
         _hardwareService.SetGameCapture(false);
         _hardwareService.ResetSamplingBaseline();
@@ -1827,6 +1831,7 @@ public partial class MainViewModel : INotifyPropertyChanged
         _prayerReminders.Reset(DateTimeOffset.UtcNow);
         _mediaService.SetSuspended(false);
         _isWorkstationLocked = false;
+        ApplyTaskbarSampler();
         NotifyPrayerPresentation();
         Fx?.Configure(ShowFxRatesTab,!_displayAwake);_deviceBatteries?.Configure(EnableDeviceBatteries,!_displayAwake);
 

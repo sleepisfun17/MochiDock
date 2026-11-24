@@ -44,6 +44,7 @@ A new install shows three tabs: **Media**, **Stats** and **Weather**. Everything
 | Location & Prayer | City for weather and prayer, calculation method, prayer sound. |
 | Notifications | Mutes, quiet hours, snooze, reminders and sounds. |
 | Gaming & Display | Resolution presets and hotkey (default Ctrl+Alt+R); window-size shortcuts, off until you turn them on, that resize the window you are using and centre it (defaults Ctrl+Alt+1 to 4 for 1920x1080, 2560x1440, 1080x1920 and 720x1280, Ctrl+Alt+F to flip width and height; editable); click-through, gaming offset, session summary. |
+| Taskbar | Readouts beside the system tray (two-line blocks, left of the clock and icons): CPU and GPU, memory and disk, network speed, the next prayer, the weather and wireless device batteries. Each is off until you switch it on, and kept per PC. Click a block to open its card (Stats, Prayer, Weather or Battery); right-click for a menu; hover for details. The tray menu has "Taskbar readouts…". A CPU temperature shown as ~45° is an estimate. Needs a horizontal taskbar on the main monitor; a small-icons taskbar shows one line per block. |
 | Hardware & power | Alerts, the optional PawnIO driver (real CPU temperature; shows whether it is installed and how to get it), wireless device batteries, power estimate. |
 | Music & lyrics | Lyrics, pronunciation and timing offset. |
 | AI usage | Which providers are tracked, and low-usage alerts. |

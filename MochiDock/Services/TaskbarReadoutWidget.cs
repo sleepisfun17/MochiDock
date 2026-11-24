@@ -9,32 +9,24 @@ using MochiDock.Core;
 using MochiDock.ViewModels;
 using Microsoft.Win32;
 
-namespace MochiDock.Services.DeviceBattery;
+namespace MochiDock.Services;
 
 /// <summary>
-/// Layered child window of the Windows taskbar (left of the tray) that shows wireless device batteries, e.g. "keyboard 82%  mouse 64%".
+/// Layered child window of the Windows taskbar (left of the tray) that shows the taskbar readout: two-line blocks for CPU/GPU, memory/disk,
+/// network, the next prayer, the weather and wireless device batteries (<see cref="TaskbarReadouts"/> decides what, <see cref="TaskbarReadoutRenderer"/> draws it).
+/// A left click on a block raises <see cref="BlockClicked"/>; a right click raises <see cref="ContextMenuRequested"/>.
 /// Owned by <c>MainWindow</c>; created, updated and destroyed on the UI thread. Primary, horizontal, non-auto-hidden taskbar only.
 /// The window class and the render surface are the only native resources; <see cref="Dispose"/> releases both and restores the Windows 10 rebar.
 /// </summary>
-public sealed class TaskbarBatteryWidget : IDisposable
+public sealed class TaskbarReadoutWidget : IDisposable
 {
-    // The widget sits on the Windows taskbar, so its colours follow the Windows app theme, not the island theme (no island brushes apply here).
-    static readonly System.Windows.Media.Color LightTaskbarText = System.Windows.Media.Color.FromRgb(0x1B, 0x1B, 0x1B);
-    static readonly System.Windows.Media.Color DarkTaskbarText = System.Windows.Media.Color.FromRgb(0xFF, 0xFF, 0xFF);
-    static readonly System.Windows.Media.Color LowBatteryText = System.Windows.Media.Color.FromRgb(0xFF, 0x5A, 0x5A);
-    static readonly System.Windows.Media.Color ChargingBolt = System.Windows.Media.Color.FromRgb(0x3B, 0x9E, 0xFF);
-    static readonly System.Windows.Media.Color LightTaskbarPlate = System.Windows.Media.Color.FromArgb(240, 243, 243, 243);
-    static readonly System.Windows.Media.Color DarkTaskbarPlate = System.Windows.Media.Color.FromArgb(240, 32, 32, 32);
-    const byte StaleAlpha = 128;
-    const int MaxItems = 4;
-
     const int GWL_EXSTYLE = -20;
     const long WS_EX_LAYOUTRTL = 0x00400000;
-    const string ClassName = "MochiDockBatteryWidget";
+    const string ClassName = "MochiDockTaskbarReadout";
     const uint WS_CHILD = 0x40000000, WS_VISIBLE = 0x10000000, WS_CLIPSIBLINGS = 0x04000000, WS_POPUP = 0x80000000;
     const uint WS_EX_LAYERED = 0x80000, WS_EX_NOACTIVATE = 0x08000000, WS_EX_TOPMOST = 8;
     const uint SWP_NOZORDER = 4, SWP_NOACTIVATE = 0x10, SWP_SHOWWINDOW = 0x40;
-    const int WM_RBUTTONUP = 0x0205, WM_LBUTTONUP = 0x0202, WM_NCHITTEST = 0x0084, HTCLIENT = 1, WM_MOUSEACTIVATE = 0x21, MA_NOACTIVATE = 3;
+    const int WM_MOUSEMOVE = 0x0200, WM_RBUTTONUP = 0x0205, WM_LBUTTONUP = 0x0202, WM_NCHITTEST = 0x0084, HTCLIENT = 1, WM_MOUSEACTIVATE = 0x21, MA_NOACTIVATE = 3;
     const int TTM_ADDTOOLW = 0x0432, TTM_UPDATETIPTEXTW = 0x0439, TTM_SETMAXTIPWIDTH = 0x0418;
     const uint TTF_SUBCLASS = 0x10, TTS_ALWAYSTIP = 1, TTS_NOPREFIX = 2;
 
@@ -90,21 +82,28 @@ public sealed class TaskbarBatteryWidget : IDisposable
     int rebarOriginalWidth;
     string tooltipText = "";
     IntPtr tooltipBuffer;
+    IReadOnlyList<TaskbarBlock> shownBlocks = Array.Empty<TaskbarBlock>();
+    IReadOnlyList<TaskbarBlockRect> blockRects = Array.Empty<TaskbarBlockRect>();
+    TaskbarBlockKind? hovered;
 
     /// <summary>Raised on the UI thread when the widget is right-clicked.</summary>
     public event Action? ContextMenuRequested;
 
-    public TaskbarBatteryWidget(MainViewModel viewModel)
+    /// <summary>Raised on the UI thread when a block is left-clicked (the owner opens the matching card).</summary>
+    public event Action<TaskbarBlockKind>? BlockClicked;
+
+    public TaskbarReadoutWidget(MainViewModel viewModel)
     {
         this.viewModel = viewModel;
         wndProc = WndProc;
         timer.Tick += (_, _) => Tick();
-        viewModel.DeviceBatteriesChanged += Refresh;
-        viewModel.DeviceBatterySettingsChanged += Refresh;
+        viewModel.TaskbarBlocksChanged += Refresh;
+        viewModel.DeviceBatterySettingsChanged += Refresh;   // the plate behind the text
         Refresh();
     }
 
-    bool ShouldShow => !disposed && viewModel.EnableDeviceBatteries && viewModel.ShowDeviceBatteriesOnTaskbar && viewModel.TaskbarDeviceBatteries.Count > 0;
+    // The widget exists while any block has content, and is hidden when none does.
+    bool ShouldShow => !disposed && viewModel.TaskbarBlocks.Count > 0;
 
     void Refresh()
     {
@@ -127,20 +126,23 @@ public sealed class TaskbarBatteryWidget : IDisposable
             if (widget != IntPtr.Zero && (parent != taskbar || !IsWindow(widget))) Destroy();
             var dpi = GetDpiForWindow(taskbar);
             var scale = (dpi == 0 ? 96 : dpi) / 96.0;
-            var readings = viewModel.TaskbarDeviceBatteries.Take(MaxItems).ToArray();
+            var blocks = viewModel.TaskbarBlocks;
             var background = viewModel.ShowDeviceBatteryBackground;
             var light = TaskbarUsesLightTheme();
             var height = taskbarRect.Bottom - taskbarRect.Top;
-            var key = string.Join("|", readings.Select(r => $"{r.Key}:{r.Percent}:{r.Charging}:{r.Stale}")) + $"@{dpi}/{light}/{height}/{background}";
+            var key = string.Join("\n", blocks.Select(b => b.ToString())) + $"@{dpi}/{light}/{height}/{background}";
             if (key != renderKey || widget == IntPtr.Zero)
             {
-                var surface = Render(readings, scale, light, height, background);
+                var surface = TaskbarReadoutRenderer.Render(blocks, dpi == 0 ? 96 : dpi, !light, height, background);
                 if (surface is null) { Hide(); return; }
-                widgetWidth = surface.Value.Width; widgetHeight = surface.Value.Height;
+                widgetWidth = surface.Width; widgetHeight = surface.Height;
                 if (widget == IntPtr.Zero && !Create(taskbar)) return;
-                Present(surface.Value);
+                Present(surface);
                 renderKey = key;
-                UpdateTooltip(readings);
+                shownBlocks = blocks;
+                blockRects = surface.Blocks;
+                hovered = null;
+                UpdateTooltip(null);
             }
 
             // Position in the taskbar's client coordinates: immediately beside the tray (stepping past the Widgets button), vertically centred.
@@ -166,7 +168,7 @@ public sealed class TaskbarBatteryWidget : IDisposable
             SetWindowPos(widget, IntPtr.Zero, x, y, widgetWidth, widgetHeight, SWP_NOACTIVATE | SWP_SHOWWINDOW);
             if (!rtl) ShrinkRebar(taskbar, x);
         }
-        catch (Exception ex) { AppLog.Warn("DeviceBattery", ex); }
+        catch (Exception ex) { AppLog.Warn("Taskbar", ex); }
     }
 
     // ---- Windows 11 Widgets (weather) button -----------------------------------------------------------------------------------------------
@@ -222,65 +224,7 @@ public sealed class TaskbarBatteryWidget : IDisposable
 
     // ---- rendering -------------------------------------------------------------------------------------------------------------------------
 
-    readonly record struct Surface(int Width, int Height, byte[] Pixels);
-
-    Surface? Render(DeviceBatteryReading[] readings, double scale, bool light, int taskbarHeight, bool background)
-    {
-        var uiFont = System.Windows.Application.Current?.TryFindResource("IslandUiFont") as System.Windows.Media.FontFamily ?? new System.Windows.Media.FontFamily("Segoe UI");
-        var textTypeface = new Typeface(uiFont, FontStyles.Normal, FontWeights.SemiBold, FontStretches.Normal);
-        var glyphTypeface = new Typeface(new System.Windows.Media.FontFamily("Segoe Fluent Icons, Segoe MDL2 Assets"), FontStyles.Normal, FontWeights.Normal, FontStretches.Normal);
-        var baseText = light ? LightTaskbarText : DarkTaskbarText;
-        var culture = CultureInfo.InvariantCulture;
-        var ppd = scale;
-        const double fontSize = 13, glyphSize = 14, gap = 4, spacing = 12, padding = 6;
-
-        var parts = new List<(FormattedText Glyph, FormattedText Bolt, FormattedText Text)>();
-        foreach (var r in readings)
-        {
-            var color = r.Percent is <= 15 && !r.Charging ? LowBatteryText : baseText;
-            if (r.Stale) color = System.Windows.Media.Color.FromArgb(StaleAlpha, color.R, color.G, color.B);
-            var boltColor = r.Stale ? System.Windows.Media.Color.FromArgb(StaleAlpha, ChargingBolt.R, ChargingBolt.G, ChargingBolt.B) : ChargingBolt;
-            var glyph = new FormattedText(Views.Cards.DeviceBatteryRowConverter.Glyph(r.Kind), culture, System.Windows.FlowDirection.LeftToRight, glyphTypeface, glyphSize, new SolidColorBrush(color), ppd);
-            var bolt = new FormattedText(r.Charging ? "" : "", culture, System.Windows.FlowDirection.LeftToRight, glyphTypeface, glyphSize - 2, new SolidColorBrush(boltColor), ppd);
-            var text = new FormattedText(r.Percent is { } p ? p + "%" : "?", culture, System.Windows.FlowDirection.LeftToRight, textTypeface, fontSize, new SolidColorBrush(color), ppd);
-            parts.Add((glyph, bolt, text));
-        }
-        if (parts.Count == 0) return null;
-
-        var widthDip = padding * 2 + parts.Sum(p => p.Glyph.WidthIncludingTrailingWhitespace + (p.Bolt.Text.Length > 0 ? p.Bolt.WidthIncludingTrailingWhitespace : 0) + gap + p.Text.WidthIncludingTrailingWhitespace) + spacing * (parts.Count - 1);
-        var heightDip = taskbarHeight / scale;
-        var pixelWidth = Math.Max(1, (int)Math.Ceiling(widthDip * scale));
-        var pixelHeight = Math.Max(1, taskbarHeight);
-
-        var visual = new DrawingVisual();
-        using (var dc = visual.RenderOpen())
-        {
-            // Alpha 1 keeps the whole rectangle hit-testable (hover tooltip, click) while staying visually transparent.
-            dc.DrawRectangle(new SolidColorBrush(System.Windows.Media.Color.FromArgb(1, 0, 0, 0)), null, new System.Windows.Rect(0, 0, pixelWidth / scale, heightDip));
-            // Optional plate for transparent or restyled taskbars, in the Windows taskbar's own light/dark colours (not island theme).
-            if (background)
-            {
-                var plate = light ? LightTaskbarPlate : DarkTaskbarPlate;
-                dc.DrawRoundedRectangle(new SolidColorBrush(plate), null, new System.Windows.Rect(0, 4, pixelWidth / scale, Math.Max(1, heightDip - 8)), 6, 6);
-            }
-            var x = padding;
-            foreach (var (glyph, bolt, text) in parts)
-            {
-                dc.DrawText(glyph, new System.Windows.Point(x, (heightDip - glyph.Height) / 2)); x += glyph.WidthIncludingTrailingWhitespace;
-                if (bolt.Text.Length > 0) { dc.DrawText(bolt, new System.Windows.Point(x, (heightDip - bolt.Height) / 2)); x += bolt.WidthIncludingTrailingWhitespace; }
-                x += gap;
-                dc.DrawText(text, new System.Windows.Point(x, (heightDip - text.Height) / 2)); x += text.WidthIncludingTrailingWhitespace + spacing;
-            }
-        }
-        var dpi = 96 * scale;
-        var bitmap = new RenderTargetBitmap(pixelWidth, pixelHeight, dpi, dpi, PixelFormats.Pbgra32); // already premultiplied alpha
-        bitmap.Render(visual);
-        var pixels = new byte[pixelWidth * pixelHeight * 4];
-        bitmap.CopyPixels(pixels, pixelWidth * 4, 0);
-        return new Surface(pixelWidth, pixelHeight, pixels);
-    }
-
-    void Present(Surface surface)
+    void Present(TaskbarRender surface)
     {
         var screen = GetDC(IntPtr.Zero);
         var memory = CreateCompatibleDC(screen);
@@ -315,7 +259,7 @@ public sealed class TaskbarBatteryWidget : IDisposable
         widget = CreateWindowExW(WS_EX_LAYERED | WS_EX_NOACTIVATE, ClassName, null, WS_CHILD | WS_CLIPSIBLINGS | WS_VISIBLE, 0, 0, widgetWidth, widgetHeight, taskbar, IntPtr.Zero, instance, IntPtr.Zero);
         if (widget == IntPtr.Zero)
         {
-            AppLog.Warn("DeviceBattery", $"Taskbar widget window could not be created (Win32 error {Marshal.GetLastWin32Error()}).");
+            AppLog.Warn("Taskbar", $"Taskbar widget window could not be created (Win32 error {Marshal.GetLastWin32Error()}).");
             return false;
         }
         parent = taskbar;
@@ -336,18 +280,13 @@ public sealed class TaskbarBatteryWidget : IDisposable
         SendMessage(tooltip, TTM_ADDTOOLW, IntPtr.Zero, ref info);
     }
 
-    void UpdateTooltip(DeviceBatteryReading[] readings)
+    // The tooltip shows the hovered block's detail (every block's, one under the other, when no block is hovered).
+    void UpdateTooltip(TaskbarBlockKind? kind)
     {
         if (tooltip == IntPtr.Zero || tooltipBuffer == IntPtr.Zero) return;
-        var text = new StringBuilder();
-        foreach (var r in readings)
-        {
-            if (text.Length > 0) text.Append("\r\n");
-            text.Append(r.Name).Append(": ").Append(r.Percent is { } p ? p + "%" : "unknown").Append(" (").Append(r.Via).Append(')');
-            if (r.Charging) text.Append(", charging");
-            text.Append(r.Stale ? ", last seen " : ", read ").Append(r.ReadAtUtc.ToLocalTime().ToString("HH:mm", CultureInfo.InvariantCulture));
-        }
-        tooltipText = text.Length > 2000 ? text.ToString(0, 2000) : text.ToString();
+        var shown = kind is { } k ? shownBlocks.Where(b => b.Kind == k) : shownBlocks;
+        var text = string.Join("\r\n", shown.Select(b => b.Tooltip));
+        tooltipText = text.Length > 2000 ? text[..2000] : text;
         var bytes = Encoding.Unicode.GetBytes(tooltipText + "\0");
         Marshal.Copy(bytes, 0, tooltipBuffer, bytes.Length);
         var info = new ToolInfo { Size = (uint)Marshal.SizeOf<ToolInfo>(), Hwnd = widget, Id = (UIntPtr)1, Text = tooltipBuffer };
@@ -360,10 +299,20 @@ public sealed class TaskbarBatteryWidget : IDisposable
         {
             case WM_MOUSEACTIVATE: return new IntPtr(MA_NOACTIVATE);
             case WM_NCHITTEST: return new IntPtr(HTCLIENT);
+            case WM_MOUSEMOVE:
+                {
+                    // Track the hovered block so the tooltip shows its detail.
+                    var over = TaskbarReadoutRenderer.HitTest(blockRects, (short)(lParam.ToInt64() & 0xFFFF));
+                    if (over != hovered) { hovered = over; UpdateTooltip(over); }
+                    return IntPtr.Zero;
+                }
             case WM_LBUTTONUP:
-                // A deliberate click: open Hardware -> Battery in the island.
-                System.Windows.Application.Current?.Dispatcher.BeginInvoke(() => { if (!disposed) viewModel.OpenBatteryModule(); });
-                return IntPtr.Zero;
+                {
+                    // A deliberate click on a block: the owner opens the matching card.
+                    var clicked = TaskbarReadoutRenderer.HitTest(blockRects, (short)(lParam.ToInt64() & 0xFFFF));
+                    if (clicked is { } kind) System.Windows.Application.Current?.Dispatcher.BeginInvoke(() => { if (!disposed) BlockClicked?.Invoke(kind); });
+                    return IntPtr.Zero;
+                }
             case WM_RBUTTONUP:
                 // Right-click: the owner shows a menu (refresh, open Battery, hide widget).
                 System.Windows.Application.Current?.Dispatcher.BeginInvoke(() => { if (!disposed) ContextMenuRequested?.Invoke(); });
@@ -416,7 +365,7 @@ public sealed class TaskbarBatteryWidget : IDisposable
         if (disposed) return;
         disposed = true;
         timer.Stop();
-        viewModel.DeviceBatteriesChanged -= Refresh;
+        viewModel.TaskbarBlocksChanged -= Refresh;
         viewModel.DeviceBatterySettingsChanged -= Refresh;
         RestoreRebar();
         Destroy();

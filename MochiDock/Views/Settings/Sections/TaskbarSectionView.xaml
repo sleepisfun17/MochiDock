@@ -1,0 +1,45 @@
+<s:SettingsSectionBase x:Class="MochiDock.Views.Settings.Sections.TaskbarSectionView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:s="clr-namespace:MochiDock.Views.Settings">
+    <StackPanel>
+        <TextBlock Style="{StaticResource SettingsGroupHeader}" Text="Readouts beside the system tray" Margin="0,0,0,2"/>
+        <TextBlock Style="{StaticResource CardCaptionText}" TextWrapping="Wrap" Margin="0,0,0,8"
+                   Text="Small two-line blocks on the Windows taskbar, left of the tray. Click a block to open its card, right-click for a menu. These choices are kept per PC: importing settings never changes them. They need a horizontal taskbar on the primary monitor."/>
+        <s:SettingRow Label="CPU and GPU" Description="Load and temperature of the CPU and the GPU. A CPU temperature with a ~ is an estimate (no sensor reading); a load or measured temperature at its alert threshold turns red.">
+            <CheckBox IsChecked="{Binding TaskbarShowSystem, Mode=TwoWay}" Style="{StaticResource ModernDarkCheckBox}" AutomationProperties.Name="Show CPU and GPU on the taskbar"/>
+        </s:SettingRow>
+        <s:SettingRow Label="Memory and disk" Description="Memory in use and disk activity.">
+            <CheckBox IsChecked="{Binding TaskbarShowMemoryDisk, Mode=TwoWay}" Style="{StaticResource ModernDarkCheckBox}" AutomationProperties.Name="Show memory and disk on the taskbar"/>
+        </s:SettingRow>
+        <s:SettingRow Label="Network up and down" Description="Upload and download speed over your active network adapters.">
+            <CheckBox IsChecked="{Binding TaskbarShowNetwork, Mode=TwoWay}" Style="{StaticResource ModernDarkCheckBox}" AutomationProperties.Name="Show network speed on the taskbar"/>
+        </s:SettingRow>
+        <s:SettingRow Label="Next prayer" Description="The next prayer and its time.">
+            <StackPanel>
+                <CheckBox x:Name="PrayerCheck" IsChecked="{Binding TaskbarShowPrayer, Mode=TwoWay}" Style="{StaticResource ModernDarkCheckBox}" AutomationProperties.Name="Show the next prayer on the taskbar"/>
+                <TextBlock x:Name="PrayerNote" Style="{StaticResource CardCaptionText}" TextWrapping="Wrap" Margin="0,4,0,0" Visibility="Collapsed"
+                           Text="Turn on prayer times in Location &amp; Prayer first."/>
+            </StackPanel>
+        </s:SettingRow>
+        <s:SettingRow Label="Weather" Description="The temperature with the sky, and the wind.">
+            <StackPanel>
+                <CheckBox x:Name="WeatherCheck" IsChecked="{Binding TaskbarShowWeather, Mode=TwoWay}" Style="{StaticResource ModernDarkCheckBox}" AutomationProperties.Name="Show the weather on the taskbar"/>
+                <TextBlock x:Name="WeatherNote" Style="{StaticResource CardCaptionText}" TextWrapping="Wrap" Margin="0,4,0,0" Visibility="Collapsed"
+                           Text="Turn on the Weather tab in Tabs first."/>
+            </StackPanel>
+        </s:SettingRow>
+
+        <TextBlock Style="{StaticResource SettingsGroupHeader}" Text="Wireless devices" Margin="0,18,0,2"/>
+        <s:SettingRow Label="Device batteries" Description="Mouse and keyboard battery levels (read in Hardware &amp; power), two to a block.">
+            <StackPanel>
+                <CheckBox IsChecked="{Binding ShowDeviceBatteriesOnTaskbar, Mode=TwoWay}" IsEnabled="{Binding EnableDeviceBatteries}" Style="{StaticResource ModernDarkCheckBox}" AutomationProperties.Name="Show device batteries on the taskbar"/>
+                <TextBlock x:Name="BatteryNote" Style="{StaticResource CardCaptionText}" TextWrapping="Wrap" Margin="0,4,0,0" Visibility="Collapsed"
+                           Text="Turn on wireless device batteries in Hardware &amp; power first."/>
+            </StackPanel>
+        </s:SettingRow>
+        <s:SettingRow Label="Background behind taskbar text" Description="Draw a plate behind the readout so it stays readable on transparent or restyled taskbars.">
+            <CheckBox IsChecked="{Binding ShowDeviceBatteryBackground, Mode=TwoWay}" Style="{StaticResource ModernDarkCheckBox}" AutomationProperties.Name="Background behind the taskbar readout"/>
+        </s:SettingRow>
+    </StackPanel>
+</s:SettingsSectionBase>

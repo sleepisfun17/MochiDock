@@ -64,6 +64,139 @@ public class HardwareMonitorService : IDisposable
         return new MochiDock.Core.HistorySample(now, cpuLoad, cpuTemp, gpuLoad, gpuTemp, ram);
     }
 
+    // ---- Taskbar readout sampler --------------------------------------------------------------------------------------------------------
+    // SampleTaskbar runs once a second while a system, memory/disk or network block is on the taskbar. It has its OWN state: its own
+    // GetSystemTimes deltas (_taskbarCpu) and byte-rate deltas (_taskbarNet). It must never use _lightTimes, which belongs to the 15 s history
+    // sampler (GetLightSample): a reading from here would shorten that sampler's interval and skew its next load. Each part is read only when
+    // its block is on, and nothing here lists processes or reads per-core data.
+    private readonly MochiDock.Core.CpuLoadDelta _taskbarCpu = new();
+    private readonly MochiDock.Core.ByteRateDelta _taskbarNet = new();
+    private PerformanceCounter? _taskbarDiskIdle;
+    private bool _taskbarDiskPrimed, _taskbarDiskFailed;
+    private long _taskbarTempsTicks;
+    private double? _taskbarCpuTemp, _taskbarGpuTemp;
+    private bool _taskbarCpuTempMeasured;
+    private System.Net.NetworkInformation.NetworkInterface[] _taskbarNics = Array.Empty<System.Net.NetworkInformation.NetworkInterface>();
+    private long _taskbarNicsTicks;
+    private static readonly long TwoSeconds = 2 * Stopwatch.Frequency, TenSeconds = 10 * Stopwatch.Frequency;
+
+    /// <summary>
+    /// One taskbar reading: CPU load (own GetSystemTimes delta), RAM, GPU load (NVML), temperatures (sensor reader and NVML, refreshed at most every
+    /// 2 s; the CPU one is the estimate marked as such when no sensor reading exists), disk activity (100 minus the PhysicalDisk % Idle Time counter,
+    /// created on first use) and network bytes per second (the active adapters' counters, the adapter list refreshed every 10 s).
+    /// Call on the UI thread, like <see cref="GetLightSample"/>.
+    /// </summary>
+    public MochiDock.Core.TaskbarSample SampleTaskbar(MochiDock.Core.TaskbarNeeds needs)
+    {
+        double? cpu = null, gpu = null, ram = null, disk = null, down = null, up = null;
+        double? cpuTemp = null, gpuTemp = null;
+        bool cpuTempMeasured = false;
+        long now = Stopwatch.GetTimestamp();
+
+        if (needs.HasFlag(MochiDock.Core.TaskbarNeeds.System))
+        {
+            if (GetSystemTimes(out var idle, out var kernel, out var user)) cpu = _taskbarCpu.Update(idle, kernel + user);
+            if (_nvmlLoaded && _nvmlDevice != IntPtr.Zero)
+            {
+                try
+                {
+                    var util = new NvmlUtilization();
+                    if (nvmlDeviceGetUtilizationRates(_nvmlDevice, ref util) == 0) gpu = util.gpu;
+                }
+                catch (Exception ex) { AppLog.Warn("Hardware", ex); }
+            }
+            if (_taskbarTempsTicks == 0 || now - _taskbarTempsTicks >= TwoSeconds)
+            {
+                _taskbarTempsTicks = now;
+                var sensors = _sensors.Latest(_detectedGpuName);
+                bool fresh = sensors.CapturedAt != DateTimeOffset.MinValue && DateTimeOffset.UtcNow - sensors.CapturedAt < TimeSpan.FromSeconds(30);
+                _taskbarCpuTemp = fresh ? sensors.CpuTempC : null;
+                _taskbarCpuTempMeasured = _taskbarCpuTemp is not null;
+                double? gpuT = null;
+                if (_nvmlLoaded && _nvmlDevice != IntPtr.Zero)
+                {
+                    try { if (nvmlDeviceGetTemperature(_nvmlDevice, 0, out uint temp) == 0) gpuT = temp; }
+                    catch (Exception ex) { AppLog.Warn("Hardware", ex); }
+                }
+                _taskbarGpuTemp = gpuT ?? (fresh ? sensors.GpuTempC : null);
+            }
+            cpuTemp = _taskbarCpuTemp;
+            cpuTempMeasured = _taskbarCpuTempMeasured;
+            if (cpuTemp is null && cpu is { } load) cpuTemp = MochiDock.Core.TaskbarSampling.EstimateCpuTemperature(load);
+            gpuTemp = gpu is null ? null : _taskbarGpuTemp;
+        }
+
+        if (needs.HasFlag(MochiDock.Core.TaskbarNeeds.MemoryDisk))
+        {
+            try
+            {
+                var memory = GC.GetGCMemoryInfo();
+                if (memory.TotalAvailableMemoryBytes > 0) ram = 100.0 * memory.MemoryLoadBytes / memory.TotalAvailableMemoryBytes;
+            }
+            catch (Exception ex) { AppLog.Warn("Hardware", ex); }
+            disk = ReadTaskbarDiskActivity();
+        }
+
+        if (needs.HasFlag(MochiDock.Core.TaskbarNeeds.Network))
+        {
+            long received = 0, sent = 0;
+            try
+            {
+                RefreshTaskbarNics(now);
+                foreach (var nic in _taskbarNics)
+                {
+                    try { var stats = nic.GetIPv4Statistics(); received += stats.BytesReceived; sent += stats.BytesSent; }
+                    catch (Exception ex) when (ex is System.Net.NetworkInformation.NetworkInformationException or InvalidOperationException) { }
+                }
+                if (_taskbarNet.Update(now / (double)Stopwatch.Frequency, received, sent) is { } rate) { down = rate.Down; up = rate.Up; }
+            }
+            catch (Exception ex) { AppLog.Warn("Hardware", ex); }
+        }
+
+        return new MochiDock.Core.TaskbarSample
+        {
+            CpuPercent = cpu, CpuTempC = cpuTemp, CpuTempMeasured = cpuTempMeasured, GpuPercent = gpu, GpuTempC = gpuTemp,
+            RamPercent = ram, DiskPercent = disk, NetDownBytesPerSecond = down, NetUpBytesPerSecond = up,
+        };
+    }
+
+    /// <summary>Forget the taskbar sampler's last readings (after the PC was locked or the display off), so the first rates are not averaged over the pause.</summary>
+    public void ResetTaskbarSampling() { _taskbarCpu.Reset(); _taskbarNet.Reset(); _taskbarTempsTicks = 0; }
+
+    private double? ReadTaskbarDiskActivity()
+    {
+        if (_taskbarDiskFailed) return null;
+        try
+        {
+            _taskbarDiskIdle ??= new PerformanceCounter("PhysicalDisk", "% Idle Time", "_Total", true);
+            float idle = _taskbarDiskIdle.NextValue();
+            if (!_taskbarDiskPrimed) { _taskbarDiskPrimed = true; return null; }   // the first reading of a counter is 0
+            return MochiDock.Core.TaskbarSampling.DiskActivityFromIdle(idle);
+        }
+        catch (Exception ex)
+        {
+            _taskbarDiskFailed = true;   // no counter on this PC: no disk figure, and no retry every second
+            AppLog.Warn("Hardware", ex);
+            try { _taskbarDiskIdle?.Dispose(); } catch { }
+            _taskbarDiskIdle = null;
+            return null;
+        }
+    }
+
+    private void RefreshTaskbarNics(long now)
+    {
+        if (_taskbarNicsTicks != 0 && now - _taskbarNicsTicks < TenSeconds) return;
+        _taskbarNicsTicks = now;
+        var active = System.Net.NetworkInformation.NetworkInterface.GetAllNetworkInterfaces()
+            .Where(nic => nic.OperationalStatus == System.Net.NetworkInformation.OperationalStatus.Up &&
+                          nic.NetworkInterfaceType != System.Net.NetworkInformation.NetworkInterfaceType.Loopback &&
+                          nic.NetworkInterfaceType != System.Net.NetworkInformation.NetworkInterfaceType.Tunnel)
+            .ToArray();
+        if (!active.Select(n => n.Id).OrderBy(i => i, StringComparer.Ordinal).SequenceEqual(_taskbarNics.Select(n => n.Id).OrderBy(i => i, StringComparer.Ordinal), StringComparer.Ordinal))
+            _taskbarNet.Reset();   // an adapter came or went: its whole byte count must not become one huge rate
+        _taskbarNics = active;
+    }
+
     /// <summary>
     /// Light power sample for the Battery page: CPU package and memory power from the sensor reader (or Windows' Energy Meter counters when that has none) plus GPU board power (NVML first, sensors as fallback).
     /// Does not touch the hardware-card sampling state. Values are null when no measured reading exists.
@@ -1791,6 +1924,8 @@ private float _lastGpuUsage;
         try { _vramCounter?.Dispose(); } catch { }
         try { _diskReadCounter?.Dispose(); } catch { }
         try { _diskWriteCounter?.Dispose(); } catch { }
+        try { _taskbarDiskIdle?.Dispose(); } catch { }
+        _taskbarDiskIdle = null;
         _cpuCounter = null;
         _gpuCounter = null;
         _vramCounter = null;

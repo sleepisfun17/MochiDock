@@ -91,7 +91,7 @@ public partial class MainWindow : Window
     private readonly DisplayResolutionService _resolutionService = new();
     private DispatcherTimer? _resolutionNoticeTimer;
     private HwndSource? _hwndSource;
-    private MochiDock.Services.DeviceBattery.TaskbarBatteryWidget? _batteryWidget;
+    private MochiDock.Services.TaskbarReadoutWidget? _batteryWidget;   // the taskbar readout (blocks beside the tray; named for the device batteries it started as)
     private readonly DispatcherTimer _takeoverTimeoutTimer;
     private DateTime _takeoverStart = DateTime.MinValue;
     private AppSettings _settings;
@@ -371,8 +371,9 @@ public partial class MainWindow : Window
 
         try
         {
-            _batteryWidget = new MochiDock.Services.DeviceBattery.TaskbarBatteryWidget(_viewModel);
+            _batteryWidget = new MochiDock.Services.TaskbarReadoutWidget(_viewModel);
             _batteryWidget.ContextMenuRequested += ShowBatteryWidgetMenu;
+            _batteryWidget.BlockClicked += kind => _viewModel.OpenTaskbarBlock(kind);   // Stats (CPU, Memory, Network), Prayer, Weather or the Battery page
         }
         catch (System.Exception logEx) { MochiDock.Services.AppLog.Warn("Window", logEx); }
 

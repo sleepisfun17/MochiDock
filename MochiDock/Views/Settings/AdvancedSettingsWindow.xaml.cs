@@ -153,6 +153,7 @@ public partial class AdvancedSettingsWindow : Window
         SettingsSections.Appearance => new AppearanceSectionView { DataContext = _viewModel },
         SettingsSections.Gaming => new GamingSectionView { DataContext = _viewModel },
         SettingsSections.Hardware => new HardwareSectionView { DataContext = _viewModel },
+        SettingsSections.Taskbar => new TaskbarSectionView { DataContext = _viewModel },
         SettingsSections.Location => new LocationSectionView { DataContext = _viewModel },
         SettingsSections.Calendar => new CalendarSectionView { DataContext = _viewModel },
         SettingsSections.Tabs => new TabsSectionView { DataContext = _viewModel },

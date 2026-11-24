@@ -41,7 +41,7 @@ public partial class MainWindow
         catch (Exception ex) { MochiDock.Services.AppLog.Warn("Window", ex); }
     }
 
-    // Right-click on the taskbar battery widget: refresh, open the Battery page, hide the widget. Raised on the UI thread by the widget.
+    // Right-click on the taskbar readout: refresh the device batteries, open the Battery page, open the Taskbar settings, hide the device batteries. Raised on the UI thread by the widget.
     private void ShowBatteryWidgetMenu()
     {
         try
@@ -56,8 +56,9 @@ public partial class MainWindow
             }
             menu.Items.Add(Item("Refresh Now", () => _viewModel.RefreshDeviceBatteries()));
             menu.Items.Add(Item("Open Battery Page", () => _viewModel.OpenBatteryModule()));
+            menu.Items.Add(Item("Taskbar readouts…", () => App.OpenSettings(MochiDock.Core.SettingsSections.Taskbar)));
             menu.Items.Add(new Separator { Style = (Style)FindResource("ModernTraySeparatorStyle") });
-            menu.Items.Add(Item("Hide Taskbar Widget", () => _viewModel.ShowDeviceBatteriesOnTaskbar = false));
+            menu.Items.Add(Item("Hide device batteries", () => _viewModel.ShowDeviceBatteriesOnTaskbar = false));
             menu.Placement = System.Windows.Controls.Primitives.PlacementMode.MousePoint;
             menu.PlacementTarget = this;
             SetForegroundWindow(new WindowInteropHelper(this).Handle);
@@ -238,6 +239,7 @@ public partial class MainWindow
 
         // Settings
         menu.Items.Add(Item("Settings…", "NavGear", () => App.OpenSettings()));
+        menu.Items.Add(Item("Taskbar readouts…", "NavGauge", () => App.OpenSettings(MochiDock.Core.SettingsSections.Taskbar)));
         AddPreferencesMenus(menu, itemStyle);
         Sep();
 
