@@ -10,6 +10,7 @@ All notable changes to MochiDock are documented here. The format follows [Keep a
 
 ### Changed
 
+- **Colour emoji in the capsule**: emoji in a WhatsApp, email or app notification are shown in colour in the compact capsule too, the same pictures as on the cards, instead of plain one-colour symbols.
 - **Notification icons in the capsule**: WhatsApp, email and Discord notices use the same line icons as the tabs of the open dock, in the theme's colour, instead of the brand logos.
 
 ## [0.3.1-beta]

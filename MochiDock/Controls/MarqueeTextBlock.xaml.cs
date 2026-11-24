@@ -153,6 +153,13 @@ public partial class MarqueeTextBlock : System.Windows.Controls.UserControl
         }
     }
 
+    // Sets a line through Emoji.Text, so emoji in a message are drawn as the same coloured pictures as on the cards (WPF text draws them in
+    // one colour). Cleared first, so the pictures are rebuilt at the current font size; text without emoji costs nothing extra.
+    private static void SetLine(System.Windows.Controls.TextBlock block, string text)
+    {
+        Emoji.SetText(block, null);
+        Emoji.SetText(block, text);
+    }
     public string Text
     {
         get => (string)GetValue(TextProperty);
@@ -253,8 +260,8 @@ public partial class MarqueeTextBlock : System.Windows.Controls.UserControl
         _isMultiLine = false;
         _isPaced = false;
         ContentPanel.Opacity = 1;
-        PrimaryText.Text = _lines.Length == 1 ? _lines[0] : _activeText;
-        SecondaryText.Text = PrimaryText.Text;
+        SetLine(PrimaryText, _lines.Length == 1 ? _lines[0] : _activeText);
+        SetLine(SecondaryText, _lines.Length == 1 ? _lines[0] : _activeText);
 
         PrimaryText.Measure(new WindowsSize(double.PositiveInfinity, double.PositiveInfinity));
         double textWidth = PrimaryText.DesiredSize.Width;
@@ -429,7 +436,7 @@ public partial class MarqueeTextBlock : System.Windows.Controls.UserControl
 
     private void PrepareLine(double availableWidth)
     {
-        PrimaryText.Text = _lines[_lineIndex];
+        SetLine(PrimaryText, _lines[_lineIndex]);
         PrimaryText.Measure(new WindowsSize(double.PositiveInfinity, double.PositiveInfinity));
         double textWidth = PrimaryText.DesiredSize.Width;
         double textHeight = PrimaryText.DesiredSize.Height;

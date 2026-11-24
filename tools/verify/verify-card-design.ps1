@@ -413,5 +413,33 @@ foreach($theme in @("Dark","Matcha")){foreach($scale in @(1,1.25,1.5,2)){
  $native.Dispose()
 }}
 Write-Output "Verified retained tab transitions, interruption, input ownership and cleanup at four DPIs."
+# The capsule marquee draws emoji in a message as the same coloured pictures as the cards (Emoji.Text), not as one-colour text glyphs,
+# in the line itself and in its scrolling copy; text without emoji stays plain text.
+foreach($scale in @(1,2)){
+ $marquee=[Activator]::CreateInstance($assembly.GetType("MochiDock.Controls.MarqueeTextBlock"));$marquee.Width=320;$marquee.Height=24;$marquee.FontSize=13
+ $marquee.SetResourceReference([Windows.Controls.Control]::FontFamilyProperty,"IslandUiFont");$marquee.SetResourceReference([Windows.Controls.Control]::ForegroundProperty,"IslandInkBrush")
+ $holder=[Windows.Controls.Border]::new();$holder.Background=[Windows.Media.Brushes]::Black;$holder.Padding=[Windows.Thickness]::new(8);$holder.Child=$marquee
+ $nativeParameters=[Windows.Interop.HwndSourceParameters]::new("Marquee emoji");$nativeParameters.WindowStyle=-2147483648;$nativeParameters.PositionX=-32000;$nativeParameters.PositionY=-32000;$nativeParameters.Width=1;$nativeParameters.Height=1
+ $native=[Windows.Interop.HwndSource]::new($nativeParameters);$native.RootVisual=$holder
+ [Windows.Media.VisualTreeHelper]::SetRootDpi($holder,[Windows.DpiScale]::new($scale,$scale))
+ try{
+  $holder.Measure([Windows.Size]::new(400,60));$holder.Arrange([Windows.Rect]::new(0,0,336,40));$holder.UpdateLayout()
+  $marquee.Text="Alex: see you soon 😀🎉 ok"
+  $frame=[Windows.Threading.DispatcherFrame]::new();[void][Windows.Threading.Dispatcher]::CurrentDispatcher.BeginInvoke('Background',[Action]{$frame.Continue=$false});[Windows.Threading.Dispatcher]::PushFrame($frame)
+  $holder.UpdateLayout()
+  foreach($part in "PrimaryText","SecondaryText"){
+   $block=$marquee.FindName($part)
+   $pictures=@($block.Inlines|Where-Object{$_ -is [Windows.Documents.InlineUIContainer] -and $_.Child -is [Windows.Controls.Image] -and $null -ne $_.Child.Source}).Count
+   if($pictures -ne 2){throw "Capsule marquee: the $part line shows $pictures emoji pictures, expected 2 (😀 and 🎉 as coloured pictures)"}
+  }
+  $marquee.Text="Alex: plain text only";$frame=[Windows.Threading.DispatcherFrame]::new();[void][Windows.Threading.Dispatcher]::CurrentDispatcher.BeginInvoke('Background',[Action]{$frame.Continue=$false});[Windows.Threading.Dispatcher]::PushFrame($frame)
+  $plain=$marquee.FindName("PrimaryText")
+  if($plain.Text -ne "Alex: plain text only" -or @($plain.Inlines|Where-Object{$_ -is [Windows.Documents.InlineUIContainer]}).Count -ne 0){throw "Capsule marquee: plain text should stay a plain line"}
+  $marquee.Text="Alex: see you soon 😀🎉 ok";$frame=[Windows.Threading.DispatcherFrame]::new();[void][Windows.Threading.Dispatcher]::CurrentDispatcher.BeginInvoke('Background',[Action]{$frame.Continue=$false});[Windows.Threading.Dispatcher]::PushFrame($frame);$holder.UpdateLayout()
+  $bitmap=[Windows.Media.Imaging.RenderTargetBitmap]::new([int](336*$scale),[int](40*$scale),96*$scale,96*$scale,[Windows.Media.PixelFormats]::Pbgra32);$bitmap.Render($holder)
+  $encoder=[Windows.Media.Imaging.PngBitmapEncoder]::new();$encoder.Frames.Add([Windows.Media.Imaging.BitmapFrame]::Create($bitmap));$stream=[IO.File]::Create((Join-Path $output "Marquee-emoji-$scale.png"));try{$encoder.Save($stream)}finally{$stream.Dispose()}
+ } finally { $native.Dispose() }
+}
+Write-Output "Verified colour emoji in the capsule marquee at two DPIs."
 & (Join-Path $PSScriptRoot 'verify-header-animation.ps1') -Configuration $Configuration
 $application.Shutdown()
