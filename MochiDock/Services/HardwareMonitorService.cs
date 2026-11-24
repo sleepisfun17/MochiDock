@@ -37,13 +37,7 @@ public class HardwareMonitorService : IDisposable
             _lightTimes = (idle, total);
         }
 
-        double? ram = null;
-        try
-        {
-            var memory = GC.GetGCMemoryInfo();
-            if (memory.TotalAvailableMemoryBytes > 0) ram = 100.0 * memory.MemoryLoadBytes / memory.TotalAvailableMemoryBytes;
-        }
-        catch (Exception ex) { AppLog.Warn("Hardware", ex); }
+        double? ram = ReadPhysicalMemory()?.Percent;   // live, not the GC's last-collection figure
 
         // The sensor reader refreshes in the background when asked, so a 15-second sampler gets the previous refresh: allow 30 s.
         var sensors = _sensors.Latest(_detectedGpuName);
@@ -128,12 +122,7 @@ public class HardwareMonitorService : IDisposable
 
         if (needs.HasFlag(MochiDock.Core.TaskbarNeeds.MemoryDisk))
         {
-            try
-            {
-                var memory = GC.GetGCMemoryInfo();
-                if (memory.TotalAvailableMemoryBytes > 0) ram = 100.0 * memory.MemoryLoadBytes / memory.TotalAvailableMemoryBytes;
-            }
-            catch (Exception ex) { AppLog.Warn("Hardware", ex); }
+            ram = ReadPhysicalMemory()?.Percent;   // live, not the GC's last-collection figure
             disk = ReadTaskbarDiskActivity();
         }
 
@@ -1274,30 +1263,45 @@ private float _lastGpuUsage;
         }
     }
 
-    private void SampleMemory(HardwareStats stats)
+    [StructLayout(LayoutKind.Sequential)]
+    private struct MemoryStatusEx
+    {
+        public uint Length, MemoryLoad;
+        public ulong TotalPhys, AvailPhys, TotalPageFile, AvailPageFile, TotalVirtual, AvailVirtual, AvailExtendedVirtual;
+    }
+    [DllImport("kernel32.dll", SetLastError = true)] private static extern bool GlobalMemoryStatusEx(ref MemoryStatusEx status);
+
+    /// <summary>
+    /// The machine's physical memory now: total and used bytes and the used percentage. Read live from Windows (GlobalMemoryStatusEx);
+    /// GC.GetGCMemoryInfo only reports the memory load as of the last garbage collection, which in a quiet app can be minutes old.
+    /// Falls back to that GC figure if the call fails, and gives null when neither works (never an invented value).
+    /// </summary>
+    private static (double Percent, double TotalBytes, double UsedBytes)? ReadPhysicalMemory()
     {
         try
         {
-            var memInfo = GC.GetGCMemoryInfo();
-            long totalPhysical = memInfo.TotalAvailableMemoryBytes;
-            long memoryLoad = memInfo.MemoryLoadBytes;
-
-            if (totalPhysical > 0)
+            var status = new MemoryStatusEx { Length = (uint)Marshal.SizeOf<MemoryStatusEx>() };
+            if (GlobalMemoryStatusEx(ref status) && status.TotalPhys > 0)
             {
-                stats.UsedRamGb = (float)Math.Round(memoryLoad / (1024.0 * 1024 * 1024), 1);
-                stats.TotalRamGb = (float)Math.Round(totalPhysical / (1024.0 * 1024 * 1024), 1);
-                stats.RamUsagePercent = (float)Math.Round(((double)memoryLoad / totalPhysical) * 100.0, 0);
+                double used = status.TotalPhys - Math.Min(status.AvailPhys, status.TotalPhys);
+                return (Math.Clamp(100.0 * used / status.TotalPhys, 0, 100), status.TotalPhys, used);
             }
-            else
-            {
-                stats.RamUsagePercent = 45;
-                stats.UsedRamGb = 7.2f;
-            }
+            var gc = GC.GetGCMemoryInfo();
+            if (gc.TotalAvailableMemoryBytes > 0)
+                return (Math.Clamp(100.0 * gc.MemoryLoadBytes / gc.TotalAvailableMemoryBytes, 0, 100), gc.TotalAvailableMemoryBytes, gc.MemoryLoadBytes);
         }
-        catch
+        catch (Exception ex) { AppLog.Warn("Hardware", ex); }
+        return null;
+    }
+
+    private void SampleMemory(HardwareStats stats)
+    {
+        // Unavailable leaves the previous values in place rather than showing made-up numbers.
+        if (ReadPhysicalMemory() is { } memory)
         {
-            stats.RamUsagePercent = 40;
-            stats.UsedRamGb = 6.4f;
+            stats.UsedRamGb = (float)Math.Round(memory.UsedBytes / (1024.0 * 1024 * 1024), 1);
+            stats.TotalRamGb = (float)Math.Round(memory.TotalBytes / (1024.0 * 1024 * 1024), 1);
+            stats.RamUsagePercent = (float)Math.Round(memory.Percent, 0);
         }
 
         try
