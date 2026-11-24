@@ -67,18 +67,22 @@ public class HardwareMonitorService : IDisposable
     private readonly MochiDock.Core.ByteRateDelta _taskbarNet = new();
     private PerformanceCounter? _taskbarDiskIdle;
     private bool _taskbarDiskPrimed, _taskbarDiskFailed;
+    private IntPtr _taskbarPdhGpuQuery, _taskbarPdh3D, _taskbarPdhCopy, _taskbarPdhDecode, _taskbarPdhEncode;
+    private bool _taskbarPdhGpuPrimed, _taskbarPdhGpuFailed;
+    private IntPtr _taskbarPdhBuf;
+    private uint _taskbarPdhBufSize;
+    private readonly List<double> _taskbarPdhValues = new();
     private long _taskbarTempsTicks;
     private double? _taskbarCpuTemp, _taskbarGpuTemp;
-    private bool _taskbarCpuTempMeasured;
     private System.Net.NetworkInformation.NetworkInterface[] _taskbarNics = Array.Empty<System.Net.NetworkInformation.NetworkInterface>();
     private long _taskbarNicsTicks;
     private static readonly long TwoSeconds = 2 * Stopwatch.Frequency, TenSeconds = 10 * Stopwatch.Frequency;
 
     /// <summary>
-    /// One taskbar reading: CPU load (own GetSystemTimes delta), RAM, GPU load (NVML), temperatures (sensor reader and NVML, refreshed at most every
-    /// 2 s; the CPU one is the estimate marked as such when no sensor reading exists), disk activity (100 minus the PhysicalDisk % Idle Time counter,
-    /// created on first use) and network bytes per second (the active adapters' counters, the adapter list refreshed every 10 s).
-    /// Call on the UI thread, like <see cref="GetLightSample"/>.
+    /// One taskbar reading: CPU load (own GetSystemTimes delta), RAM, GPU load (NVML, or lazily created PDH GPU Engine wildcard counters),
+    /// temperatures (sensor reader and NVML, refreshed at most every 2 s; the CPU one is the estimate marked as such when no sensor reading exists),
+    /// disk activity (100 minus the PhysicalDisk % Idle Time counter, created on first use) and network bytes per second (the active adapters' counters,
+    /// the adapter list refreshed every 10 s). Call on the UI thread, like <see cref="GetLightSample"/>.
     /// </summary>
     public MochiDock.Core.TaskbarSample SampleTaskbar(MochiDock.Core.TaskbarNeeds needs)
     {
@@ -87,44 +91,60 @@ public class HardwareMonitorService : IDisposable
         bool cpuTempMeasured = false;
         long now = Stopwatch.GetTimestamp();
 
-        if (needs.HasFlag(MochiDock.Core.TaskbarNeeds.System))
+        bool needCpuLoad = needs.HasFlag(MochiDock.Core.TaskbarNeeds.CpuLoad);
+        bool needCpuTemp = needs.HasFlag(MochiDock.Core.TaskbarNeeds.CpuTemp);
+        bool needGpuLoad = needs.HasFlag(MochiDock.Core.TaskbarNeeds.GpuLoad);
+        bool needGpuTemp = needs.HasFlag(MochiDock.Core.TaskbarNeeds.GpuTemp);
+
+        double? rawCpuLoad = null;
+        if (needCpuLoad || needCpuTemp)
         {
-            if (GetSystemTimes(out var idle, out var kernel, out var user)) cpu = _taskbarCpu.Update(idle, kernel + user);
-            if (_nvmlLoaded && _nvmlDevice != IntPtr.Zero)
+            if (GetSystemTimes(out var idle, out var kernel, out var user)) rawCpuLoad = _taskbarCpu.Update(idle, kernel + user);
+            if (needCpuLoad) cpu = rawCpuLoad;
+        }
+
+        if (needGpuLoad)
+        {
+            double? nvmlLoad = null;
+            if (Volatile.Read(ref _nvmlLoaded) && _nvmlDevice != IntPtr.Zero)
             {
                 try
                 {
                     var util = new NvmlUtilization();
-                    if (nvmlDeviceGetUtilizationRates(_nvmlDevice, ref util) == 0) gpu = util.gpu;
+                    if (nvmlDeviceGetUtilizationRates(_nvmlDevice, ref util) == 0) nvmlLoad = util.gpu;
                 }
                 catch (Exception ex) { AppLog.Warn("Hardware", ex); }
             }
+            gpu = MochiDock.Core.TaskbarSampling.PickGpuLoad(nvmlLoad, nvmlLoad is null ? ReadTaskbarPdhGpuLoad() : null);
+        }
+
+        if (needCpuTemp || needGpuTemp)
+        {
             if (_taskbarTempsTicks == 0 || now - _taskbarTempsTicks >= TwoSeconds)
             {
                 _taskbarTempsTicks = now;
                 var sensors = _sensors.Latest(_detectedGpuName);
                 bool fresh = sensors.CapturedAt != DateTimeOffset.MinValue && DateTimeOffset.UtcNow - sensors.CapturedAt < TimeSpan.FromSeconds(30);
                 _taskbarCpuTemp = fresh ? sensors.CpuTempC : null;
-                _taskbarCpuTempMeasured = _taskbarCpuTemp is not null;
                 double? gpuT = null;
-                if (_nvmlLoaded && _nvmlDevice != IntPtr.Zero)
+                if (Volatile.Read(ref _nvmlLoaded) && _nvmlDevice != IntPtr.Zero)
                 {
                     try { if (nvmlDeviceGetTemperature(_nvmlDevice, 0, out uint temp) == 0) gpuT = temp; }
                     catch (Exception ex) { AppLog.Warn("Hardware", ex); }
                 }
-                _taskbarGpuTemp = gpuT ?? (fresh ? sensors.GpuTempC : null);
+                _taskbarGpuTemp = MochiDock.Core.TaskbarSampling.PickGpuTemperature(gpuT, fresh ? sensors.GpuTempC : null);
             }
-            cpuTemp = _taskbarCpuTemp;
-            cpuTempMeasured = _taskbarCpuTempMeasured;
-            if (cpuTemp is null && cpu is { } load) cpuTemp = MochiDock.Core.TaskbarSampling.EstimateCpuTemperature(load);
-            gpuTemp = gpu is null ? null : _taskbarGpuTemp;
+            if (needCpuTemp)
+                (cpuTemp, cpuTempMeasured) = MochiDock.Core.TaskbarSampling.PickCpuTemperature(_taskbarCpuTemp, rawCpuLoad);
+            if (needGpuTemp)
+                gpuTemp = _taskbarGpuTemp;
         }
 
-        if (needs.HasFlag(MochiDock.Core.TaskbarNeeds.MemoryDisk))
-        {
+        if (needs.HasFlag(MochiDock.Core.TaskbarNeeds.Memory))
             ram = ReadPhysicalMemory()?.Percent;   // live, not the GC's last-collection figure
+
+        if (needs.HasFlag(MochiDock.Core.TaskbarNeeds.Disk))
             disk = ReadTaskbarDiskActivity();
-        }
 
         if (needs.HasFlag(MochiDock.Core.TaskbarNeeds.Network))
         {
@@ -150,7 +170,98 @@ public class HardwareMonitorService : IDisposable
     }
 
     /// <summary>Forget the taskbar sampler's last readings (after the PC was locked or the display off), so the first rates are not averaged over the pause.</summary>
-    public void ResetTaskbarSampling() { _taskbarCpu.Reset(); _taskbarNet.Reset(); _taskbarTempsTicks = 0; }
+    public void ResetTaskbarSampling() { _taskbarCpu.Reset(); _taskbarNet.Reset(); _taskbarTempsTicks = 0; _taskbarPdhGpuPrimed = false; }
+
+    private double? ReadTaskbarPdhGpuLoad()
+    {
+        if (_taskbarPdhGpuFailed) return null;
+        try
+        {
+            if (_taskbarPdhGpuQuery == IntPtr.Zero)
+            {
+                if (PdhOpenQuery(IntPtr.Zero, IntPtr.Zero, out var query) != 0 || query == IntPtr.Zero)
+                {
+                    _taskbarPdhGpuFailed = true;
+                    return null;
+                }
+                _taskbarPdhGpuQuery = query;
+                if (PdhAddEnglishCounter(query, @"\GPU Engine(*engtype_3D*)\Utilization Percentage", IntPtr.Zero, out _taskbarPdh3D) != 0) _taskbarPdh3D = IntPtr.Zero;
+                if (PdhAddEnglishCounter(query, @"\GPU Engine(*engtype_Copy*)\Utilization Percentage", IntPtr.Zero, out _taskbarPdhCopy) != 0) _taskbarPdhCopy = IntPtr.Zero;
+                if (PdhAddEnglishCounter(query, @"\GPU Engine(*engtype_VideoDecode*)\Utilization Percentage", IntPtr.Zero, out _taskbarPdhDecode) != 0) _taskbarPdhDecode = IntPtr.Zero;
+                if (PdhAddEnglishCounter(query, @"\GPU Engine(*engtype_VideoEncode*)\Utilization Percentage", IntPtr.Zero, out _taskbarPdhEncode) != 0) _taskbarPdhEncode = IntPtr.Zero;
+                if (_taskbarPdh3D == IntPtr.Zero && _taskbarPdhCopy == IntPtr.Zero && _taskbarPdhDecode == IntPtr.Zero && _taskbarPdhEncode == IntPtr.Zero)
+                {
+                    CloseTaskbarPdhGpu();
+                    _taskbarPdhGpuFailed = true;
+                    return null;
+                }
+                PdhCollectQueryData(query);
+                _taskbarPdhGpuPrimed = true;
+                return null;
+            }
+
+            if (PdhCollectQueryData(_taskbarPdhGpuQuery) != 0) return null;
+            if (!_taskbarPdhGpuPrimed) { _taskbarPdhGpuPrimed = true; return null; }
+
+            return MochiDock.Core.TaskbarSampling.PickGpuLoad(null,
+                ReadTaskbarPdhEngine(_taskbarPdh3D),
+                ReadTaskbarPdhEngine(_taskbarPdhCopy),
+                ReadTaskbarPdhEngine(_taskbarPdhDecode),
+                ReadTaskbarPdhEngine(_taskbarPdhEncode));
+        }
+        catch (Exception ex)
+        {
+            AppLog.Warn("Hardware", ex);
+            CloseTaskbarPdhGpu();
+            _taskbarPdhGpuFailed = true;
+            return null;
+        }
+    }
+
+    private double? ReadTaskbarPdhEngine(IntPtr hCounter)
+    {
+        if (hCounter == IntPtr.Zero) return null;
+        uint bufSize = 0, itemCount = 0;
+        PdhGetFormattedCounterArray(hCounter, PDH_FMT_DOUBLE, ref bufSize, ref itemCount, IntPtr.Zero);
+        if (bufSize == 0) return null;
+
+        if (bufSize > _taskbarPdhBufSize)
+        {
+            if (_taskbarPdhBuf != IntPtr.Zero) Marshal.FreeHGlobal(_taskbarPdhBuf);
+            _taskbarPdhBuf = Marshal.AllocHGlobal((int)bufSize);
+            _taskbarPdhBufSize = bufSize;
+        }
+
+        if (PdhGetFormattedCounterArray(hCounter, PDH_FMT_DOUBLE, ref bufSize, ref itemCount, _taskbarPdhBuf) != 0)
+            return null;
+
+        _taskbarPdhValues.Clear();
+        int itemSize = Marshal.SizeOf<PDH_FMT_COUNTERVALUE_ITEM>();
+        for (int i = 0; i < itemCount; i++)
+        {
+            var item = Marshal.PtrToStructure<PDH_FMT_COUNTERVALUE_ITEM>(IntPtr.Add(_taskbarPdhBuf, i * itemSize));
+            if (item.CStatus is 0 or 1 && double.IsFinite(item.doubleValue) && item.doubleValue >= 0)
+                _taskbarPdhValues.Add(item.doubleValue);
+        }
+        return MochiDock.Core.TaskbarSampling.AggregateGpuEngine(_taskbarPdhValues);
+    }
+
+    private void CloseTaskbarPdhGpu()
+    {
+        if (_taskbarPdhGpuQuery != IntPtr.Zero)
+        {
+            try { PdhCloseQuery(_taskbarPdhGpuQuery); } catch { }
+            _taskbarPdhGpuQuery = IntPtr.Zero;
+        }
+        _taskbarPdh3D = _taskbarPdhCopy = _taskbarPdhDecode = _taskbarPdhEncode = IntPtr.Zero;
+        if (_taskbarPdhBuf != IntPtr.Zero)
+        {
+            Marshal.FreeHGlobal(_taskbarPdhBuf);
+            _taskbarPdhBuf = IntPtr.Zero;
+        }
+        _taskbarPdhBufSize = 0;
+        _taskbarPdhGpuPrimed = false;
+    }
 
     private double? ReadTaskbarDiskActivity()
     {
@@ -1930,6 +2041,7 @@ private float _lastGpuUsage;
         try { _diskWriteCounter?.Dispose(); } catch { }
         try { _taskbarDiskIdle?.Dispose(); } catch { }
         _taskbarDiskIdle = null;
+        CloseTaskbarPdhGpu();
         _cpuCounter = null;
         _gpuCounter = null;
         _vramCounter = null;

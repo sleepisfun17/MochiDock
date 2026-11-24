@@ -14,12 +14,28 @@ public class AppSettings
     public List<MochiDock.Core.PowerComponent> PowerComponents { get; set; } = new();
     public List<string> HiddenDeviceBatteryKeys { get; set; } = new();
     public bool ShowDeviceBatteriesOnTaskbar { get; set; } = true;
-    // The taskbar readout blocks (Settings > Taskbar), all off until chosen and kept per PC (SettingsTransfer.LocalOnlyKeys).
-    public bool TaskbarShowSystem { get; set; }
-    public bool TaskbarShowMemoryDisk { get; set; }
-    public bool TaskbarShowNetwork { get; set; }
+    // The taskbar readout items, order, placement and styling (Settings > Taskbar), off until chosen and kept per PC (SettingsTransfer.LocalOnlyKeys).
+    public bool TaskbarItemsMigrated { get; set; }
+    public bool TaskbarShowCpuLoad { get; set; }
+    public bool TaskbarShowCpuTemp { get; set; }
+    public bool TaskbarShowGpuLoad { get; set; }
+    public bool TaskbarShowGpuTemp { get; set; }
+    public bool TaskbarShowMemory { get; set; }
+    public bool TaskbarShowDisk { get; set; }
+    public bool TaskbarShowUpload { get; set; }
+    public bool TaskbarShowDownload { get; set; }
     public bool TaskbarShowPrayer { get; set; }
-    public bool TaskbarShowWeather { get; set; }
+    public bool TaskbarShowWeatherTemp { get; set; }
+    public bool TaskbarShowWeatherWind { get; set; }
+    public List<string> TaskbarBlockOrder { get; set; } = new(MochiDock.Core.TaskbarReadouts.DefaultOrderNames);
+    public string TaskbarPlacement { get; set; } = "LeftOfTray";
+    public int TaskbarOffsetPx { get; set; }
+    public string TaskbarFontFamily { get; set; } = "";
+    public double TaskbarFontSize { get; set; }
+    public bool TaskbarFontBold { get; set; }
+    public string TaskbarLabelColor { get; set; } = "";
+    public string TaskbarValueColor { get; set; } = "";
+    public string TaskbarNetworkArrows { get; set; } = "Arrow";
     public bool ShowAiUsageTab { get; set; } = false;
     public bool ShowScriptTab { get; set; } = false;
     public bool ShowDownloadsTab { get; set; } = false;
@@ -256,5 +272,32 @@ public class AppSettings
             ExtensionData.Remove("ShowTasksTab");
         }
         if (hadTasksTab) ShowTodayTab = true;
+    }
+
+    /// <summary>
+    /// One-time migration from coarse taskbar block switches (TaskbarShowSystem, TaskbarShowMemoryDisk, TaskbarShowNetwork, TaskbarShowWeather)
+    /// to per-item checkboxes. Drops the legacy keys from the unknown-field bag.
+    /// </summary>
+    public void MigrateTaskbarItems()
+    {
+        if (TaskbarItemsMigrated) return;
+        TaskbarItemsMigrated = true;
+        if (ExtensionData == null) return;
+
+        bool TakeFlag(string key)
+        {
+            if (!ExtensionData.TryGetValue(key, out var val)) return false;
+            ExtensionData.Remove(key);
+            return val.ValueKind == System.Text.Json.JsonValueKind.True;
+        }
+
+        if (TakeFlag("TaskbarShowSystem"))
+            TaskbarShowCpuLoad = TaskbarShowCpuTemp = TaskbarShowGpuLoad = TaskbarShowGpuTemp = true;
+        if (TakeFlag("TaskbarShowMemoryDisk"))
+            TaskbarShowMemory = TaskbarShowDisk = true;
+        if (TakeFlag("TaskbarShowNetwork"))
+            TaskbarShowUpload = TaskbarShowDownload = true;
+        if (TakeFlag("TaskbarShowWeather"))
+            TaskbarShowWeatherTemp = TaskbarShowWeatherWind = true;
     }
 }

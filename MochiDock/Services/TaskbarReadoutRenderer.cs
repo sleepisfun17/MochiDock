@@ -14,16 +14,17 @@ public sealed record TaskbarRender(int Width, int Height, byte[] Pixels, IReadOn
 
 /// <summary>
 /// Draws the taskbar readout blocks into a bitmap, without any window, so the widget and the verify harness share one drawing.
-/// The colours follow the Windows taskbar's own light or dark theme, not the island theme (nothing here uses island brushes).
-/// Two lines per block fit a 40 px (Windows 10) or 48 px (Windows 11) taskbar at 100% (the font shrinks if it must); a taskbar under
+/// The colours follow the Windows taskbar's own light or dark theme (with optional user label/value colours adapted to stay >= 4.5:1).
+/// Two lines per block scale to fit the measured taskbar height (including tall Windhawk taskbars); a taskbar under
 /// <see cref="SmallTaskbarDip"/> DIPs high (small icons) gets one line per block, "CPU 2% · GPU 5%".
 /// </summary>
 public static class TaskbarReadoutRenderer
 {
     public const double SmallTaskbarDip = 36;
-    public const double FontSize = 12;      // about 9 pt
+    public const double FontSize = 12;
     public const double Padding = 6, BlockGap = 14;
     public const string SegoeIcons = "Segoe Fluent Icons, Segoe MDL2 Assets";
+    public const string DefaultTaskbarFont = "Segoe UI Variable Text, Segoe UI Variable, Segoe UI, Yu Gothic UI, Meiryo UI";
     public const string ChargingBolt = "\uE945";
 
     static readonly Color LightText = Color.FromRgb(0x1B, 0x1B, 0x1B);
@@ -35,15 +36,45 @@ public static class TaskbarReadoutRenderer
     static readonly Color DarkPlate = Color.FromArgb(240, 32, 32, 32);
     const byte StaleAlpha = 128;
 
-    /// <summary>The Windows taskbar's text colour for a light or dark taskbar (the harness uses it to check contrast).</summary>
+    /// <summary>The Windows taskbar's default text colour for a light or dark taskbar (the harness uses it to check contrast).</summary>
     public static Color TextColor(bool darkTaskbar) => darkTaskbar ? DarkText : LightText;
     public static Color WarnColor(bool darkTaskbar) => darkTaskbar ? DarkWarn : LightWarn;
 
-    // One drawn piece of a line: an optional icon glyph, an optional charging bolt and the text, all in one colour.
-    private sealed record Segment(FormattedText? Glyph, FormattedText? Bolt, FormattedText Text)
+    public static Color ResolveInkColor(string? customHex, bool darkTaskbar)
     {
-        public double Width => (Glyph is null ? 0 : Glyph.WidthIncludingTrailingWhitespace + 3) + (Bolt is null ? 0 : Bolt.WidthIncludingTrailingWhitespace) + Text.WidthIncludingTrailingWhitespace;
-        public double Height => Math.Max(Text.Height, Math.Max(Glyph?.Height ?? 0, Bolt?.Height ?? 0));
+        var (r, g, b) = TaskbarStyle.ResolveColor(customHex, darkTaskbar);
+        return Color.FromRgb(r, g, b);
+    }
+
+    public static FontFamily ResolveFontFamily(string? familyName)
+    {
+        string trimmed = familyName?.Trim() ?? "";
+        if (trimmed.Length == 0) return new FontFamily(DefaultTaskbarFont);
+        if (string.Equals(trimmed, "Quicksand", StringComparison.OrdinalIgnoreCase))
+            return Application.Current?.TryFindResource("QuicksandFont") as FontFamily ?? new FontFamily("Segoe UI");
+        return new FontFamily($"{trimmed}, {DefaultTaskbarFont}");
+    }
+
+    // One drawn piece of a line: an optional icon glyph, an optional colour emoji image, an optional charging bolt, an optional label, and the value.
+    private sealed record Segment(
+        FormattedText? Glyph,
+        BitmapSource? Emoji,
+        double EmojiSize,
+        double EmojiGap,
+        FormattedText? Bolt,
+        FormattedText? Label,
+        FormattedText? Value)
+    {
+        public double Width =>
+            (Glyph is null ? 0 : Glyph.WidthIncludingTrailingWhitespace + 3)
+            + (Emoji is null ? 0 : EmojiSize + EmojiGap)
+            + (Bolt is null ? 0 : Bolt.WidthIncludingTrailingWhitespace)
+            + (Label is null ? 0 : Label.WidthIncludingTrailingWhitespace)
+            + (Value is null ? 0 : Value.WidthIncludingTrailingWhitespace);
+
+        public double Height => Math.Max(
+            Math.Max(Value?.Height ?? 0, Label?.Height ?? 0),
+            Math.Max(Emoji is null ? 0 : EmojiSize, Math.Max(Glyph?.Height ?? 0, Bolt?.Height ?? 0)));
     }
 
     private sealed record Line(List<Segment> Segments)
@@ -55,67 +86,89 @@ public static class TaskbarReadoutRenderer
     /// <param name="dpi">Device DPI of the taskbar (96, 120, 144, 192 ...).</param>
     /// <param name="heightPx">The taskbar's height in device pixels.</param>
     /// <param name="background">A plate behind the text for transparent or restyled taskbars.</param>
-    public static TaskbarRender? Render(IReadOnlyList<TaskbarBlock> blocks, double dpi, bool darkTaskbar, int heightPx, bool background = false)
+    /// <param name="style">Optional font, size, bold and label/value colour preferences.</param>
+    public static TaskbarRender? Render(IReadOnlyList<TaskbarBlock> blocks, double dpi, bool darkTaskbar, int heightPx, bool background = false, TaskbarAppearance? style = null)
     {
         if (blocks.Count == 0) return null;
         double scale = dpi / 96.0;
         double heightDip = heightPx / scale;
         bool oneLine = heightDip < SmallTaskbarDip;
-        var uiFont = Application.Current?.TryFindResource("IslandUiFont") as FontFamily ?? new FontFamily("Segoe UI");
-        var textFace = new Typeface(uiFont, FontStyles.Normal, FontWeights.SemiBold, FontStretches.Normal);
+
+        var fontFamily = ResolveFontFamily(style?.FontFamily);
+        var weight = style?.Bold == true ? FontWeights.Bold : FontWeights.Normal;
+        var textFace = new Typeface(fontFamily, FontStyles.Normal, weight, FontStretches.Normal);
         var iconFace = new Typeface(new FontFamily(SegoeIcons), FontStyles.Normal, FontWeights.Normal, FontStretches.Normal);
         var culture = CultureInfo.InvariantCulture;
 
-        // The font fits two lines into the taskbar (with 2 DIPs above and below), never bigger than 12 DIPs.
-        double fontSize = FontSize;
-        if (!oneLine)
-        {
-            double sample = new FormattedText("Ag", culture, FlowDirection.LeftToRight, textFace, FontSize, Brushes.Black, scale).Height;
-            fontSize = Math.Min(FontSize, FontSize * (heightDip - 4) / (2 * sample));
-        }
+        double sample = new FormattedText("Ag", culture, FlowDirection.LeftToRight, textFace, 12.0, Brushes.Black, scale).Height;
+        double lineHeightRatio = sample / 12.0;
+        double fontSize = TaskbarStyle.ComputeFontSize(heightDip, lineHeightRatio, oneLine, style?.FontSize ?? 0);
+
+        var labelBase = ResolveInkColor(style?.LabelColorHex, darkTaskbar);
+        var valueBase = ResolveInkColor(style?.ValueColorHex, darkTaskbar);
+        var warnBase = WarnColor(darkTaskbar);
 
         FormattedText Text(string text, Color color) => new(text, culture, FlowDirection.LeftToRight, textFace, fontSize, new SolidColorBrush(color), scale);
         FormattedText Icon(string text, Color color) => new(text, culture, FlowDirection.LeftToRight, iconFace, fontSize + 1, new SolidColorBrush(color), scale);
-        Color Shade(Color c, bool dim) => dim ? Color.FromArgb(StaleAlpha, c.R, c.G, c.B) : c;
+        static Color Shade(Color c, bool dim) => dim ? Color.FromArgb(StaleAlpha, c.R, c.G, c.B) : c;
 
-        Segment MakeSegment(string glyph, bool charging, string text, bool warn, bool dim)
+        double emojiSize = Math.Max(8, fontSize * 1.05);
+        double emojiGap = Math.Max(2, Math.Round(fontSize * 0.22));
+
+        Segment MakeSegment(string glyph, string emojiKey, bool charging, string labelText, string valueText, bool warn, bool dim)
         {
-            var color = Shade(warn ? WarnColor(darkTaskbar) : TextColor(darkTaskbar), dim);
-            return new Segment(glyph.Length > 0 ? Icon(glyph, color) : null,
+            BitmapSource? emoji = emojiKey.Length > 0 ? EmojiImages.Get(emojiKey) : null;
+            string effectiveLabel = labelText;
+            if (emojiKey.Length > 0 && emoji is null)
+                effectiveLabel = (emojiKey == TaskbarReadouts.UploadEmojiKey ? "▲ " : "▼ ") + labelText;
+
+            var lColor = Shade(warn ? warnBase : labelBase, dim);
+            var vColor = Shade(warn ? warnBase : valueBase, dim);
+
+            return new Segment(
+                glyph.Length > 0 ? Icon(glyph, lColor) : null,
+                emoji,
+                emojiSize,
+                emojiGap,
                 charging ? Icon(ChargingBolt, Shade(BoltBlue, dim)) : null,
-                Text(text, color));
+                effectiveLabel.Length > 0 ? Text(effectiveLabel, lColor) : null,
+                valueText.Length > 0 ? Text(valueText, vColor) : null);
         }
 
         // The lines of every block: two per block, or one (the lines joined with a dot) on a small taskbar.
         var layout = new List<(TaskbarBlock Block, List<Line> Lines)>();
         foreach (var block in blocks)
         {
-            var top = MakeSegment(block.TopGlyph, block.TopCharging, block.Top, block.TopWarn, block.TopDim);
+            var top = MakeSegment(block.TopGlyph, block.TopEmojiKey, block.TopCharging, block.TopLabel, block.TopValue, block.TopWarn, block.TopDim);
             var lines = new List<Line>();
             if (oneLine)
             {
                 var segments = new List<Segment> { top };
                 if (block.HasBottom)
                 {
-                    segments.Add(new Segment(null, null, Text("  ·  ", TextColor(darkTaskbar))));
-                    segments.Add(MakeSegment(block.BottomGlyph, block.BottomCharging, block.Bottom, block.BottomWarn, block.BottomDim));
+                    segments.Add(new Segment(null, null, 0, 0, null, Text("  ·  ", labelBase), null));
+                    segments.Add(MakeSegment(block.BottomGlyph, block.BottomEmojiKey, block.BottomCharging, block.BottomLabel, block.BottomValue, block.BottomWarn, block.BottomDim));
                 }
                 lines.Add(new Line(segments));
             }
             else
             {
                 lines.Add(new Line(new List<Segment> { top }));
-                if (block.HasBottom) lines.Add(new Line(new List<Segment> { MakeSegment(block.BottomGlyph, block.BottomCharging, block.Bottom, block.BottomWarn, block.BottomDim) }));
+                if (block.HasBottom)
+                    lines.Add(new Line(new List<Segment> { MakeSegment(block.BottomGlyph, block.BottomEmojiKey, block.BottomCharging, block.BottomLabel, block.BottomValue, block.BottomWarn, block.BottomDim) }));
             }
             layout.Add((block, lines));
         }
 
-        double widthDip = Padding * 2 + layout.Sum(l => l.Lines.Max(x => x.Width)) + BlockGap * (layout.Count - 1);
+        double padding = Math.Max(Padding, Math.Round(fontSize * 0.5));
+        double blockGap = Math.Max(BlockGap, Math.Round(fontSize * 1.15));
+        double widthDip = padding * 2 + layout.Sum(l => l.Lines.Max(x => x.Width)) + blockGap * (layout.Count - 1);
         int pixelWidth = Math.Max(1, (int)Math.Ceiling(widthDip * scale));
         int pixelHeight = Math.Max(1, heightPx);
 
         var rects = new List<TaskbarBlockRect>();
         var visual = new DrawingVisual();
+        RenderOptions.SetBitmapScalingMode(visual, BitmapScalingMode.HighQuality);
         using (var dc = visual.RenderOpen())
         {
             // Alpha 1 keeps the whole rectangle hit-testable (hover tooltip, click) while staying visually transparent.
@@ -123,7 +176,7 @@ public static class TaskbarReadoutRenderer
             if (background)
                 dc.DrawRoundedRectangle(new SolidColorBrush(darkTaskbar ? DarkPlate : LightPlate), null, new Rect(0, 4, pixelWidth / scale, Math.Max(1, heightDip - 8)), 6, 6);
 
-            double x = Padding;
+            double x = padding;
             for (int i = 0; i < layout.Count; i++)
             {
                 var (block, lines) = layout[i];
@@ -135,18 +188,40 @@ public static class TaskbarReadoutRenderer
                     double sx = x;
                     foreach (var segment in line.Segments)
                     {
-                        if (segment.Glyph is { } glyph) { dc.DrawText(glyph, new Point(sx, y + (line.Height - glyph.Height) / 2)); sx += glyph.WidthIncludingTrailingWhitespace + 3; }
-                        if (segment.Bolt is { } bolt) { dc.DrawText(bolt, new Point(sx, y + (line.Height - bolt.Height) / 2)); sx += bolt.WidthIncludingTrailingWhitespace; }
-                        dc.DrawText(segment.Text, new Point(sx, y + (line.Height - segment.Text.Height) / 2));
-                        sx += segment.Text.WidthIncludingTrailingWhitespace;
+                        if (segment.Glyph is { } glyph)
+                        {
+                            dc.DrawText(glyph, new Point(sx, y + (line.Height - glyph.Height) / 2));
+                            sx += glyph.WidthIncludingTrailingWhitespace + 3;
+                        }
+                        if (segment.Emoji is { } emoji)
+                        {
+                            double ey = y + (line.Height - segment.EmojiSize) / 2;
+                            dc.DrawImage(emoji, new Rect(sx, ey, segment.EmojiSize, segment.EmojiSize));
+                            sx += segment.EmojiSize + segment.EmojiGap;
+                        }
+                        if (segment.Bolt is { } bolt)
+                        {
+                            dc.DrawText(bolt, new Point(sx, y + (line.Height - bolt.Height) / 2));
+                            sx += bolt.WidthIncludingTrailingWhitespace;
+                        }
+                        if (segment.Label is { } label)
+                        {
+                            dc.DrawText(label, new Point(sx, y + (line.Height - label.Height) / 2));
+                            sx += label.WidthIncludingTrailingWhitespace;
+                        }
+                        if (segment.Value is { } value)
+                        {
+                            dc.DrawText(value, new Point(sx, y + (line.Height - value.Height) / 2));
+                            sx += value.WidthIncludingTrailingWhitespace;
+                        }
                     }
                     y += line.Height;
                 }
                 // The hit region: from the middle of the gap before this block to the middle of the gap after it.
-                double left = i == 0 ? 0 : x - BlockGap / 2;
-                double right = i == layout.Count - 1 ? pixelWidth / scale : x + blockWidth + BlockGap / 2;
+                double left = i == 0 ? 0 : x - blockGap / 2;
+                double right = i == layout.Count - 1 ? pixelWidth / scale : x + blockWidth + blockGap / 2;
                 rects.Add(new TaskbarBlockRect(block.Kind, new Rect(left * scale, 0, (right - left) * scale, pixelHeight)));
-                x += blockWidth + BlockGap;
+                x += blockWidth + blockGap;
             }
         }
 

@@ -1,9 +1,7 @@
-using System.Globalization;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Windows;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
+using System.Windows.Automation;
 using System.Windows.Threading;
 using MochiDock.Core;
 using MochiDock.ViewModels;
@@ -12,11 +10,12 @@ using Microsoft.Win32;
 namespace MochiDock.Services;
 
 /// <summary>
-/// Layered child window of the Windows taskbar (left of the tray) that shows the taskbar readout: two-line blocks for CPU/GPU, memory/disk,
-/// network, the next prayer, the weather and wireless device batteries (<see cref="TaskbarReadouts"/> decides what, <see cref="TaskbarReadoutRenderer"/> draws it).
-/// A left click on a block raises <see cref="BlockClicked"/>; a right click raises <see cref="ContextMenuRequested"/>.
-/// Owned by <c>MainWindow</c>; created, updated and destroyed on the UI thread. Primary, horizontal, non-auto-hidden taskbar only.
-/// The window class and the render surface are the only native resources; <see cref="Dispose"/> releases both and restores the Windows 10 rebar.
+/// Layered child window of the Windows taskbar (left of the tray or after the task buttons) that shows the taskbar readout: two-line blocks
+/// for CPU/GPU, memory/disk, network, the next prayer, the weather and wireless device batteries (<see cref="TaskbarReadouts"/> decides what,
+/// <see cref="TaskbarReadoutRenderer"/> draws it). A left click on a block raises <see cref="BlockClicked"/>; a right click raises
+/// <see cref="ContextMenuRequested"/>. Owned by <c>MainWindow</c>; created, updated and destroyed on the UI thread. Primary, horizontal,
+/// non-auto-hidden taskbar only. The window class and the render surface are the only native resources; <see cref="Dispose"/> releases both
+/// and restores the Windows 10 rebar.
 /// </summary>
 public sealed class TaskbarReadoutWidget : IDisposable
 {
@@ -98,6 +97,7 @@ public sealed class TaskbarReadoutWidget : IDisposable
         wndProc = WndProc;
         timer.Tick += (_, _) => Tick();
         viewModel.TaskbarBlocksChanged += Refresh;
+        viewModel.TaskbarStyleChanged += Refresh;
         viewModel.DeviceBatterySettingsChanged += Refresh;   // the plate behind the text
         Refresh();
     }
@@ -128,12 +128,16 @@ public sealed class TaskbarReadoutWidget : IDisposable
             var scale = (dpi == 0 ? 96 : dpi) / 96.0;
             var blocks = viewModel.TaskbarBlocks;
             var background = viewModel.ShowDeviceBatteryBackground;
+            var style = viewModel.CurrentTaskbarAppearance;
+            var placement = viewModel.CurrentTaskbarPlacement;
+            var offset = viewModel.EffectiveTaskbarOffsetPx;
             var light = TaskbarUsesLightTheme();
             var height = taskbarRect.Bottom - taskbarRect.Top;
-            var key = string.Join("\n", blocks.Select(b => b.ToString())) + $"@{dpi}/{light}/{height}/{background}";
+            var styleKey = $"{style.FontFamily}|{style.FontSize}|{style.Bold}|{style.LabelColorHex}|{style.ValueColorHex}";
+            var key = string.Join("\n", blocks.Select(b => b.ToString())) + $"@{dpi}/{light}/{height}/{background}/{styleKey}";
             if (key != renderKey || widget == IntPtr.Zero)
             {
-                var surface = TaskbarReadoutRenderer.Render(blocks, dpi == 0 ? 96 : dpi, !light, height, background);
+                var surface = TaskbarReadoutRenderer.Render(blocks, dpi == 0 ? 96 : dpi, !light, height, background, style);
                 if (surface is null) { Hide(); return; }
                 widgetWidth = surface.Width; widgetHeight = surface.Height;
                 if (widget == IntPtr.Zero && !Create(taskbar)) return;
@@ -145,62 +149,152 @@ public sealed class TaskbarReadoutWidget : IDisposable
                 UpdateTooltip(null);
             }
 
-            // Position in the taskbar's client coordinates: immediately beside the tray (stepping past the Widgets button), vertically centred.
-            var rtl = (GetWindowLongPtr(taskbar, GWL_EXSTYLE).ToInt64() & WS_EX_LAYOUTRTL) != 0;
-            var widgets = WidgetsButtonRect(taskbar);
-            int x;
-            if (rtl)
-            {
-                // Right-to-left Windows: client x runs from the taskbar's right edge, so the widget goes on the tray's leading (right) side.
-                var screenLeft = trayRect.Right;
-                if (widgets is { } w && w.Left < screenLeft + widgetWidth && w.Right > screenLeft) screenLeft = (int)Math.Ceiling(w.Right);
-                x = taskbarRect.Right - screenLeft - widgetWidth;
-            }
-            else
-            {
-                var screenLeft = trayRect.Left - widgetWidth;
-                // Windows 11 left-aligned taskbar: the Widgets (weather) button sits next to the tray; step past it.
-                if (widgets is { } w && w.Right > screenLeft && w.Left < trayRect.Left) screenLeft = (int)Math.Floor(w.Left) - widgetWidth;
-                x = screenLeft - taskbarRect.Left;
-            }
-            var y = (height - widgetHeight) / 2;
+            // Position in the taskbar's client coordinates: beside the tray or right after the task buttons, vertically centred.
+            bool rtl = (GetWindowLongPtr(taskbar, GWL_EXSTYLE).ToInt64() & WS_EX_LAYOUTRTL) != 0;
+            bool isWin11 = FindWindowExW(taskbar, IntPtr.Zero, "Windows.UI.Composition.DesktopWindowContentBridge", null) != IntPtr.Zero;
+            bool needWidgets = TaskbarIsLeftAligned();
+            bool needTaskButtons = placement == TaskbarPlacementMode.AfterTaskButtons;
+            QueryTaskbarElements(taskbar, taskbarRect, needWidgets, needTaskButtons, isWin11);
+
+            (int Left, int Right)? widgetsBounds = widgetsRect is { IsEmpty: false } wr
+                ? ((int)Math.Floor(wr.Left), (int)Math.Ceiling(wr.Right)) : null;
+            (int Left, int Right)? taskBounds = taskButtonsRect is { IsEmpty: false } tb
+                ? ((int)Math.Floor(tb.Left), (int)Math.Ceiling(tb.Right)) : null;
+
+            int x = TaskbarLayout.ComputeClientX(
+                placement, offset, rtl,
+                taskbarRect.Left, taskbarRect.Right,
+                trayRect.Left, trayRect.Right,
+                widgetWidth, (int)Math.Round(8 * scale),
+                widgetsBounds, taskBounds);
+
+            int y = (height - widgetHeight) / 2;
             // HWND_TOP (0): on Windows 11 the XAML bridge child covers the whole taskbar, so the widget must stay above it.
             SetWindowPos(widget, IntPtr.Zero, x, y, widgetWidth, widgetHeight, SWP_NOACTIVATE | SWP_SHOWWINDOW);
-            if (!rtl) ShrinkRebar(taskbar, x);
+            if (!rtl && !isWin11 && placement == TaskbarPlacementMode.LeftOfTray) ShrinkRebar(taskbar, x);
+            else RestoreRebar();
         }
         catch (Exception ex) { AppLog.Warn("Taskbar", ex); }
     }
 
-    // ---- Windows 11 Widgets (weather) button -----------------------------------------------------------------------------------------------
-    // The button is XAML, so only UI Automation knows its rectangle. Looked up off the UI thread, at most every 5 s, and only while the
-    // taskbar is left-aligned (centre-aligned taskbars put it at the far left, away from the tray).
+    // ---- Windows 11 Widgets button & task-buttons bounds -----------------------------------------------------------------------------------
+    // Both are XAML (Win11) or child toolbar buttons (Win10), so UI Automation reads their bounding boxes off the UI thread.
     System.Windows.Rect? widgetsRect;
-    DateTime widgetsCheckedUtc;
-    bool widgetsLookupRunning;
+    System.Windows.Rect? taskButtonsRect;
+    DateTime uiaCheckedUtc;
+    bool uiaLookupRunning;
 
-    System.Windows.Rect? WidgetsButtonRect(IntPtr taskbar)
+    void QueryTaskbarElements(IntPtr taskbar, Rect taskbarRect, bool needWidgets, bool needTaskButtons, bool isWin11)
     {
-        if (!TaskbarIsLeftAligned()) return widgetsRect = null;
-        if (!widgetsLookupRunning && DateTime.UtcNow - widgetsCheckedUtc > TimeSpan.FromSeconds(5))
+        if (!needWidgets) widgetsRect = null;
+        if (!needTaskButtons) taskButtonsRect = null;
+        if (!needWidgets && !needTaskButtons) return;
+
+        var interval = needTaskButtons ? TimeSpan.FromSeconds(2) : TimeSpan.FromSeconds(5);
+        if (uiaLookupRunning || DateTime.UtcNow - uiaCheckedUtc < interval) return;
+
+        uiaLookupRunning = true;
+        uiaCheckedUtc = DateTime.UtcNow;
+        var handle = taskbar;
+        var bounds = taskbarRect;
+        _ = Task.Run(() =>
         {
-            widgetsLookupRunning = true;
-            widgetsCheckedUtc = DateTime.UtcNow;
-            var handle = taskbar;
-            _ = Task.Run(() =>
+            System.Windows.Rect? foundWidgets = null;
+            System.Windows.Rect? foundTasks = null;
+            try
             {
-                System.Windows.Rect? found = null;
-                try
+                if (needWidgets || isWin11)
                 {
-                    var root = System.Windows.Automation.AutomationElement.FromHandle(handle);
-                    var button = root.FindFirst(System.Windows.Automation.TreeScope.Descendants,
-                        new System.Windows.Automation.PropertyCondition(System.Windows.Automation.AutomationElement.AutomationIdProperty, "WidgetsButton"));
-                    if (button is not null && !button.Current.IsOffscreen) found = button.Current.BoundingRectangle;
+                    var root = AutomationElement.FromHandle(handle);
+                    if (needWidgets)
+                    {
+                        var button = root.FindFirst(TreeScope.Descendants,
+                            new PropertyCondition(AutomationElement.AutomationIdProperty, "WidgetsButton"));
+                        if (button is not null && !button.Current.IsOffscreen && !button.Current.BoundingRectangle.IsEmpty)
+                            foundWidgets = button.Current.BoundingRectangle;
+                    }
+                    if (needTaskButtons && isWin11)
+                    {
+                        foundTasks = FindWin11TaskButtonsBounds(root, bounds);
+                    }
                 }
-                catch (Exception ex) when (ex is System.Windows.Automation.ElementNotAvailableException or InvalidOperationException or System.Runtime.InteropServices.COMException) { }
-                System.Windows.Application.Current?.Dispatcher.BeginInvoke(() => { widgetsRect = found is { IsEmpty: false } r ? r : null; widgetsLookupRunning = false; });
+                if (needTaskButtons && !isWin11)
+                {
+                    foundTasks = FindWin10TaskButtonsBounds(handle, bounds);
+                }
+            }
+            catch (Exception ex) when (ex is ElementNotAvailableException or InvalidOperationException or COMException) { }
+            Application.Current?.Dispatcher.BeginInvoke(() =>
+            {
+                if (needWidgets) widgetsRect = foundWidgets is { IsEmpty: false } wr ? wr : null;
+                if (needTaskButtons) taskButtonsRect = foundTasks is { IsEmpty: false } tr ? tr : null;
+                uiaLookupRunning = false;
             });
+        });
+    }
+
+    static System.Windows.Rect? FindWin11TaskButtonsBounds(AutomationElement root, Rect taskbarBounds)
+    {
+        var buttons = root.FindAll(TreeScope.Descendants, new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Button));
+        var taskUnion = System.Windows.Rect.Empty;
+        var fallbackUnion = System.Windows.Rect.Empty;
+
+        for (int i = 0; i < buttons.Count; i++)
+        {
+            try
+            {
+                var el = buttons[i];
+                var cur = el.Current;
+                if (cur.IsOffscreen) continue;
+                var r = cur.BoundingRectangle;
+                if (r.IsEmpty || r.Width <= 0 || r.Height <= 0) continue;
+                if (r.Left < taskbarBounds.Left - 2 || r.Right > taskbarBounds.Right + 2) continue;
+
+                string cls = cur.ClassName ?? "";
+                string id = cur.AutomationId ?? "";
+                if (cls == "Taskbar.TaskListButton" || id.StartsWith("Appid:", StringComparison.Ordinal))
+                {
+                    taskUnion.Union(r);
+                }
+                else if (id is "StartButton" or "SearchButton" or "TaskViewButton")
+                {
+                    fallbackUnion.Union(r);
+                }
+            }
+            catch (ElementNotAvailableException) { }
+            catch (COMException) { }
         }
-        return widgetsRect;
+
+        if (!taskUnion.IsEmpty) return taskUnion;
+        return fallbackUnion.IsEmpty ? null : fallbackUnion;
+    }
+
+    static System.Windows.Rect? FindWin10TaskButtonsBounds(IntPtr taskbar, Rect taskbarBounds)
+    {
+        var rebar = FindWindowExW(taskbar, IntPtr.Zero, "ReBarWindow32", null);
+        if (rebar == IntPtr.Zero) return null;
+        var taskSw = FindWindowExW(rebar, IntPtr.Zero, "MSTaskSwWClass", null);
+        var taskList = taskSw != IntPtr.Zero ? FindWindowExW(taskSw, IntPtr.Zero, "MSTaskListWClass", null) : IntPtr.Zero;
+        if (taskList == IntPtr.Zero) return null;
+
+        var listEl = AutomationElement.FromHandle(taskList);
+        var children = listEl.FindAll(TreeScope.Children, System.Windows.Automation.Condition.TrueCondition);
+        var union = System.Windows.Rect.Empty;
+        for (int i = 0; i < children.Count; i++)
+        {
+            try
+            {
+                var cur = children[i].Current;
+                if (cur.IsOffscreen) continue;
+                var r = cur.BoundingRectangle;
+                if (r.IsEmpty || r.Width <= 0 || r.Height <= 0) continue;
+                if (r.Left >= taskbarBounds.Left - 2 && r.Right <= taskbarBounds.Right + 2)
+                    union.Union(r);
+            }
+            catch (ElementNotAvailableException) { }
+            catch (COMException) { }
+        }
+        return union.IsEmpty ? null : union;
     }
 
     static bool TaskbarIsLeftAligned()
@@ -310,12 +404,12 @@ public sealed class TaskbarReadoutWidget : IDisposable
                 {
                     // A deliberate click on a block: the owner opens the matching card.
                     var clicked = TaskbarReadoutRenderer.HitTest(blockRects, (short)(lParam.ToInt64() & 0xFFFF));
-                    if (clicked is { } kind) System.Windows.Application.Current?.Dispatcher.BeginInvoke(() => { if (!disposed) BlockClicked?.Invoke(kind); });
+                    if (clicked is { } kind) Application.Current?.Dispatcher.BeginInvoke(() => { if (!disposed) BlockClicked?.Invoke(kind); });
                     return IntPtr.Zero;
                 }
             case WM_RBUTTONUP:
                 // Right-click: the owner shows a menu (refresh, open Battery, hide widget).
-                System.Windows.Application.Current?.Dispatcher.BeginInvoke(() => { if (!disposed) ContextMenuRequested?.Invoke(); });
+                Application.Current?.Dispatcher.BeginInvoke(() => { if (!disposed) ContextMenuRequested?.Invoke(); });
                 return IntPtr.Zero;
         }
         return DefWindowProcW(hwnd, msg, wParam, lParam);
@@ -366,6 +460,7 @@ public sealed class TaskbarReadoutWidget : IDisposable
         disposed = true;
         timer.Stop();
         viewModel.TaskbarBlocksChanged -= Refresh;
+        viewModel.TaskbarStyleChanged -= Refresh;
         viewModel.DeviceBatterySettingsChanged -= Refresh;
         RestoreRebar();
         Destroy();

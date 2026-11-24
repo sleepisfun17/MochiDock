@@ -15,9 +15,21 @@ public sealed record TaskbarSample
     public double? NetUpBytesPerSecond { get; init; }
 }
 
-/// <summary>Which parts the sampler has to read (a switched-off block costs nothing).</summary>
+/// <summary>Which parts the sampler has to read (a switched-off item costs nothing).</summary>
 [Flags]
-public enum TaskbarNeeds { None = 0, System = 1, MemoryDisk = 2, Network = 4 }
+public enum TaskbarNeeds
+{
+    None = 0,
+    CpuLoad = 1 << 0,
+    CpuTemp = 1 << 1,
+    GpuLoad = 1 << 2,
+    GpuTemp = 1 << 3,
+    Memory = 1 << 4,
+    Disk = 1 << 5,
+    Network = 1 << 6,
+    System = CpuLoad | CpuTemp | GpuLoad | GpuTemp,
+    MemoryDisk = Memory | Disk,
+}
 
 /// <summary>
 /// CPU load from successive GetSystemTimes readings. The taskbar sampler owns its own instance: the 24-hour history sampler has another
@@ -72,4 +84,54 @@ public static class TaskbarSampling
 
     /// <summary>Disk activity from the "% Idle Time" counter: 100 minus the idle percentage, clamped to 0 to 100.</summary>
     public static double DiskActivityFromIdle(double idlePercent) => Math.Clamp(100.0 - idlePercent, 0, 100);
+
+    /// <summary>Sums valid, finite, non-negative GPU engine percentages and clamps to 0..100; null when empty.</summary>
+    public static double? AggregateGpuEngine(IEnumerable<double> validValues)
+    {
+        double sum = 0;
+        bool any = false;
+        foreach (double v in validValues)
+        {
+            if (double.IsFinite(v) && v >= 0)
+            {
+                sum += v;
+                any = true;
+            }
+        }
+        return any ? Math.Clamp(sum, 0, 100) : null;
+    }
+
+    /// <summary>Prefers NVML GPU load when available; otherwise picks the busiest GPU engine (3D, Copy, VideoDecode, VideoEncode).</summary>
+    public static double? PickGpuLoad(double? nvmlLoad, params double?[] engineLoads)
+    {
+        if (nvmlLoad is { } nv && double.IsFinite(nv))
+            return Math.Clamp(nv, 0, 100);
+
+        double? best = null;
+        foreach (var candidate in engineLoads)
+        {
+            if (candidate is { } v && double.IsFinite(v))
+            {
+                double clamped = Math.Clamp(v, 0, 100);
+                best = best is { } b ? Math.Max(b, clamped) : clamped;
+            }
+        }
+        return best;
+    }
+
+    /// <summary>Prefers NVML GPU temperature, else LibreHardwareMonitor sensor temperature; never invented from load.</summary>
+    public static double? PickGpuTemperature(double? nvmlTempC, double? sensorTempC)
+    {
+        if (nvmlTempC is { } nt && double.IsFinite(nt) && nt > 1 && nt < 130) return nt;
+        if (sensorTempC is { } st && double.IsFinite(st) && st > 1 && st < 130) return st;
+        return null;
+    }
+
+    /// <summary>Measured CPU sensor temperature when plausible, otherwise the load-based estimate marked as unmeasured.</summary>
+    public static (double? TempC, bool Measured) PickCpuTemperature(double? sensorTempC, double? cpuLoad)
+    {
+        if (sensorTempC is { } st && double.IsFinite(st) && st > 1 && st < 130) return (st, true);
+        if (cpuLoad is { } load && double.IsFinite(load)) return (EstimateCpuTemperature(load), false);
+        return (null, false);
+    }
 }

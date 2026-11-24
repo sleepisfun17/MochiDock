@@ -5,7 +5,12 @@ using MochiDock.Models;
 
 public class TaskbarReadoutsTests
 {
-    private static TaskbarOptions All() => new() { System = true, MemoryDisk = true, Network = true, Prayer = true, Weather = true, Batteries = true };
+    private static TaskbarOptions All() => new()
+    {
+        CpuLoad = true, CpuTemp = true, GpuLoad = true, GpuTemp = true,
+        Memory = true, Disk = true, Upload = true, Download = true,
+        Prayer = true, WeatherTemp = true, WeatherWind = true, Batteries = true,
+    };
 
     private static TaskbarSnapshot Full() => new()
     {
@@ -21,10 +26,33 @@ public class TaskbarReadoutsTests
     };
 
     [Fact]
-    public void BlocksComeInTheFixedOrder()
+    public void BlocksComeInTheDefaultOrder()
     {
         var kinds = TaskbarReadouts.Build(Full(), All()).Select(b => b.Kind).ToArray();
         Assert.Equal(new[] { TaskbarBlockKind.System, TaskbarBlockKind.MemoryDisk, TaskbarBlockKind.Network, TaskbarBlockKind.Prayer, TaskbarBlockKind.Weather, TaskbarBlockKind.Batteries }, kinds);
+    }
+
+    [Fact]
+    public void CustomBlockOrderIsRespectedAndNormalized()
+    {
+        var order = TaskbarReadouts.MoveBlock(TaskbarReadouts.DefaultOrder, TaskbarBlockKind.Network, -2);
+        Assert.Equal(TaskbarBlockKind.Network, order[0]);
+        Assert.Equal(TaskbarBlockKind.System, order[1]);
+
+        var clampedUp = TaskbarReadouts.MoveBlock(order, TaskbarBlockKind.Network, -1);
+        Assert.Equal(order, clampedUp);
+        var clampedDown = TaskbarReadouts.MoveBlock(order, TaskbarBlockKind.Batteries, +1);
+        Assert.Equal(order, clampedDown);
+
+        var normalized = TaskbarReadouts.NormalizeOrder(new[] { "Weather", "bogus", "Weather", "Batteries" });
+        Assert.Equal(new[]
+        {
+            TaskbarBlockKind.Weather, TaskbarBlockKind.Batteries,
+            TaskbarBlockKind.System, TaskbarBlockKind.MemoryDisk, TaskbarBlockKind.Network, TaskbarBlockKind.Prayer,
+        }, normalized);
+
+        var blocks = TaskbarReadouts.Build(Full(), All() with { BlockOrder = new[] { TaskbarBlockKind.Batteries, TaskbarBlockKind.Network, TaskbarBlockKind.System } });
+        Assert.Equal(new[] { TaskbarBlockKind.Batteries, TaskbarBlockKind.Network, TaskbarBlockKind.System }, blocks.Select(b => b.Kind).Take(3).ToArray());
     }
 
     [Fact]
@@ -32,6 +60,8 @@ public class TaskbarReadoutsTests
     {
         var blocks = TaskbarReadouts.Build(Full(), All());
         Assert.Equal(("CPU 2% 45°", "GPU 5% 37°"), (blocks[0].Top, blocks[0].Bottom));
+        Assert.Equal(("CPU ", "GPU "), (blocks[0].TopLabel, blocks[0].BottomLabel));
+        Assert.Equal(("2% 45°", "5% 37°"), (blocks[0].TopValue, blocks[0].BottomValue));
         Assert.Equal(("MEM 49%", "DISK 0%"), (blocks[1].Top, blocks[1].Bottom));
         Assert.Equal(("↑ 51 KB/s", "↓ 18 KB/s"), (blocks[2].Top, blocks[2].Bottom));
         Assert.Equal(("Maghrib", "16:40"), (blocks[3].Top, blocks[3].Bottom));
@@ -40,9 +70,56 @@ public class TaskbarReadoutsTests
     }
 
     [Fact]
+    public void IndividualItemsCanBeToggledAndSingleLinesPromoteToTop()
+    {
+        var cpuLoadOnly = TaskbarReadouts.Build(Full(), new TaskbarOptions { CpuLoad = true });
+        Assert.Equal("CPU 2%", Assert.Single(cpuLoadOnly).Top);
+        Assert.False(cpuLoadOnly[0].HasBottom);
+
+        var cpuTempOnly = TaskbarReadouts.Build(Full(), new TaskbarOptions { CpuTemp = true });
+        Assert.Equal("CPU 45°", Assert.Single(cpuTempOnly).Top);
+
+        var gpuOnly = TaskbarReadouts.Build(Full(), new TaskbarOptions { GpuLoad = true, GpuTemp = true });
+        Assert.Equal("GPU 5% 37°", Assert.Single(gpuOnly).Top);
+        Assert.Equal("GPU ", gpuOnly[0].TopLabel);
+        Assert.False(gpuOnly[0].HasBottom);
+
+        var gpuTempOnly = TaskbarReadouts.Build(Full(), new TaskbarOptions { GpuTemp = true });
+        Assert.Equal("GPU 37°", Assert.Single(gpuTempOnly).Top);
+
+        var diskOnly = TaskbarReadouts.Build(Full(), new TaskbarOptions { Disk = true });
+        Assert.Equal("DISK 0%", Assert.Single(diskOnly).Top);
+
+        var downOnly = TaskbarReadouts.Build(Full(), new TaskbarOptions { Download = true, NetworkArrows = TaskbarArrowStyle.Triangle });
+        Assert.Equal("▼ 18 KB/s", Assert.Single(downOnly).Top);
+        Assert.False(downOnly[0].HasBottom);
+
+        var windOnly = TaskbarReadouts.Build(Full(), new TaskbarOptions { WeatherWind = true });
+        Assert.Equal("↘ 8 m/s", Assert.Single(windOnly).Top);
+    }
+
+    [Fact]
+    public void NetworkArrowStylesProduceExpectedLabelsAndEmojiKeys()
+    {
+        var tri = Assert.Single(TaskbarReadouts.Build(Full(), new TaskbarOptions { Upload = true, Download = true, NetworkArrows = TaskbarArrowStyle.Triangle }));
+        Assert.Equal(("▲ 51 KB/s", "▼ 18 KB/s"), (tri.Top, tri.Bottom));
+        Assert.Equal(("▲ ", "▼ "), (tri.TopLabel, tri.BottomLabel));
+        Assert.Equal(("", ""), (tri.TopEmojiKey, tri.BottomEmojiKey));
+
+        var emoji = Assert.Single(TaskbarReadouts.Build(Full(), new TaskbarOptions { Upload = true, Download = true, NetworkArrows = TaskbarArrowStyle.Emoji }));
+        Assert.Equal(("51 KB/s", "18 KB/s"), (emoji.Top, emoji.Bottom));
+        Assert.Equal((TaskbarReadouts.UploadEmojiKey, TaskbarReadouts.DownloadEmojiKey), (emoji.TopEmojiKey, emoji.BottomEmojiKey));
+
+        var downEmojiOnly = Assert.Single(TaskbarReadouts.Build(Full(), new TaskbarOptions { Download = true, NetworkArrows = TaskbarArrowStyle.Emoji }));
+        Assert.Equal("18 KB/s", downEmojiOnly.Top);
+        Assert.Equal(TaskbarReadouts.DownloadEmojiKey, downEmojiOnly.TopEmojiKey);
+        Assert.False(downEmojiOnly.HasBottom);
+    }
+
+    [Fact]
     public void SwitchedOffBlocksAreSkipped()
     {
-        var onlyNetwork = new TaskbarOptions { Network = true };
+        var onlyNetwork = new TaskbarOptions { Upload = true, Download = true };
         var blocks = TaskbarReadouts.Build(Full(), onlyNetwork);
         Assert.Single(blocks);
         Assert.Equal(TaskbarBlockKind.Network, blocks[0].Kind);
@@ -52,27 +129,29 @@ public class TaskbarReadoutsTests
     [Fact]
     public void UnavailableBlocksAreSkippedNotShownEmpty()
     {
-        var empty = new TaskbarSnapshot();   // no readings yet, no prayer times, no weather, no devices
+        var empty = new TaskbarSnapshot();
         Assert.Empty(TaskbarReadouts.Build(empty, All()));
 
-        var noGpu = TaskbarReadouts.Build(new TaskbarSnapshot { CpuPercent = 10, CpuTempC = 50, CpuTempMeasured = true }, new TaskbarOptions { System = true });
+        var noGpu = TaskbarReadouts.Build(new TaskbarSnapshot { CpuPercent = 10, CpuTempC = 50, CpuTempMeasured = true },
+            new TaskbarOptions { CpuLoad = true, CpuTemp = true, GpuLoad = true, GpuTemp = true });
         Assert.Equal("CPU 10% 50°", noGpu[0].Top);
-        Assert.False(noGpu[0].HasBottom);   // no GPU: a one-line block
+        Assert.False(noGpu[0].HasBottom);
 
-        Assert.Empty(TaskbarReadouts.Build(new TaskbarSnapshot { PrayerName = "Asr" }, new TaskbarOptions { Prayer = true }));   // no time yet
-        Assert.Empty(TaskbarReadouts.Build(new TaskbarSnapshot(), new TaskbarOptions { Weather = true }));   // no weather yet
+        Assert.Empty(TaskbarReadouts.Build(new TaskbarSnapshot { PrayerName = "Asr" }, new TaskbarOptions { Prayer = true }));
+        Assert.Empty(TaskbarReadouts.Build(new TaskbarSnapshot(), new TaskbarOptions { WeatherTemp = true, WeatherWind = true }));
     }
 
     [Fact]
     public void ACpuTemperatureEstimateIsMarkedAndNeverAWarning()
     {
         var snapshot = new TaskbarSnapshot { CpuPercent = 10, CpuTempC = 95, CpuTempMeasured = false };
-        var block = TaskbarReadouts.Build(snapshot, new TaskbarOptions { System = true })[0];
+        var opts = new TaskbarOptions { CpuLoad = true, CpuTemp = true };
+        var block = TaskbarReadouts.Build(snapshot, opts)[0];
         Assert.Equal("CPU 10% ~95°", block.Top);
         Assert.False(block.TopWarn);
         Assert.Contains("estimate", block.Tooltip);
 
-        var measured = TaskbarReadouts.Build(snapshot with { CpuTempMeasured = true }, new TaskbarOptions { System = true })[0];
+        var measured = TaskbarReadouts.Build(snapshot with { CpuTempMeasured = true }, opts)[0];
         Assert.Equal("CPU 10% 95°", measured.Top);
         Assert.True(measured.TopWarn);
     }
@@ -83,7 +162,8 @@ public class TaskbarReadoutsTests
     [InlineData(10, 20, false, false)]
     public void CpuAndGpuWarnAtTheirAlertThresholds(double cpu, double gpu, bool cpuWarn, bool gpuWarn)
     {
-        var block = TaskbarReadouts.Build(new TaskbarSnapshot { CpuPercent = cpu, GpuPercent = gpu }, new TaskbarOptions { System = true, CpuAlert = 90, GpuAlert = 90 })[0];
+        var block = TaskbarReadouts.Build(new TaskbarSnapshot { CpuPercent = cpu, GpuPercent = gpu },
+            new TaskbarOptions { CpuLoad = true, GpuLoad = true, CpuAlert = 90, GpuAlert = 90 })[0];
         Assert.Equal(cpuWarn, block.TopWarn);
         Assert.Equal(gpuWarn, block.BottomWarn);
     }
@@ -92,10 +172,10 @@ public class TaskbarReadoutsTests
     public void TheThresholdsComeFromTheOptions()
     {
         var snapshot = new TaskbarSnapshot { CpuPercent = 60, GpuPercent = 70, GpuTempC = 80, CpuTempMeasured = true, CpuTempC = 70 };
-        var strict = TaskbarReadouts.Build(snapshot, new TaskbarOptions { System = true, CpuAlert = 60, GpuAlert = 99, TempAlert = 80 })[0];
-        Assert.True(strict.TopWarn);      // CPU load at its threshold
-        Assert.True(strict.BottomWarn);   // GPU temperature at the temperature threshold
-        var relaxed = TaskbarReadouts.Build(snapshot, new TaskbarOptions { System = true, CpuAlert = 61, GpuAlert = 71, TempAlert = 81 })[0];
+        var strict = TaskbarReadouts.Build(snapshot, new TaskbarOptions { CpuLoad = true, CpuTemp = true, GpuLoad = true, GpuTemp = true, CpuAlert = 60, GpuAlert = 99, TempAlert = 80 })[0];
+        Assert.True(strict.TopWarn);
+        Assert.True(strict.BottomWarn);
+        var relaxed = TaskbarReadouts.Build(snapshot, new TaskbarOptions { CpuLoad = true, CpuTemp = true, GpuLoad = true, GpuTemp = true, CpuAlert = 61, GpuAlert = 71, TempAlert = 81 })[0];
         Assert.False(relaxed.TopWarn);
         Assert.False(relaxed.BottomWarn);
     }
@@ -105,15 +185,15 @@ public class TaskbarReadoutsTests
     [InlineData(90, true)]
     public void MemoryWarnsAtNinetyPercent(double ram, bool warn)
     {
-        var block = TaskbarReadouts.Build(new TaskbarSnapshot { RamPercent = ram, DiskPercent = 100 }, new TaskbarOptions { MemoryDisk = true })[0];
+        var block = TaskbarReadouts.Build(new TaskbarSnapshot { RamPercent = ram, DiskPercent = 100 }, new TaskbarOptions { Memory = true, Disk = true })[0];
         Assert.Equal(warn, block.TopWarn);
-        Assert.False(block.BottomWarn);   // a busy disk is not a warning
+        Assert.False(block.BottomWarn);
     }
 
     [Fact]
     public void DiskAloneStillMakesABlock()
     {
-        var block = TaskbarReadouts.Build(new TaskbarSnapshot { DiskPercent = 12 }, new TaskbarOptions { MemoryDisk = true })[0];
+        var block = TaskbarReadouts.Build(new TaskbarSnapshot { DiskPercent = 12 }, new TaskbarOptions { Memory = true, Disk = true })[0];
         Assert.Equal("DISK 12%", block.Top);
         Assert.False(block.HasBottom);
     }
@@ -126,7 +206,7 @@ public class TaskbarReadoutsTests
     public void RatesUseTheStatsCardUnits(double bytes, string text)
     {
         Assert.Equal(text, TaskbarReadouts.Rate(bytes));
-        Assert.Equal(MochiDock.Core.RateScale.Format(bytes), TaskbarReadouts.Rate(bytes));
+        Assert.Equal(RateScale.Format(bytes), TaskbarReadouts.Rate(bytes));
     }
 
     [Theory]
@@ -149,7 +229,7 @@ public class TaskbarReadoutsTests
     [Fact]
     public void WeatherWithoutAGlyphOrWindStillReads()
     {
-        var block = TaskbarReadouts.Build(new TaskbarSnapshot { WeatherTempC = -2 }, new TaskbarOptions { Weather = true })[0];
+        var block = TaskbarReadouts.Build(new TaskbarSnapshot { WeatherTempC = -2 }, new TaskbarOptions { WeatherTemp = true, WeatherWind = true })[0];
         Assert.Equal("-2°", block.Top);
         Assert.False(block.HasBottom);
     }
@@ -162,7 +242,7 @@ public class TaskbarReadoutsTests
     [InlineData(2, 1)]
     [InlineData(3, 2)]
     [InlineData(4, 2)]
-    [InlineData(6, 2)]   // MaxItems (4) is kept
+    [InlineData(6, 2)]
     public void BatteriesPackTwoToABlockAndKeepMaxItems(int devices, int blocks)
     {
         var batteries = Enumerable.Range(0, devices).Select(i => Device("D" + i, 50 + i)).ToArray();
@@ -181,7 +261,7 @@ public class TaskbarReadoutsTests
         Assert.True(block.TopCharging);
         Assert.False(block.TopDim);
         Assert.True(block.BottomDim);
-        Assert.True(block.BottomWarn);    // 10%, not charging
+        Assert.True(block.BottomWarn);
         Assert.False(block.TopWarn);
         Assert.Contains("Mouse: 64%", block.Tooltip);
         Assert.Contains("charging", block.Tooltip);
@@ -202,37 +282,174 @@ public class TaskbarReadoutsTests
         foreach (var block in TaskbarReadouts.Build(Full(), All())) Assert.False(string.IsNullOrWhiteSpace(block.Tooltip), block.Kind.ToString());
     }
 
-    // ---- the settings ----
+    // ---- style, colours & placement ----
+
+    [Fact]
+    public void AutoFontScalesUpOnTallWindhawkTaskbarAndExplicitFontClampsToFit()
+    {
+        double f40 = TaskbarStyle.ComputeFontSize(40, 1.33, oneLine: false, requestedSize: 0);
+        double f48 = TaskbarStyle.ComputeFontSize(48, 1.33, oneLine: false, requestedSize: 0);
+        double f64 = TaskbarStyle.ComputeFontSize(64, 1.33, oneLine: false, requestedSize: 0);
+        double f30 = TaskbarStyle.ComputeFontSize(30, 1.33, oneLine: true, requestedSize: 0);
+
+        Assert.True(f48 > f40);
+        Assert.True(f64 > f48);
+        Assert.True(f64 <= TaskbarStyle.MaxAutoFontSize);
+        Assert.True(f30 <= 12);
+
+        double oversizedOn40 = TaskbarStyle.ComputeFontSize(40, 1.33, oneLine: false, requestedSize: 26);
+        Assert.True(oversizedOn40 * 2 * 1.33 <= 40 - 3.9);
+        Assert.Equal(16, TaskbarStyle.ComputeFontSize(64, 1.33, oneLine: false, requestedSize: 16), 3);
+    }
+
+    [Fact]
+    public void CustomColorsPreserveContrastAcrossLightAndDarkTaskbars()
+    {
+        Assert.Equal((255, 255, 255), TaskbarStyle.ResolveColor("", darkTaskbar: true));
+        Assert.Equal((0x1B, 0x1B, 0x1B), TaskbarStyle.ResolveColor("", darkTaskbar: false));
+        Assert.Equal("#80CBC4", TaskbarStyle.NormalizeHexColor("80cbc4"));
+        Assert.Equal("", TaskbarStyle.NormalizeHexColor("not-a-color"));
+
+        // Bright teal passes directly on dark taskbar, and adapts darker on light taskbar to stay >= 4.5:1.
+        var onDark = TaskbarStyle.ResolveColor("#80CBC4", darkTaskbar: true);
+        Assert.Equal((0x80, 0xCB, 0xC4), onDark);
+        var onLight = TaskbarStyle.ResolveColor("#80CBC4", darkTaskbar: false);
+        Assert.NotEqual((0x80, 0xCB, 0xC4), onLight);
+        Assert.True(TaskbarStyle.Contrast(onLight, (0xF3, 0xF3, 0xF3)) >= TaskbarStyle.MinContrastRatio);
+
+        // Deep navy passes directly on light taskbar, and adapts lighter on dark taskbar to stay >= 4.5:1.
+        var navyLight = TaskbarStyle.ResolveColor("#1A237E", darkTaskbar: false);
+        Assert.Equal((0x1A, 0x23, 0x7E), navyLight);
+        var navyDark = TaskbarStyle.ResolveColor("#1A237E", darkTaskbar: true);
+        Assert.True(TaskbarStyle.Contrast(navyDark, (0x20, 0x20, 0x20)) >= TaskbarStyle.MinContrastRatio);
+    }
+
+    [Fact]
+    public void PlacementComputesLeftOfTrayAndAfterTaskButtonsForLtrAndRtl()
+    {
+        // LTR LeftOfTray without widgets
+        int x1 = TaskbarLayout.ComputeClientX(TaskbarPlacementMode.LeftOfTray, 0, rtl: false,
+            taskbarLeft: 0, taskbarRight: 1920, trayLeft: 1700, trayRight: 1920, widgetWidth: 200, gapPx: 8,
+            widgetsButton: null, taskButtons: (100, 600));
+        Assert.Equal(1500, x1);
+
+        // LTR LeftOfTray steps past WidgetsButton next to tray
+        int x2 = TaskbarLayout.ComputeClientX(TaskbarPlacementMode.LeftOfTray, 0, rtl: false,
+            taskbarLeft: 0, taskbarRight: 1920, trayLeft: 1700, trayRight: 1920, widgetWidth: 200, gapPx: 8,
+            widgetsButton: (1580, 1700), taskButtons: (100, 600));
+        Assert.Equal(1380, x2);
+
+        // LTR AfterTaskButtons places right after task buttons + gap + offset
+        int x3 = TaskbarLayout.ComputeClientX(TaskbarPlacementMode.AfterTaskButtons, 10, rtl: false,
+            taskbarLeft: 0, taskbarRight: 1920, trayLeft: 1700, trayRight: 1920, widgetWidth: 200, gapPx: 8,
+            widgetsButton: null, taskButtons: (100, 600));
+        Assert.Equal(618, x3);
+
+        // Crowded LTR AfterTaskButtons stops before WidgetsButton/Tray
+        int xCrowded = TaskbarLayout.ComputeClientX(TaskbarPlacementMode.AfterTaskButtons, 0, rtl: false,
+            taskbarLeft: 0, taskbarRight: 1920, trayLeft: 1700, trayRight: 1920, widgetWidth: 200, gapPx: 8,
+            widgetsButton: (1580, 1700), taskButtons: (100, 1500));
+        Assert.Equal(1380, xCrowded);
+
+        // Fallback to LeftOfTray when taskButtons is null
+        int xFallback = TaskbarLayout.ComputeClientX(TaskbarPlacementMode.AfterTaskButtons, 0, rtl: false,
+            taskbarLeft: 0, taskbarRight: 1920, trayLeft: 1700, trayRight: 1920, widgetWidth: 200, gapPx: 8,
+            widgetsButton: null, taskButtons: null);
+        Assert.Equal(1500, xFallback);
+
+        // RTL LeftOfTray & AfterTaskButtons
+        int rtlTray = TaskbarLayout.ComputeClientX(TaskbarPlacementMode.LeftOfTray, 0, rtl: true,
+            taskbarLeft: 0, taskbarRight: 1920, trayLeft: 0, trayRight: 220, widgetWidth: 200, gapPx: 8,
+            widgetsButton: null, taskButtons: (1300, 1820));
+        Assert.Equal(1920 - 220 - 200, rtlTray);
+
+        int rtlTasks = TaskbarLayout.ComputeClientX(TaskbarPlacementMode.AfterTaskButtons, 0, rtl: true,
+            taskbarLeft: 0, taskbarRight: 1920, trayLeft: 0, trayRight: 220, widgetWidth: 200, gapPx: 8,
+            widgetsButton: null, taskButtons: (1300, 1820));
+        // screenLeft = 1300 - 8 - 200 = 1092 => client x = 1920 - 1092 - 200 = 628
+        Assert.Equal(628, rtlTasks);
+    }
+
+    // ---- settings, migration & local-only keys ----
 
     [Fact]
     public void TheTaskbarKeysAreLocalOnly()
     {
-        foreach (var key in new[] { "TaskbarShowSystem", "TaskbarShowMemoryDisk", "TaskbarShowNetwork", "TaskbarShowPrayer", "TaskbarShowWeather" })
+        foreach (var key in new[]
+        {
+            "TaskbarShowCpuLoad", "TaskbarShowCpuTemp", "TaskbarShowGpuLoad", "TaskbarShowGpuTemp",
+            "TaskbarShowMemory", "TaskbarShowDisk", "TaskbarShowUpload", "TaskbarShowDownload",
+            "TaskbarShowPrayer", "TaskbarShowWeatherTemp", "TaskbarShowWeatherWind",
+            "TaskbarBlockOrder", "TaskbarPlacement", "TaskbarOffsetPx",
+            "TaskbarFontFamily", "TaskbarFontSize", "TaskbarFontBold",
+            "TaskbarLabelColor", "TaskbarValueColor", "TaskbarNetworkArrows",
+            "ShowDeviceBatteriesOnTaskbar", "ShowDeviceBatteryBackground",
+        })
             Assert.Contains(key, SettingsTransfer.LocalOnlyKeys);
 
-        var settings = new JsonObject { ["TaskbarShowNetwork"] = true, ["CapsuleTheme"] = "Matcha" };
+        var settings = new JsonObject
+        {
+            ["TaskbarShowUpload"] = true,
+            ["TaskbarShowNetwork"] = true,
+            ["TaskbarFontFamily"] = "Consolas",
+            ["CapsuleTheme"] = "Matcha",
+        };
         var exported = SettingsTransfer.BuildExport(settings, new JsonArray())["settings"] as JsonObject;
-        Assert.False(exported!.ContainsKey("TaskbarShowNetwork"));
+        Assert.False(exported!.ContainsKey("TaskbarShowUpload"));
+        Assert.False(exported.ContainsKey("TaskbarShowNetwork"));
+        Assert.False(exported.ContainsKey("TaskbarFontFamily"));
         Assert.True(exported.ContainsKey("CapsuleTheme"));
 
-        // An import never switches the readouts on a PC that has them off.
-        var merged = SettingsTransfer.Merge(new JsonObject { ["TaskbarShowNetwork"] = true }, new JsonObject { ["TaskbarShowNetwork"] = false });
-        Assert.False(merged["TaskbarShowNetwork"]!.GetValue<bool>());
-        Assert.False(SettingsTransfer.Merge(new JsonObject { ["TaskbarShowNetwork"] = true }, new JsonObject()).ContainsKey("TaskbarShowNetwork"));
+        // An import never switches the readouts on a PC that has them off (and strips legacy keys).
+        var merged = SettingsTransfer.Merge(
+            new JsonObject { ["TaskbarShowUpload"] = true, ["TaskbarShowSystem"] = true },
+            new JsonObject { ["TaskbarShowUpload"] = false, ["TaskbarItemsMigrated"] = true });
+        Assert.False(merged["TaskbarShowUpload"]!.GetValue<bool>());
+        Assert.False(merged.ContainsKey("TaskbarShowSystem"));
+        Assert.False(SettingsTransfer.Merge(new JsonObject { ["TaskbarShowUpload"] = true }, new JsonObject()).ContainsKey("TaskbarShowUpload"));
     }
 
     [Fact]
-    public void OldSettingsWithoutTheKeysLoadWithEverythingOff()
+    public void OldSettingsMigrateCoarseTaskbarSwitchesAndDropLegacyKeys()
     {
-        var settings = JsonSerializer.Deserialize<AppSettings>("{\"CapsuleTheme\":\"Matcha\",\"ShowDeviceBatteriesOnTaskbar\":true}")!;
-        Assert.False(settings.TaskbarShowSystem);
-        Assert.False(settings.TaskbarShowMemoryDisk);
-        Assert.False(settings.TaskbarShowNetwork);
-        Assert.False(settings.TaskbarShowPrayer);
-        Assert.False(settings.TaskbarShowWeather);
+        var oldJson = """
+            {
+              "CapsuleTheme": "Matcha",
+              "ShowDeviceBatteriesOnTaskbar": true,
+              "TaskbarShowSystem": true,
+              "TaskbarShowNetwork": true,
+              "TaskbarShowPrayer": true
+            }
+            """;
+        var settings = JsonSerializer.Deserialize<AppSettings>(oldJson)!;
+        settings.MigrateTaskbarItems();
+
+        Assert.True(settings.TaskbarItemsMigrated);
+        Assert.True(settings.TaskbarShowCpuLoad);
+        Assert.True(settings.TaskbarShowCpuTemp);
+        Assert.True(settings.TaskbarShowGpuLoad);
+        Assert.True(settings.TaskbarShowGpuTemp);
+        Assert.False(settings.TaskbarShowMemory);
+        Assert.False(settings.TaskbarShowDisk);
+        Assert.True(settings.TaskbarShowUpload);
+        Assert.True(settings.TaskbarShowDownload);
+        Assert.True(settings.TaskbarShowPrayer);
+        Assert.False(settings.TaskbarShowWeatherTemp);
+        Assert.False(settings.TaskbarShowWeatherWind);
         Assert.True(settings.ShowDeviceBatteriesOnTaskbar);
-        var roundTrip = JsonSerializer.Deserialize<AppSettings>(JsonSerializer.Serialize(new AppSettings { TaskbarShowNetwork = true }))!;
-        Assert.True(roundTrip.TaskbarShowNetwork);
+        Assert.False(settings.ExtensionData?.ContainsKey("TaskbarShowSystem") ?? false);
+        Assert.False(settings.ExtensionData?.ContainsKey("TaskbarShowNetwork") ?? false);
+
+        // Idempotent: turning a migrated item off stays off if MigrateTaskbarItems runs again.
+        settings.TaskbarShowCpuLoad = false;
+        settings.MigrateTaskbarItems();
+        Assert.False(settings.TaskbarShowCpuLoad);
+
+        var blank = JsonSerializer.Deserialize<AppSettings>("{\"CapsuleTheme\":\"Matcha\"}")!;
+        blank.MigrateTaskbarItems();
+        Assert.False(blank.TaskbarShowCpuLoad);
+        Assert.False(blank.TaskbarShowGpuLoad);
+        Assert.False(blank.TaskbarShowUpload);
     }
 
     [Fact]
@@ -244,25 +461,70 @@ public class TaskbarReadoutsTests
     }
 
     [Fact]
-    public void NeedsSamplerOnlyForSampledBlocks()
+    public void NeedsSamplerOnlyForSampledItems()
     {
-        Assert.False(new TaskbarOptions { Prayer = true, Weather = true, Batteries = true }.NeedsSampler);
-        Assert.True(new TaskbarOptions { System = true }.NeedsSampler);
-        Assert.True(new TaskbarOptions { MemoryDisk = true }.NeedsSampler);
-        Assert.True(new TaskbarOptions { Network = true }.NeedsSampler);
+        Assert.False(new TaskbarOptions { Prayer = true, WeatherTemp = true, WeatherWind = true, Batteries = true }.NeedsSampler);
+        Assert.Equal(TaskbarNeeds.None, new TaskbarOptions { Prayer = true, WeatherTemp = true, Batteries = true }.Needs);
+        Assert.True(new TaskbarOptions { CpuLoad = true }.NeedsSampler);
+        Assert.True(new TaskbarOptions { GpuLoad = true }.NeedsSampler);
+        Assert.True(new TaskbarOptions { GpuTemp = true }.NeedsSampler);
+        Assert.True(new TaskbarOptions { Memory = true }.NeedsSampler);
+        Assert.True(new TaskbarOptions { Disk = true }.NeedsSampler);
+        Assert.True(new TaskbarOptions { Upload = true }.NeedsSampler);
+        Assert.True(new TaskbarOptions { Download = true }.NeedsSampler);
     }
 }
 
 public class TaskbarSamplingTests
 {
     [Fact]
+    public void AggregateGpuEngineSumsValidValuesAndClamps()
+    {
+        Assert.Null(TaskbarSampling.AggregateGpuEngine(Array.Empty<double>()));
+        Assert.Null(TaskbarSampling.AggregateGpuEngine(new[] { -1.0, double.NaN, double.PositiveInfinity }));
+        Assert.Equal(28.5, TaskbarSampling.AggregateGpuEngine(new[] { 12.0, 16.5, -2.0 })!.Value, 6);
+        Assert.Equal(100.0, TaskbarSampling.AggregateGpuEngine(new[] { 65.0, 60.0 })!.Value, 6);
+    }
+
+    [Fact]
+    public void PickGpuLoadPrefersNvmlOtherwiseUsesBusiestPdhEngine()
+    {
+        Assert.Equal(42.0, TaskbarSampling.PickGpuLoad(42.0, 10.0, 80.0)!.Value, 6);
+        Assert.Equal(73.0, TaskbarSampling.PickGpuLoad(null, 12.0, 73.0, 4.0, null)!.Value, 6);
+        Assert.Equal(100.0, TaskbarSampling.PickGpuLoad(null, 150.0, 10.0)!.Value, 6);
+        Assert.Null(TaskbarSampling.PickGpuLoad(null, null, double.NaN));
+    }
+
+    [Fact]
+    public void PickGpuAndCpuTemperaturesSelectMeasuredAndFallbackCleanly()
+    {
+        Assert.Equal(61.0, TaskbarSampling.PickGpuTemperature(61.0, 58.0)!.Value, 6);
+        Assert.Equal(58.0, TaskbarSampling.PickGpuTemperature(null, 58.0)!.Value, 6);
+        Assert.Equal(58.0, TaskbarSampling.PickGpuTemperature(0.0, 58.0)!.Value, 6);
+        Assert.Null(TaskbarSampling.PickGpuTemperature(null, 140.0));
+        Assert.Null(TaskbarSampling.PickGpuTemperature(null, null));
+
+        var measured = TaskbarSampling.PickCpuTemperature(67.5, 10.0);
+        Assert.True(measured.Measured);
+        Assert.Equal(67.5, measured.TempC!.Value, 6);
+
+        var estimated = TaskbarSampling.PickCpuTemperature(null, 50.0);
+        Assert.False(estimated.Measured);
+        Assert.Equal(TaskbarSampling.EstimateCpuTemperature(50.0), estimated.TempC!.Value, 6);
+
+        var none = TaskbarSampling.PickCpuTemperature(0.0, null);
+        Assert.Null(none.TempC);
+        Assert.False(none.Measured);
+    }
+
+    [Fact]
     public void CpuLoadFromTwoReadings()
     {
         var cpu = new CpuLoadDelta();
-        Assert.Null(cpu.Update(1000, 2000));         // the first reading has nothing to compare with
-        Assert.Equal(50, cpu.Update(1500, 3000)!.Value, 6);   // 500 of 1000 ticks idle
-        Assert.Equal(0, cpu.Update(2500, 4000)!.Value, 6);    // all idle
-        Assert.Equal(100, cpu.Update(2500, 5000)!.Value, 6);  // no idle
+        Assert.Null(cpu.Update(1000, 2000));
+        Assert.Equal(50, cpu.Update(1500, 3000)!.Value, 6);
+        Assert.Equal(0, cpu.Update(2500, 4000)!.Value, 6);
+        Assert.Equal(100, cpu.Update(2500, 5000)!.Value, 6);
     }
 
     [Fact]
@@ -276,16 +538,14 @@ public class TaskbarSamplingTests
         Assert.Null(cpu.Update(2000, 4000));
     }
 
-    // The taskbar sampler and the 24-hour history sampler each own their CPU and network state, so a reading by one never disturbs the other.
     [Fact]
     public void TwoSamplersKeepTheirOwnDeltas()
     {
-        var history = new CpuLoadDelta();   // the 15 s history sampler's
-        var taskbar = new CpuLoadDelta();   // the taskbar's, read every second
+        var history = new CpuLoadDelta();
+        var taskbar = new CpuLoadDelta();
         history.Update(0, 0);
         taskbar.Update(0, 0);
-        for (ulong t = 1; t <= 15; t++) Assert.NotNull(taskbar.Update(t * 100, t * 1000));   // 90% busy, every second
-        // The history sampler's first delta still spans all 15 seconds, not just the last one.
+        for (ulong t = 1; t <= 15; t++) Assert.NotNull(taskbar.Update(t * 100, t * 1000));
         Assert.Equal(90, history.Update(1500, 15000)!.Value, 6);
 
         var historyNet = new ByteRateDelta();
@@ -313,8 +573,8 @@ public class TaskbarSamplingTests
     {
         var net = new ByteRateDelta();
         net.Update(10, 5_000, 5_000);
-        Assert.Null(net.Update(11, 100, 100));      // an adapter went away: the total fell
-        Assert.Null(net.Update(11, 200, 200));      // the time did not advance
+        Assert.Null(net.Update(11, 100, 100));
+        Assert.Null(net.Update(11, 200, 200));
         Assert.NotNull(net.Update(12, 300, 300));
         net.Reset();
         Assert.Null(net.Update(13, 400, 400));
@@ -324,7 +584,7 @@ public class TaskbarSamplingTests
     [InlineData(100, 0)]
     [InlineData(80, 20)]
     [InlineData(0, 100)]
-    [InlineData(130, 0)]     // the counter can read over 100
+    [InlineData(130, 0)]
     [InlineData(-5, 100)]
     public void DiskActivityIsTheIdleTimeInverted(double idle, double activity) => Assert.Equal(activity, TaskbarSampling.DiskActivityFromIdle(idle));
 

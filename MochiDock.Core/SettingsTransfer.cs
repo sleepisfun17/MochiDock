@@ -22,13 +22,25 @@ public static class SettingsTransfer
         "RemoteWebhookToken", "TargetMonitor", "TopMargin", "GamingTopOffset", "IslandHorizontalRatio",
         "SettingsWindowWidth", "SettingsWindowHeight", "PrayerAudioWavPath", "StartWithWindows", "LastUpdateCheckUtc", "LastAnnouncedUpdate",
         "SnoozeUntilTicks", "GowaPort", "WebhookPort", "PowerComponents", "HiddenDeviceBatteryKeys", "PreferredGamingResolution",
-        "TaskbarShowSystem", "TaskbarShowMemoryDisk", "TaskbarShowNetwork", "TaskbarShowPrayer", "TaskbarShowWeather",
+        "TaskbarItemsMigrated", "TaskbarShowCpuLoad", "TaskbarShowCpuTemp", "TaskbarShowGpuLoad", "TaskbarShowGpuTemp",
+        "TaskbarShowMemory", "TaskbarShowDisk", "TaskbarShowUpload", "TaskbarShowDownload",
+        "TaskbarShowPrayer", "TaskbarShowWeatherTemp", "TaskbarShowWeatherWind",
+        "TaskbarBlockOrder", "TaskbarPlacement", "TaskbarOffsetPx",
+        "TaskbarFontFamily", "TaskbarFontSize", "TaskbarFontBold",
+        "TaskbarLabelColor", "TaskbarValueColor", "TaskbarNetworkArrows",
+        "ShowDeviceBatteriesOnTaskbar", "ShowDeviceBatteryBackground",
+    };
+
+    private static readonly string[] LegacyLocalOnlyKeys =
+    {
+        "TaskbarShowSystem", "TaskbarShowMemoryDisk", "TaskbarShowNetwork", "TaskbarShowWeather",
     };
 
     /// <summary>Removes the local-only keys from <paramref name="settings"/> and returns it.</summary>
     public static JsonObject Strip(JsonObject settings)
     {
         foreach (var key in LocalOnlyKeys) settings.Remove(key);
+        foreach (var key in LegacyLocalOnlyKeys) settings.Remove(key);
         return settings;
     }
 
@@ -42,6 +54,16 @@ public static class SettingsTransfer
         {
             imported.Remove(key);
             if (current != null && current.TryGetPropertyValue(key, out var value))
+                imported[key] = value?.DeepClone();
+        }
+        bool currentMigrated = current != null
+            && current.TryGetPropertyValue("TaskbarItemsMigrated", out var migNode)
+            && migNode is JsonValue migVal
+            && migVal.TryGetValue<bool>(out var mig) && mig;
+        foreach (var key in LegacyLocalOnlyKeys)
+        {
+            imported.Remove(key);
+            if (!currentMigrated && current != null && current.TryGetPropertyValue(key, out var value))
                 imported[key] = value?.DeepClone();
         }
         return imported;

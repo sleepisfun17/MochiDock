@@ -365,8 +365,13 @@ public partial class MainViewModel : INotifyPropertyChanged
         OnPropertyChanged(nameof(FxPairs));
         OnPropertyChanged(nameof(EnableDeviceBatteries));OnPropertyChanged(nameof(ShowDeviceBatteriesOnTaskbar));OnPropertyChanged(nameof(ShowDeviceBatteryBackground));
         ApplyDeviceBatteryConfiguration();DeviceBatterySettingsChanged?.Invoke();
-        OnPropertyChanged(nameof(TaskbarShowSystem));OnPropertyChanged(nameof(TaskbarShowMemoryDisk));OnPropertyChanged(nameof(TaskbarShowNetwork));OnPropertyChanged(nameof(TaskbarShowPrayer));OnPropertyChanged(nameof(TaskbarShowWeather));
-        ApplyTaskbarSampler();RefreshTaskbarBlocks();
+        OnPropertyChanged(nameof(TaskbarShowCpuLoad));OnPropertyChanged(nameof(TaskbarShowCpuTemp));OnPropertyChanged(nameof(TaskbarShowGpuLoad));OnPropertyChanged(nameof(TaskbarShowGpuTemp));
+        OnPropertyChanged(nameof(TaskbarShowMemory));OnPropertyChanged(nameof(TaskbarShowDisk));OnPropertyChanged(nameof(TaskbarShowUpload));OnPropertyChanged(nameof(TaskbarShowDownload));
+        OnPropertyChanged(nameof(TaskbarShowPrayer));OnPropertyChanged(nameof(TaskbarShowWeatherTemp));OnPropertyChanged(nameof(TaskbarShowWeatherWind));
+        OnPropertyChanged(nameof(TaskbarBlockOrder));OnPropertyChanged(nameof(TaskbarPlacement));OnPropertyChanged(nameof(TaskbarOffsetPx));
+        OnPropertyChanged(nameof(TaskbarFontFamily));OnPropertyChanged(nameof(TaskbarFontSize));OnPropertyChanged(nameof(TaskbarFontBold));
+        OnPropertyChanged(nameof(TaskbarLabelColor));OnPropertyChanged(nameof(TaskbarValueColor));OnPropertyChanged(nameof(TaskbarNetworkArrows));
+        ApplyTaskbarSampler();RefreshTaskbarBlocks();TaskbarStyleChanged?.Invoke();
         OnPropertyChanged(nameof(EnablePowerLogging));_powerComponentItems=null;OnPropertyChanged(nameof(PowerComponentItems));RecomputePowerAllowance();ApplyPowerLogConfiguration();
         OnPropertyChanged(nameof(HideInFullscreen));
         OnPropertyChanged(nameof(EnableHardwareAlerts));
