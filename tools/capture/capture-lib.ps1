@@ -162,3 +162,48 @@ function Find-Control([string]$name, [string]$type = 'ControlType.CheckBox') {
   $d = Get-MainDock; $root = [Windows.Automation.AutomationElement]::FromHandle($d.H)
   $root.FindAll([Windows.Automation.TreeScope]::Descendants, [Windows.Automation.Condition]::TrueCondition) | Where-Object { $_.Current.Name -eq $name -and $_.Current.ControlType.ProgrammaticName -eq $type } | Select-Object -First 1
 }
+# Finds a control by its AutomationId (the x:Name in the XAML). Labels repeat in quick settings ("Matcha" and "Hojicha" are both a theme
+# and a mascot), so the theme and mascot radios are always found by id.
+function Find-ControlById([string]$id) {
+  $d = Get-MainDock; $root = [Windows.Automation.AutomationElement]::FromHandle($d.H)
+  $cond = [Windows.Automation.PropertyCondition]::new([Windows.Automation.AutomationElement]::AutomationIdProperty, $id)
+  $root.FindFirst([Windows.Automation.TreeScope]::Descendants, $cond)
+}
+
+# The quick-settings radios for each theme and mascot (SettingsCardView.xaml). Theme keys match the file names (<card>-<theme>.png).
+$script:ThemeRadios = [ordered]@{ default = 'ThemeClassicRadio'; hojicha = 'ThemeHojichaRadio'; 'kuro-night' = 'ThemeKuroNightRadio'; matcha = 'ThemeMatchaRadio' }
+$script:MascotRadios = [ordered]@{ auto = 'MascotAutoRadio'; mochi = 'MascotMochiRadio'; 'matcha-mochi' = 'MascotMatchaMochiRadio'
+                                   'hojicha-mochi' = 'MascotHojichaMochiRadio'; kuro = 'MascotKuroRadio'; shiro = 'MascotShiroRadio' }
+
+# Opens the dock on its quick settings (the gear), so the theme and mascot radios exist and can be clicked.
+function Open-QuickSettings {
+  $d = Get-MainDock
+  Move-Mouse ($d.L + 340) 12 15; Start-Sleep -Milliseconds 1600
+  if ($null -eq (Find-ControlById 'ThemeClassicRadio')) { Click-Rect (Get-Header).Gear; Start-Sleep -Milliseconds 1500 }
+  if ($null -eq (Find-ControlById 'ThemeClassicRadio')) { throw 'Quick settings did not open (no theme radios found).' }
+}
+# Which key of $map is selected now (quick settings must be open), or $null.
+function Get-SelectedKey($map) {
+  foreach ($key in $map.Keys) {
+    $e = Find-ControlById $map[$key]
+    if ($e -and $e.GetCurrentPattern([Windows.Automation.SelectionItemPattern]::Pattern).Current.IsSelected) { return $key }
+  }
+  return $null
+}
+function Select-Radio($map, [string]$key, [int]$settleMs = 2200) {
+  if (-not $map.Contains($key)) { throw "Unknown choice '$key' (one of: $($map.Keys -join ', '))." }
+  $e = Find-ControlById $map[$key]
+  if ($null -eq $e) { throw "Radio $($map[$key]) not found; is quick settings open?" }
+  Click-Rect $e.Current.BoundingRectangle
+  Start-Sleep -Milliseconds $settleMs   # the theme repaints and the mascot spins (about 1 s) before the next step
+}
+function Set-Theme([string]$key, [int]$settleMs = 2200) { Select-Radio $script:ThemeRadios $key $settleMs }
+function Set-Mascot([string]$key, [int]$settleMs = 2200) { Select-Radio $script:MascotRadios $key $settleMs }
+# The theme and mascot now chosen, to put back after a capture that changed them.
+function Get-Look { Open-QuickSettings; [pscustomobject]@{ Theme = Get-SelectedKey $script:ThemeRadios; Mascot = Get-SelectedKey $script:MascotRadios } }
+function Restore-Look($look) {
+  if ($null -eq $look) { return }
+  Open-QuickSettings
+  if ($look.Theme) { Set-Theme $look.Theme }
+  if ($look.Mascot) { Set-Mascot $look.Mascot }
+}

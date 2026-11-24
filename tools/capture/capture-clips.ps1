@@ -1,4 +1,4 @@
-param([Parameter(Mandatory)][ValidateSet('hover', 'tour', 'theme')][string]$Clip,
+param([Parameter(Mandatory)][ValidateSet('hover', 'tour', 'theme', 'mascot')][string]$Clip,
       [string]$RawDir = (Join-Path $env:TEMP 'mochidock-capture'),
       [string]$OutDir = (Join-Path $PSScriptRoot '..\..\docs\media'))
 # Records a short clip of the running dock with ffmpeg gdigrab while driving it, then converts it to a GIF. Needs an ELEVATED shell and
@@ -52,12 +52,24 @@ switch ($Clip) {
     $p.WaitForExit(); Convert-ToGif 'tab-tour' 10
   }
   'theme' {
-    Move-Mouse ($dock.L + 340) 12 20; Start-Sleep -Milliseconds 1600
-    Click-Rect (Get-Header).Gear; Start-Sleep -Milliseconds 1500
-    $p = Start-Recording 'theme-switch' 10
+    # Default -> Matcha -> Kuro Night -> back to the starting theme, in quick settings. The radios are found by id (their labels repeat
+    # in the Mascot row). The theme and mascot in use before are put back afterwards.
+    $before = Get-Look
+    $p = Start-Recording 'theme-switch' 12
     Start-Sleep -Milliseconds 800
-    $r = Find-Control 'Matcha' 'ControlType.RadioButton'; Click-Rect $r.Current.BoundingRectangle; Move-Mouse ($dock.L + 340) 3 10; Start-Sleep -Milliseconds 2500
-    $r = Find-Control 'Default' 'ControlType.RadioButton'; Click-Rect $r.Current.BoundingRectangle; Move-Mouse ($dock.L + 340) 3 10; Start-Sleep -Milliseconds 2500
+    foreach ($key in 'matcha', 'kuro-night', 'default') { Set-Theme $key; Move-Mouse ($dock.L + 340) 3 10 }
     $p.WaitForExit(); Convert-ToGif 'theme-switch'
+    Restore-Look $before
+  }
+  'mascot' {
+    # The mascot picker in quick settings: Mochi spins into Kuro, then Shiro, then back to Mochi (the whirlwind of the mascot change). Set
+    # the theme you want first (Kuro Night shows Kuro's glow best); the theme and mascot in use before are put back afterwards.
+    $before = Get-Look
+    Set-Mascot 'mochi' 1500
+    $p = Start-Recording 'mascot-switch' 11
+    Start-Sleep -Milliseconds 800
+    foreach ($key in 'kuro', 'shiro', 'mochi') { Set-Mascot $key 2600; Move-Mouse ($dock.L + 340) 3 10 }
+    $p.WaitForExit(); Convert-ToGif 'mascot-switch'
+    Restore-Look $before
   }
 }
