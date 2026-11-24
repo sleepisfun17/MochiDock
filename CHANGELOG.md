@@ -2,7 +2,7 @@
 
 All notable changes to MochiDock are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [Unreleased]
+## [0.4.0-beta]
 
 ### Added
 
@@ -13,6 +13,11 @@ All notable changes to MochiDock are documented here. The format follows [Keep a
 ### Changed
 
 - **Colour emoji in the capsule**: emoji in a WhatsApp, email or app notification are shown in colour in the compact capsule too, the same pictures as on the cards, instead of plain one-colour symbols.
+
+### Fixed
+
+- **Live memory readout**: memory usage now reads live from Windows instead of the last garbage collection.
+- **Taskbar prayer countdown stability**: stopped the taskbar prayer block from flashing or flipping between `Fajr xx:xx` and `in xxh xxm` on 1-second ticks after Isha.
 
 ## [0.3.1-beta]
 
