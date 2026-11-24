@@ -252,6 +252,23 @@ public static class TaskbarReadouts
     /// <summary>"13°C" for weather temperature.</summary>
     public static string WeatherTemperature(double celsius) => Temperature(celsius) + "C";
 
+    /// <summary>
+    /// Picks the taskbar weather emoji matching the dock's Weather tab: sun behind cloud for daytime Clear/PartlyCloudy,
+    /// crescent moon for clear night skies, and standard weather icons for clouds/rain/snow/thunder.
+    /// </summary>
+    public static string ResolveWeatherGlyph(string? iconKind, string? fallbackGlyph, bool isNight) => iconKind switch
+    {
+        "Clear" => isNight ? "🌙" : "⛅",
+        "PartlyCloudy" => isNight ? "☁️" : "⛅",
+        "Cloudy" => "☁️",
+        "Fog" => "🌫️",
+        "Drizzle" => "🌦️",
+        "Rain" => "🌧️",
+        "Snow" => "🌨️",
+        "Thunder" => "⛈️",
+        _ => fallbackGlyph ?? "",
+    };
+
     /// <summary>Extracts the Twemoji key for a weather symbol (accepting bare Unicode symbols like "☀" by retrying with U+FE0F).</summary>
     public static string WeatherEmojiKey(string? glyph)
     {

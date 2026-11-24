@@ -599,6 +599,15 @@ public class TaskbarReadoutsTests
         Assert.Equal(("🌧️ 13°C", "↘ 4 m/s"), (monoBlock.Top, monoBlock.Bottom));
         Assert.Equal("", monoBlock.TopEmojiKey);
         Assert.Equal("🌧️ ", monoBlock.TopLabel);
+
+        // Daytime Clear matches the dock's cloud-sun; nighttime Clear switches to crescent moon.
+        Assert.Equal("⛅", TaskbarReadouts.ResolveWeatherGlyph("Clear", "☀️", isNight: false));
+        Assert.Equal("26c5", TaskbarReadouts.WeatherEmojiKey(TaskbarReadouts.ResolveWeatherGlyph("Clear", "☀️", isNight: false)));
+        Assert.Equal("🌙", TaskbarReadouts.ResolveWeatherGlyph("Clear", "☀️", isNight: true));
+        Assert.Equal("1f319", TaskbarReadouts.WeatherEmojiKey(TaskbarReadouts.ResolveWeatherGlyph("Clear", "☀️", isNight: true)));
+        Assert.Equal("⛅", TaskbarReadouts.ResolveWeatherGlyph("PartlyCloudy", "🌤️", isNight: false));
+        Assert.Equal("☁️", TaskbarReadouts.ResolveWeatherGlyph("PartlyCloudy", "🌤️", isNight: true));
+        Assert.Equal("🌧️", TaskbarReadouts.ResolveWeatherGlyph("Rain", "🌧️", isNight: true));
     }
 
     // ---- settings, migration & local-only keys ----

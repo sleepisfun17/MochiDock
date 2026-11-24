@@ -31,6 +31,7 @@ public class WeatherInfo
     public string Condition { get; set; } = "Clear";
     public string IconKind { get; set; } = "Clear";
     public string WeatherIcon { get; set; } = "☀️";
+    public bool? IsDay { get; set; }
     public string? IconUrl { get; set; }
 
     public string ResolvedCityName { get; set; } = "";

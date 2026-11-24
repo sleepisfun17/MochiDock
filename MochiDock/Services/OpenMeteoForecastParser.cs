@@ -22,6 +22,9 @@ public static class OpenMeteoForecastParser
         int weatherCode = current.TryGetProperty("weather_code", out var codeEl) && codeEl.ValueKind == JsonValueKind.Number
             ? codeEl.GetInt32()
             : 0;
+        bool? isDay = current.TryGetProperty("is_day", out var dayEl) && dayEl.ValueKind == JsonValueKind.Number
+            ? dayEl.GetInt32() != 0
+            : null;
         var (condition, icon, kind) = DecodeWmoWeatherCode(weatherCode);
 
         var weatherInfo = new WeatherInfo
@@ -31,6 +34,7 @@ public static class OpenMeteoForecastParser
             Condition = condition,
             WeatherIcon = icon,
             IconKind = kind,
+            IsDay = isDay,
             ResolvedCityName = resolvedCityName,
             Latitude = latitude,
             Longitude = longitude

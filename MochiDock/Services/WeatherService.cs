@@ -144,7 +144,7 @@ public class WeatherService
                 string latStr = geo.Latitude.ToString("F4", CultureInfo.InvariantCulture);
                 string lonStr = geo.Longitude.ToString("F4", CultureInfo.InvariantCulture);
 
-                var weatherUrl = $"https://api.open-meteo.com/v1/forecast?latitude={latStr}&longitude={lonStr}&current=temperature_2m,wind_speed_10m,weather_code&hourly=temperature_2m,weather_code,precipitation_probability&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max&minutely_15=precipitation,weather_code&forecast_minutely_15=8&forecast_days=3&wind_speed_unit=ms&timezone=auto";
+                var weatherUrl = $"https://api.open-meteo.com/v1/forecast?latitude={latStr}&longitude={lonStr}&current=temperature_2m,wind_speed_10m,weather_code,is_day&hourly=temperature_2m,weather_code,precipitation_probability&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max&minutely_15=precipitation,weather_code&forecast_minutely_15=8&forecast_days=3&wind_speed_unit=ms&timezone=auto";
                 var weatherResponse = await _httpClient.GetStringAsync(weatherUrl, cancellationToken);
                 string resolvedName = !string.IsNullOrEmpty(geo.ShortName) ? geo.ShortName : city;
                 if (OpenMeteoForecastParser.Parse(weatherResponse, resolvedName, geo.Latitude, geo.Longitude) is { } parsed)

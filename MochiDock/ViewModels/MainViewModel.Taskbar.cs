@@ -492,7 +492,8 @@ public partial class MainViewModel
     {
         if (e.PropertyName is nameof(PrayerSchedule.NextPrayer)
             or nameof(PrayerSchedule.CountdownText)
-            or nameof(PrayerSchedule.CurrentPrayerElapsedText))
+            or nameof(PrayerSchedule.CurrentPrayerElapsedText)
+            or nameof(PrayerSchedule.IsDaytime))
             RefreshTaskbarBlocks();
     }
 
@@ -540,12 +541,23 @@ public partial class MainViewModel
         CurrentPrayerElapsed = CurrentPrayerSchedule?.CurrentPrayerInstant is not null ? CurrentPrayerSchedule.TimeSinceCurrentPrayer : null,
         WeatherTempC = _weatherInfo?.Temperature,
         WindMetersPerSecond = _weatherInfo?.WindSpeed,
-        WeatherGlyph = _weatherInfo?.WeatherIcon ?? "",
+        WeatherGlyph = ResolveTaskbarWeatherGlyph(),
         WeatherCondition = _weatherInfo?.Condition ?? "",
         Batteries = options.Batteries
             ? TaskbarDeviceBatteries.Select(r => new TaskbarBattery(Views.Cards.DeviceBatteryRowConverter.Glyph(r.Kind), r.Name, r.Via, r.Percent, r.Charging, r.Stale, r.ReadAtUtc)).ToArray()
             : Array.Empty<TaskbarBattery>(),
     };
+
+    private string ResolveTaskbarWeatherGlyph()
+    {
+        if (_weatherInfo is null) return "";
+        bool isNight = _weatherInfo.IsDay is { } isDay
+            ? !isDay
+            : (CurrentPrayerSchedule is { } ps && !string.IsNullOrEmpty(ps.TimeZoneId)
+                ? !ps.IsDaytime
+                : (DateTime.Now.Hour < 6 || DateTime.Now.Hour >= 18));
+        return TaskbarReadouts.ResolveWeatherGlyph(_weatherInfo.IconKind, _weatherInfo.WeatherIcon, isNight);
+    }
 
     /// <summary>Rebuilds Left and Right blocks from the latest data and raises <see cref="TaskbarBlocksChanged"/> only when either side differs.</summary>
     public void RefreshTaskbarBlocks()
