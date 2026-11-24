@@ -28,14 +28,24 @@ public class AppSettings
     public bool TaskbarShowWeatherTemp { get; set; }
     public bool TaskbarShowWeatherWind { get; set; }
     public List<string> TaskbarBlockOrder { get; set; } = new(MochiDock.Core.TaskbarReadouts.DefaultOrderNames);
+    public Dictionary<string, string> TaskbarBlockZones { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+    public string TaskbarMonitor { get; set; } = "";
     public string TaskbarPlacement { get; set; } = "LeftOfTray";
     public int TaskbarOffsetPx { get; set; }
+    public int TaskbarLeftOffsetPx { get; set; }
+    public int TaskbarVerticalOffsetPx { get; set; }
     public string TaskbarFontFamily { get; set; } = "";
     public double TaskbarFontSize { get; set; }
     public bool TaskbarFontBold { get; set; }
+    public int TaskbarBlockSpacing { get; set; }
+    public bool TaskbarStableWidth { get; set; } = true;
     public string TaskbarLabelColor { get; set; } = "";
     public string TaskbarValueColor { get; set; } = "";
     public string TaskbarNetworkArrows { get; set; } = "Arrow";
+    public string TaskbarNetworkUnit { get; set; } = "Bytes";
+    public bool TaskbarSwapNetworkLines { get; set; }
+    public bool TaskbarCompactLabels { get; set; }
+    public int TaskbarRefreshSeconds { get; set; } = 1;
     public bool ShowAiUsageTab { get; set; } = false;
     public bool ShowScriptTab { get; set; } = false;
     public bool ShowDownloadsTab { get; set; } = false;

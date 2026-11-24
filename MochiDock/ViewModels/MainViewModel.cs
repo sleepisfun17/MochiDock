@@ -368,10 +368,14 @@ public partial class MainViewModel : INotifyPropertyChanged
         OnPropertyChanged(nameof(TaskbarShowCpuLoad));OnPropertyChanged(nameof(TaskbarShowCpuTemp));OnPropertyChanged(nameof(TaskbarShowGpuLoad));OnPropertyChanged(nameof(TaskbarShowGpuTemp));
         OnPropertyChanged(nameof(TaskbarShowMemory));OnPropertyChanged(nameof(TaskbarShowDisk));OnPropertyChanged(nameof(TaskbarShowUpload));OnPropertyChanged(nameof(TaskbarShowDownload));
         OnPropertyChanged(nameof(TaskbarShowPrayer));OnPropertyChanged(nameof(TaskbarShowWeatherTemp));OnPropertyChanged(nameof(TaskbarShowWeatherWind));
-        OnPropertyChanged(nameof(TaskbarBlockOrder));OnPropertyChanged(nameof(TaskbarPlacement));OnPropertyChanged(nameof(TaskbarOffsetPx));
+        OnPropertyChanged(nameof(TaskbarBlockOrder));OnPropertyChanged(nameof(TaskbarMonitor));OnPropertyChanged(nameof(TaskbarPlacement));
+        OnPropertyChanged(nameof(TaskbarOffsetPx));OnPropertyChanged(nameof(TaskbarLeftOffsetPx));OnPropertyChanged(nameof(TaskbarVerticalOffsetPx));
         OnPropertyChanged(nameof(TaskbarFontFamily));OnPropertyChanged(nameof(TaskbarFontSize));OnPropertyChanged(nameof(TaskbarFontBold));
-        OnPropertyChanged(nameof(TaskbarLabelColor));OnPropertyChanged(nameof(TaskbarValueColor));OnPropertyChanged(nameof(TaskbarNetworkArrows));
-        ApplyTaskbarSampler();RefreshTaskbarBlocks();TaskbarStyleChanged?.Invoke();
+        OnPropertyChanged(nameof(TaskbarBlockSpacing));OnPropertyChanged(nameof(TaskbarStableWidth));
+        OnPropertyChanged(nameof(TaskbarLabelColor));OnPropertyChanged(nameof(TaskbarValueColor));
+        OnPropertyChanged(nameof(TaskbarNetworkArrows));OnPropertyChanged(nameof(TaskbarNetworkUnit));
+        OnPropertyChanged(nameof(TaskbarSwapNetworkLines));OnPropertyChanged(nameof(TaskbarCompactLabels));OnPropertyChanged(nameof(TaskbarRefreshSeconds));
+        ApplyTaskbarRefreshInterval();ApplyTaskbarSampler();RefreshTaskbarBlocks();TaskbarStyleChanged?.Invoke();TaskbarStyleChanged?.Invoke();
         OnPropertyChanged(nameof(EnablePowerLogging));_powerComponentItems=null;OnPropertyChanged(nameof(PowerComponentItems));RecomputePowerAllowance();ApplyPowerLogConfiguration();
         OnPropertyChanged(nameof(HideInFullscreen));
         OnPropertyChanged(nameof(EnableHardwareAlerts));

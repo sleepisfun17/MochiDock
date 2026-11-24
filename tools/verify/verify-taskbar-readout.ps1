@@ -34,6 +34,7 @@ $output=Join-Path $repo 'MochiDock/obj/taskbar-readout';$null=New-Item -ItemType
 $blockType=$core.GetType('MochiDock.Core.TaskbarBlock');$snapType=$core.GetType('MochiDock.Core.TaskbarSnapshot');$optType=$core.GetType('MochiDock.Core.TaskbarOptions')
 $batType=$core.GetType('MochiDock.Core.TaskbarBattery');$kindType=$core.GetType('MochiDock.Core.TaskbarBlockKind');$readouts=$core.GetType('MochiDock.Core.TaskbarReadouts')
 $arrowType=$core.GetType('MochiDock.Core.TaskbarArrowStyle');$styleType=$core.GetType('MochiDock.Core.TaskbarAppearance')
+$zoneType=$core.GetType('MochiDock.Core.TaskbarZone');$unitType=$core.GetType('MochiDock.Core.TaskbarNetworkUnit')
 $renderer=$assembly.GetType('MochiDock.Services.TaskbarReadoutRenderer')
 $renderMethod=$renderer.GetMethod('Render')
 
@@ -250,6 +251,46 @@ foreach($dark in $false,$true){
  $null = Assert-LayoutValid $rWarnCol $cases[1].Blocks "custom colors warnings $theme" 1 $false
  $checks += 2
 }
+
+# ---- Left/Right zone split, compact labels, bits/sec + swapped lines, block spacing & stable width -------------------------------------
+$zonesDict = [System.Collections.Generic.Dictionary[MochiDock.Core.TaskbarBlockKind, MochiDock.Core.TaskbarZone]]::new()
+$zonesDict[[Enum]::Parse($kindType, 'System')] = [Enum]::Parse($zoneType, 'Left')
+$zonesDict[[Enum]::Parse($kindType, 'MemoryDisk')] = [Enum]::Parse($zoneType, 'Left')
+$zonesDict[[Enum]::Parse($kindType, 'Network')] = [Enum]::Parse($zoneType, 'Left')
+$splitOpt = New-Rec $optType @{CpuLoad=$true;CpuTemp=$true;GpuLoad=$true;GpuTemp=$true;Memory=$true;Disk=$true;Upload=$true;Download=$true;Prayer=$true;WeatherTemp=$true;WeatherWind=$true;Batteries=$true;BlockZones=$zonesDict}
+$leftBlocks = $readouts.GetMethod('BuildForZone').Invoke($null, @($full, $splitOpt, [Enum]::Parse($zoneType, 'Left')))
+$rightBlocks = $readouts.GetMethod('BuildForZone').Invoke($null, @($full, $splitOpt, [Enum]::Parse($zoneType, 'Right')))
+if($leftBlocks.Count -ne 3 -or $rightBlocks.Count -ne 4){throw "Left/Right zone split expected 3+4 blocks, got $($leftBlocks.Count)+$($rightBlocks.Count)"}
+$rLeft = Invoke-Render $leftBlocks 96 $true 48 $false $null
+$rRight = Invoke-Render $rightBlocks 96 $true 48 $false $null
+$null = Assert-LayoutValid $rLeft $leftBlocks 'left zone strip' 1 $false
+$null = Assert-LayoutValid $rRight $rightBlocks 'right zone strip' 1 $false
+Save-Png $rLeft $true (Join-Path $output 'readout-zone-left-dark-100.png')
+Save-Png $rRight $true (Join-Path $output 'readout-zone-right-dark-100.png')
+$checks += 2
+
+$compactOpt = New-Rec $optType @{CpuLoad=$true;CpuTemp=$true;GpuLoad=$true;GpuTemp=$true;Memory=$true;Disk=$true;Upload=$true;Download=$true;CompactLabels=$true;SwapNetworkLines=$true;NetworkUnit=([Enum]::Parse($unitType,'Bits'))}
+$compactBlocks = Build-Blocks $full $compactOpt
+if(-not $compactBlocks[0].Top.StartsWith('C ') -or -not $compactBlocks[2].Top.StartsWith([string][char]0x2193)){throw 'Compact labels or swapped bits network mismatch'}
+$rCompact = Invoke-Render $compactBlocks 96 $true 48 $false $null
+$null = Assert-LayoutValid $rCompact $compactBlocks 'compact labels + swapped bits' 1 $false
+Save-Png $rCompact $true (Join-Path $output 'readout-compact-bits-dark-100.png')
+$checks++
+
+$spacedStyle = New-Rec $styleType @{BlockSpacing=24;StableWidth=$false}
+$rSpaced = Invoke-Render $cases[0].Blocks 96 $true 48 $false $spacedStyle
+$null = Assert-LayoutValid $rSpaced $cases[0].Blocks 'custom 24px block spacing' 1 $false
+if($rSpaced.Width -le $r48.Width){throw "24px block spacing should widen the readout ($($rSpaced.Width) vs $($r48.Width))"}
+$checks++
+
+$stableStyle = New-Rec $styleType @{StableWidth=$true}
+$stableOpt = New-Rec $optType @{CpuLoad=$true;CpuTemp=$true;GpuLoad=$true;GpuTemp=$true;Memory=$true;Disk=$true;Upload=$true;Download=$true}
+$rStableFull = Invoke-Render (Build-Blocks $full $stableOpt) 96 $true 48 $false $stableStyle
+$rStableHot = Invoke-Render (Build-Blocks $hot $stableOpt) 96 $true 48 $false $stableStyle
+$null = Assert-LayoutValid $rStableFull (Build-Blocks $full $stableOpt) 'stable width full' 1 $false
+$null = Assert-LayoutValid $rStableHot (Build-Blocks $hot $stableOpt) 'stable width hot' 1 $false
+if($rStableFull.Width -ne $rStableHot.Width){throw "Stable width changed between full ($($rStableFull.Width) px) and hot ($($rStableHot.Width) px)"}
+$checks++
 
 $measure|Set-Content (Join-Path $output 'measurements.txt')
 

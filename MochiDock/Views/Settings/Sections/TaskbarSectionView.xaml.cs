@@ -4,56 +4,137 @@ using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Media.Imaging;
 using MochiDock.Core;
+using MochiDock.Services;
 using MochiDock.ViewModels;
 using Binding = System.Windows.Data.Binding;
 using Button = System.Windows.Controls.Button;
 using CheckBox = System.Windows.Controls.CheckBox;
 using Color = System.Windows.Media.Color;
 using ComboBox = System.Windows.Controls.ComboBox;
-using FontFamily = System.Windows.Media.FontFamily;
 using Orientation = System.Windows.Controls.Orientation;
 using TextBox = System.Windows.Controls.TextBox;
 
 namespace MochiDock.Views.Settings.Sections;
 
 /// <summary>
-/// Advanced Settings > Taskbar: per-item readout checkboxes, block order, placement/offset, font, arrow style, and optional colours.
-/// All options live-apply and are kept per PC.
+/// Advanced Settings > Taskbar: live preview bar, per-item readout checkboxes, Left/Right zone toggle, block ordering,
+/// multi-monitor display picker, offsets, font, spacing, stable width, network unit/arrows, refresh rate, and adaptive colours.
 /// </summary>
 public partial class TaskbarSectionView : SettingsSectionBase
 {
     private static readonly double[] FontSizeChoices = { 0, 9, 10, 11, 12, 13, 14, 16, 18, 20, 22, 24 };
-    private bool _listsPopulated;
+    private static readonly int[] BlockSpacingChoices = { 0, 6, 8, 10, 12, 16, 20, 24, 32 };
+    private static readonly int[] RefreshChoices = { 1, 2, 3 };
 
-    public TaskbarSectionView() => InitializeComponent();
+    private static readonly TaskbarSnapshot PreviewFallback = new()
+    {
+        CpuPercent = 14,
+        CpuTempC = 48,
+        CpuTempMeasured = false,
+        GpuPercent = 22,
+        GpuTempC = 41,
+        RamPercent = 46,
+        DiskPercent = 3,
+        NetUpBytesPerSecond = 128 * 1024,
+        NetDownBytesPerSecond = 2.4 * 1024 * 1024,
+        PrayerName = "Asr",
+        PrayerTime = "15:20",
+        WeatherTempC = 18,
+        WindMetersPerSecond = 6,
+        WeatherGlyph = "\u2601",
+        WeatherCondition = "Cloudy",
+        Batteries = new[]
+        {
+            new TaskbarBattery("\uE962", "Mouse", "2.4G", 78, false, false, DateTimeOffset.UtcNow),
+            new TaskbarBattery("\uE765", "Keyboard", "Bluetooth", 64, true, false, DateTimeOffset.UtcNow),
+        },
+    };
+
+    private bool _listsPopulated;
+    private bool _previewDark = true;
+    private MainViewModel? _previewVm;
+
+    public TaskbarSectionView()
+    {
+        InitializeComponent();
+        Loaded += (_, _) => HookPreviewEvents();
+        Unloaded += (_, _) => UnhookPreviewEvents();
+    }
+
+    private void HookPreviewEvents()
+    {
+        var vm = ViewModel;
+        if (ReferenceEquals(_previewVm, vm)) return;
+        UnhookPreviewEvents();
+        _previewVm = vm;
+        if (_previewVm != null)
+        {
+            _previewVm.TaskbarBlocksChanged += OnLiveTaskbarChanged;
+            _previewVm.TaskbarStyleChanged += OnLiveTaskbarChanged;
+        }
+    }
+
+    private void UnhookPreviewEvents()
+    {
+        if (_previewVm != null)
+        {
+            _previewVm.TaskbarBlocksChanged -= OnLiveTaskbarChanged;
+            _previewVm.TaskbarStyleChanged -= OnLiveTaskbarChanged;
+            _previewVm = null;
+        }
+    }
+
+    private void OnLiveTaskbarChanged() => Dispatcher.BeginInvoke(UpdatePreview);
 
     protected override void LoadFromSettings()
     {
         var vm = ViewModel;
         if (vm == null) return;
-        var s = vm.Settings;
 
+        HookPreviewEvents();
         EnsureComboLists();
+        PopulateMonitorCombo(vm.TaskbarMonitor);
         BuildBlockOrderList(vm);
 
         PlaceTrayRadio.IsChecked = vm.CurrentTaskbarPlacement == TaskbarPlacementMode.LeftOfTray;
         PlaceTaskButtonsRadio.IsChecked = vm.CurrentTaskbarPlacement == TaskbarPlacementMode.AfterTaskButtons;
 
+        if (!LeftOffsetBox.IsKeyboardFocusWithin)
+        {
+            LeftOffsetBox.Text = vm.TaskbarLeftOffsetPx.ToString(CultureInfo.InvariantCulture);
+            LeftOffsetRow.Validation = "";
+        }
         if (!OffsetBox.IsKeyboardFocusWithin)
         {
             OffsetBox.Text = vm.TaskbarOffsetPx.ToString(CultureInfo.InvariantCulture);
             OffsetRow.Validation = "";
         }
+        if (!VerticalOffsetBox.IsKeyboardFocusWithin)
+        {
+            VerticalOffsetBox.Text = vm.TaskbarVerticalOffsetPx.ToString(CultureInfo.InvariantCulture);
+            VerticalOffsetRow.Validation = "";
+        }
 
         SelectFontFamily(vm.TaskbarFontFamily);
         SelectFontSize(vm.TaskbarFontSize);
+        SelectBlockSpacing(vm.TaskbarBlockSpacing);
+        SelectRefreshSeconds(vm.TaskbarRefreshSeconds);
+
         BoldCheck.IsChecked = vm.TaskbarFontBold;
+        StableWidthCheck.IsChecked = vm.TaskbarStableWidth;
+        CompactLabelsCheck.IsChecked = vm.TaskbarCompactLabels;
+        SwapNetCheck.IsChecked = vm.TaskbarSwapNetworkLines;
 
         var arrows = TaskbarStyle.ParseArrowStyle(vm.TaskbarNetworkArrows);
         ArrowClassicRadio.IsChecked = arrows == TaskbarArrowStyle.Arrow;
         ArrowTriangleRadio.IsChecked = arrows == TaskbarArrowStyle.Triangle;
         ArrowEmojiRadio.IsChecked = arrows == TaskbarArrowStyle.Emoji;
+
+        var unit = TaskbarStyle.ParseNetworkUnit(vm.TaskbarNetworkUnit);
+        UnitBytesRadio.IsChecked = unit == TaskbarNetworkUnit.Bytes;
+        UnitBitsRadio.IsChecked = unit == TaskbarNetworkUnit.Bits;
 
         if (!LabelColorBox.IsKeyboardFocusWithin)
         {
@@ -68,6 +149,8 @@ public partial class TaskbarSectionView : SettingsSectionBase
             ValueColorRow.Validation = "";
         }
         UpdateColorSwatch(ValueColorSwatch, vm.TaskbarValueColor);
+
+        UpdatePreview();
     }
 
     private void EnsureComboLists()
@@ -87,10 +170,38 @@ public partial class TaskbarSectionView : SettingsSectionBase
             FontFamilyCombo.Items.Add(new ComboBoxItem { Content = name, Tag = name });
 
         foreach (double size in FontSizeChoices)
+            FontSizeCombo.Items.Add(new ComboBoxItem { Content = size <= 0 ? "Auto (fit taskbar)" : $"{size:0} px", Tag = size });
+
+        foreach (int spacing in BlockSpacingChoices)
+            BlockSpacingCombo.Items.Add(new ComboBoxItem { Content = spacing <= 0 ? "Auto (with font)" : $"{spacing} px", Tag = spacing });
+
+        foreach (int sec in RefreshChoices)
+            RefreshCombo.Items.Add(new ComboBoxItem { Content = sec == 1 ? "1 second" : $"{sec} seconds", Tag = sec });
+    }
+
+    private void PopulateMonitorCombo(string currentMonitor)
+    {
+        MonitorCombo.Items.Clear();
+        MonitorCombo.Items.Add(new ComboBoxItem { Content = "Primary display", Tag = TaskbarMonitorSelection.Primary });
+        MonitorCombo.Items.Add(new ComboBoxItem { Content = "Same as MochiDock", Tag = TaskbarMonitorSelection.FollowDock });
+        MonitorCombo.Items.Add(new ComboBoxItem { Content = "All displays", Tag = TaskbarMonitorSelection.All });
+
+        var monitors = MultiMonitorHelper.GetAllMonitors();
+        foreach (var m in monitors)
+            MonitorCombo.Items.Add(new ComboBoxItem { Content = m.DisplayLabel, Tag = m.DeviceName });
+
+        string target = currentMonitor?.Trim() ?? "";
+        foreach (ComboBoxItem item in MonitorCombo.Items)
         {
-            string label = size <= 0 ? "Auto (fit taskbar)" : $"{size:0} px";
-            FontSizeCombo.Items.Add(new ComboBoxItem { Content = label, Tag = size });
+            if (string.Equals(item.Tag as string ?? "", target, StringComparison.OrdinalIgnoreCase))
+            {
+                MonitorCombo.SelectedItem = item;
+                return;
+            }
         }
+        var disconnected = new ComboBoxItem { Content = $"{target} (disconnected)", Tag = target };
+        MonitorCombo.Items.Add(disconnected);
+        MonitorCombo.SelectedItem = disconnected;
     }
 
     private void SelectFontFamily(string family)
@@ -124,6 +235,83 @@ public partial class TaskbarSectionView : SettingsSectionBase
         FontSizeCombo.Items.Add(custom);
         FontSizeCombo.SelectedItem = custom;
     }
+
+    private void SelectBlockSpacing(int spacing)
+    {
+        int clamped = TaskbarStyle.ClampBlockSpacing(spacing);
+        foreach (ComboBoxItem item in BlockSpacingCombo.Items)
+        {
+            if (item.Tag is int s && s == clamped)
+            {
+                BlockSpacingCombo.SelectedItem = item;
+                return;
+            }
+        }
+        var custom = new ComboBoxItem { Content = $"{clamped} px", Tag = clamped };
+        BlockSpacingCombo.Items.Add(custom);
+        BlockSpacingCombo.SelectedItem = custom;
+    }
+
+    private void SelectRefreshSeconds(int sec)
+    {
+        int clamped = TaskbarStyle.ClampRefreshSeconds(sec);
+        foreach (ComboBoxItem item in RefreshCombo.Items)
+        {
+            if (item.Tag is int s && s == clamped)
+            {
+                RefreshCombo.SelectedItem = item;
+                return;
+            }
+        }
+    }
+
+    // ---- Live preview ----------------------------------------------------------------------------------------------------------------------
+
+    private void PreviewTheme_Click(object sender, RoutedEventArgs e)
+    {
+        _previewDark = ReferenceEquals(sender, PreviewDarkBtn);
+        PreviewDarkBtn.Tag = _previewDark ? "Selected" : null;
+        PreviewLightBtn.Tag = _previewDark ? null : "Selected";
+        UpdatePreview();
+    }
+
+    private void UpdatePreview()
+    {
+        var vm = ViewModel;
+        if (vm == null) return;
+
+        PreviewBar.Background = new SolidColorBrush(_previewDark ? Color.FromRgb(0x20, 0x20, 0x20) : Color.FromRgb(0xF3, 0xF3, 0xF3));
+        PreviewEmptyHint.Foreground = new SolidColorBrush(_previewDark ? Color.FromRgb(0xB8, 0xB8, 0xB8) : Color.FromRgb(0x55, 0x55, 0x55));
+
+        var (left, right) = vm.BuildTaskbarPreview(PreviewFallback);
+        var dpiInfo = VisualTreeHelper.GetDpi(this);
+        double dpi = dpiInfo.PixelsPerInchX > 0 ? dpiInfo.PixelsPerInchX : 96.0;
+        double scale = dpiInfo.DpiScaleY > 0 ? dpiInfo.DpiScaleY : 1.0;
+        int heightPx = Math.Max(24, (int)Math.Round(48 * scale));
+        var style = vm.CurrentTaskbarAppearance;
+        bool bg = vm.ShowDeviceBatteryBackground;
+
+        PreviewLeftImage.Source = RenderPreviewBitmap(left, dpi, _previewDark, heightPx, bg, style);
+        PreviewRightImage.Source = RenderPreviewBitmap(right, dpi, _previewDark, heightPx, bg, style);
+        PreviewEmptyHint.Visibility = left.Count == 0 && right.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    private static BitmapSource? RenderPreviewBitmap(
+        IReadOnlyList<TaskbarBlock> blocks,
+        double dpi,
+        bool darkTaskbar,
+        int heightPx,
+        bool background,
+        TaskbarAppearance style)
+    {
+        var render = TaskbarReadoutRenderer.Render(blocks, dpi, darkTaskbar, heightPx, background, style);
+        if (render == null) return null;
+        var bmp = BitmapSource.Create(render.Width, render.Height, dpi, dpi, PixelFormats.Pbgra32, null, render.Pixels, render.Width * 4);
+        bmp.Freeze();
+        return bmp;
+    }
+
+    // ---- Blocks, side & order --------------------------------------------------------------------------------------------------------------
 
     private void BuildBlockOrderList(MainViewModel vm)
     {
@@ -193,13 +381,41 @@ public partial class TaskbarSectionView : SettingsSectionBase
         Grid.SetColumn(left, 0);
         grid.Children.Add(left);
 
-        var buttons = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(12, 0, 0, 0) };
+        var zone = vm.GetTaskbarBlockZone(kind);
+        var controls = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(12, 0, 0, 0) };
+
+        var leftBtn = new Button
+        {
+            Style = (Style)FindResource("MonitorSelectionButton"),
+            Content = "Left",
+            FontSize = 11,
+            Padding = new Thickness(8, 3, 8, 3),
+            Tag = zone == TaskbarZone.Left ? "Selected" : null,
+            ToolTip = "Place this block on the left edge of the taskbar",
+        };
+        System.Windows.Automation.AutomationProperties.SetName(leftBtn, $"Place {BlockTitle(kind)} on left side");
+        leftBtn.Click += (_, _) => { ViewModel?.SetTaskbarBlockZone(kind, TaskbarZone.Left); if (ViewModel != null) BuildBlockOrderList(ViewModel); };
+
+        var rightBtn = new Button
+        {
+            Style = (Style)FindResource("MonitorSelectionButton"),
+            Content = "Right",
+            FontSize = 11,
+            Padding = new Thickness(8, 3, 8, 3),
+            Margin = new Thickness(6, 0, 0, 0),
+            Tag = zone == TaskbarZone.Right ? "Selected" : null,
+            ToolTip = "Place this block on the right side of the taskbar",
+        };
+        System.Windows.Automation.AutomationProperties.SetName(rightBtn, $"Place {BlockTitle(kind)} on right side");
+        rightBtn.Click += (_, _) => { ViewModel?.SetTaskbarBlockZone(kind, TaskbarZone.Right); if (ViewModel != null) BuildBlockOrderList(ViewModel); };
+
         var up = new Button
         {
             Style = (Style)FindResource("ActionButton"),
             Content = "▲",
             Width = 28,
             Padding = new Thickness(0, 3, 0, 3),
+            Margin = new Thickness(10, 0, 0, 0),
             IsEnabled = !isFirst,
             ToolTip = "Move block up",
         };
@@ -219,10 +435,12 @@ public partial class TaskbarSectionView : SettingsSectionBase
         System.Windows.Automation.AutomationProperties.SetName(down, $"Move {BlockTitle(kind)} down");
         down.Click += (_, _) => { ViewModel?.MoveTaskbarBlock(kind, +1); if (ViewModel != null) BuildBlockOrderList(ViewModel); };
 
-        buttons.Children.Add(up);
-        buttons.Children.Add(down);
-        Grid.SetColumn(buttons, 1);
-        grid.Children.Add(buttons);
+        controls.Children.Add(leftBtn);
+        controls.Children.Add(rightBtn);
+        controls.Children.Add(up);
+        controls.Children.Add(down);
+        Grid.SetColumn(controls, 1);
+        grid.Children.Add(controls);
 
         card.Child = grid;
         return card;
@@ -260,7 +478,14 @@ public partial class TaskbarSectionView : SettingsSectionBase
         _ => kind.ToString(),
     };
 
-    // ---- Placement & offset ----------------------------------------------------------------------------------------------------------------
+    // ---- Display & placement ---------------------------------------------------------------------------------------------------------------
+
+    private void Monitor_Changed(object sender, SelectionChangedEventArgs e)
+    {
+        if (Loading || ViewModel == null) return;
+        if (MonitorCombo.SelectedItem is ComboBoxItem item)
+            ViewModel.TaskbarMonitor = item.Tag as string ?? "";
+    }
 
     private void Placement_Checked(object sender, RoutedEventArgs e)
     {
@@ -268,54 +493,49 @@ public partial class TaskbarSectionView : SettingsSectionBase
         ViewModel.TaskbarPlacement = PlaceTaskButtonsRadio.IsChecked == true ? "AfterTaskButtons" : "LeftOfTray";
     }
 
-    private void OffsetMinus_Click(object sender, RoutedEventArgs e)
+    private void LeftOffsetMinus_Click(object sender, RoutedEventArgs e) => NudgeInt(() => ViewModel!.TaskbarLeftOffsetPx -= 4, () => ViewModel!.TaskbarLeftOffsetPx, LeftOffsetBox, LeftOffsetRow);
+    private void LeftOffsetPlus_Click(object sender, RoutedEventArgs e) => NudgeInt(() => ViewModel!.TaskbarLeftOffsetPx += 4, () => ViewModel!.TaskbarLeftOffsetPx, LeftOffsetBox, LeftOffsetRow);
+    private void LeftOffsetReset_Click(object sender, RoutedEventArgs e) => NudgeInt(() => ViewModel!.TaskbarLeftOffsetPx = 0, () => ViewModel!.TaskbarLeftOffsetPx, LeftOffsetBox, LeftOffsetRow);
+    private void LeftOffsetBox_LostFocus(object sender, RoutedEventArgs e) => CommitInt(LeftOffsetBox, LeftOffsetRow, TaskbarStyle.MinOffsetPx, TaskbarStyle.MaxOffsetPx, () => ViewModel!.TaskbarLeftOffsetPx, v => ViewModel!.TaskbarLeftOffsetPx = v);
+    private void LeftOffsetBox_KeyDown(object sender, System.Windows.Input.KeyEventArgs e) { if (e.Key == Key.Enter) { LeftOffsetBox_LostFocus(sender, e); e.Handled = true; } }
+
+    private void OffsetMinus_Click(object sender, RoutedEventArgs e) => NudgeInt(() => ViewModel!.TaskbarOffsetPx -= 4, () => ViewModel!.TaskbarOffsetPx, OffsetBox, OffsetRow);
+    private void OffsetPlus_Click(object sender, RoutedEventArgs e) => NudgeInt(() => ViewModel!.TaskbarOffsetPx += 4, () => ViewModel!.TaskbarOffsetPx, OffsetBox, OffsetRow);
+    private void OffsetReset_Click(object sender, RoutedEventArgs e) => NudgeInt(() => ViewModel!.TaskbarOffsetPx = 0, () => ViewModel!.TaskbarOffsetPx, OffsetBox, OffsetRow);
+    private void OffsetBox_LostFocus(object sender, RoutedEventArgs e) => CommitInt(OffsetBox, OffsetRow, TaskbarStyle.MinOffsetPx, TaskbarStyle.MaxOffsetPx, () => ViewModel!.TaskbarOffsetPx, v => ViewModel!.TaskbarOffsetPx = v);
+    private void OffsetBox_KeyDown(object sender, System.Windows.Input.KeyEventArgs e) { if (e.Key == Key.Enter) { OffsetBox_LostFocus(sender, e); e.Handled = true; } }
+
+    private void VerticalOffsetMinus_Click(object sender, RoutedEventArgs e) => NudgeInt(() => ViewModel!.TaskbarVerticalOffsetPx -= 2, () => ViewModel!.TaskbarVerticalOffsetPx, VerticalOffsetBox, VerticalOffsetRow);
+    private void VerticalOffsetPlus_Click(object sender, RoutedEventArgs e) => NudgeInt(() => ViewModel!.TaskbarVerticalOffsetPx += 2, () => ViewModel!.TaskbarVerticalOffsetPx, VerticalOffsetBox, VerticalOffsetRow);
+    private void VerticalOffsetReset_Click(object sender, RoutedEventArgs e) => NudgeInt(() => ViewModel!.TaskbarVerticalOffsetPx = 0, () => ViewModel!.TaskbarVerticalOffsetPx, VerticalOffsetBox, VerticalOffsetRow);
+    private void VerticalOffsetBox_LostFocus(object sender, RoutedEventArgs e) => CommitInt(VerticalOffsetBox, VerticalOffsetRow, TaskbarStyle.MinVerticalOffsetPx, TaskbarStyle.MaxVerticalOffsetPx, () => ViewModel!.TaskbarVerticalOffsetPx, v => ViewModel!.TaskbarVerticalOffsetPx = v);
+    private void VerticalOffsetBox_KeyDown(object sender, System.Windows.Input.KeyEventArgs e) { if (e.Key == Key.Enter) { VerticalOffsetBox_LostFocus(sender, e); e.Handled = true; } }
+
+    private void NudgeInt(Action apply, Func<int> read, TextBox box, SettingRow row)
     {
         if (ViewModel == null) return;
-        ViewModel.TaskbarOffsetPx -= 4;
-        OffsetBox.Text = ViewModel.TaskbarOffsetPx.ToString(CultureInfo.InvariantCulture);
-        OffsetRow.Validation = "";
+        apply();
+        box.Text = read().ToString(CultureInfo.InvariantCulture);
+        row.Validation = "";
     }
 
-    private void OffsetPlus_Click(object sender, RoutedEventArgs e)
-    {
-        if (ViewModel == null) return;
-        ViewModel.TaskbarOffsetPx += 4;
-        OffsetBox.Text = ViewModel.TaskbarOffsetPx.ToString(CultureInfo.InvariantCulture);
-        OffsetRow.Validation = "";
-    }
-
-    private void OffsetReset_Click(object sender, RoutedEventArgs e)
-    {
-        if (ViewModel == null) return;
-        ViewModel.TaskbarOffsetPx = 0;
-        OffsetBox.Text = "0";
-        OffsetRow.Validation = "";
-    }
-
-    private void OffsetBox_LostFocus(object sender, RoutedEventArgs e) => CommitOffset();
-
-    private void OffsetBox_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
-    {
-        if (e.Key == Key.Enter) { CommitOffset(); e.Handled = true; }
-    }
-
-    private void CommitOffset()
+    private void CommitInt(TextBox box, SettingRow row, int min, int max, Func<int> read, Action<int> write)
     {
         if (Loading || ViewModel == null) return;
-        if (int.TryParse(OffsetBox.Text.Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out int px))
+        if (int.TryParse(box.Text.Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out int px))
         {
-            ViewModel.TaskbarOffsetPx = px;
-            OffsetBox.Text = ViewModel.TaskbarOffsetPx.ToString(CultureInfo.InvariantCulture);
-            OffsetRow.Validation = "";
+            write(px);
+            box.Text = read().ToString(CultureInfo.InvariantCulture);
+            row.Validation = "";
         }
         else
         {
-            OffsetRow.Validation = $"Enter a whole number between {TaskbarStyle.MinOffsetPx} and {TaskbarStyle.MaxOffsetPx}.";
-            OffsetBox.Text = ViewModel.TaskbarOffsetPx.ToString(CultureInfo.InvariantCulture);
+            row.Validation = $"Enter a whole number between {min} and {max}.";
+            box.Text = read().ToString(CultureInfo.InvariantCulture);
         }
     }
 
-    // ---- Appearance ------------------------------------------------------------------------------------------------------------------------
+    // ---- Appearance & formatting -----------------------------------------------------------------------------------------------------------
 
     private void FontFamily_Changed(object sender, SelectionChangedEventArgs e)
     {
@@ -331,6 +551,20 @@ public partial class TaskbarSectionView : SettingsSectionBase
             ViewModel.TaskbarFontSize = d;
     }
 
+    private void BlockSpacing_Changed(object sender, SelectionChangedEventArgs e)
+    {
+        if (Loading || ViewModel == null) return;
+        if (BlockSpacingCombo.SelectedItem is ComboBoxItem item && item.Tag is int s)
+            ViewModel.TaskbarBlockSpacing = s;
+    }
+
+    private void Refresh_Changed(object sender, SelectionChangedEventArgs e)
+    {
+        if (Loading || ViewModel == null) return;
+        if (RefreshCombo.SelectedItem is ComboBoxItem item && item.Tag is int sec)
+            ViewModel.TaskbarRefreshSeconds = sec;
+    }
+
     private void Arrows_Checked(object sender, RoutedEventArgs e)
     {
         if (Loading || ViewModel == null) return;
@@ -339,16 +573,18 @@ public partial class TaskbarSectionView : SettingsSectionBase
         else ViewModel.TaskbarNetworkArrows = "Arrow";
     }
 
+    private void NetUnit_Checked(object sender, RoutedEventArgs e)
+    {
+        if (Loading || ViewModel == null) return;
+        ViewModel.TaskbarNetworkUnit = UnitBitsRadio.IsChecked == true ? "Bits" : "Bytes";
+    }
+
     private void LabelColor_LostFocus(object sender, RoutedEventArgs e) =>
         CommitColor(LabelColorBox, LabelColorRow, LabelColorSwatch, ViewModel?.TaskbarLabelColor ?? "", c => { if (ViewModel != null) ViewModel.TaskbarLabelColor = c; });
 
     private void LabelColor_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
     {
-        if (e.Key == Key.Enter)
-        {
-            CommitColor(LabelColorBox, LabelColorRow, LabelColorSwatch, ViewModel?.TaskbarLabelColor ?? "", c => { if (ViewModel != null) ViewModel.TaskbarLabelColor = c; });
-            e.Handled = true;
-        }
+        if (e.Key == Key.Enter) { LabelColor_LostFocus(sender, e); e.Handled = true; }
     }
 
     private void LabelColorReset_Click(object sender, RoutedEventArgs e)
@@ -365,11 +601,7 @@ public partial class TaskbarSectionView : SettingsSectionBase
 
     private void ValueColor_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
     {
-        if (e.Key == Key.Enter)
-        {
-            CommitColor(ValueColorBox, ValueColorRow, ValueColorSwatch, ViewModel?.TaskbarValueColor ?? "", c => { if (ViewModel != null) ViewModel.TaskbarValueColor = c; });
-            e.Handled = true;
-        }
+        if (e.Key == Key.Enter) { ValueColor_LostFocus(sender, e); e.Handled = true; }
     }
 
     private void ValueColorReset_Click(object sender, RoutedEventArgs e)

@@ -6,6 +6,10 @@ public enum TaskbarArrowStyle { Arrow, Triangle, Emoji }
 
 public enum TaskbarPlacementMode { LeftOfTray, AfterTaskButtons }
 
+public enum TaskbarZone { Left, Right }
+
+public enum TaskbarNetworkUnit { Bytes, Bits }
+
 /// <summary>Visual styling options for the taskbar readout (empty strings / 0 mean automatic defaults).</summary>
 public sealed record TaskbarAppearance
 {
@@ -14,6 +18,8 @@ public sealed record TaskbarAppearance
     public bool Bold { get; init; } = false;
     public string LabelColorHex { get; init; } = "";
     public string ValueColorHex { get; init; } = "";
+    public int BlockSpacing { get; init; } = 0;
+    public bool StableWidth { get; init; } = true;
 
     public static TaskbarAppearance Default { get; } = new();
 }
@@ -23,12 +29,22 @@ public static class TaskbarStyle
 {
     public const int MinOffsetPx = -500;
     public const int MaxOffsetPx = 500;
+    public const int MinVerticalOffsetPx = -24;
+    public const int MaxVerticalOffsetPx = 24;
+    public const int MinBlockSpacing = 4;
+    public const int MaxBlockSpacing = 40;
     public const double MinFontSize = 8;
     public const double MaxFontSize = 28;
     public const double MaxAutoFontSize = 24;
     public const double MinContrastRatio = 4.5;
 
     public static int ClampOffset(int px) => Math.Clamp(px, MinOffsetPx, MaxOffsetPx);
+
+    public static int ClampVerticalOffset(int px) => Math.Clamp(px, MinVerticalOffsetPx, MaxVerticalOffsetPx);
+
+    public static int ClampBlockSpacing(int px) => px <= 0 ? 0 : Math.Clamp(px, MinBlockSpacing, MaxBlockSpacing);
+
+    public static int ClampRefreshSeconds(int sec) => sec <= 1 ? 1 : (sec >= 3 ? 3 : 2);
 
     public static double ClampFontSize(double size) =>
         !double.IsFinite(size) || size <= 0 ? 0 : Math.Clamp(Math.Round(size, 1), MinFontSize, MaxFontSize);
@@ -40,6 +56,20 @@ public static class TaskbarStyle
 
     public static string FormatPlacement(TaskbarPlacementMode mode) =>
         mode == TaskbarPlacementMode.AfterTaskButtons ? "AfterTaskButtons" : "LeftOfTray";
+
+    public static TaskbarZone ParseZone(string? value) =>
+        string.Equals(value?.Trim(), "Left", StringComparison.OrdinalIgnoreCase)
+            ? TaskbarZone.Left
+            : TaskbarZone.Right;
+
+    public static string FormatZone(TaskbarZone zone) => zone == TaskbarZone.Left ? "Left" : "Right";
+
+    public static TaskbarNetworkUnit ParseNetworkUnit(string? value) =>
+        string.Equals(value?.Trim(), "Bits", StringComparison.OrdinalIgnoreCase)
+            ? TaskbarNetworkUnit.Bits
+            : TaskbarNetworkUnit.Bytes;
+
+    public static string FormatNetworkUnit(TaskbarNetworkUnit unit) => unit == TaskbarNetworkUnit.Bits ? "Bits" : "Bytes";
 
     public static TaskbarArrowStyle ParseArrowStyle(string? value)
     {
@@ -263,5 +293,75 @@ public static class TaskbarLayout
 
         screenLeft = Math.Clamp(screenLeft, taskbarLeft, Math.Max(taskbarLeft, taskbarRight - widgetWidth));
         return rtl ? taskbarRight - screenLeft - widgetWidth : screenLeft - taskbarLeft;
+    }
+
+    /// <summary>Computes the taskbar client X coordinate for the far-left strip (stepping past a left-side Widgets button).</summary>
+    public static int ComputeLeftZoneClientX(
+        int offsetPx,
+        bool rtl,
+        int taskbarLeft,
+        int taskbarRight,
+        int widgetWidth,
+        int gapPx,
+        (int Left, int Right)? widgetsButton)
+    {
+        offsetPx = TaskbarStyle.ClampOffset(offsetPx);
+        int taskbarWidth = Math.Max(1, taskbarRight - taskbarLeft);
+
+        int screenLeft;
+        if (rtl)
+        {
+            int baseLeft = taskbarRight - gapPx - widgetWidth;
+            if (widgetsButton is { } w && w.Left < taskbarRight && w.Left > taskbarLeft + taskbarWidth / 2 && w.Right > baseLeft)
+                baseLeft = Math.Min(baseLeft, w.Left - gapPx - widgetWidth);
+            screenLeft = baseLeft + offsetPx;
+        }
+        else
+        {
+            int baseLeft = taskbarLeft + gapPx;
+            if (widgetsButton is { } w && w.Right > taskbarLeft && w.Right < taskbarLeft + taskbarWidth / 2 && w.Left < baseLeft + widgetWidth)
+                baseLeft = Math.Max(baseLeft, w.Right + gapPx);
+            screenLeft = baseLeft + offsetPx;
+        }
+
+        screenLeft = Math.Clamp(screenLeft, taskbarLeft, Math.Max(taskbarLeft, taskbarRight - widgetWidth));
+        return rtl ? taskbarRight - screenLeft - widgetWidth : screenLeft - taskbarLeft;
+    }
+}
+
+/// <summary>Selects which taskbar windows receive readout strips based on Primary, FollowDock, All, or a specific device name.</summary>
+public static class TaskbarMonitorSelection
+{
+    public const string Primary = "";
+    public const string FollowDock = "Dock";
+    public const string All = "All";
+
+    public static IReadOnlyList<int> SelectIndices(
+        string? setting,
+        string? dockMonitor,
+        IReadOnlyList<(string DeviceName, bool IsPrimary)> taskbars)
+    {
+        if (taskbars.Count == 0) return Array.Empty<int>();
+        string mode = setting?.Trim() ?? "";
+        if (string.Equals(mode, All, StringComparison.OrdinalIgnoreCase))
+            return Enumerable.Range(0, taskbars.Count).ToArray();
+
+        string? wantedDevice = string.Equals(mode, FollowDock, StringComparison.OrdinalIgnoreCase)
+            ? dockMonitor?.Trim()
+            : mode;
+
+        if (!string.IsNullOrEmpty(wantedDevice))
+        {
+            for (int i = 0; i < taskbars.Count; i++)
+            {
+                if (string.Equals(taskbars[i].DeviceName, wantedDevice, StringComparison.OrdinalIgnoreCase))
+                    return new[] { i };
+            }
+        }
+
+        for (int i = 0; i < taskbars.Count; i++)
+            if (taskbars[i].IsPrimary) return new[] { i };
+
+        return new[] { 0 };
     }
 }

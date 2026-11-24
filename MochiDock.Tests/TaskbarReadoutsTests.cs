@@ -370,6 +370,102 @@ public class TaskbarReadoutsTests
         Assert.Equal(628, rtlTasks);
     }
 
+    [Fact]
+    public void LeftZonePlacementClearsWidgetsButtonAndClampsBounds()
+    {
+        // LTR without widgets
+        Assert.Equal(8, TaskbarLayout.ComputeLeftZoneClientX(0, rtl: false, taskbarLeft: 0, taskbarRight: 1920, widgetWidth: 200, gapPx: 8, widgetsButton: null));
+        // LTR with left Widgets button (8..130): steps past 130 + 8 = 138
+        Assert.Equal(138, TaskbarLayout.ComputeLeftZoneClientX(0, rtl: false, taskbarLeft: 0, taskbarRight: 1920, widgetWidth: 200, gapPx: 8, widgetsButton: (8, 130)));
+        // Negative offset clamps to taskbarLeft (client 0)
+        Assert.Equal(0, TaskbarLayout.ComputeLeftZoneClientX(-50, rtl: false, taskbarLeft: 0, taskbarRight: 1920, widgetWidth: 200, gapPx: 8, widgetsButton: null));
+        // RTL without widgets: sits 8 px inside right leading edge -> client x = 8
+        Assert.Equal(8, TaskbarLayout.ComputeLeftZoneClientX(0, rtl: true, taskbarLeft: 0, taskbarRight: 1920, widgetWidth: 200, gapPx: 8, widgetsButton: null));
+        // RTL with Widgets button on leading right edge (1780..1912)
+        Assert.Equal(148, TaskbarLayout.ComputeLeftZoneClientX(0, rtl: true, taskbarLeft: 0, taskbarRight: 1920, widgetWidth: 200, gapPx: 8, widgetsButton: (1780, 1912)));
+    }
+
+    [Fact]
+    public void MonitorSelectionHandlesPrimaryFollowDockSpecificAndAll()
+    {
+        var screens = new[] { (@"\\.\DISPLAY1", true), (@"\\.\DISPLAY2", false) };
+
+        Assert.Equal(new[] { 0 }, TaskbarMonitorSelection.SelectIndices("", @"\\.\DISPLAY2", screens));
+        Assert.Equal(new[] { 1 }, TaskbarMonitorSelection.SelectIndices("Dock", @"\\.\DISPLAY2", screens));
+        Assert.Equal(new[] { 1 }, TaskbarMonitorSelection.SelectIndices(@"\\.\display2", @"\\.\DISPLAY1", screens));
+        Assert.Equal(new[] { 0 }, TaskbarMonitorSelection.SelectIndices(@"\\.\DISPLAY9", @"\\.\DISPLAY1", screens)); // disconnected fallback
+        Assert.Equal(new[] { 0, 1 }, TaskbarMonitorSelection.SelectIndices("All", @"\\.\DISPLAY1", screens));
+    }
+
+    [Fact]
+    public void BlocksSplitIntoLeftAndRightZonesInConfiguredOrder()
+    {
+        var zones = TaskbarReadouts.ParseZones(new Dictionary<string, string>
+        {
+            ["System"] = "Left",
+            ["Network"] = "Left",
+            ["Prayer"] = "Right",
+        });
+        var opts = All() with
+        {
+            BlockZones = zones,
+            BlockOrder = new[]
+            {
+                TaskbarBlockKind.Network, TaskbarBlockKind.System, TaskbarBlockKind.Batteries,
+                TaskbarBlockKind.Prayer, TaskbarBlockKind.Weather, TaskbarBlockKind.MemoryDisk,
+            },
+        };
+        var (left, right) = TaskbarReadouts.BuildSplit(Full(), opts);
+        Assert.Equal(new[] { TaskbarBlockKind.Network, TaskbarBlockKind.System }, left.Select(b => b.Kind).ToArray());
+        Assert.Equal(new[] { TaskbarBlockKind.Batteries, TaskbarBlockKind.Prayer, TaskbarBlockKind.Weather, TaskbarBlockKind.MemoryDisk },
+            right.Select(b => b.Kind).ToArray());
+    }
+
+    [Fact]
+    public void CompactLabelsBitsUnitAndSwappedNetworkLinesWork()
+    {
+        Assert.Equal("0 Kb/s", TaskbarReadouts.RateBits(0));
+        Assert.Equal("408 Kb/s", TaskbarReadouts.RateBits(51_000));
+        Assert.Equal("9.6 Mb/s", TaskbarReadouts.RateBits(1_200_000));
+        Assert.Equal("1.2 Gb/s", TaskbarReadouts.RateBits(150_000_000));
+
+        var opts = new TaskbarOptions
+        {
+            CpuLoad = true, GpuLoad = true, Memory = true, Disk = true,
+            Upload = true, Download = true,
+            CompactLabels = true,
+            NetworkUnit = TaskbarNetworkUnit.Bits,
+            SwapNetworkLines = true,
+        };
+        var snap = new TaskbarSnapshot
+        {
+            CpuPercent = 12, GpuPercent = 34, RamPercent = 55, DiskPercent = 4,
+            NetUpBytesPerSecond = 51_000, NetDownBytesPerSecond = 1_200_000,
+        };
+        var blocks = TaskbarReadouts.Build(snap, opts);
+        Assert.Equal(("C 12%", "G 34%"), (blocks[0].Top, blocks[0].Bottom));
+        Assert.Equal(("M 55%", "D 4%"), (blocks[1].Top, blocks[1].Bottom));
+        Assert.Equal(("↓ 9.6 Mb/s", "↑ 408 Kb/s"), (blocks[2].Top, blocks[2].Bottom));
+
+        // Single-line swapped promotion still promotes whichever is enabled
+        var upOnlySwapped = Assert.Single(TaskbarReadouts.Build(snap, new TaskbarOptions { Upload = true, SwapNetworkLines = true, NetworkUnit = TaskbarNetworkUnit.Bits }));
+        Assert.Equal("↑ 408 Kb/s", upOnlySwapped.Top);
+        Assert.False(upOnlySwapped.HasBottom);
+    }
+
+    [Fact]
+    public void SpacingVerticalOffsetAndRefreshClampsStayInRange()
+    {
+        Assert.Equal(0, TaskbarStyle.ClampBlockSpacing(0));
+        Assert.Equal(4, TaskbarStyle.ClampBlockSpacing(2));
+        Assert.Equal(40, TaskbarStyle.ClampBlockSpacing(99));
+        Assert.Equal(-24, TaskbarStyle.ClampVerticalOffset(-100));
+        Assert.Equal(24, TaskbarStyle.ClampVerticalOffset(100));
+        Assert.Equal(1, TaskbarStyle.ClampRefreshSeconds(0));
+        Assert.Equal(2, TaskbarStyle.ClampRefreshSeconds(2));
+        Assert.Equal(3, TaskbarStyle.ClampRefreshSeconds(10));
+    }
+
     // ---- settings, migration & local-only keys ----
 
     [Fact]
@@ -380,9 +476,11 @@ public class TaskbarReadoutsTests
             "TaskbarShowCpuLoad", "TaskbarShowCpuTemp", "TaskbarShowGpuLoad", "TaskbarShowGpuTemp",
             "TaskbarShowMemory", "TaskbarShowDisk", "TaskbarShowUpload", "TaskbarShowDownload",
             "TaskbarShowPrayer", "TaskbarShowWeatherTemp", "TaskbarShowWeatherWind",
-            "TaskbarBlockOrder", "TaskbarPlacement", "TaskbarOffsetPx",
-            "TaskbarFontFamily", "TaskbarFontSize", "TaskbarFontBold",
-            "TaskbarLabelColor", "TaskbarValueColor", "TaskbarNetworkArrows",
+            "TaskbarBlockOrder", "TaskbarBlockZones", "TaskbarMonitor", "TaskbarPlacement", "TaskbarOffsetPx",
+            "TaskbarLeftOffsetPx", "TaskbarVerticalOffsetPx",
+            "TaskbarFontFamily", "TaskbarFontSize", "TaskbarFontBold", "TaskbarBlockSpacing", "TaskbarStableWidth",
+            "TaskbarLabelColor", "TaskbarValueColor", "TaskbarNetworkArrows", "TaskbarNetworkUnit",
+            "TaskbarSwapNetworkLines", "TaskbarCompactLabels", "TaskbarRefreshSeconds",
             "ShowDeviceBatteriesOnTaskbar", "ShowDeviceBatteryBackground",
         })
             Assert.Contains(key, SettingsTransfer.LocalOnlyKeys);

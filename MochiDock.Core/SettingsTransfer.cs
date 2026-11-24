@@ -25,9 +25,11 @@ public static class SettingsTransfer
         "TaskbarItemsMigrated", "TaskbarShowCpuLoad", "TaskbarShowCpuTemp", "TaskbarShowGpuLoad", "TaskbarShowGpuTemp",
         "TaskbarShowMemory", "TaskbarShowDisk", "TaskbarShowUpload", "TaskbarShowDownload",
         "TaskbarShowPrayer", "TaskbarShowWeatherTemp", "TaskbarShowWeatherWind",
-        "TaskbarBlockOrder", "TaskbarPlacement", "TaskbarOffsetPx",
-        "TaskbarFontFamily", "TaskbarFontSize", "TaskbarFontBold",
-        "TaskbarLabelColor", "TaskbarValueColor", "TaskbarNetworkArrows",
+        "TaskbarBlockOrder", "TaskbarBlockZones", "TaskbarMonitor", "TaskbarPlacement", "TaskbarOffsetPx",
+        "TaskbarLeftOffsetPx", "TaskbarVerticalOffsetPx",
+        "TaskbarFontFamily", "TaskbarFontSize", "TaskbarFontBold", "TaskbarBlockSpacing", "TaskbarStableWidth",
+        "TaskbarLabelColor", "TaskbarValueColor", "TaskbarNetworkArrows", "TaskbarNetworkUnit",
+        "TaskbarSwapNetworkLines", "TaskbarCompactLabels", "TaskbarRefreshSeconds",
         "ShowDeviceBatteriesOnTaskbar", "ShowDeviceBatteryBackground",
     };
 

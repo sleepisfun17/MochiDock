@@ -4,29 +4,80 @@
              xmlns:s="clr-namespace:MochiDock.Views.Settings"
              xmlns:controls="clr-namespace:MochiDock.Controls">
     <StackPanel>
-        <TextBlock Style="{StaticResource SettingsGroupHeader}" Text="Blocks and order" Margin="0,0,0,2"/>
+        <!-- Live preview bar -->
+        <Grid Margin="0,0,0,6">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                <TextBlock Style="{StaticResource SettingsGroupHeader}" Text="Live preview" Margin="0"/>
+                <TextBlock Style="{StaticResource CardCaptionText}" Text="Shows how your Left and Right taskbar strips look on a dark or light Windows taskbar."/>
+            </StackPanel>
+            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                <Button x:Name="PreviewDarkBtn" Style="{StaticResource MonitorSelectionButton}" Content="Dark" Padding="10,4" FontSize="11" Tag="Selected" Click="PreviewTheme_Click" AutomationProperties.Name="Preview on dark taskbar"/>
+                <Button x:Name="PreviewLightBtn" Style="{StaticResource MonitorSelectionButton}" Content="Light" Padding="10,4" FontSize="11" Margin="8,0,0,0" Click="PreviewTheme_Click" AutomationProperties.Name="Preview on light taskbar"/>
+            </StackPanel>
+        </Grid>
+        <Border x:Name="PreviewBar" Height="52" CornerRadius="8" Padding="8,0" Margin="0,0,0,14"
+                Background="{DynamicResource IslandGroundBrush}" BorderBrush="{DynamicResource IslandSubCardBorderBrush}" BorderThickness="1">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <Image x:Name="PreviewLeftImage" Grid.Column="0" Stretch="Uniform" StretchDirection="DownOnly" MaxHeight="48" VerticalAlignment="Center" SnapsToDevicePixels="True"/>
+                <TextBlock x:Name="PreviewEmptyHint" Grid.Column="1" Text="Turn on any item below to preview" Style="{StaticResource CardCaptionText}"
+                           HorizontalAlignment="Center" VerticalAlignment="Center" Opacity="0.7" Visibility="Collapsed"/>
+                <Image x:Name="PreviewRightImage" Grid.Column="2" Stretch="Uniform" StretchDirection="DownOnly" MaxHeight="48" VerticalAlignment="Center" SnapsToDevicePixels="True"/>
+            </Grid>
+        </Border>
+
+        <TextBlock Style="{StaticResource SettingsGroupHeader}" Text="Blocks, side and order" Margin="0,0,0,2"/>
         <TextBlock Style="{StaticResource CardCaptionText}" TextWrapping="Wrap" Margin="0,0,0,10"
-                   Text="Choose individual readouts and reorder the blocks on the Windows taskbar. Click a block to open its card, right-click for a menu. These settings are kept per PC: importing settings never changes them. They need a horizontal taskbar on the primary monitor."/>
+                   Text="Choose individual items, place each block on the Left edge or Right side of the taskbar, and reorder blocks within each side. Click a block on the taskbar to open its card, right-click for a menu. All Taskbar settings are kept per PC."/>
         <StackPanel x:Name="BlockOrderList" Margin="0,0,0,6"/>
 
-        <TextBlock Style="{StaticResource SettingsGroupHeader}" Text="Placement" Margin="0,16,0,2"/>
-        <s:SettingRow Label="Position" Description="Left of the tray sits beside the clock and system icons; After the task buttons sits right after your pinned and open apps.">
+        <TextBlock Style="{StaticResource SettingsGroupHeader}" Text="Display and placement" Margin="0,16,0,2"/>
+        <s:SettingRow Label="Display" Description="Which monitor's taskbar shows the readout (Primary, same monitor as MochiDock, a specific display, or all displays).">
+            <ComboBox x:Name="MonitorCombo" Style="{StaticResource ModernDarkComboBox}" Width="240" SelectionChanged="Monitor_Changed" AutomationProperties.Name="Taskbar readout display"/>
+        </s:SettingRow>
+        <s:SettingRow Label="Right side position" Description="Where Right-side blocks sit: beside the system tray/clock, or right after your pinned and open task buttons.">
             <StackPanel Orientation="Horizontal">
                 <RadioButton x:Name="PlaceTrayRadio" Style="{StaticResource ModernDarkRadioButton}" Content="Left of the tray" GroupName="TaskbarPlacement" Checked="Placement_Checked" Margin="0,0,14,0"/>
                 <RadioButton x:Name="PlaceTaskButtonsRadio" Style="{StaticResource ModernDarkRadioButton}" Content="After the task buttons" GroupName="TaskbarPlacement" Checked="Placement_Checked"/>
             </StackPanel>
         </s:SettingRow>
-        <s:SettingRow x:Name="OffsetRow" Label="Horizontal offset" Description="Fine-tune the position in pixels (−500 to 500). Negative moves left, positive moves right.">
+        <s:SettingRow x:Name="LeftOffsetRow" Label="Left offset" Description="Horizontal nudge in pixels (−500 to 500) for blocks placed on the Left side.">
             <StackPanel Orientation="Horizontal">
-                <Button Style="{StaticResource ActionButton}" Content="&#x2212;" Width="28" Padding="0,4" Click="OffsetMinus_Click" ToolTip="Move 4 px left" AutomationProperties.Name="Decrease horizontal offset"/>
-                <TextBox x:Name="OffsetBox" Style="{StaticResource ModernDarkTextBox}" Width="72" Margin="8,0,0,0" LostFocus="OffsetBox_LostFocus" KeyDown="OffsetBox_KeyDown" AutomationProperties.Name="Horizontal offset in pixels"/>
-                <Button Style="{StaticResource ActionButton}" Content="+" Width="28" Padding="0,4" Margin="8,0,0,0" Click="OffsetPlus_Click" ToolTip="Move 4 px right" AutomationProperties.Name="Increase horizontal offset"/>
+                <Button Style="{StaticResource ActionButton}" Content="&#x2212;" Width="28" Padding="0,4" Click="LeftOffsetMinus_Click" ToolTip="Move 4 px left" AutomationProperties.Name="Decrease left offset"/>
+                <TextBox x:Name="LeftOffsetBox" Style="{StaticResource ModernDarkTextBox}" Width="72" Margin="8,0,0,0" LostFocus="LeftOffsetBox_LostFocus" KeyDown="LeftOffsetBox_KeyDown" AutomationProperties.Name="Left zone offset in pixels"/>
+                <Button Style="{StaticResource ActionButton}" Content="+" Width="28" Padding="0,4" Margin="8,0,0,0" Click="LeftOffsetPlus_Click" ToolTip="Move 4 px right" AutomationProperties.Name="Increase left offset"/>
                 <TextBlock Text="px" Style="{StaticResource CardCaptionText}" VerticalAlignment="Center" Margin="6,0,0,0"/>
-                <Button Style="{StaticResource ActionButton}" Content="Reset" Margin="8,0,0,0" Click="OffsetReset_Click" AutomationProperties.Name="Reset horizontal offset"/>
+                <Button Style="{StaticResource ActionButton}" Content="Reset" Margin="8,0,0,0" Click="LeftOffsetReset_Click" AutomationProperties.Name="Reset left offset"/>
+            </StackPanel>
+        </s:SettingRow>
+        <s:SettingRow x:Name="OffsetRow" Label="Right offset" Description="Horizontal nudge in pixels (−500 to 500) for blocks placed on the Right side.">
+            <StackPanel Orientation="Horizontal">
+                <Button Style="{StaticResource ActionButton}" Content="&#x2212;" Width="28" Padding="0,4" Click="OffsetMinus_Click" ToolTip="Move 4 px left" AutomationProperties.Name="Decrease right offset"/>
+                <TextBox x:Name="OffsetBox" Style="{StaticResource ModernDarkTextBox}" Width="72" Margin="8,0,0,0" LostFocus="OffsetBox_LostFocus" KeyDown="OffsetBox_KeyDown" AutomationProperties.Name="Right zone offset in pixels"/>
+                <Button Style="{StaticResource ActionButton}" Content="+" Width="28" Padding="0,4" Margin="8,0,0,0" Click="OffsetPlus_Click" ToolTip="Move 4 px right" AutomationProperties.Name="Increase right offset"/>
+                <TextBlock Text="px" Style="{StaticResource CardCaptionText}" VerticalAlignment="Center" Margin="6,0,0,0"/>
+                <Button Style="{StaticResource ActionButton}" Content="Reset" Margin="8,0,0,0" Click="OffsetReset_Click" AutomationProperties.Name="Reset right offset"/>
+            </StackPanel>
+        </s:SettingRow>
+        <s:SettingRow x:Name="VerticalOffsetRow" Label="Vertical offset" Description="Fine vertical adjustment in pixels (−24 to 24), useful for custom-padded Windhawk taskbars.">
+            <StackPanel Orientation="Horizontal">
+                <Button Style="{StaticResource ActionButton}" Content="&#x2212;" Width="28" Padding="0,4" Click="VerticalOffsetMinus_Click" ToolTip="Move 2 px up" AutomationProperties.Name="Move readout up"/>
+                <TextBox x:Name="VerticalOffsetBox" Style="{StaticResource ModernDarkTextBox}" Width="72" Margin="8,0,0,0" LostFocus="VerticalOffsetBox_LostFocus" KeyDown="VerticalOffsetBox_KeyDown" AutomationProperties.Name="Vertical offset in pixels"/>
+                <Button Style="{StaticResource ActionButton}" Content="+" Width="28" Padding="0,4" Margin="8,0,0,0" Click="VerticalOffsetPlus_Click" ToolTip="Move 2 px down" AutomationProperties.Name="Move readout down"/>
+                <TextBlock Text="px" Style="{StaticResource CardCaptionText}" VerticalAlignment="Center" Margin="6,0,0,0"/>
+                <Button Style="{StaticResource ActionButton}" Content="Reset" Margin="8,0,0,0" Click="VerticalOffsetReset_Click" AutomationProperties.Name="Reset vertical offset"/>
             </StackPanel>
         </s:SettingRow>
 
-        <TextBlock Style="{StaticResource SettingsGroupHeader}" Text="Appearance" Margin="0,16,0,2"/>
+        <TextBlock Style="{StaticResource SettingsGroupHeader}" Text="Appearance and formatting" Margin="0,16,0,2"/>
         <s:SettingRow Label="Font" Description="Defaults to the Windows taskbar font (Segoe UI Variable / Segoe UI).">
             <ComboBox x:Name="FontFamilyCombo" Style="{StaticResource ModernDarkComboBox}" Width="240" SelectionChanged="FontFamily_Changed" AutomationProperties.Name="Taskbar readout font"/>
         </s:SettingRow>
@@ -36,6 +87,15 @@
         <s:SettingRow Label="Bold text" Description="Draw readout labels and values in bold.">
             <CheckBox x:Name="BoldCheck" IsChecked="{Binding TaskbarFontBold, Mode=TwoWay}" Style="{StaticResource ModernDarkCheckBox}" AutomationProperties.Name="Bold taskbar readout text"/>
         </s:SettingRow>
+        <s:SettingRow Label="Block spacing" Description="Gap between adjacent blocks (Auto scales with the font size).">
+            <ComboBox x:Name="BlockSpacingCombo" Style="{StaticResource ModernDarkComboBox}" Width="180" SelectionChanged="BlockSpacing_Changed" AutomationProperties.Name="Taskbar block spacing"/>
+        </s:SettingRow>
+        <s:SettingRow Label="Stable width" Description="Reserve consistent column widths and right-align values so blocks do not shift as numbers change.">
+            <CheckBox x:Name="StableWidthCheck" IsChecked="{Binding TaskbarStableWidth, Mode=TwoWay}" Style="{StaticResource ModernDarkCheckBox}" AutomationProperties.Name="Keep stable taskbar block widths"/>
+        </s:SettingRow>
+        <s:SettingRow Label="Compact labels" Description="Use short C / G / M / D labels instead of CPU / GPU / MEM / DISK.">
+            <CheckBox x:Name="CompactLabelsCheck" IsChecked="{Binding TaskbarCompactLabels, Mode=TwoWay}" Style="{StaticResource ModernDarkCheckBox}" AutomationProperties.Name="Use compact taskbar labels"/>
+        </s:SettingRow>
         <s:SettingRow Label="Network arrows" Description="Arrow style used for upload and download rates.">
             <StackPanel Orientation="Horizontal">
                 <RadioButton x:Name="ArrowClassicRadio" Style="{StaticResource ModernDarkRadioButton}" Content="↑ ↓" GroupName="TaskbarArrows" Checked="Arrows_Checked" Margin="0,0,14,0"/>
@@ -44,6 +104,18 @@
                     <TextBlock controls:Emoji.Text="🔼 🔽" VerticalAlignment="Center"/>
                 </RadioButton>
             </StackPanel>
+        </s:SettingRow>
+        <s:SettingRow Label="Network speed unit" Description="Show network throughput in bytes per second (KB/s, MB/s) or bits per second (Kb/s, Mb/s).">
+            <StackPanel Orientation="Horizontal">
+                <RadioButton x:Name="UnitBytesRadio" Style="{StaticResource ModernDarkRadioButton}" Content="Bytes (KB/s, MB/s)" GroupName="TaskbarNetUnit" Checked="NetUnit_Checked" Margin="0,0,14,0"/>
+                <RadioButton x:Name="UnitBitsRadio" Style="{StaticResource ModernDarkRadioButton}" Content="Bits (Kb/s, Mb/s)" GroupName="TaskbarNetUnit" Checked="NetUnit_Checked"/>
+            </StackPanel>
+        </s:SettingRow>
+        <s:SettingRow Label="Swap upload and download" Description="Show download on the top line and upload on the bottom line.">
+            <CheckBox x:Name="SwapNetCheck" IsChecked="{Binding TaskbarSwapNetworkLines, Mode=TwoWay}" Style="{StaticResource ModernDarkCheckBox}" AutomationProperties.Name="Swap upload and download lines"/>
+        </s:SettingRow>
+        <s:SettingRow Label="Refresh interval" Description="How often CPU, GPU, memory, disk and network values update.">
+            <ComboBox x:Name="RefreshCombo" Style="{StaticResource ModernDarkComboBox}" Width="140" SelectionChanged="Refresh_Changed" AutomationProperties.Name="Taskbar refresh interval"/>
         </s:SettingRow>
         <s:SettingRow x:Name="LabelColorRow" Label="Label colour" Description="Optional #RRGGBB hex for labels (CPU, GPU, MEM, arrows). Leave empty for Auto; adapts automatically if contrast drops below 4.5:1 on a light or dark taskbar.">
             <StackPanel Orientation="Horizontal">

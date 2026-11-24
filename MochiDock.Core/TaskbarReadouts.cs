@@ -73,7 +73,11 @@ public sealed record TaskbarOptions
     public bool Batteries { get; init; }
 
     public IReadOnlyList<TaskbarBlockKind>? BlockOrder { get; init; }
+    public IReadOnlyDictionary<TaskbarBlockKind, TaskbarZone>? BlockZones { get; init; }
     public TaskbarArrowStyle NetworkArrows { get; init; } = TaskbarArrowStyle.Arrow;
+    public TaskbarNetworkUnit NetworkUnit { get; init; } = TaskbarNetworkUnit.Bytes;
+    public bool SwapNetworkLines { get; init; }
+    public bool CompactLabels { get; init; }
 
     /// <summary>CPU / GPU load at or over this is a warning (the existing alert settings).</summary>
     public double CpuAlert { get; init; } = 90;
@@ -169,12 +173,39 @@ public static class TaskbarReadouts
         return list;
     }
 
+    public static TaskbarZone ZoneOf(IReadOnlyDictionary<TaskbarBlockKind, TaskbarZone>? zones, TaskbarBlockKind kind) =>
+        zones != null && zones.TryGetValue(kind, out var z) ? z : TaskbarZone.Right;
+
+    public static Dictionary<TaskbarBlockKind, TaskbarZone> ParseZones(IReadOnlyDictionary<string, string>? raw)
+    {
+        var map = new Dictionary<TaskbarBlockKind, TaskbarZone>();
+        if (raw == null) return map;
+        foreach (var kv in raw)
+        {
+            if (Enum.TryParse<TaskbarBlockKind>(kv.Key?.Trim(), ignoreCase: true, out var kind) && Enum.IsDefined(kind))
+                map[kind] = TaskbarStyle.ParseZone(kv.Value);
+        }
+        return map;
+    }
+
     /// <summary>The blocks to draw in the configured order; switched-off or unavailable items are skipped.</summary>
-    public static IReadOnlyList<TaskbarBlock> Build(TaskbarSnapshot snapshot, TaskbarOptions options)
+    public static IReadOnlyList<TaskbarBlock> Build(TaskbarSnapshot snapshot, TaskbarOptions options) =>
+        BuildFiltered(snapshot, options, zoneFilter: null);
+
+    /// <summary>The blocks assigned to a specific taskbar zone (<see cref="TaskbarZone.Left"/> or <see cref="TaskbarZone.Right"/>).</summary>
+    public static IReadOnlyList<TaskbarBlock> BuildForZone(TaskbarSnapshot snapshot, TaskbarOptions options, TaskbarZone zone) =>
+        BuildFiltered(snapshot, options, zone);
+
+    /// <summary>Splits the readout into separate Left and Right zone lists in the configured order.</summary>
+    public static (IReadOnlyList<TaskbarBlock> Left, IReadOnlyList<TaskbarBlock> Right) BuildSplit(TaskbarSnapshot snapshot, TaskbarOptions options) =>
+        (BuildFiltered(snapshot, options, TaskbarZone.Left), BuildFiltered(snapshot, options, TaskbarZone.Right));
+
+    private static IReadOnlyList<TaskbarBlock> BuildFiltered(TaskbarSnapshot snapshot, TaskbarOptions options, TaskbarZone? zoneFilter)
     {
         var blocks = new List<TaskbarBlock>();
         foreach (var kind in NormalizeOrder(options.BlockOrder))
         {
+            if (zoneFilter is { } target && ZoneOf(options.BlockZones, kind) != target) continue;
             switch (kind)
             {
                 case TaskbarBlockKind.System:
@@ -212,6 +243,28 @@ public static class TaskbarReadouts
     /// <summary>"51 KB/s" or "1.2 MB/s": the same units as the Stats card (<see cref="RateScale.Format"/>).</summary>
     public static string Rate(double bytesPerSecond) => RateScale.Format(bytesPerSecond);
 
+    /// <summary>Decimal bits per second ("408 Kb/s", "9.6 Mb/s", "1.2 Gb/s").</summary>
+    public static string RateBits(double bytesPerSecond)
+    {
+        if (!double.IsFinite(bytesPerSecond) || bytesPerSecond <= 100) return "0 Kb/s";
+        double bits = bytesPerSecond * 8.0;
+        if (bits < 1_000_000)
+        {
+            double kb = bits / 1_000.0;
+            return (kb >= 100 ? kb.ToString("0", CultureInfo.InvariantCulture) : kb.ToString("0.#", CultureInfo.InvariantCulture)) + " Kb/s";
+        }
+        if (bits < 1_000_000_000)
+        {
+            double mb = bits / 1_000_000.0;
+            return (mb >= 100 ? mb.ToString("0", CultureInfo.InvariantCulture) : mb.ToString("0.0", CultureInfo.InvariantCulture)) + " Mb/s";
+        }
+        double gb = bits / 1_000_000_000.0;
+        return gb.ToString("0.0", CultureInfo.InvariantCulture) + " Gb/s";
+    }
+
+    public static string Rate(double bytesPerSecond, TaskbarNetworkUnit unit) =>
+        unit == TaskbarNetworkUnit.Bits ? RateBits(bytesPerSecond) : Rate(bytesPerSecond);
+
     /// <summary>"8 m/s" (whole metres per second).</summary>
     public static string Wind(double metersPerSecond) => Math.Round(metersPerSecond, MidpointRounding.AwayFromZero).ToString("0", CultureInfo.InvariantCulture) + " m/s";
 
@@ -228,7 +281,7 @@ public static class TaskbarReadouts
         bool cpuWarn = false;
         if (cpu is not null || cpuTemp is not null)
         {
-            cpuLabel = "CPU ";
+            cpuLabel = o.CompactLabels ? "C " : "CPU ";
             var parts = new List<string>(2);
             if (cpu is { } c) parts.Add(Percent(c));
             if (cpuTemp is { } ct) parts.Add(Temperature(ct, estimate: !s.CpuTempMeasured));
@@ -240,7 +293,7 @@ public static class TaskbarReadouts
         bool gpuWarn = false;
         if (gpu is not null || gpuTemp is not null)
         {
-            gpuLabel = "GPU ";
+            gpuLabel = o.CompactLabels ? "G " : "GPU ";
             var parts = new List<string>(2);
             if (gpu is { } g) parts.Add(Percent(g));
             if (gpuTemp is { } gt) parts.Add(Temperature(gt));
@@ -288,14 +341,14 @@ public static class TaskbarReadouts
         var tipParts = new List<string>(2);
         if (ram is { } r)
         {
-            topLabel = "MEM ";
+            topLabel = o.CompactLabels ? "M " : "MEM ";
             top = topLabel + Percent(r);
             topWarn = r >= o.MemoryWarn;
             tipParts.Add("Memory in use: " + Percent(r));
         }
         if (disk is { } d)
         {
-            const string diskLabel = "DISK ";
+            string diskLabel = o.CompactLabels ? "D " : "DISK ";
             string diskText = diskLabel + Percent(d);
             if (top.Length == 0) { top = diskText; topLabel = diskLabel; }
             else { bottom = diskText; bottomLabel = diskLabel; }
@@ -316,55 +369,50 @@ public static class TaskbarReadouts
 
         string upText = "", upLabel = "", upEmoji = "";
         string downText = "", downLabel = "", downEmoji = "";
-        var tipParts = new List<string>(2);
+        string upTip = "", downTip = "";
 
         if (up is { } u)
         {
-            string r = Rate(u);
-            if (o.NetworkArrows == TaskbarArrowStyle.Emoji)
-            {
-                upEmoji = UploadEmojiKey;
-                upText = r;
-            }
-            else
-            {
-                upLabel = o.NetworkArrows == TaskbarArrowStyle.Triangle ? "▲ " : "↑ ";
-                upText = upLabel + r;
-            }
-            tipParts.Add("Upload " + r);
+            string r = Rate(u, o.NetworkUnit);
+            if (o.NetworkArrows == TaskbarArrowStyle.Emoji) { upEmoji = UploadEmojiKey; upText = r; }
+            else { upLabel = o.NetworkArrows == TaskbarArrowStyle.Triangle ? "▲ " : "↑ "; upText = upLabel + r; }
+            upTip = "Upload " + r;
         }
         if (down is { } d)
         {
-            string r = Rate(d);
-            if (o.NetworkArrows == TaskbarArrowStyle.Emoji)
-            {
-                downEmoji = DownloadEmojiKey;
-                downText = r;
-            }
-            else
-            {
-                downLabel = o.NetworkArrows == TaskbarArrowStyle.Triangle ? "▼ " : "↓ ";
-                downText = downLabel + r;
-            }
-            tipParts.Add("Download " + r);
+            string r = Rate(d, o.NetworkUnit);
+            if (o.NetworkArrows == TaskbarArrowStyle.Emoji) { downEmoji = DownloadEmojiKey; downText = r; }
+            else { downLabel = o.NetworkArrows == TaskbarArrowStyle.Triangle ? "▼ " : "↓ "; downText = downLabel + r; }
+            downTip = "Download " + r;
         }
 
+        var first = o.SwapNetworkLines
+            ? (Text: downText, Label: downLabel, Emoji: downEmoji, Tip: downTip)
+            : (Text: upText, Label: upLabel, Emoji: upEmoji, Tip: upTip);
+        var second = o.SwapNetworkLines
+            ? (Text: upText, Label: upLabel, Emoji: upEmoji, Tip: upTip)
+            : (Text: downText, Label: downLabel, Emoji: downEmoji, Tip: downTip);
+
+        var tipParts = new List<string>(2);
+        if (first.Tip.Length > 0) tipParts.Add(first.Tip);
+        if (second.Tip.Length > 0) tipParts.Add(second.Tip);
         string tip = string.Join("\r\n", tipParts);
-        if (upText.Length == 0)
+
+        if (first.Text.Length == 0)
         {
-            return new TaskbarBlock(TaskbarBlockKind.Network, downText, "", false, false, tip)
+            return new TaskbarBlock(TaskbarBlockKind.Network, second.Text, "", false, false, tip)
             {
-                TopLabel = downLabel,
-                TopEmojiKey = downEmoji,
+                TopLabel = second.Label,
+                TopEmojiKey = second.Emoji,
             };
         }
 
-        return new TaskbarBlock(TaskbarBlockKind.Network, upText, downText, false, false, tip)
+        return new TaskbarBlock(TaskbarBlockKind.Network, first.Text, second.Text, false, false, tip)
         {
-            TopLabel = upLabel,
-            BottomLabel = downLabel,
-            TopEmojiKey = upEmoji,
-            BottomEmojiKey = downEmoji,
+            TopLabel = first.Label,
+            BottomLabel = second.Label,
+            TopEmojiKey = first.Emoji,
+            BottomEmojiKey = second.Emoji,
         };
     }
 

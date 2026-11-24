@@ -10,12 +10,10 @@ using Microsoft.Win32;
 namespace MochiDock.Services;
 
 /// <summary>
-/// Layered child window of the Windows taskbar (left of the tray or after the task buttons) that shows the taskbar readout: two-line blocks
-/// for CPU/GPU, memory/disk, network, the next prayer, the weather and wireless device batteries (<see cref="TaskbarReadouts"/> decides what,
-/// <see cref="TaskbarReadoutRenderer"/> draws it). A left click on a block raises <see cref="BlockClicked"/>; a right click raises
-/// <see cref="ContextMenuRequested"/>. Owned by <c>MainWindow</c>; created, updated and destroyed on the UI thread. Primary, horizontal,
-/// non-auto-hidden taskbar only. The window class and the render surface are the only native resources; <see cref="Dispose"/> releases both
-/// and restores the Windows 10 rebar.
+/// Layered child windows of the Windows taskbar(s) showing the Left and/or Right readout strips on the chosen monitor(s).
+/// <see cref="TaskbarReadouts"/> decides the blocks per zone; <see cref="TaskbarReadoutRenderer"/> draws each bitmap.
+/// A left click on a block raises <see cref="BlockClicked"/>; a right click raises <see cref="ContextMenuRequested"/>.
+/// Primary and secondary horizontal, non-auto-hidden taskbars are supported; created, updated and destroyed on the UI thread.
 /// </summary>
 public sealed class TaskbarReadoutWidget : IDisposable
 {
@@ -53,7 +51,6 @@ public sealed class TaskbarReadoutWidget : IDisposable
     [DllImport("user32.dll")] static extern bool GetWindowRect(IntPtr hwnd, out Rect rect);
     [DllImport("user32.dll")] static extern int MapWindowPoints(IntPtr from, IntPtr to, ref Rect rect, int count);
     [DllImport("user32.dll")] static extern bool SetWindowPos(IntPtr hwnd, IntPtr after, int x, int y, int w, int h, uint flags);
-    [DllImport("user32.dll")] static extern bool ShowWindow(IntPtr hwnd, int cmd);
     [DllImport("user32.dll")] static extern uint GetDpiForWindow(IntPtr hwnd);
     [DllImport("user32.dll")] static extern IntPtr GetDC(IntPtr hwnd);
     [DllImport("user32.dll")] static extern int ReleaseDC(IntPtr hwnd, IntPtr dc);
@@ -70,22 +67,38 @@ public sealed class TaskbarReadoutWidget : IDisposable
     [DllImport("comctl32.dll")] static extern bool InitCommonControlsEx(ref InitCommonControls init);
     [StructLayout(LayoutKind.Sequential)] struct InitCommonControls { public uint Size, Classes; }
 
+    private sealed class StripWindow
+    {
+        public IntPtr Widget, Tooltip, Parent, TooltipBuffer;
+        public string RenderKey = "", TooltipText = "";
+        public int Width, Height;
+        public IReadOnlyList<TaskbarBlock> ShownBlocks = Array.Empty<TaskbarBlock>();
+        public IReadOnlyList<TaskbarBlockRect> BlockRects = Array.Empty<TaskbarBlockRect>();
+        public TaskbarBlockKind? Hovered;
+    }
+
+    private sealed class UiaCacheEntry
+    {
+        public System.Windows.Rect? WidgetsRect;
+        public System.Windows.Rect? TaskButtonsRect;
+        public System.Windows.Rect? SecondaryClockRect;
+        public DateTime CheckedUtc;
+        public bool Running;
+    }
+
+    private readonly record struct TaskbarEntry(IntPtr Hwnd, bool IsPrimary, string DeviceName, Rect Bounds);
+
     readonly MainViewModel viewModel;
     readonly DispatcherTimer timer = new() { Interval = TimeSpan.FromSeconds(1) };
     readonly WndProcDelegate wndProc; // kept in a field so the native callback is not garbage-collected
+    readonly Dictionary<(IntPtr Taskbar, TaskbarZone Zone), StripWindow> strips = new();
+    readonly Dictionary<IntPtr, StripWindow> stripsByHwnd = new();
+    readonly Dictionary<IntPtr, UiaCacheEntry> uiaCache = new();
     bool classRegistered, disposed;
-    IntPtr widget, tooltip, parent;
-    string renderKey = "";
-    int widgetWidth, widgetHeight;
     IntPtr rebar;
     int rebarOriginalWidth;
-    string tooltipText = "";
-    IntPtr tooltipBuffer;
-    IReadOnlyList<TaskbarBlock> shownBlocks = Array.Empty<TaskbarBlock>();
-    IReadOnlyList<TaskbarBlockRect> blockRects = Array.Empty<TaskbarBlockRect>();
-    TaskbarBlockKind? hovered;
 
-    /// <summary>Raised on the UI thread when the widget is right-clicked.</summary>
+    /// <summary>Raised on the UI thread when any strip is right-clicked.</summary>
     public event Action? ContextMenuRequested;
 
     /// <summary>Raised on the UI thread when a block is left-clicked (the owner opens the matching card).</summary>
@@ -102,108 +115,245 @@ public sealed class TaskbarReadoutWidget : IDisposable
         Refresh();
     }
 
-    // The widget exists while any block has content, and is hidden when none does.
-    bool ShouldShow => !disposed && viewModel.TaskbarBlocks.Count > 0;
+    // At least one strip is needed while Left or Right blocks have content.
+    bool ShouldShow => !disposed && (viewModel.TaskbarLeftBlocks.Count > 0 || viewModel.TaskbarRightBlocks.Count > 0);
 
     void Refresh()
     {
         if (disposed) return;
         if (ShouldShow) { if (!timer.IsEnabled) timer.Start(); Tick(); }
-        else { timer.Stop(); Hide(); }
+        else { timer.Stop(); HideAll(); }
     }
 
     void Tick()
     {
         try
         {
-            if (!ShouldShow) { Hide(); return; }
-            // MochiDock is elevated, so the TaskbarCreated broadcast may be filtered; instead re-find the taskbar every second.
-            var taskbar = FindWindowW("Shell_TrayWnd", null);
-            if (taskbar == IntPtr.Zero || !GetWindowRect(taskbar, out var taskbarRect) || IsVerticalOrAutoHidden(taskbar, taskbarRect)) { Hide(); return; }
-            var tray = FindWindowExW(taskbar, IntPtr.Zero, "TrayNotifyWnd", null);
-            if (tray == IntPtr.Zero || !GetWindowRect(tray, out var trayRect)) { Hide(); return; }
+            if (!ShouldShow) { HideAll(); return; }
 
-            if (widget != IntPtr.Zero && (parent != taskbar || !IsWindow(widget))) Destroy();
-            var dpi = GetDpiForWindow(taskbar);
-            var scale = (dpi == 0 ? 96 : dpi) / 96.0;
-            var blocks = viewModel.TaskbarBlocks;
+            var allTaskbars = DiscoverTaskbars();
+            if (allTaskbars.Count == 0) { HideAll(); return; }
+
+            // Prune UIA cache for destroyed taskbar windows (e.g. Explorer restart).
+            foreach (var stale in uiaCache.Keys.Where(k => allTaskbars.All(t => t.Hwnd != k)).ToList())
+                uiaCache.Remove(stale);
+
+            var selectionInputs = allTaskbars.Select(t => (t.DeviceName, t.IsPrimary)).ToList();
+            var selectedIndices = TaskbarMonitorSelection.SelectIndices(viewModel.TaskbarMonitor, viewModel.Settings.TargetMonitor, selectionInputs);
+
+            var leftBlocks = viewModel.TaskbarLeftBlocks;
+            var rightBlocks = viewModel.TaskbarRightBlocks;
             var background = viewModel.ShowDeviceBatteryBackground;
             var style = viewModel.CurrentTaskbarAppearance;
             var placement = viewModel.CurrentTaskbarPlacement;
-            var offset = viewModel.EffectiveTaskbarOffsetPx;
-            var light = TaskbarUsesLightTheme();
-            var height = taskbarRect.Bottom - taskbarRect.Top;
-            var styleKey = $"{style.FontFamily}|{style.FontSize}|{style.Bold}|{style.LabelColorHex}|{style.ValueColorHex}";
-            var key = string.Join("\n", blocks.Select(b => b.ToString())) + $"@{dpi}/{light}/{height}/{background}/{styleKey}";
-            if (key != renderKey || widget == IntPtr.Zero)
+            int rightOffset = viewModel.EffectiveTaskbarOffsetPx;
+            int leftOffset = viewModel.EffectiveTaskbarLeftOffsetPx;
+            int verticalOffset = viewModel.EffectiveTaskbarVerticalOffsetPx;
+            bool light = TaskbarUsesLightTheme();
+            bool leftAligned = TaskbarIsLeftAligned();
+            var styleKey = $"{style.FontFamily}|{style.FontSize}|{style.Bold}|{style.BlockSpacing}|{style.StableWidth}|{style.LabelColorHex}|{style.ValueColorHex}";
+
+            var wantedKeys = new HashSet<(IntPtr Taskbar, TaskbarZone Zone)>();
+            bool shrunkPrimaryRebar = false;
+
+            foreach (int idx in selectedIndices)
             {
-                var surface = TaskbarReadoutRenderer.Render(blocks, dpi == 0 ? 96 : dpi, !light, height, background, style);
-                if (surface is null) { Hide(); return; }
-                widgetWidth = surface.Width; widgetHeight = surface.Height;
-                if (widget == IntPtr.Zero && !Create(taskbar)) return;
-                Present(surface);
-                renderKey = key;
-                shownBlocks = blocks;
-                blockRects = surface.Blocks;
-                hovered = null;
-                UpdateTooltip(null);
+                if ((uint)idx >= (uint)allTaskbars.Count) continue;
+                var tb = allTaskbars[idx];
+                int height = tb.Bounds.Bottom - tb.Bounds.Top;
+                uint rawDpi = GetDpiForWindow(tb.Hwnd);
+                double dpi = rawDpi == 0 ? 96 : rawDpi;
+                double scale = dpi / 96.0;
+                int gapPx = (int)Math.Round(8 * scale);
+
+                bool rtl = (GetWindowLongPtr(tb.Hwnd, GWL_EXSTYLE).ToInt64() & WS_EX_LAYOUTRTL) != 0;
+                bool isWin11 = FindWindowExW(tb.Hwnd, IntPtr.Zero, "Windows.UI.Composition.DesktopWindowContentBridge", null) != IntPtr.Zero;
+                bool hasLeft = leftBlocks.Count > 0;
+                bool hasRight = rightBlocks.Count > 0;
+
+                // Resolve Right-side tray / secondary-clock bounds.
+                int trayLeft = rtl ? tb.Bounds.Left : tb.Bounds.Right - gapPx;
+                int trayRight = rtl ? tb.Bounds.Left + gapPx : tb.Bounds.Right;
+                bool haveClockWin32 = false;
+                if (tb.IsPrimary)
+                {
+                    var tray = FindWindowExW(tb.Hwnd, IntPtr.Zero, "TrayNotifyWnd", null);
+                    if (tray != IntPtr.Zero && GetWindowRect(tray, out var trayRect))
+                    {
+                        trayLeft = trayRect.Left;
+                        trayRight = trayRect.Right;
+                    }
+                    else
+                    {
+                        hasRight = false;
+                    }
+                }
+                else if (hasRight)
+                {
+                    var clock = FindWindowExW(tb.Hwnd, IntPtr.Zero, "ClockButton", null);
+                    if (clock != IntPtr.Zero && GetWindowRect(clock, out var clockRect) && clockRect.Right > clockRect.Left)
+                    {
+                        trayLeft = clockRect.Left;
+                        trayRight = clockRect.Right;
+                        haveClockWin32 = true;
+                    }
+                }
+
+                bool needWidgets = isWin11 && (hasLeft || (hasRight && leftAligned));
+                bool needTaskButtons = hasRight && placement == TaskbarPlacementMode.AfterTaskButtons;
+                bool needSecondaryClock = hasRight && !tb.IsPrimary && !haveClockWin32;
+                var uia = QueryTaskbarElements(tb.Hwnd, tb.Bounds, needWidgets, needTaskButtons, needSecondaryClock, isWin11);
+
+                if (!tb.IsPrimary && !haveClockWin32 && uia.SecondaryClockRect is { IsEmpty: false } sc)
+                {
+                    trayLeft = (int)Math.Floor(sc.Left);
+                    trayRight = (int)Math.Ceiling(sc.Right);
+                }
+
+                (int Left, int Right)? widgetsBounds = uia.WidgetsRect is { IsEmpty: false } wr
+                    ? ((int)Math.Floor(wr.Left), (int)Math.Ceiling(wr.Right)) : null;
+                (int Left, int Right)? taskBounds = uia.TaskButtonsRect is { IsEmpty: false } tbr
+                    ? ((int)Math.Floor(tbr.Left), (int)Math.Ceiling(tbr.Right)) : null;
+
+                if (hasLeft)
+                {
+                    var key = (tb.Hwnd, TaskbarZone.Left);
+                    wantedKeys.Add(key);
+                    var strip = UpdateStrip(key, tb.Hwnd, leftBlocks, dpi, light, height, background, style, styleKey);
+                    if (strip != null)
+                    {
+                        int x = TaskbarLayout.ComputeLeftZoneClientX(leftOffset, rtl, tb.Bounds.Left, tb.Bounds.Right, strip.Width, gapPx, widgetsBounds);
+                        int y = Math.Clamp((height - strip.Height) / 2 + verticalOffset, 0, Math.Max(0, height - strip.Height));
+                        SetWindowPos(strip.Widget, IntPtr.Zero, x, y, strip.Width, strip.Height, SWP_NOACTIVATE | SWP_SHOWWINDOW);
+                    }
+                }
+
+                if (hasRight)
+                {
+                    var key = (tb.Hwnd, TaskbarZone.Right);
+                    wantedKeys.Add(key);
+                    var strip = UpdateStrip(key, tb.Hwnd, rightBlocks, dpi, light, height, background, style, styleKey);
+                    if (strip != null)
+                    {
+                        int x = TaskbarLayout.ComputeClientX(
+                            placement, rightOffset, rtl,
+                            tb.Bounds.Left, tb.Bounds.Right,
+                            trayLeft, trayRight,
+                            strip.Width, gapPx,
+                            widgetsBounds, taskBounds);
+                        int y = Math.Clamp((height - strip.Height) / 2 + verticalOffset, 0, Math.Max(0, height - strip.Height));
+                        SetWindowPos(strip.Widget, IntPtr.Zero, x, y, strip.Width, strip.Height, SWP_NOACTIVATE | SWP_SHOWWINDOW);
+
+                        if (tb.IsPrimary && !rtl && !isWin11 && placement == TaskbarPlacementMode.LeftOfTray)
+                        {
+                            ShrinkRebar(tb.Hwnd, x);
+                            shrunkPrimaryRebar = true;
+                        }
+                    }
+                }
             }
 
-            // Position in the taskbar's client coordinates: beside the tray or right after the task buttons, vertically centred.
-            bool rtl = (GetWindowLongPtr(taskbar, GWL_EXSTYLE).ToInt64() & WS_EX_LAYOUTRTL) != 0;
-            bool isWin11 = FindWindowExW(taskbar, IntPtr.Zero, "Windows.UI.Composition.DesktopWindowContentBridge", null) != IntPtr.Zero;
-            bool needWidgets = TaskbarIsLeftAligned();
-            bool needTaskButtons = placement == TaskbarPlacementMode.AfterTaskButtons;
-            QueryTaskbarElements(taskbar, taskbarRect, needWidgets, needTaskButtons, isWin11);
+            if (!shrunkPrimaryRebar) RestoreRebar();
 
-            (int Left, int Right)? widgetsBounds = widgetsRect is { IsEmpty: false } wr
-                ? ((int)Math.Floor(wr.Left), (int)Math.Ceiling(wr.Right)) : null;
-            (int Left, int Right)? taskBounds = taskButtonsRect is { IsEmpty: false } tb
-                ? ((int)Math.Floor(tb.Left), (int)Math.Ceiling(tb.Right)) : null;
-
-            int x = TaskbarLayout.ComputeClientX(
-                placement, offset, rtl,
-                taskbarRect.Left, taskbarRect.Right,
-                trayRect.Left, trayRect.Right,
-                widgetWidth, (int)Math.Round(8 * scale),
-                widgetsBounds, taskBounds);
-
-            int y = (height - widgetHeight) / 2;
-            // HWND_TOP (0): on Windows 11 the XAML bridge child covers the whole taskbar, so the widget must stay above it.
-            SetWindowPos(widget, IntPtr.Zero, x, y, widgetWidth, widgetHeight, SWP_NOACTIVATE | SWP_SHOWWINDOW);
-            if (!rtl && !isWin11 && placement == TaskbarPlacementMode.LeftOfTray) ShrinkRebar(taskbar, x);
-            else RestoreRebar();
+            foreach (var obsolete in strips.Keys.Where(k => !wantedKeys.Contains(k)).ToList())
+            {
+                DestroyStrip(strips[obsolete]);
+                strips.Remove(obsolete);
+            }
         }
         catch (Exception ex) { AppLog.Warn("Taskbar", ex); }
     }
 
-    // ---- Windows 11 Widgets button & task-buttons bounds -----------------------------------------------------------------------------------
-    // Both are XAML (Win11) or child toolbar buttons (Win10), so UI Automation reads their bounding boxes off the UI thread.
-    System.Windows.Rect? widgetsRect;
-    System.Windows.Rect? taskButtonsRect;
-    DateTime uiaCheckedUtc;
-    bool uiaLookupRunning;
-
-    void QueryTaskbarElements(IntPtr taskbar, Rect taskbarRect, bool needWidgets, bool needTaskButtons, bool isWin11)
+    StripWindow? UpdateStrip(
+        (IntPtr Taskbar, TaskbarZone Zone) key,
+        IntPtr taskbar,
+        IReadOnlyList<TaskbarBlock> blocks,
+        double dpi,
+        bool light,
+        int height,
+        bool background,
+        TaskbarAppearance style,
+        string styleKey)
     {
-        if (!needWidgets) widgetsRect = null;
-        if (!needTaskButtons) taskButtonsRect = null;
-        if (!needWidgets && !needTaskButtons) return;
+        if (strips.TryGetValue(key, out var existing) && (existing.Parent != taskbar || !IsWindow(existing.Widget)))
+        {
+            DestroyStrip(existing);
+            strips.Remove(key);
+            existing = null;
+        }
+
+        var strip = existing ?? new StripWindow();
+        var renderKey = string.Join("\n", blocks.Select(b => b.ToString())) + $"@{dpi}/{light}/{height}/{background}/{styleKey}";
+        if (renderKey != strip.RenderKey || strip.Widget == IntPtr.Zero)
+        {
+            var surface = TaskbarReadoutRenderer.Render(blocks, dpi, !light, height, background, style);
+            if (surface is null)
+            {
+                if (existing != null) { DestroyStrip(existing); strips.Remove(key); }
+                return null;
+            }
+            strip.Width = surface.Width;
+            strip.Height = surface.Height;
+            if (strip.Widget == IntPtr.Zero && !CreateStripWindow(strip, taskbar))
+                return null;
+
+            Present(strip.Widget, surface);
+            strip.RenderKey = renderKey;
+            strip.ShownBlocks = blocks;
+            strip.BlockRects = surface.Blocks;
+            strip.Hovered = null;
+            UpdateTooltip(strip, null);
+            strips[key] = strip;
+        }
+        return strip;
+    }
+
+    static List<TaskbarEntry> DiscoverTaskbars()
+    {
+        var list = new List<TaskbarEntry>();
+        var primary = FindWindowW("Shell_TrayWnd", null);
+        if (primary != IntPtr.Zero && GetWindowRect(primary, out var pRect) && !IsVerticalOrAutoHidden(primary, pRect))
+        {
+            list.Add(new TaskbarEntry(primary, IsPrimary: true, MultiMonitorHelper.FromHandle(primary)?.DeviceName ?? "", pRect));
+        }
+        IntPtr sec = IntPtr.Zero;
+        while ((sec = FindWindowExW(IntPtr.Zero, sec, "Shell_SecondaryTrayWnd", null)) != IntPtr.Zero)
+        {
+            if (GetWindowRect(sec, out var sRect) && !IsVerticalOrAutoHidden(sec, sRect))
+            {
+                list.Add(new TaskbarEntry(sec, IsPrimary: false, MultiMonitorHelper.FromHandle(sec)?.DeviceName ?? "", sRect));
+            }
+        }
+        return list;
+    }
+
+    // ---- UI Automation per-taskbar lookup (Widgets button, task buttons, Win11 secondary clock) ---------------------------------------------
+
+    UiaCacheEntry QueryTaskbarElements(IntPtr taskbar, Rect taskbarRect, bool needWidgets, bool needTaskButtons, bool needSecondaryClock, bool isWin11)
+    {
+        if (!uiaCache.TryGetValue(taskbar, out var entry))
+            uiaCache[taskbar] = entry = new UiaCacheEntry();
+
+        if (!needWidgets) entry.WidgetsRect = null;
+        if (!needTaskButtons) entry.TaskButtonsRect = null;
+        if (!needSecondaryClock) entry.SecondaryClockRect = null;
+        if (!needWidgets && !needTaskButtons && !needSecondaryClock) return entry;
 
         var interval = needTaskButtons ? TimeSpan.FromSeconds(2) : TimeSpan.FromSeconds(5);
-        if (uiaLookupRunning || DateTime.UtcNow - uiaCheckedUtc < interval) return;
+        if (entry.Running || DateTime.UtcNow - entry.CheckedUtc < interval) return entry;
 
-        uiaLookupRunning = true;
-        uiaCheckedUtc = DateTime.UtcNow;
+        entry.Running = true;
+        entry.CheckedUtc = DateTime.UtcNow;
         var handle = taskbar;
         var bounds = taskbarRect;
         _ = Task.Run(() =>
         {
             System.Windows.Rect? foundWidgets = null;
             System.Windows.Rect? foundTasks = null;
+            System.Windows.Rect? foundClock = null;
             try
             {
-                if (needWidgets || isWin11)
+                if (needWidgets || isWin11 || needSecondaryClock)
                 {
                     var root = AutomationElement.FromHandle(handle);
                     if (needWidgets)
@@ -217,6 +367,10 @@ public sealed class TaskbarReadoutWidget : IDisposable
                     {
                         foundTasks = FindWin11TaskButtonsBounds(root, bounds);
                     }
+                    if (needSecondaryClock)
+                    {
+                        foundClock = FindSecondaryClockBounds(root, bounds);
+                    }
                 }
                 if (needTaskButtons && !isWin11)
                 {
@@ -226,11 +380,13 @@ public sealed class TaskbarReadoutWidget : IDisposable
             catch (Exception ex) when (ex is ElementNotAvailableException or InvalidOperationException or COMException) { }
             Application.Current?.Dispatcher.BeginInvoke(() =>
             {
-                if (needWidgets) widgetsRect = foundWidgets is { IsEmpty: false } wr ? wr : null;
-                if (needTaskButtons) taskButtonsRect = foundTasks is { IsEmpty: false } tr ? tr : null;
-                uiaLookupRunning = false;
+                if (needWidgets) entry.WidgetsRect = foundWidgets is { IsEmpty: false } wr ? wr : null;
+                if (needTaskButtons) entry.TaskButtonsRect = foundTasks is { IsEmpty: false } tr ? tr : null;
+                if (needSecondaryClock) entry.SecondaryClockRect = foundClock is { IsEmpty: false } cr ? cr : null;
+                entry.Running = false;
             });
         });
+        return entry;
     }
 
     static System.Windows.Rect? FindWin11TaskButtonsBounds(AutomationElement root, Rect taskbarBounds)
@@ -243,8 +399,7 @@ public sealed class TaskbarReadoutWidget : IDisposable
         {
             try
             {
-                var el = buttons[i];
-                var cur = el.Current;
+                var cur = buttons[i].Current;
                 if (cur.IsOffscreen) continue;
                 var r = cur.BoundingRectangle;
                 if (r.IsEmpty || r.Width <= 0 || r.Height <= 0) continue;
@@ -253,13 +408,9 @@ public sealed class TaskbarReadoutWidget : IDisposable
                 string cls = cur.ClassName ?? "";
                 string id = cur.AutomationId ?? "";
                 if (cls == "Taskbar.TaskListButton" || id.StartsWith("Appid:", StringComparison.Ordinal))
-                {
                     taskUnion.Union(r);
-                }
                 else if (id is "StartButton" or "SearchButton" or "TaskViewButton")
-                {
                     fallbackUnion.Union(r);
-                }
             }
             catch (ElementNotAvailableException) { }
             catch (COMException) { }
@@ -267,6 +418,34 @@ public sealed class TaskbarReadoutWidget : IDisposable
 
         if (!taskUnion.IsEmpty) return taskUnion;
         return fallbackUnion.IsEmpty ? null : fallbackUnion;
+    }
+
+    static System.Windows.Rect? FindSecondaryClockBounds(AutomationElement root, Rect taskbarBounds)
+    {
+        var buttons = root.FindAll(TreeScope.Descendants, new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Button));
+        var clockUnion = System.Windows.Rect.Empty;
+        int minTrailX = taskbarBounds.Left + (taskbarBounds.Right - taskbarBounds.Left) / 2;
+        for (int i = 0; i < buttons.Count; i++)
+        {
+            try
+            {
+                var cur = buttons[i].Current;
+                if (cur.IsOffscreen) continue;
+                var r = cur.BoundingRectangle;
+                if (r.IsEmpty || r.Width <= 0 || r.Height <= 0) continue;
+                string id = cur.AutomationId ?? "";
+                string cls = cur.ClassName ?? "";
+                if (id is "ClockButton" or "SystemTrayIcon" || cls.Contains("Clock", StringComparison.OrdinalIgnoreCase)
+                    || cls.Contains("SystemTray", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (r.Left >= minTrailX)
+                        clockUnion.Union(r);
+                }
+            }
+            catch (ElementNotAvailableException) { }
+            catch (COMException) { }
+        }
+        return clockUnion.IsEmpty ? null : clockUnion;
     }
 
     static System.Windows.Rect? FindWin10TaskButtonsBounds(IntPtr taskbar, Rect taskbarBounds)
@@ -318,7 +497,7 @@ public sealed class TaskbarReadoutWidget : IDisposable
 
     // ---- rendering -------------------------------------------------------------------------------------------------------------------------
 
-    void Present(TaskbarRender surface)
+    static void Present(IntPtr widget, TaskbarRender surface)
     {
         var screen = GetDC(IntPtr.Zero);
         var memory = CreateCompatibleDC(screen);
@@ -338,9 +517,9 @@ public sealed class TaskbarReadoutWidget : IDisposable
         finally { if (dib != IntPtr.Zero) DeleteObject(dib); DeleteDC(memory); ReleaseDC(IntPtr.Zero, screen); }
     }
 
-    // ---- window ----------------------------------------------------------------------------------------------------------------------------
+    // ---- native child window management ----------------------------------------------------------------------------------------------------
 
-    bool Create(IntPtr taskbar)
+    bool CreateStripWindow(StripWindow strip, IntPtr taskbar)
     {
         var instance = GetModuleHandleW(null);
         if (!classRegistered)
@@ -349,42 +528,42 @@ public sealed class TaskbarReadoutWidget : IDisposable
             classRegistered = RegisterClassExW(ref cls) != 0 || Marshal.GetLastWin32Error() == 1410; // 1410: already registered
             if (!classRegistered) return false;
         }
-        // Layered child windows need Windows 8 or later (always true for this app's target).
-        widget = CreateWindowExW(WS_EX_LAYERED | WS_EX_NOACTIVATE, ClassName, null, WS_CHILD | WS_CLIPSIBLINGS | WS_VISIBLE, 0, 0, widgetWidth, widgetHeight, taskbar, IntPtr.Zero, instance, IntPtr.Zero);
-        if (widget == IntPtr.Zero)
+        var hwnd = CreateWindowExW(WS_EX_LAYERED | WS_EX_NOACTIVATE, ClassName, null, WS_CHILD | WS_CLIPSIBLINGS | WS_VISIBLE, 0, 0, strip.Width, strip.Height, taskbar, IntPtr.Zero, instance, IntPtr.Zero);
+        if (hwnd == IntPtr.Zero)
         {
             AppLog.Warn("Taskbar", $"Taskbar widget window could not be created (Win32 error {Marshal.GetLastWin32Error()}).");
             return false;
         }
-        parent = taskbar;
-        CreateTooltip(instance);
+        strip.Widget = hwnd;
+        strip.Parent = taskbar;
+        stripsByHwnd[hwnd] = strip;
+        CreateTooltip(strip, instance);
         return true;
     }
 
-    void CreateTooltip(IntPtr instance)
+    static void CreateTooltip(StripWindow strip, IntPtr instance)
     {
         var init = new InitCommonControls { Size = (uint)Marshal.SizeOf<InitCommonControls>(), Classes = 0xFF };
         InitCommonControlsEx(ref init);
-        tooltip = CreateWindowExW(WS_EX_TOPMOST, "tooltips_class32", null, WS_POPUP | TTS_ALWAYSTIP | TTS_NOPREFIX, 0, 0, 0, 0, widget, IntPtr.Zero, instance, IntPtr.Zero);
-        if (tooltip == IntPtr.Zero) return;
-        tooltipBuffer = Marshal.AllocHGlobal(2048 * 2);
-        Marshal.WriteInt16(tooltipBuffer, 0);
-        SendMessage(tooltip, TTM_SETMAXTIPWIDTH, IntPtr.Zero, new IntPtr(600));
-        var info = new ToolInfo { Size = (uint)Marshal.SizeOf<ToolInfo>(), Flags = TTF_SUBCLASS, Hwnd = widget, Id = (UIntPtr)1, Rc = new Rect { Right = 4000, Bottom = 400 }, Text = tooltipBuffer };
-        SendMessage(tooltip, TTM_ADDTOOLW, IntPtr.Zero, ref info);
+        strip.Tooltip = CreateWindowExW(WS_EX_TOPMOST, "tooltips_class32", null, WS_POPUP | TTS_ALWAYSTIP | TTS_NOPREFIX, 0, 0, 0, 0, strip.Widget, IntPtr.Zero, instance, IntPtr.Zero);
+        if (strip.Tooltip == IntPtr.Zero) return;
+        strip.TooltipBuffer = Marshal.AllocHGlobal(2048 * 2);
+        Marshal.WriteInt16(strip.TooltipBuffer, 0);
+        SendMessage(strip.Tooltip, TTM_SETMAXTIPWIDTH, IntPtr.Zero, new IntPtr(600));
+        var info = new ToolInfo { Size = (uint)Marshal.SizeOf<ToolInfo>(), Flags = TTF_SUBCLASS, Hwnd = strip.Widget, Id = (UIntPtr)1, Rc = new Rect { Right = 4000, Bottom = 400 }, Text = strip.TooltipBuffer };
+        SendMessage(strip.Tooltip, TTM_ADDTOOLW, IntPtr.Zero, ref info);
     }
 
-    // The tooltip shows the hovered block's detail (every block's, one under the other, when no block is hovered).
-    void UpdateTooltip(TaskbarBlockKind? kind)
+    static void UpdateTooltip(StripWindow strip, TaskbarBlockKind? kind)
     {
-        if (tooltip == IntPtr.Zero || tooltipBuffer == IntPtr.Zero) return;
-        var shown = kind is { } k ? shownBlocks.Where(b => b.Kind == k) : shownBlocks;
+        if (strip.Tooltip == IntPtr.Zero || strip.TooltipBuffer == IntPtr.Zero) return;
+        var shown = kind is { } k ? strip.ShownBlocks.Where(b => b.Kind == k) : strip.ShownBlocks;
         var text = string.Join("\r\n", shown.Select(b => b.Tooltip));
-        tooltipText = text.Length > 2000 ? text[..2000] : text;
-        var bytes = Encoding.Unicode.GetBytes(tooltipText + "\0");
-        Marshal.Copy(bytes, 0, tooltipBuffer, bytes.Length);
-        var info = new ToolInfo { Size = (uint)Marshal.SizeOf<ToolInfo>(), Hwnd = widget, Id = (UIntPtr)1, Text = tooltipBuffer };
-        SendMessage(tooltip, TTM_UPDATETIPTEXTW, IntPtr.Zero, ref info);
+        strip.TooltipText = text.Length > 2000 ? text[..2000] : text;
+        var bytes = Encoding.Unicode.GetBytes(strip.TooltipText + "\0");
+        Marshal.Copy(bytes, 0, strip.TooltipBuffer, bytes.Length);
+        var info = new ToolInfo { Size = (uint)Marshal.SizeOf<ToolInfo>(), Hwnd = strip.Widget, Id = (UIntPtr)1, Text = strip.TooltipBuffer };
+        SendMessage(strip.Tooltip, TTM_UPDATETIPTEXTW, IntPtr.Zero, ref info);
     }
 
     IntPtr WndProc(IntPtr hwnd, uint msg, IntPtr wParam, IntPtr lParam)
@@ -395,27 +574,30 @@ public sealed class TaskbarReadoutWidget : IDisposable
             case WM_NCHITTEST: return new IntPtr(HTCLIENT);
             case WM_MOUSEMOVE:
                 {
-                    // Track the hovered block so the tooltip shows its detail.
-                    var over = TaskbarReadoutRenderer.HitTest(blockRects, (short)(lParam.ToInt64() & 0xFFFF));
-                    if (over != hovered) { hovered = over; UpdateTooltip(over); }
+                    if (stripsByHwnd.TryGetValue(hwnd, out var strip))
+                    {
+                        var over = TaskbarReadoutRenderer.HitTest(strip.BlockRects, (short)(lParam.ToInt64() & 0xFFFF));
+                        if (over != strip.Hovered) { strip.Hovered = over; UpdateTooltip(strip, over); }
+                    }
                     return IntPtr.Zero;
                 }
             case WM_LBUTTONUP:
                 {
-                    // A deliberate click on a block: the owner opens the matching card.
-                    var clicked = TaskbarReadoutRenderer.HitTest(blockRects, (short)(lParam.ToInt64() & 0xFFFF));
-                    if (clicked is { } kind) Application.Current?.Dispatcher.BeginInvoke(() => { if (!disposed) BlockClicked?.Invoke(kind); });
+                    if (stripsByHwnd.TryGetValue(hwnd, out var strip))
+                    {
+                        var clicked = TaskbarReadoutRenderer.HitTest(strip.BlockRects, (short)(lParam.ToInt64() & 0xFFFF));
+                        if (clicked is { } kind) Application.Current?.Dispatcher.BeginInvoke(() => { if (!disposed) BlockClicked?.Invoke(kind); });
+                    }
                     return IntPtr.Zero;
                 }
             case WM_RBUTTONUP:
-                // Right-click: the owner shows a menu (refresh, open Battery, hide widget).
                 Application.Current?.Dispatcher.BeginInvoke(() => { if (!disposed) ContextMenuRequested?.Invoke(); });
                 return IntPtr.Zero;
         }
         return DefWindowProcW(hwnd, msg, wParam, lParam);
     }
 
-    // Windows 10 only: the ReBar (task buttons) spans the full width, so shrink it to keep the widget from covering buttons.
+    // Windows 10 only: the ReBar (task buttons) spans the full width, so shrink it to keep the Right widget from covering buttons.
     void ShrinkRebar(IntPtr taskbar, int widgetLeft)
     {
         var bar = FindWindowExW(taskbar, IntPtr.Zero, "ReBarWindow32", null);
@@ -438,20 +620,22 @@ public sealed class TaskbarReadoutWidget : IDisposable
         rebar = IntPtr.Zero;
     }
 
-    void Hide()
+    void HideAll()
     {
-        if (widget != IntPtr.Zero) ShowWindow(widget, 0);
         RestoreRebar();
-        renderKey = "";
+        foreach (var strip in strips.Values) DestroyStrip(strip);
+        strips.Clear();
+        stripsByHwnd.Clear();
     }
 
-    void Destroy()
+    void DestroyStrip(StripWindow strip)
     {
-        if (tooltip != IntPtr.Zero) { DestroyWindow(tooltip); tooltip = IntPtr.Zero; }
-        if (widget != IntPtr.Zero) { DestroyWindow(widget); widget = IntPtr.Zero; }
-        if (tooltipBuffer != IntPtr.Zero) { Marshal.FreeHGlobal(tooltipBuffer); tooltipBuffer = IntPtr.Zero; }
-        parent = IntPtr.Zero;
-        renderKey = "";
+        if (strip.Widget != IntPtr.Zero) stripsByHwnd.Remove(strip.Widget);
+        if (strip.Tooltip != IntPtr.Zero) { DestroyWindow(strip.Tooltip); strip.Tooltip = IntPtr.Zero; }
+        if (strip.Widget != IntPtr.Zero) { DestroyWindow(strip.Widget); strip.Widget = IntPtr.Zero; }
+        if (strip.TooltipBuffer != IntPtr.Zero) { Marshal.FreeHGlobal(strip.TooltipBuffer); strip.TooltipBuffer = IntPtr.Zero; }
+        strip.Parent = IntPtr.Zero;
+        strip.RenderKey = "";
     }
 
     public void Dispose()
@@ -462,8 +646,7 @@ public sealed class TaskbarReadoutWidget : IDisposable
         viewModel.TaskbarBlocksChanged -= Refresh;
         viewModel.TaskbarStyleChanged -= Refresh;
         viewModel.DeviceBatterySettingsChanged -= Refresh;
-        RestoreRebar();
-        Destroy();
+        HideAll();
         if (classRegistered) UnregisterClassW(ClassName, GetModuleHandleW(null));
     }
 }
