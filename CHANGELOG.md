@@ -2,6 +2,12 @@
 
 All notable changes to MochiDock are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.4.1-beta]
+
+### Fixed
+
+- **Taskbar weather icon day/night matching**: daytime Clear Sky now uses the cloud-sun icon (`⛅`) to match the Weather tab, and nighttime Clear Sky switches to a crescent moon (`🌙`) using Open-Meteo's `is_day` indicator.
+
 ## [0.4.0-beta]
 
 ### Added
