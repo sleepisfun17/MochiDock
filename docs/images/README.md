@@ -1,7 +1,8 @@
 # README images
 
 - `mochi-icon.png`: 512 px render of the current Mochi, also the source of `MochiDock/icon.ico`. Regenerate both with `pwsh -NoProfile -STA -File tools/make-icon.ps1` after a Release build.
-- `mochi-moods-*.png`: the labelled face grids (`moods-grid-default.png` / `moods-grid-matcha.png`) from `tools/verify/verify-mascot.ps1` (`MochiDock/obj/mascot`), copied here. Drawn by the real mascot control, not captured; the same faces on both themes plus one frame of the face-change spin.
+- `mochi-moods-*.png`: the labelled face grids from `tools/verify/verify-mascot.ps1` (`MochiDock/obj/mascot`), copied here: `moods-grid-default.png` / `moods-grid-matcha.png` as `mochi-moods-default.png` / `mochi-moods-matcha.png`, `moods-kuro.png` as `mochi-moods-kuro.png` and `moods-shiro.png` as `mochi-moods-shiro.png`.
+- `mascots-on-themes.png`: every mascot (Mochi, Matcha Mochi, Hojicha Mochi, Kuro, Shiro) on every theme ground, from the same harness. Drawn by the real mascot control, not captured; the same faces on both themes plus one frame of the face-change spin.
 - `social-preview.png`: the 1280 x 640 card GitHub shows when the repository link is shared. Regenerate with `pwsh -NoProfile -STA -File tools/make-social-preview.ps1` after a Release build, then upload it by hand in the repository's Settings > General > Social preview (GitHub has no API for it).
 - `live/<card>-<theme>.png` (and `live/<card>-<theme>-<mascot>.png`): captures of the running dock in any theme (Default, Hojicha, Kuro Night, Matcha) and, optionally, with a chosen mascot. See below.
 - `../media/*.gif`: recordings of the running dock (hover expand, card tour, theme switch, mascot switch).

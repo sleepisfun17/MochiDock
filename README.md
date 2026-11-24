@@ -51,15 +51,15 @@ Four themes, `Default` (dark), `Hojicha` (warm roasted-tea brown with a caramel 
 
 ## Screenshots
 
-![Switching from the Default theme to Matcha and back](docs/media/theme-switch.gif)
+![Switching from Default to Matcha, then Kuro Night, and back to Default](docs/media/theme-switch.gif)
 
-| Default | Matcha |
-| --- | --- |
-| ![Stats card, Default theme](docs/images/live/stats-default.png) | ![Stats card, Matcha theme](docs/images/live/stats-matcha.png) |
-| ![Media card with lyrics, Default theme](docs/images/live/media-default.png) | ![Media card with lyrics, Matcha theme](docs/images/live/media-matcha.png) |
-| ![FX Rates card, Default theme](docs/images/live/fx-default.png) | ![FX Rates card, Matcha theme](docs/images/live/fx-matcha.png) |
-| ![Weather card, Default theme](docs/images/live/weather-default.png) | ![Weather card, Matcha theme](docs/images/live/weather-matcha.png) |
-| ![Prayer times card, Default theme](docs/images/live/prayer-default.png) | ![Prayer times card, Matcha theme](docs/images/live/prayer-matcha.png) |
+| Default | Matcha | Kuro Night |
+| --- | --- | --- |
+| ![Stats card, Default theme](docs/images/live/stats-default.png) | ![Stats card, Matcha theme](docs/images/live/stats-matcha.png) | ![Stats card, Kuro Night theme with Kuro](docs/images/live/stats-kuro-night-kuro.png) |
+| ![Media card with lyrics, Default theme](docs/images/live/media-default.png) | ![Media card with lyrics, Matcha theme](docs/images/live/media-matcha.png) | ![Media card with lyrics, Kuro Night theme with Kuro](docs/images/live/media-kuro-night-kuro.png) |
+| ![FX Rates card, Default theme](docs/images/live/fx-default.png) | ![FX Rates card, Matcha theme](docs/images/live/fx-matcha.png) | ![FX Rates card, Kuro Night theme with Kuro](docs/images/live/fx-kuro-night-kuro.png) |
+| ![Weather card, Default theme](docs/images/live/weather-default.png) | ![Weather card, Matcha theme](docs/images/live/weather-matcha.png) | ![Weather card, Kuro Night theme with Kuro](docs/images/live/weather-kuro-night-kuro.png) |
+| ![Prayer times card, Default theme](docs/images/live/prayer-default.png) | ![Prayer times card, Matcha theme](docs/images/live/prayer-matcha.png) | ![Prayer times card, Kuro Night theme with Kuro](docs/images/live/prayer-kuro-night-kuro.png) |
 
 <table>
   <tr>
@@ -74,16 +74,31 @@ Four themes, `Default` (dark), `Hojicha` (warm roasted-tea brown with a caramel 
   </tr>
 </table>
 
-The compact capsule in both themes, here showing the current song:
+The compact capsule in the Default, Matcha and Kuro Night themes, here showing the current song:
 
 ![Compact capsule, Default theme](docs/images/live/capsule-media-default.png)
 ![Compact capsule, Matcha theme](docs/images/live/capsule-media-matcha.png)
+![Compact capsule, Kuro Night theme](docs/images/live/capsule-media-kuro-night-kuro.png)
 
 Mochi's faces, in both themes ([what makes each one appear](docs/USER_GUIDE.md#mochis-faces)):
 
 ![Mochi's moods on the Default dark theme](docs/images/mochi-moods-default.png)
 
 ![Mochi's moods on the Matcha theme](docs/images/mochi-moods-matcha.png)
+
+Pick another mascot in Settings > Mascot: Kuro, a black electric cat (at home on the Kuro Night theme), or Shiro, a white cat:
+
+![Kuro's moods on the Kuro Night theme](docs/images/mochi-moods-kuro.png)
+
+![Shiro's moods on the Default dark theme](docs/images/mochi-moods-shiro.png)
+
+Changing the mascot in quick settings spins Mochi into Kuro, Shiro and back:
+
+![Mochi turning into Kuro and Shiro on the Kuro Night theme, then back to Mochi](docs/media/mascot-switch.gif)
+
+Every mascot works on every theme:
+
+![Mochi, Matcha Mochi, Hojicha Mochi, Kuro and Shiro on the Default, Hojicha, Kuro Night and Matcha themes](docs/images/mascots-on-themes.png)
 
 ## Requirements
 

@@ -59,6 +59,7 @@ public static class Cap {
   }
   public static void Down() { mouse_event(0x0002, 0, 0, 0, IntPtr.Zero); }
   public static void Up() { mouse_event(0x0004, 0, 0, 0, IntPtr.Zero); }
+  public static void Wheel(int delta) { mouse_event(0x0800, 0, 0, delta, IntPtr.Zero); }
 }
 "@
 }
@@ -177,10 +178,13 @@ $script:MascotRadios = [ordered]@{ auto = 'MascotAutoRadio'; mochi = 'MascotMoch
 
 # Opens the dock on its quick settings (the gear), so the theme and mascot radios exist and can be clicked.
 function Open-QuickSettings {
-  $d = Get-MainDock
-  Move-Mouse ($d.L + 340) 12 15; Start-Sleep -Milliseconds 1600
-  if ($null -eq (Find-ControlById 'ThemeClassicRadio')) { Click-Rect (Get-Header).Gear; Start-Sleep -Milliseconds 1500 }
-  if ($null -eq (Find-ControlById 'ThemeClassicRadio')) { throw 'Quick settings did not open (no theme radios found).' }
+  for ($try = 0; $try -lt 3; $try++) {
+    Raise-Dock; $d = Get-MainDock
+    Move-Mouse ($d.L + 340) 12 15; Start-Sleep -Milliseconds 1600
+    if ($null -eq (Find-ControlById 'ThemeClassicRadio')) { Click-Rect (Get-Header).Gear; Start-Sleep -Milliseconds 1500 }
+    if ($null -ne (Find-ControlById 'ThemeClassicRadio')) { return }
+  }
+  throw 'Quick settings did not open (no theme radios found).'
 }
 # Which key of $map is selected now (quick settings must be open), or $null.
 function Get-SelectedKey($map) {
@@ -194,6 +198,15 @@ function Select-Radio($map, [string]$key, [int]$settleMs = 2200) {
   if (-not $map.Contains($key)) { throw "Unknown choice '$key' (one of: $($map.Keys -join ', '))." }
   $e = Find-ControlById $map[$key]
   if ($null -eq $e) { throw "Radio $($map[$key]) not found; is quick settings open?" }
+  # The quick-settings panel can be scrolled; a radio hidden under the header would make the click land on a header tab.
+  # Scroll the panel back to the top with the wheel, then look the radio up again.
+  $d = Get-MainDock
+  if ($e.Current.BoundingRectangle.Y -lt $d.T + 55) {
+    Move-Mouse ($d.L + 340) ($d.T + 250) 10
+    1..8 | ForEach-Object { [Cap]::Wheel(120); Start-Sleep -Milliseconds 80 }
+    Start-Sleep -Milliseconds 500
+    $e = Find-ControlById $map[$key]
+  }
   Click-Rect $e.Current.BoundingRectangle
   Start-Sleep -Milliseconds $settleMs   # the theme repaints and the mascot spins (about 1 s) before the next step
 }
