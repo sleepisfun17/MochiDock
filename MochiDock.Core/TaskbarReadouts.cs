@@ -50,6 +50,9 @@ public sealed record TaskbarSnapshot
     public string PrayerName { get; init; } = "";
     public string PrayerTime { get; init; } = "";
     public TimeSpan? PrayerRemaining { get; init; }
+    public string CurrentPrayerName { get; init; } = "";
+    public string CurrentPrayerTime { get; init; } = "";
+    public TimeSpan? CurrentPrayerElapsed { get; init; }
     public double? WeatherTempC { get; init; }
     public double? WindMetersPerSecond { get; init; }
     public string WeatherGlyph { get; init; } = "";
@@ -83,6 +86,7 @@ public sealed record TaskbarOptions
     public TaskbarPrayerDisplay PrayerDisplay { get; init; } = TaskbarPrayerDisplay.TimeAndRemaining;
     public TaskbarWeatherIconStyle WeatherIconStyle { get; init; } = TaskbarWeatherIconStyle.Emoji;
     public int PrayerWarnMinutes { get; init; } = 10;
+    public int PrayerElapsedMinutes { get; init; } = 15;
 
     /// <summary>CPU / GPU load at or over this is a warning (the existing alert settings).</summary>
     public double CpuAlert { get; init; } = 90;
@@ -445,33 +449,80 @@ public static class TaskbarReadouts
         return hours > 0 ? $"in {hours}h {minutes}m" : $"in {minutes}m";
     }
 
+    /// <summary>"Now", "+5m", "+1h 5m".</summary>
+    public static string FormatPrayerElapsed(TimeSpan elapsed)
+    {
+        if (elapsed < TimeSpan.Zero) return "now";
+        if (elapsed.TotalMinutes < 1) return "Now";
+        int hours = (int)elapsed.TotalHours;
+        int minutes = elapsed.Minutes;
+        return hours > 0 ? $"+{hours}h {minutes}m" : $"+{minutes}m";
+    }
+
     private static TaskbarBlock? PrayerBlock(TaskbarSnapshot s, TaskbarOptions o)
     {
-        if (string.IsNullOrWhiteSpace(s.PrayerName) || string.IsNullOrWhiteSpace(s.PrayerTime)) return null;
         string? rem = s.PrayerRemaining is { } span ? FormatPrayerRemaining(span) : null;
-        bool warnSoon = o.PrayerWarnMinutes > 0 && s.PrayerRemaining is { } r && r > TimeSpan.Zero && r <= TimeSpan.FromMinutes(o.PrayerWarnMinutes);
-        string tip = rem != null
+        int warnMinutes = TaskbarStyle.ClampPrayerWindowMinutes(o.PrayerWarnMinutes);
+        int elapsedMinutes = TaskbarStyle.ClampPrayerWindowMinutes(o.PrayerElapsedMinutes);
+        bool approaching = warnMinutes > 0 && s.PrayerRemaining is { } r && r > TimeSpan.Zero && r <= TimeSpan.FromMinutes(warnMinutes);
+        bool showCurrent = !approaching
+            && elapsedMinutes > 0
+            && !string.IsNullOrWhiteSpace(s.CurrentPrayerName)
+            && s.CurrentPrayerElapsed is { } el
+            && el >= TimeSpan.Zero
+            && el <= TimeSpan.FromMinutes(elapsedMinutes);
+
+        if (showCurrent)
+        {
+            string elapsedText = FormatPrayerElapsed(s.CurrentPrayerElapsed!.Value);
+            string tip = string.IsNullOrWhiteSpace(s.CurrentPrayerTime)
+                ? $"Current prayer: {s.CurrentPrayerName} ({elapsedText})"
+                : $"Current prayer: {s.CurrentPrayerName} ({s.CurrentPrayerTime}, {elapsedText})";
+            if (!string.IsNullOrWhiteSpace(s.PrayerName) && !string.IsNullOrWhiteSpace(s.PrayerTime))
+            {
+                tip += "\r\n" + (rem != null
+                    ? $"Next prayer: {s.PrayerName} at {s.PrayerTime} ({rem})"
+                    : $"Next prayer: {s.PrayerName} at {s.PrayerTime}");
+            }
+
+            if (o.PrayerDisplay == TaskbarPrayerDisplay.TimeAndRemaining && !string.IsNullOrWhiteSpace(s.CurrentPrayerTime))
+            {
+                string currentLabel = s.CurrentPrayerName + " ";
+                return new TaskbarBlock(TaskbarBlockKind.Prayer, currentLabel + s.CurrentPrayerTime, elapsedText, false, false, tip)
+                {
+                    TopLabel = currentLabel,
+                };
+            }
+
+            return new TaskbarBlock(TaskbarBlockKind.Prayer, s.CurrentPrayerName, elapsedText, false, false, tip)
+            {
+                TopLabel = s.CurrentPrayerName,
+            };
+        }
+
+        if (string.IsNullOrWhiteSpace(s.PrayerName) || string.IsNullOrWhiteSpace(s.PrayerTime)) return null;
+        string nextTip = rem != null
             ? $"Next prayer: {s.PrayerName} at {s.PrayerTime} ({rem})"
             : $"Next prayer: {s.PrayerName} at {s.PrayerTime}";
 
-        if (rem is null || o.PrayerDisplay == TaskbarPrayerDisplay.Time)
+        if (rem is null || (o.PrayerDisplay == TaskbarPrayerDisplay.Time && !approaching))
         {
-            return new TaskbarBlock(TaskbarBlockKind.Prayer, s.PrayerName, s.PrayerTime, false, warnSoon, tip)
+            return new TaskbarBlock(TaskbarBlockKind.Prayer, s.PrayerName, s.PrayerTime, false, false, nextTip)
             {
                 TopLabel = s.PrayerName,
             };
         }
 
-        if (o.PrayerDisplay == TaskbarPrayerDisplay.Remaining)
+        if (o.PrayerDisplay == TaskbarPrayerDisplay.Remaining || o.PrayerDisplay == TaskbarPrayerDisplay.Time)
         {
-            return new TaskbarBlock(TaskbarBlockKind.Prayer, s.PrayerName, rem, false, warnSoon, tip)
+            return new TaskbarBlock(TaskbarBlockKind.Prayer, s.PrayerName, rem, false, approaching, nextTip)
             {
                 TopLabel = s.PrayerName,
             };
         }
 
         string topLabel = s.PrayerName + " ";
-        return new TaskbarBlock(TaskbarBlockKind.Prayer, topLabel + s.PrayerTime, rem, false, warnSoon, tip)
+        return new TaskbarBlock(TaskbarBlockKind.Prayer, topLabel + s.PrayerTime, rem, false, approaching, nextTip)
         {
             TopLabel = topLabel,
         };

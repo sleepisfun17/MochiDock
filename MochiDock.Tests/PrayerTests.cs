@@ -134,6 +134,8 @@ public class PrayerTests : IDisposable
         Assert.Equal("Maghrib",seen[0].Name);
         Assert.NotNull(seen[0].Instant);
         Assert.True(seen[0].Remaining>TimeSpan.Zero);
+        Assert.Equal("Asr",schedule.CurrentPrayer?.Name);
+        Assert.Equal("+33m",schedule.CurrentPrayerElapsedText);
 
         // After Isha (targeting TomorrowFajr), subsequent 1 s ticks reuse the item and emit zero NextPrayer changes.
         seen.Clear();

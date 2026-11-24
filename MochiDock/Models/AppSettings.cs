@@ -48,6 +48,8 @@ public class AppSettings
     public int TaskbarRefreshSeconds { get; set; } = 1;
     public string TaskbarBatteryLayout { get; set; } = "Auto";
     public string TaskbarPrayerDisplay { get; set; } = "TimeAndRemaining";
+    public int TaskbarPrayerApproachMinutes { get; set; } = 10;
+    public int TaskbarPrayerElapsedMinutes { get; set; } = 15;
     public string TaskbarWeatherIcon { get; set; } = "Emoji";
     public bool ShowAiUsageTab { get; set; } = false;
     public bool ShowScriptTab { get; set; } = false;

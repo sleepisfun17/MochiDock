@@ -307,6 +307,36 @@ public partial class MainViewModel
         }
     }
 
+    public int TaskbarPrayerApproachMinutes
+    {
+        get => TaskbarStyle.ClampPrayerWindowMinutes(_settings.TaskbarPrayerApproachMinutes);
+        set
+        {
+            int clamped = TaskbarStyle.ClampPrayerWindowMinutes(value);
+            if (_settings.TaskbarPrayerApproachMinutes == clamped) return;
+            _settings.TaskbarPrayerApproachMinutes = clamped;
+            SettingsService.Save(_settings);
+            OnPropertyChanged(nameof(TaskbarPrayerApproachMinutes));
+            RefreshTaskbarBlocks();
+            TaskbarStyleChanged?.Invoke();
+        }
+    }
+
+    public int TaskbarPrayerElapsedMinutes
+    {
+        get => TaskbarStyle.ClampPrayerWindowMinutes(_settings.TaskbarPrayerElapsedMinutes);
+        set
+        {
+            int clamped = TaskbarStyle.ClampPrayerWindowMinutes(value);
+            if (_settings.TaskbarPrayerElapsedMinutes == clamped) return;
+            _settings.TaskbarPrayerElapsedMinutes = clamped;
+            SettingsService.Save(_settings);
+            OnPropertyChanged(nameof(TaskbarPrayerElapsedMinutes));
+            RefreshTaskbarBlocks();
+            TaskbarStyleChanged?.Invoke();
+        }
+    }
+
     public string TaskbarWeatherIcon
     {
         get => TaskbarStyle.FormatWeatherIconStyle(TaskbarStyle.ParseWeatherIconStyle(_settings.TaskbarWeatherIcon));
@@ -391,7 +421,8 @@ public partial class MainViewModel
         BatteryLayout = TaskbarStyle.ParseBatteryLayout(_settings.TaskbarBatteryLayout),
         PrayerDisplay = TaskbarStyle.ParsePrayerDisplay(_settings.TaskbarPrayerDisplay),
         WeatherIconStyle = TaskbarStyle.ParseWeatherIconStyle(_settings.TaskbarWeatherIcon),
-        PrayerWarnMinutes = 10,
+        PrayerWarnMinutes = TaskbarStyle.ClampPrayerWindowMinutes(_settings.TaskbarPrayerApproachMinutes),
+        PrayerElapsedMinutes = TaskbarStyle.ClampPrayerWindowMinutes(_settings.TaskbarPrayerElapsedMinutes),
         CpuAlert = _settings.CpuAlertThreshold,
         GpuAlert = _settings.GpuAlertThreshold,
         TempAlert = _settings.TemperatureAlertThreshold,
@@ -416,6 +447,9 @@ public partial class MainViewModel
             PrayerName = !string.IsNullOrWhiteSpace(live.PrayerName) ? live.PrayerName : sampleFallback.PrayerName,
             PrayerTime = !string.IsNullOrWhiteSpace(live.PrayerTime) ? live.PrayerTime : sampleFallback.PrayerTime,
             PrayerRemaining = live.PrayerRemaining ?? sampleFallback.PrayerRemaining,
+            CurrentPrayerName = live.CurrentPrayerName,
+            CurrentPrayerTime = live.CurrentPrayerTime,
+            CurrentPrayerElapsed = live.CurrentPrayerElapsed,
             WeatherTempC = live.WeatherTempC ?? sampleFallback.WeatherTempC,
             WindMetersPerSecond = live.WindMetersPerSecond ?? sampleFallback.WindMetersPerSecond,
             WeatherGlyph = !string.IsNullOrWhiteSpace(live.WeatherGlyph) ? live.WeatherGlyph : sampleFallback.WeatherGlyph,
@@ -456,7 +490,9 @@ public partial class MainViewModel
 
     private void OnTaskbarScheduleChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
-        if (e.PropertyName is nameof(PrayerSchedule.NextPrayer) or nameof(PrayerSchedule.CountdownText))
+        if (e.PropertyName is nameof(PrayerSchedule.NextPrayer)
+            or nameof(PrayerSchedule.CountdownText)
+            or nameof(PrayerSchedule.CurrentPrayerElapsedText))
             RefreshTaskbarBlocks();
     }
 
@@ -499,6 +535,9 @@ public partial class MainViewModel
         PrayerName = CurrentPrayerSchedule?.NextPrayer?.Name ?? "",
         PrayerTime = CurrentPrayerSchedule?.NextPrayer?.FormattedTime ?? "",
         PrayerRemaining = CurrentPrayerSchedule?.NextPrayerInstant is not null ? CurrentPrayerSchedule.TimeUntilNextPrayer : null,
+        CurrentPrayerName = CurrentPrayerSchedule?.CurrentPrayer?.Name ?? "",
+        CurrentPrayerTime = CurrentPrayerSchedule?.CurrentPrayer?.FormattedTime ?? "",
+        CurrentPrayerElapsed = CurrentPrayerSchedule?.CurrentPrayerInstant is not null ? CurrentPrayerSchedule.TimeSinceCurrentPrayer : null,
         WeatherTempC = _weatherInfo?.Temperature,
         WindMetersPerSecond = _weatherInfo?.WindSpeed,
         WeatherGlyph = _weatherInfo?.WeatherIcon ?? "",

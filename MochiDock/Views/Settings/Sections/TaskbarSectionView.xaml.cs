@@ -27,6 +27,8 @@ public partial class TaskbarSectionView : SettingsSectionBase
     private static readonly double[] FontSizeChoices = { 0, 9, 10, 11, 12, 13, 14, 16, 18, 20, 22, 24 };
     private static readonly int[] BlockSpacingChoices = { 0, 6, 8, 10, 12, 16, 20, 24, 32 };
     private static readonly int[] RefreshChoices = { 1, 2, 3 };
+    private static readonly int[] PrayerApproachChoices = { 0, 5, 10, 15, 20, 30, 60 };
+    private static readonly int[] PrayerElapsedChoices = { 0, 10, 15, 20, 30, 45, 60 };
 
     private static readonly TaskbarSnapshot PreviewFallback = new()
     {
@@ -123,6 +125,8 @@ public partial class TaskbarSectionView : SettingsSectionBase
         SelectBlockSpacing(vm.TaskbarBlockSpacing);
         SelectBatteryLayout(vm.TaskbarBatteryLayout);
         SelectPrayerDisplay(vm.TaskbarPrayerDisplay);
+        SelectMinutesCombo(PrayerApproachCombo, vm.TaskbarPrayerApproachMinutes);
+        SelectMinutesCombo(PrayerElapsedCombo, vm.TaskbarPrayerElapsedMinutes);
         SelectRefreshSeconds(vm.TaskbarRefreshSeconds);
 
         BoldCheck.IsChecked = vm.TaskbarFontBold;
@@ -192,6 +196,9 @@ public partial class TaskbarSectionView : SettingsSectionBase
         PrayerDisplayCombo.Items.Add(new ComboBoxItem { Content = "Time & remaining (Asr 15:20 / in 1h 25m)", Tag = "TimeAndRemaining" });
         PrayerDisplayCombo.Items.Add(new ComboBoxItem { Content = "Remaining only (Asr / in 1h 25m)", Tag = "Remaining" });
         PrayerDisplayCombo.Items.Add(new ComboBoxItem { Content = "Time only (Asr / 15:20)", Tag = "Time" });
+
+        PopulateMinutesCombo(PrayerApproachCombo, PrayerApproachChoices);
+        PopulateMinutesCombo(PrayerElapsedCombo, PrayerElapsedChoices);
     }
 
     private void PopulateMonitorCombo(string currentMonitor)
@@ -304,6 +311,28 @@ public partial class TaskbarSectionView : SettingsSectionBase
                 return;
             }
         }
+    }
+
+    private static void PopulateMinutesCombo(ComboBox combo, int[] choices)
+    {
+        foreach (int min in choices)
+            combo.Items.Add(new ComboBoxItem { Content = min <= 0 ? "Off" : $"{min} min", Tag = min });
+    }
+
+    private static void SelectMinutesCombo(ComboBox combo, int minutes)
+    {
+        int clamped = TaskbarStyle.ClampPrayerWindowMinutes(minutes);
+        foreach (ComboBoxItem item in combo.Items)
+        {
+            if (item.Tag is int m && m == clamped)
+            {
+                combo.SelectedItem = item;
+                return;
+            }
+        }
+        var custom = new ComboBoxItem { Content = $"{clamped} min", Tag = clamped };
+        combo.Items.Add(custom);
+        combo.SelectedItem = custom;
     }
 
     // ---- Live preview ----------------------------------------------------------------------------------------------------------------------
@@ -618,6 +647,20 @@ public partial class TaskbarSectionView : SettingsSectionBase
         if (Loading || ViewModel == null) return;
         if (PrayerDisplayCombo.SelectedItem is ComboBoxItem item && item.Tag is string display)
             ViewModel.TaskbarPrayerDisplay = display;
+    }
+
+    private void PrayerApproach_Changed(object sender, SelectionChangedEventArgs e)
+    {
+        if (Loading || ViewModel == null) return;
+        if (PrayerApproachCombo.SelectedItem is ComboBoxItem item && item.Tag is int min)
+            ViewModel.TaskbarPrayerApproachMinutes = min;
+    }
+
+    private void PrayerElapsed_Changed(object sender, SelectionChangedEventArgs e)
+    {
+        if (Loading || ViewModel == null) return;
+        if (PrayerElapsedCombo.SelectedItem is ComboBoxItem item && item.Tag is int min)
+            ViewModel.TaskbarPrayerElapsedMinutes = min;
     }
 
     private void Arrows_Checked(object sender, RoutedEventArgs e)

@@ -99,8 +99,14 @@
         <s:SettingRow Label="Device battery layout" Description="Auto uses the classic single-row size for 1 device and stacks 2+ devices top and bottom; Side by side always keeps devices on one row.">
             <ComboBox x:Name="BatteryLayoutCombo" Style="{StaticResource ModernDarkComboBox}" Width="220" SelectionChanged="BatteryLayout_Changed" AutomationProperties.Name="Device battery taskbar layout"/>
         </s:SettingRow>
-        <s:SettingRow Label="Next prayer display" Description="Show the scheduled time, remaining countdown, or both. Highlights in the last 10 minutes.">
+        <s:SettingRow Label="Next prayer display" Description="Show the scheduled time, remaining countdown, or both.">
             <ComboBox x:Name="PrayerDisplayCombo" Style="{StaticResource ModernDarkComboBox}" Width="260" SelectionChanged="PrayerDisplay_Changed" AutomationProperties.Name="Next prayer taskbar display"/>
+        </s:SettingRow>
+        <s:SettingRow Label="Countdown before prayer" Description="Highlight and show 'in Xm' (even in Time only mode) when the next prayer is within this window.">
+            <ComboBox x:Name="PrayerApproachCombo" Style="{StaticResource ModernDarkComboBox}" Width="180" SelectionChanged="PrayerApproach_Changed" AutomationProperties.Name="Countdown window before next prayer"/>
+        </s:SettingRow>
+        <s:SettingRow Label="Show current prayer after start" Description="Show the ongoing prayer and elapsed time (for example 'Asr / +5m') for this long after it begins.">
+            <ComboBox x:Name="PrayerElapsedCombo" Style="{StaticResource ModernDarkComboBox}" Width="180" SelectionChanged="PrayerElapsed_Changed" AutomationProperties.Name="Show current prayer elapsed duration"/>
         </s:SettingRow>
         <s:SettingRow Label="Weather icon" Description="Draw the taskbar weather icon as a colour emoji or monochrome taskbar ink.">
             <StackPanel Orientation="Horizontal">

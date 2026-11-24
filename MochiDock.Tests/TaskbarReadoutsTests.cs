@@ -512,6 +512,67 @@ public class TaskbarReadoutsTests
         Assert.True(warn10.BottomWarn);
         var noWarn11 = Assert.Single(TaskbarReadouts.Build(snap with { PrayerRemaining = TimeSpan.FromMinutes(11) }, new TaskbarOptions { Prayer = true }));
         Assert.False(noWarn11.BottomWarn);
+
+        // Even in Time only mode, an approaching prayer within PrayerWarnMinutes switches bottom to the highlighted countdown.
+        var timeModeClose = Assert.Single(TaskbarReadouts.Build(
+            snap with { PrayerRemaining = TimeSpan.FromMinutes(8) },
+            new TaskbarOptions { Prayer = true, PrayerDisplay = TaskbarPrayerDisplay.Time, PrayerWarnMinutes = 10 }));
+        Assert.Equal(("Maghrib", "in 8m"), (timeModeClose.Top, timeModeClose.Bottom));
+        Assert.True(timeModeClose.BottomWarn);
+
+        var timeModeApproachOff = Assert.Single(TaskbarReadouts.Build(
+            snap with { PrayerRemaining = TimeSpan.FromMinutes(8) },
+            new TaskbarOptions { Prayer = true, PrayerDisplay = TaskbarPrayerDisplay.Time, PrayerWarnMinutes = 0 }));
+        Assert.Equal(("Maghrib", "16:40"), (timeModeApproachOff.Top, timeModeApproachOff.Bottom));
+        Assert.False(timeModeApproachOff.BottomWarn);
+    }
+
+    [Fact]
+    public void CurrentPrayerElapsedShowsWithinWindowAndYieldsWhenApproachingOrExpired()
+    {
+        Assert.Equal("Now", TaskbarReadouts.FormatPrayerElapsed(TimeSpan.FromSeconds(25)));
+        Assert.Equal("+5m", TaskbarReadouts.FormatPrayerElapsed(TimeSpan.FromMinutes(5)));
+        Assert.Equal("+1h 5m", TaskbarReadouts.FormatPrayerElapsed(TimeSpan.FromMinutes(65)));
+
+        var baseSnap = new TaskbarSnapshot
+        {
+            PrayerName = "Maghrib",
+            PrayerTime = "16:48",
+            PrayerRemaining = TimeSpan.FromMinutes(136),
+            CurrentPrayerName = "Asr",
+            CurrentPrayerTime = "14:27",
+            CurrentPrayerElapsed = TimeSpan.FromMinutes(5),
+        };
+
+        var activeTimeMode = Assert.Single(TaskbarReadouts.Build(
+            baseSnap,
+            new TaskbarOptions { Prayer = true, PrayerDisplay = TaskbarPrayerDisplay.Time, PrayerElapsedMinutes = 15 }));
+        Assert.Equal(("Asr", "+5m"), (activeTimeMode.Top, activeTimeMode.Bottom));
+        Assert.False(activeTimeMode.BottomWarn);
+        Assert.Contains("Current prayer: Asr (14:27, +5m)", activeTimeMode.Tooltip);
+        Assert.Contains("Next prayer: Maghrib at 16:48", activeTimeMode.Tooltip);
+
+        var activeBothMode = Assert.Single(TaskbarReadouts.Build(
+            baseSnap with { CurrentPrayerElapsed = TimeSpan.FromSeconds(15) },
+            new TaskbarOptions { Prayer = true, PrayerDisplay = TaskbarPrayerDisplay.TimeAndRemaining, PrayerElapsedMinutes = 15 }));
+        Assert.Equal(("Asr 14:27", "Now"), (activeBothMode.Top, activeBothMode.Bottom));
+
+        var expired = Assert.Single(TaskbarReadouts.Build(
+            baseSnap with { CurrentPrayerElapsed = TimeSpan.FromMinutes(16) },
+            new TaskbarOptions { Prayer = true, PrayerDisplay = TaskbarPrayerDisplay.Time, PrayerElapsedMinutes = 15 }));
+        Assert.Equal(("Maghrib", "16:48"), (expired.Top, expired.Bottom));
+
+        var disabled = Assert.Single(TaskbarReadouts.Build(
+            baseSnap,
+            new TaskbarOptions { Prayer = true, PrayerDisplay = TaskbarPrayerDisplay.Time, PrayerElapsedMinutes = 0 }));
+        Assert.Equal(("Maghrib", "16:48"), (disabled.Top, disabled.Bottom));
+
+        // If approaching window and elapsed window overlap, the upcoming countdown wins.
+        var approachWins = Assert.Single(TaskbarReadouts.Build(
+            baseSnap with { PrayerRemaining = TimeSpan.FromMinutes(7) },
+            new TaskbarOptions { Prayer = true, PrayerDisplay = TaskbarPrayerDisplay.Time, PrayerWarnMinutes = 10, PrayerElapsedMinutes = 15 }));
+        Assert.Equal(("Maghrib", "in 7m"), (approachWins.Top, approachWins.Bottom));
+        Assert.True(approachWins.BottomWarn);
     }
 
     [Fact]
@@ -555,7 +616,7 @@ public class TaskbarReadoutsTests
             "TaskbarFontFamily", "TaskbarFontSize", "TaskbarFontBold", "TaskbarBlockSpacing", "TaskbarStableWidth",
             "TaskbarLabelColor", "TaskbarValueColor", "TaskbarNetworkArrows", "TaskbarNetworkUnit",
             "TaskbarSwapNetworkLines", "TaskbarCompactLabels", "TaskbarRefreshSeconds", "TaskbarBatteryLayout",
-            "TaskbarPrayerDisplay", "TaskbarWeatherIcon",
+            "TaskbarPrayerDisplay", "TaskbarPrayerApproachMinutes", "TaskbarPrayerElapsedMinutes", "TaskbarWeatherIcon",
             "ShowDeviceBatteriesOnTaskbar", "ShowDeviceBatteryBackground",
         })
             Assert.Contains(key, SettingsTransfer.LocalOnlyKeys);

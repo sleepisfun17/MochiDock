@@ -44,6 +44,8 @@ public static class TaskbarStyle
     public const double MaxFontSize = 28;
     public const double MaxAutoFontSize = 24;
     public const double MinContrastRatio = 4.5;
+    public const int MinPrayerWindowMinutes = 0;
+    public const int MaxPrayerWindowMinutes = 60;
 
     public static int ClampOffset(int px) => Math.Clamp(px, MinOffsetPx, MaxOffsetPx);
 
@@ -52,6 +54,8 @@ public static class TaskbarStyle
     public static int ClampBlockSpacing(int px) => px <= 0 ? 0 : Math.Clamp(px, MinBlockSpacing, MaxBlockSpacing);
 
     public static int ClampRefreshSeconds(int sec) => sec <= 1 ? 1 : (sec >= 3 ? 3 : 2);
+
+    public static int ClampPrayerWindowMinutes(int minutes) => Math.Clamp(minutes, MinPrayerWindowMinutes, MaxPrayerWindowMinutes);
 
     public static double ClampFontSize(double size) =>
         !double.IsFinite(size) || size <= 0 ? 0 : Math.Clamp(Math.Round(size, 1), MinFontSize, MaxFontSize);

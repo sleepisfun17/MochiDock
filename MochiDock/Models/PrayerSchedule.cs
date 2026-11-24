@@ -132,6 +132,16 @@ public class PrayerSchedule : INotifyPropertyChanged
     public DateTimeOffset? TomorrowFajr { get; set; }
     public DateTimeOffset? NextPrayerInstant { get; private set; }
     public string NextPrayerDayText { get; private set; } = "";
+    public PrayerTimeItem? CurrentPrayer { get; private set; }
+    public DateTimeOffset? CurrentPrayerInstant { get; private set; }
+    public TimeSpan? TimeSinceCurrentPrayer { get; private set; }
+
+    private string _currentPrayerElapsedText = "";
+    public string CurrentPrayerElapsedText
+    {
+        get => _currentPrayerElapsedText;
+        private set { if (_currentPrayerElapsedText != value) { _currentPrayerElapsedText = value; OnPropertyChanged(); } }
+    }
     public string Source { get; set; } = "";
     public IEnumerable<(string Name,DateTimeOffset At)> Instants()
     {
@@ -142,16 +152,17 @@ public class PrayerSchedule : INotifyPropertyChanged
     public void UpdateCountdown()
     {
         NowUtc=Clock();
-        if(string.IsNullOrWhiteSpace(TimeZoneId)){NextPrayerInstant=null;TimeUntilNextPrayer=TimeSpan.Zero;NextPrayer=null;return;}
+        if(string.IsNullOrWhiteSpace(TimeZoneId)){CurrentPrayer=null;CurrentPrayerInstant=null;TimeSinceCurrentPrayer=null;CurrentPrayerElapsedText="";NextPrayerInstant=null;TimeUntilNextPrayer=TimeSpan.Zero;NextPrayer=null;return;}
         var zone=TimeZoneInfo.FindSystemTimeZoneById(TimeZoneId);
         var local=TimeZoneInfo.ConvertTime(NowUtc,zone);
         PrayerTimeItem[] items=[Fajr,Dhuhr,Asr,Maghrib,Isha];
-        PrayerTimeItem? nextItem=null;
-        DateTimeOffset? nextInstant=null;
+        PrayerTimeItem? nextItem=null,currentItem=null;
+        DateTimeOffset? nextInstant=null,currentInstant=null;
         foreach(var item in items)
         {
             var instant=MochiDock.Core.PrayerTime.At(Date.Date.Add(item.Time),zone);
             item.IsPassed=instant<=NowUtc;
+            if(item.IsPassed){currentItem=item;currentInstant=instant;}
             bool isNext=nextItem==null&&instant>NowUtc;
             item.IsNext=isNext;
             if(isNext){nextItem=item;nextInstant=instant;}
@@ -163,6 +174,10 @@ public class PrayerSchedule : INotifyPropertyChanged
             nextItem=reuseSynthetic?_nextPrayer!:new PrayerTimeItem{Name="Fajr",Time=tomorrowTime,IsNext=true};
             nextInstant=TomorrowFajr;
         }
+        TimeSpan? sinceCurrent=currentInstant.HasValue?NowUtc-currentInstant.Value:null;
+        CurrentPrayer=currentItem;
+        CurrentPrayerInstant=currentInstant;
+        TimeSinceCurrentPrayer=sinceCurrent;
         NextPrayerInstant=nextInstant;
         TimeUntilNextPrayer=nextInstant.HasValue?nextInstant.Value-NowUtc:TimeSpan.Zero;
         var remaining=TimeUntilNextPrayer;
@@ -173,6 +188,7 @@ public class PrayerSchedule : INotifyPropertyChanged
         NextPrayer=nextItem;
         CountdownText=$"{(int)remaining.TotalHours}h {remaining.Minutes}m";
         CountdownFullText=$"{(int)remaining.TotalHours:00}:{remaining.Minutes:00}:{remaining.Seconds:00}";
+        CurrentPrayerElapsedText=sinceCurrent is { } el?MochiDock.Core.TaskbarReadouts.FormatPrayerElapsed(el):"";
         OnPropertyChanged(nameof(NowUtc));OnPropertyChanged(nameof(NextPrayerDayText));OnPropertyChanged(nameof(Source));
         var moon = Moon;
         if (!string.Equals(moon.Summary, _lastMoonSummary, StringComparison.Ordinal) || moon.IlluminationPercent != _lastMoonPercent)

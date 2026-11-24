@@ -1,4 +1,4 @@
-﻿param([string]$Configuration='Release')
+param([string]$Configuration='Release')
 # Renders the taskbar readout (TaskbarReadoutRenderer, the same drawing the widget uses) without a taskbar and without starting MochiDock:
 # sample blocks at 100/125/150/200% on light and dark taskbars, for 40 px (Windows 10), 48 px (Windows 11), 64 px (Windhawk tall), and the
 # small-taskbar one-line fallback. Also tests item subsets, custom block order, all network arrow styles (including colour emoji pictures),
@@ -337,7 +337,17 @@ if(-not $prayerSoon[0].BottomWarn -or $prayerSoon[0].Bottom -ne 'in 8m'){throw '
 $rPrayerSoon = Invoke-Render $prayerSoon 96 $true 48 $false $stableStyle
 $null = Assert-LayoutValid $rPrayerSoon $prayerSoon 'prayer 10m warning remaining' 1 $false
 Save-Png $rPrayerSoon $true (Join-Path $output 'readout-prayer-soon-dark-100.png')
-$checks += 2
+
+$prayerTimeApproach = Build-Blocks $prayerSoonSnap (New-Rec $optType @{Prayer=$true;PrayerDisplay=([Enum]::Parse($prayerDisplayType,'Time'));PrayerWarnMinutes=10})
+if(-not $prayerTimeApproach[0].BottomWarn -or $prayerTimeApproach[0].Bottom -ne 'in 8m'){throw 'Time mode approaching override mismatch'}
+
+$prayerCurrentSnap = New-Rec $snapType @{PrayerName='Maghrib';PrayerTime='16:48';PrayerRemaining=[Nullable[TimeSpan]][TimeSpan]::FromMinutes(136);CurrentPrayerName='Asr';CurrentPrayerTime='14:27';CurrentPrayerElapsed=[Nullable[TimeSpan]][TimeSpan]::FromMinutes(5)}
+$prayerCurrent = Build-Blocks $prayerCurrentSnap (New-Rec $optType @{Prayer=$true;PrayerDisplay=([Enum]::Parse($prayerDisplayType,'Time'));PrayerElapsedMinutes=15})
+if($prayerCurrent[0].Top -ne 'Asr' -or $prayerCurrent[0].Bottom -ne '+5m'){throw "Active prayer elapsed mismatch: $($prayerCurrent[0].Top) / $($prayerCurrent[0].Bottom)"}
+$rPrayerCurrent = Invoke-Render $prayerCurrent 96 $true 48 $false $stableStyle
+$null = Assert-LayoutValid $rPrayerCurrent $prayerCurrent 'prayer active Asr +5m' 1 $false
+Save-Png $rPrayerCurrent $true (Join-Path $output 'readout-prayer-current-dark-100.png')
+$checks += 4
 
 # ---- weather Celsius, tight spacing, and colour emoji vs monochrome icon -----------------------------------------------------------------
 $rainSnap = New-Rec $snapType @{WeatherTempC=[Nullable[double]]13;WindMetersPerSecond=[Nullable[double]]4;WeatherGlyph='🌦️';WeatherCondition='Drizzle'}
