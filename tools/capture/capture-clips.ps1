@@ -4,12 +4,17 @@ param([Parameter(Mandatory)][ValidateSet('hover', 'tour', 'theme', 'mascot')][st
 # Records a short clip of the running dock with ffmpeg gdigrab while driving it, then converts it to a GIF. Needs an ELEVATED shell and
 # the backdrop window. The region (660 x 395 around the dock) is fixed so the GIF does not jump between cards.
 . (Join-Path $PSScriptRoot 'capture-lib.ps1')
-$ffmpeg = 'C:\Program Files\FFmpeg\bin\ffmpeg.exe'
+# ffmpeg from PATH (WinGet installs it there), else the classic install folder.
+$ffmpeg = (Get-Command ffmpeg -ErrorAction SilentlyContinue | Select-Object -First 1).Source
+if (-not $ffmpeg -and (Test-Path 'C:\Program Files\FFmpeg\bin\ffmpeg.exe')) { $ffmpeg = 'C:\Program Files\FFmpeg\bin\ffmpeg.exe' }
+if (-not $ffmpeg) { throw 'ffmpeg not found: install it (winget install Gyan.FFmpeg) or put ffmpeg.exe on PATH.' }
 $null = New-Item -ItemType Directory -Force $RawDir, $OutDir
 $OutDir = (Resolve-Path $OutDir).Path
 Raise-Dock
 $dock = Get-MainDock
 $x =$dock.L + 10; $y = 0; $w = 660; $h = 396   # even dimensions: libx264 refuses odd ones
+
+$quickStatusBlur = '30:70:300:20'   # the "WhatsApp (Server): ... Mail: ..." line under "MochiDock Preferences"
 
 function Start-Recording([string]$name, [int]$seconds) {
   $mp4 = Join-Path $RawDir "$name.mp4"
@@ -20,9 +25,16 @@ function Start-Recording([string]$name, [int]$seconds) {
   Start-Sleep -Milliseconds 900    # let ffmpeg open the grabber before the first move
   return $p
 }
-function Convert-ToGif([string]$name, [int]$fps = 12) {
+# $blur = 'x:y:w:h' in clip pixels: that region is blurred before the GIF is made (used to hide the integration status line in quick settings,
+# which names the user's WhatsApp server and accounts).
+function Convert-ToGif([string]$name, [int]$fps = 12, [string]$blur = '') {
   $mp4 = Join-Path $RawDir "$name.mp4"; $gif = Join-Path $OutDir "$name.gif"
-  $filter = "fps=$fps,scale=${w}:-1:flags=lanczos,split[s0][s1];[s0]palettegen=stats_mode=diff[p];[s1][p]paletteuse=dither=bayer:bayer_scale=5:diff_mode=rectangle"
+  $pre = ''
+  if ($blur) {
+    $bx, $by, $bw, $bh = $blur -split ':'
+    $pre = "split[a][b];[b]crop=${bw}:${bh}:${bx}:${by},boxblur=5:4:2:2[bl];[a][bl]overlay=${bx}:${by},"
+  }
+  $filter = "${pre}fps=$fps,scale=${w}:-1:flags=lanczos,split[s0][s1];[s0]palettegen=stats_mode=diff[p];[s1][p]paletteuse=dither=bayer:bayer_scale=5:diff_mode=rectangle"
   & $ffmpeg -y -loglevel error -i $mp4 -vf $filter -loop 0 $gif
   '{0}: {1:N1} MB' -f $gif, ((Get-Item $gif).Length / 1MB)
 }
@@ -58,7 +70,7 @@ switch ($Clip) {
     $p = Start-Recording 'theme-switch' 12
     Start-Sleep -Milliseconds 800
     foreach ($key in 'matcha', 'kuro-night', 'default') { Set-Theme $key; Move-Mouse ($dock.L + 340) 3 10 }
-    $p.WaitForExit(); Convert-ToGif 'theme-switch'
+    $p.WaitForExit(); Convert-ToGif 'theme-switch' 12 $quickStatusBlur
     Restore-Look $before
   }
   'mascot' {
@@ -69,7 +81,7 @@ switch ($Clip) {
     $p = Start-Recording 'mascot-switch' 11
     Start-Sleep -Milliseconds 800
     foreach ($key in 'kuro', 'shiro', 'mochi') { Set-Mascot $key 2600; Move-Mouse ($dock.L + 340) 3 10 }
-    $p.WaitForExit(); Convert-ToGif 'mascot-switch'
+    $p.WaitForExit(); Convert-ToGif 'mascot-switch' 12 $quickStatusBlur
     Restore-Look $before
   }
 }
