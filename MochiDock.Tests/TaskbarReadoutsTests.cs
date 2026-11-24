@@ -65,7 +65,8 @@ public class TaskbarReadoutsTests
         Assert.Equal(("MEM 49%", "DISK 0%"), (blocks[1].Top, blocks[1].Bottom));
         Assert.Equal(("↑ 51 KB/s", "↓ 18 KB/s"), (blocks[2].Top, blocks[2].Bottom));
         Assert.Equal(("Maghrib", "16:40"), (blocks[3].Top, blocks[3].Bottom));
-        Assert.Equal(("☁ 13°", "↘ 8 m/s"), (blocks[4].Top, blocks[4].Bottom));
+        Assert.Equal(("13°C", "↘ 8 m/s"), (blocks[4].Top, blocks[4].Bottom));
+        Assert.Equal("2601", blocks[4].TopEmojiKey);
         Assert.Equal(("64%", "82%"), (blocks[5].Top, blocks[5].Bottom));
     }
 
@@ -230,7 +231,7 @@ public class TaskbarReadoutsTests
     public void WeatherWithoutAGlyphOrWindStillReads()
     {
         var block = TaskbarReadouts.Build(new TaskbarSnapshot { WeatherTempC = -2 }, new TaskbarOptions { WeatherTemp = true, WeatherWind = true })[0];
-        Assert.Equal("-2°", block.Top);
+        Assert.Equal("-2°C", block.Top);
         Assert.False(block.HasBottom);
     }
 
@@ -513,6 +514,32 @@ public class TaskbarReadoutsTests
         Assert.False(noWarn11.BottomWarn);
     }
 
+    [Fact]
+    public void WeatherShowsCelsiusAndSupportsEmojiOrMonochromeIcon()
+    {
+        Assert.Equal(TaskbarWeatherIconStyle.Emoji, TaskbarStyle.ParseWeatherIconStyle(null));
+        Assert.Equal(TaskbarWeatherIconStyle.Monochrome, TaskbarStyle.ParseWeatherIconStyle("Monochrome"));
+        Assert.Equal("Emoji", TaskbarStyle.FormatWeatherIconStyle(TaskbarWeatherIconStyle.Emoji));
+        Assert.Equal("Monochrome", TaskbarStyle.FormatWeatherIconStyle(TaskbarWeatherIconStyle.Monochrome));
+
+        Assert.Equal("2600", TaskbarReadouts.WeatherEmojiKey("☀️"));
+        Assert.Equal("2600", TaskbarReadouts.WeatherEmojiKey("☀"));
+        Assert.Equal("1f327", TaskbarReadouts.WeatherEmojiKey("🌧️"));
+        Assert.Equal("26c5", TaskbarReadouts.WeatherEmojiKey("⛅"));
+
+        var snap = new TaskbarSnapshot { WeatherTempC = 13, WindMetersPerSecond = 4, WeatherGlyph = "🌧️", WeatherCondition = "Rain" };
+        var emojiBlock = Assert.Single(TaskbarReadouts.Build(snap, new TaskbarOptions { WeatherTemp = true, WeatherWind = true, WeatherIconStyle = TaskbarWeatherIconStyle.Emoji }));
+        Assert.Equal(("13°C", "↘ 4 m/s"), (emojiBlock.Top, emojiBlock.Bottom));
+        Assert.Equal("1f327", emojiBlock.TopEmojiKey);
+        Assert.Equal("", emojiBlock.TopLabel);
+        Assert.Contains("13°C", emojiBlock.Tooltip);
+
+        var monoBlock = Assert.Single(TaskbarReadouts.Build(snap, new TaskbarOptions { WeatherTemp = true, WeatherWind = true, WeatherIconStyle = TaskbarWeatherIconStyle.Monochrome }));
+        Assert.Equal(("🌧️ 13°C", "↘ 4 m/s"), (monoBlock.Top, monoBlock.Bottom));
+        Assert.Equal("", monoBlock.TopEmojiKey);
+        Assert.Equal("🌧️ ", monoBlock.TopLabel);
+    }
+
     // ---- settings, migration & local-only keys ----
 
     [Fact]
@@ -528,7 +555,7 @@ public class TaskbarReadoutsTests
             "TaskbarFontFamily", "TaskbarFontSize", "TaskbarFontBold", "TaskbarBlockSpacing", "TaskbarStableWidth",
             "TaskbarLabelColor", "TaskbarValueColor", "TaskbarNetworkArrows", "TaskbarNetworkUnit",
             "TaskbarSwapNetworkLines", "TaskbarCompactLabels", "TaskbarRefreshSeconds", "TaskbarBatteryLayout",
-            "TaskbarPrayerDisplay",
+            "TaskbarPrayerDisplay", "TaskbarWeatherIcon",
             "ShowDeviceBatteriesOnTaskbar", "ShowDeviceBatteryBackground",
         })
             Assert.Contains(key, SettingsTransfer.LocalOnlyKeys);

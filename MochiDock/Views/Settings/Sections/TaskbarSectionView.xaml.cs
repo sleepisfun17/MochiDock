@@ -44,7 +44,7 @@ public partial class TaskbarSectionView : SettingsSectionBase
         PrayerRemaining = TimeSpan.FromMinutes(85),
         WeatherTempC = 18,
         WindMetersPerSecond = 6,
-        WeatherGlyph = "\u2601",
+        WeatherGlyph = "⛅",
         WeatherCondition = "Cloudy",
         Batteries = new[]
         {
@@ -138,6 +138,10 @@ public partial class TaskbarSectionView : SettingsSectionBase
         var unit = TaskbarStyle.ParseNetworkUnit(vm.TaskbarNetworkUnit);
         UnitBytesRadio.IsChecked = unit == TaskbarNetworkUnit.Bytes;
         UnitBitsRadio.IsChecked = unit == TaskbarNetworkUnit.Bits;
+
+        var weatherIcon = TaskbarStyle.ParseWeatherIconStyle(vm.TaskbarWeatherIcon);
+        WeatherIconEmojiRadio.IsChecked = weatherIcon == TaskbarWeatherIconStyle.Emoji;
+        WeatherIconMonoRadio.IsChecked = weatherIcon == TaskbarWeatherIconStyle.Monochrome;
 
         if (!LabelColorBox.IsKeyboardFocusWithin)
         {
@@ -628,6 +632,12 @@ public partial class TaskbarSectionView : SettingsSectionBase
     {
         if (Loading || ViewModel == null) return;
         ViewModel.TaskbarNetworkUnit = UnitBitsRadio.IsChecked == true ? "Bits" : "Bytes";
+    }
+
+    private void WeatherIcon_Checked(object sender, RoutedEventArgs e)
+    {
+        if (Loading || ViewModel == null) return;
+        ViewModel.TaskbarWeatherIcon = WeatherIconMonoRadio.IsChecked == true ? "Monochrome" : "Emoji";
     }
 
     private void LabelColor_LostFocus(object sender, RoutedEventArgs e) =>

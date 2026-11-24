@@ -125,7 +125,10 @@ public static class TaskbarReadoutRenderer
             BitmapSource? emoji = emojiKey.Length > 0 ? EmojiImages.Get(emojiKey) : null;
             string effectiveLabel = labelText;
             if (emojiKey.Length > 0 && emoji is null)
-                effectiveLabel = (emojiKey == TaskbarReadouts.UploadEmojiKey ? "▲ " : "▼ ") + labelText;
+            {
+                if (emojiKey == TaskbarReadouts.UploadEmojiKey) effectiveLabel = "▲ " + labelText;
+                else if (emojiKey == TaskbarReadouts.DownloadEmojiKey) effectiveLabel = "▼ " + labelText;
+            }
 
             var lColor = Shade(warn ? warnBase : labelBase, dim);
             var vColor = Shade(warn ? warnBase : valueBase, dim);
@@ -148,8 +151,8 @@ public static class TaskbarReadoutRenderer
 
         double ComputeStableMinWidth(TaskbarBlock block, List<Line> lines)
         {
-            // Device batteries stay tight (icon + optional bolt + 4 DIP gap + percentage), never padded or right-aligned.
-            if (!stableWidth || lines.Count == 0 || block.Kind == TaskbarBlockKind.Batteries) return 0;
+            // Device batteries and weather stay tightly spaced (no column-width padding or right-alignment).
+            if (!stableWidth || lines.Count == 0 || block.Kind == TaskbarBlockKind.Batteries || block.Kind == TaskbarBlockKind.Weather) return 0;
 
             double LineProtoWidth(string rawLine, string labelText, string emojiKey)
             {
@@ -157,7 +160,8 @@ public static class TaskbarReadoutRenderer
                 if (emojiKey.Length > 0)
                 {
                     if (EmojiImages.Get(emojiKey) is not null) prefix += emojiSize + emojiGap;
-                    else prefix += MeasureWidth((emojiKey == TaskbarReadouts.UploadEmojiKey ? "▲ " : "▼ ") + labelText);
+                    else if (emojiKey == TaskbarReadouts.UploadEmojiKey || emojiKey == TaskbarReadouts.DownloadEmojiKey)
+                        prefix += MeasureWidth((emojiKey == TaskbarReadouts.UploadEmojiKey ? "▲ " : "▼ ") + labelText);
                 }
                 else if (labelText.Length > 0)
                 {
@@ -180,10 +184,6 @@ public static class TaskbarReadoutRenderer
                         break;
                     case TaskbarBlockKind.Network:
                         protoVal = rawLine.EndsWith("b/s", StringComparison.Ordinal) ? "999.9 Mb/s" : "999.9 MB/s";
-                        break;
-                    case TaskbarBlockKind.Weather:
-                        if (rawLine.Contains('°')) protoVal = "-25°";
-                        else if (rawLine.Contains("m/s", StringComparison.Ordinal)) protoVal = "99 m/s";
                         break;
                 }
                 return protoVal.Length == 0 ? 0 : prefix + MeasureWidth(protoVal);
@@ -265,7 +265,7 @@ public static class TaskbarReadoutRenderer
                 var (block, lines, blockWidth) = layout[i];
                 double total = lines.Sum(l => l.Height);
                 double y = (heightDip - total) / 2;
-                bool alignValueRight = stableWidth && block.Kind != TaskbarBlockKind.Batteries && block.Kind != TaskbarBlockKind.Prayer;
+                bool alignValueRight = stableWidth && block.Kind != TaskbarBlockKind.Batteries && block.Kind != TaskbarBlockKind.Prayer && block.Kind != TaskbarBlockKind.Weather;
                 foreach (var line in lines)
                 {
                     double sx = x;

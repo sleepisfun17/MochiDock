@@ -307,6 +307,21 @@ public partial class MainViewModel
         }
     }
 
+    public string TaskbarWeatherIcon
+    {
+        get => TaskbarStyle.FormatWeatherIconStyle(TaskbarStyle.ParseWeatherIconStyle(_settings.TaskbarWeatherIcon));
+        set
+        {
+            string normalized = TaskbarStyle.FormatWeatherIconStyle(TaskbarStyle.ParseWeatherIconStyle(value));
+            if (string.Equals(_settings.TaskbarWeatherIcon, normalized, StringComparison.Ordinal)) return;
+            _settings.TaskbarWeatherIcon = normalized;
+            SettingsService.Save(_settings);
+            OnPropertyChanged(nameof(TaskbarWeatherIcon));
+            RefreshTaskbarBlocks();
+            TaskbarStyleChanged?.Invoke();
+        }
+    }
+
     public TaskbarPlacementMode CurrentTaskbarPlacement => TaskbarStyle.ParsePlacement(_settings.TaskbarPlacement);
     public int EffectiveTaskbarOffsetPx => TaskbarStyle.ClampOffset(_settings.TaskbarOffsetPx);
     public int EffectiveTaskbarLeftOffsetPx => TaskbarStyle.ClampOffset(_settings.TaskbarLeftOffsetPx);
@@ -375,6 +390,7 @@ public partial class MainViewModel
         CompactLabels = _settings.TaskbarCompactLabels,
         BatteryLayout = TaskbarStyle.ParseBatteryLayout(_settings.TaskbarBatteryLayout),
         PrayerDisplay = TaskbarStyle.ParsePrayerDisplay(_settings.TaskbarPrayerDisplay),
+        WeatherIconStyle = TaskbarStyle.ParseWeatherIconStyle(_settings.TaskbarWeatherIcon),
         PrayerWarnMinutes = 10,
         CpuAlert = _settings.CpuAlertThreshold,
         GpuAlert = _settings.GpuAlertThreshold,

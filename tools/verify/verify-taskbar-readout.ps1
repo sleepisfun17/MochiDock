@@ -37,6 +37,7 @@ $arrowType=$core.GetType('MochiDock.Core.TaskbarArrowStyle');$styleType=$core.Ge
 $zoneType=$core.GetType('MochiDock.Core.TaskbarZone');$unitType=$core.GetType('MochiDock.Core.TaskbarNetworkUnit')
 $batLayoutType=$core.GetType('MochiDock.Core.TaskbarBatteryLayout')
 $prayerDisplayType=$core.GetType('MochiDock.Core.TaskbarPrayerDisplay')
+$weatherIconType=$core.GetType('MochiDock.Core.TaskbarWeatherIconStyle')
 $renderer=$assembly.GetType('MochiDock.Services.TaskbarReadoutRenderer')
 $renderMethod=$renderer.GetMethod('Render')
 
@@ -336,6 +337,24 @@ if(-not $prayerSoon[0].BottomWarn -or $prayerSoon[0].Bottom -ne 'in 8m'){throw '
 $rPrayerSoon = Invoke-Render $prayerSoon 96 $true 48 $false $stableStyle
 $null = Assert-LayoutValid $rPrayerSoon $prayerSoon 'prayer 10m warning remaining' 1 $false
 Save-Png $rPrayerSoon $true (Join-Path $output 'readout-prayer-soon-dark-100.png')
+$checks += 2
+
+# ---- weather Celsius, tight spacing, and colour emoji vs monochrome icon -----------------------------------------------------------------
+$rainSnap = New-Rec $snapType @{WeatherTempC=[Nullable[double]]13;WindMetersPerSecond=[Nullable[double]]4;WeatherGlyph='🌦️';WeatherCondition='Drizzle'}
+$wEmoji = Build-Blocks $rainSnap (New-Rec $optType @{WeatherTemp=$true;WeatherWind=$true;WeatherIconStyle=([Enum]::Parse($weatherIconType,'Emoji'))})
+if($wEmoji[0].Top -ne '13°C' -or $wEmoji[0].TopEmojiKey -ne '1f326'){throw "Weather emoji mismatch: $($wEmoji[0].Top) / $($wEmoji[0].TopEmojiKey)"}
+$rWEmoji = Invoke-Render $wEmoji 96 $true 48 $false $stableStyle
+$null = Assert-LayoutValid $rWEmoji $wEmoji 'weather colour emoji 13C' 1 $false
+$wColor = 0; $wStride = $rWEmoji.Width * 4; $wPx = $rWEmoji.Pixels
+for($y=0;$y -lt $rWEmoji.Height;$y++){for($x=0;$x -lt $rWEmoji.Width;$x++){$o=$y*$wStride+$x*4;if($wPx[$o+3] -ge 120 -and ([math]::Abs($wPx[$o+2]-$wPx[$o+1]) -gt 20 -or [math]::Abs($wPx[$o+1]-$wPx[$o]) -gt 20)){$wColor++}}}
+if($wColor -eq 0){throw 'Weather colour emoji drew no coloured pixels'}
+Save-Png $rWEmoji $true (Join-Path $output 'readout-weather-emoji-dark-100.png')
+
+$wMono = Build-Blocks $rainSnap (New-Rec $optType @{WeatherTemp=$true;WeatherWind=$true;WeatherIconStyle=([Enum]::Parse($weatherIconType,'Monochrome'))})
+if($wMono[0].Top -ne '🌦️ 13°C' -or $wMono[0].TopEmojiKey -ne ''){throw 'Weather monochrome fallback mismatch'}
+$rWMono = Invoke-Render $wMono 96 $true 48 $false $stableStyle
+$null = Assert-LayoutValid $rWMono $wMono 'weather monochrome 13C' 1 $false
+Save-Png $rWMono $true (Join-Path $output 'readout-weather-mono-dark-100.png')
 $checks += 2
 
 $measure|Set-Content (Join-Path $output 'measurements.txt')

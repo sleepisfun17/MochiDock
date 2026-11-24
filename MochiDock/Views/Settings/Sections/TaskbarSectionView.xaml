@@ -102,6 +102,14 @@
         <s:SettingRow Label="Next prayer display" Description="Show the scheduled time, remaining countdown, or both. Highlights in the last 10 minutes.">
             <ComboBox x:Name="PrayerDisplayCombo" Style="{StaticResource ModernDarkComboBox}" Width="260" SelectionChanged="PrayerDisplay_Changed" AutomationProperties.Name="Next prayer taskbar display"/>
         </s:SettingRow>
+        <s:SettingRow Label="Weather icon" Description="Draw the taskbar weather icon as a colour emoji or monochrome taskbar ink.">
+            <StackPanel Orientation="Horizontal">
+                <RadioButton x:Name="WeatherIconEmojiRadio" Style="{StaticResource ModernDarkRadioButton}" GroupName="TaskbarWeatherIcon" Checked="WeatherIcon_Checked" Margin="0,0,14,0">
+                    <TextBlock controls:Emoji.Text="⛅ Colour emoji" VerticalAlignment="Center"/>
+                </RadioButton>
+                <RadioButton x:Name="WeatherIconMonoRadio" Style="{StaticResource ModernDarkRadioButton}" Content="☁ Monochrome" GroupName="TaskbarWeatherIcon" Checked="WeatherIcon_Checked"/>
+            </StackPanel>
+        </s:SettingRow>
         <s:SettingRow Label="Network arrows" Description="Arrow style used for upload and download rates.">
             <StackPanel Orientation="Horizontal">
                 <RadioButton x:Name="ArrowClassicRadio" Style="{StaticResource ModernDarkRadioButton}" Content="↑ ↓" GroupName="TaskbarArrows" Checked="Arrows_Checked" Margin="0,0,14,0"/>

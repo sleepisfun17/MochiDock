@@ -14,6 +14,8 @@ public enum TaskbarBatteryLayout { Auto, Horizontal, Stacked }
 
 public enum TaskbarPrayerDisplay { TimeAndRemaining, Remaining, Time }
 
+public enum TaskbarWeatherIconStyle { Emoji, Monochrome }
+
 /// <summary>Visual styling options for the taskbar readout (empty strings / 0 mean automatic defaults).</summary>
 public sealed record TaskbarAppearance
 {
@@ -117,6 +119,14 @@ public static class TaskbarStyle
         TaskbarPrayerDisplay.Time => "Time",
         _ => "TimeAndRemaining",
     };
+
+    public static TaskbarWeatherIconStyle ParseWeatherIconStyle(string? value) =>
+        string.Equals(value?.Trim(), "Monochrome", StringComparison.OrdinalIgnoreCase)
+            ? TaskbarWeatherIconStyle.Monochrome
+            : TaskbarWeatherIconStyle.Emoji;
+
+    public static string FormatWeatherIconStyle(TaskbarWeatherIconStyle style) =>
+        style == TaskbarWeatherIconStyle.Monochrome ? "Monochrome" : "Emoji";
 
     /// <summary>
     /// Computes the rendered DIP font size from the live taskbar height.

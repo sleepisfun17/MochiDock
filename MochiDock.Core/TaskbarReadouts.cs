@@ -81,6 +81,7 @@ public sealed record TaskbarOptions
     public bool CompactLabels { get; init; }
     public TaskbarBatteryLayout BatteryLayout { get; init; } = TaskbarBatteryLayout.Auto;
     public TaskbarPrayerDisplay PrayerDisplay { get; init; } = TaskbarPrayerDisplay.TimeAndRemaining;
+    public TaskbarWeatherIconStyle WeatherIconStyle { get; init; } = TaskbarWeatherIconStyle.Emoji;
     public int PrayerWarnMinutes { get; init; } = 10;
 
     /// <summary>CPU / GPU load at or over this is a warning (the existing alert settings).</summary>
@@ -243,6 +244,20 @@ public static class TaskbarReadouts
     /// <summary>"45°", or "~45°" for an estimate.</summary>
     public static string Temperature(double celsius, bool estimate = false) =>
         (estimate ? "~" : "") + Math.Round(celsius, MidpointRounding.AwayFromZero).ToString("0", CultureInfo.InvariantCulture) + "°";
+
+    /// <summary>"13°C" for weather temperature.</summary>
+    public static string WeatherTemperature(double celsius) => Temperature(celsius) + "C";
+
+    /// <summary>Extracts the Twemoji key for a weather symbol (accepting bare Unicode symbols like "☀" by retrying with U+FE0F).</summary>
+    public static string WeatherEmojiKey(string? glyph)
+    {
+        if (string.IsNullOrWhiteSpace(glyph)) return "";
+        foreach (var run in EmojiText.Split(glyph))
+            if (run.IsEmoji && !string.IsNullOrEmpty(run.Key)) return run.Key;
+        foreach (var run in EmojiText.Split(glyph.Trim() + "\uFE0F"))
+            if (run.IsEmoji && !string.IsNullOrEmpty(run.Key)) return run.Key;
+        return "";
+    }
 
     /// <summary>"51 KB/s" or "1.2 MB/s": the same units as the Stats card (<see cref="RateScale.Format"/>).</summary>
     public static string Rate(double bytesPerSecond) => RateScale.Format(bytesPerSecond);
@@ -468,11 +483,21 @@ public static class TaskbarReadouts
         double? wind = o.WeatherWind ? s.WindMetersPerSecond : null;
         if (temp is null && wind is null) return null;
 
-        string top = "", bottom = "", topLabel = "", bottomLabel = "";
+        string top = "", bottom = "", topLabel = "", bottomLabel = "", topEmoji = "";
         if (temp is { } t)
         {
-            topLabel = s.WeatherGlyph.Length > 0 ? s.WeatherGlyph + " " : "";
-            top = topLabel + Temperature(t);
+            string tempText = WeatherTemperature(t);
+            string emojiKey = o.WeatherIconStyle == TaskbarWeatherIconStyle.Emoji ? WeatherEmojiKey(s.WeatherGlyph) : "";
+            if (emojiKey.Length > 0)
+            {
+                topEmoji = emojiKey;
+                top = tempText;
+            }
+            else
+            {
+                topLabel = s.WeatherGlyph.Length > 0 ? s.WeatherGlyph + " " : "";
+                top = topLabel + tempText;
+            }
         }
         if (wind is { } w)
         {
@@ -484,7 +509,7 @@ public static class TaskbarReadouts
 
         var tipParts = new List<string>(2);
         if (temp is { } tt)
-            tipParts.Add((s.WeatherCondition.Length > 0 ? s.WeatherCondition + ", " : "") + Temperature(tt));
+            tipParts.Add((s.WeatherCondition.Length > 0 ? s.WeatherCondition + ", " : "") + WeatherTemperature(tt));
         else if (s.WeatherCondition.Length > 0)
             tipParts.Add(s.WeatherCondition);
         if (wind is { } ww)
@@ -494,6 +519,7 @@ public static class TaskbarReadouts
         {
             TopLabel = topLabel,
             BottomLabel = bottomLabel,
+            TopEmojiKey = topEmoji,
         };
     }
 
