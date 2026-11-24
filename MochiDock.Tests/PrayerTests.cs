@@ -102,5 +102,49 @@ public class PrayerTests : IDisposable
         var loaded=AtomicJsonStore.Load(path,()=>new Dictionary<string,string>()).Value;
         Assert.Equal(expected,loaded["PrayerSoundMode"]);Assert.Equal("legacy.wav",loaded["PrayerAudioWavPath"]);
     }
+    [Fact] public void UpdateCountdownDoesNotEmitTransientNullOrEmptyInstantForNextPrayer()
+    {
+        var zone=TimeZoneInfo.FindSystemTimeZoneById("Asia/Tokyo");
+        var now=new DateTimeOffset(2026,11,7,15,0,0,TimeSpan.FromHours(9));
+        var schedule=new MochiDock.Models.PrayerSchedule
+        {
+            Date=new DateTime(2026,11,7),
+            TimeZoneId="Asia/Tokyo",
+            Clock=()=>now,
+            TomorrowFajr=PrayerTime.At(new DateTime(2026,11,8,4,52,0),zone),
+        };
+        schedule.Fajr.Time=new TimeSpan(4,50,0);
+        schedule.Sunrise.Time=new TimeSpan(6,17,0);
+        schedule.Dhuhr.Time=new TimeSpan(11,33,0);
+        schedule.Asr.Time=new TimeSpan(14,27,0);
+        schedule.Maghrib.Time=new TimeSpan(16,48,0);
+        schedule.Isha.Time=new TimeSpan(18,10,0);
+
+        var seen=new List<(string? Name,DateTimeOffset? Instant,TimeSpan Remaining)>();
+        schedule.PropertyChanged+=(_,e)=>
+        {
+            if(e.PropertyName==nameof(MochiDock.Models.PrayerSchedule.NextPrayer))
+                seen.Add((schedule.NextPrayer?.Name,schedule.NextPrayerInstant,schedule.TimeUntilNextPrayer));
+        };
+
+        schedule.UpdateCountdown();
+        now=now.AddSeconds(1);schedule.UpdateCountdown();
+        now=now.AddSeconds(1);schedule.UpdateCountdown();
+        Assert.Single(seen);
+        Assert.Equal("Maghrib",seen[0].Name);
+        Assert.NotNull(seen[0].Instant);
+        Assert.True(seen[0].Remaining>TimeSpan.Zero);
+
+        // After Isha (targeting TomorrowFajr), subsequent 1 s ticks reuse the item and emit zero NextPrayer changes.
+        seen.Clear();
+        now=new DateTimeOffset(2026,11,7,19,0,0,TimeSpan.FromHours(9));
+        schedule.UpdateCountdown();
+        now=now.AddSeconds(1);schedule.UpdateCountdown();
+        now=now.AddSeconds(1);schedule.UpdateCountdown();
+        Assert.Single(seen);
+        Assert.Equal("Fajr",seen[0].Name);
+        Assert.Equal(schedule.TomorrowFajr,seen[0].Instant);
+        Assert.True(seen[0].Remaining>TimeSpan.FromHours(9));
+    }
     public void Dispose(){if(Directory.Exists(_directory))Directory.Delete(_directory,true);}
 }

@@ -142,27 +142,37 @@ public class PrayerSchedule : INotifyPropertyChanged
     public void UpdateCountdown()
     {
         NowUtc=Clock();
-        if(string.IsNullOrWhiteSpace(TimeZoneId)){NextPrayer=null;return;}
+        if(string.IsNullOrWhiteSpace(TimeZoneId)){NextPrayerInstant=null;TimeUntilNextPrayer=TimeSpan.Zero;NextPrayer=null;return;}
         var zone=TimeZoneInfo.FindSystemTimeZoneById(TimeZoneId);
         var local=TimeZoneInfo.ConvertTime(NowUtc,zone);
         PrayerTimeItem[] items=[Fajr,Dhuhr,Asr,Maghrib,Isha];
-        NextPrayer=null;NextPrayerInstant=null;
+        PrayerTimeItem? nextItem=null;
+        DateTimeOffset? nextInstant=null;
         foreach(var item in items)
         {
             var instant=MochiDock.Core.PrayerTime.At(Date.Date.Add(item.Time),zone);
-            item.IsPassed=instant<=NowUtc;item.IsNext=false;
-            if(NextPrayer==null&&instant>NowUtc){NextPrayer=item;NextPrayerInstant=instant;item.IsNext=true;}
+            item.IsPassed=instant<=NowUtc;
+            bool isNext=nextItem==null&&instant>NowUtc;
+            item.IsNext=isNext;
+            if(isNext){nextItem=item;nextInstant=instant;}
         }
-        if(NextPrayer==null&&TomorrowFajr>NowUtc)
-        {NextPrayer=new PrayerTimeItem{Name="Fajr",Time=TimeZoneInfo.ConvertTime(TomorrowFajr.Value,zone).TimeOfDay,IsNext=true};NextPrayerInstant=TomorrowFajr;}
-        TimeUntilNextPrayer=NextPrayerInstant.HasValue?NextPrayerInstant.Value-NowUtc:TimeSpan.Zero;
+        if(nextItem==null&&TomorrowFajr>NowUtc)
+        {
+            var tomorrowTime=TimeZoneInfo.ConvertTime(TomorrowFajr.Value,zone).TimeOfDay;
+            bool reuseSynthetic=_nextPrayer!=null&&!Array.Exists(items,p=>ReferenceEquals(p,_nextPrayer))&&string.Equals(_nextPrayer.Name,"Fajr",StringComparison.Ordinal)&&_nextPrayer.Time==tomorrowTime;
+            nextItem=reuseSynthetic?_nextPrayer!:new PrayerTimeItem{Name="Fajr",Time=tomorrowTime,IsNext=true};
+            nextInstant=TomorrowFajr;
+        }
+        NextPrayerInstant=nextInstant;
+        TimeUntilNextPrayer=nextInstant.HasValue?nextInstant.Value-NowUtc:TimeSpan.Zero;
         var remaining=TimeUntilNextPrayer;
-        CountdownText=$"{(int)remaining.TotalHours}h {remaining.Minutes}m";
-        CountdownFullText=$"{(int)remaining.TotalHours:00}:{remaining.Minutes:00}:{remaining.Seconds:00}";
-        var nextDate=NextPrayerInstant.HasValue?TimeZoneInfo.ConvertTime(NextPrayerInstant.Value,zone).Date:local.Date;
+        var nextDate=nextInstant.HasValue?TimeZoneInfo.ConvertTime(nextInstant.Value,zone).Date:local.Date;
         NextPrayerDayText=nextDate==local.Date?"today":nextDate==local.Date.AddDays(1)?"tomorrow":MochiDock.Core.DateDisplay.Short(nextDate);
         IsDaytime=NowUtc>=MochiDock.Core.PrayerTime.At(Date.Date.Add(Sunrise.Time),zone)&&NowUtc<MochiDock.Core.PrayerTime.At(Date.Date.Add(Maghrib.Time),zone);
         SunProgress=MochiDock.Core.PrayerTimeline.Position(NowUtc,MochiDock.Core.PrayerTime.At(Date.Date,zone),MochiDock.Core.PrayerTime.At(Date.Date.AddDays(1),zone),items.Select(p=>MochiDock.Core.PrayerTime.At(Date.Date.Add(p.Time),zone)).ToArray()) ?? double.NaN;
+        NextPrayer=nextItem;
+        CountdownText=$"{(int)remaining.TotalHours}h {remaining.Minutes}m";
+        CountdownFullText=$"{(int)remaining.TotalHours:00}:{remaining.Minutes:00}:{remaining.Seconds:00}";
         OnPropertyChanged(nameof(NowUtc));OnPropertyChanged(nameof(NextPrayerDayText));OnPropertyChanged(nameof(Source));
         var moon = Moon;
         if (!string.Equals(moon.Summary, _lastMoonSummary, StringComparison.Ordinal) || moon.IlluminationPercent != _lastMoonPercent)
