@@ -151,7 +151,7 @@ public sealed class TaskbarReadoutWidget : IDisposable
             int verticalOffset = viewModel.EffectiveTaskbarVerticalOffsetPx;
             bool light = TaskbarUsesLightTheme();
             bool leftAligned = TaskbarIsLeftAligned();
-            var styleKey = $"{style.FontFamily}|{style.FontSize}|{style.Bold}|{style.BlockSpacing}|{style.StableWidth}|{style.LabelColorHex}|{style.ValueColorHex}";
+            var styleKey = $"{style.FontFamily}|{style.FontSize}|{style.Bold}|{style.BlockSpacing}|{style.StableWidth}|{style.BatteryLayout}|{style.LabelColorHex}|{style.ValueColorHex}";
 
             var wantedKeys = new HashSet<(IntPtr Taskbar, TaskbarZone Zone)>();
             bool shrunkPrimaryRebar = false;

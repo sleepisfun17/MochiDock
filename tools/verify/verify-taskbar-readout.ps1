@@ -35,6 +35,7 @@ $blockType=$core.GetType('MochiDock.Core.TaskbarBlock');$snapType=$core.GetType(
 $batType=$core.GetType('MochiDock.Core.TaskbarBattery');$kindType=$core.GetType('MochiDock.Core.TaskbarBlockKind');$readouts=$core.GetType('MochiDock.Core.TaskbarReadouts')
 $arrowType=$core.GetType('MochiDock.Core.TaskbarArrowStyle');$styleType=$core.GetType('MochiDock.Core.TaskbarAppearance')
 $zoneType=$core.GetType('MochiDock.Core.TaskbarZone');$unitType=$core.GetType('MochiDock.Core.TaskbarNetworkUnit')
+$batLayoutType=$core.GetType('MochiDock.Core.TaskbarBatteryLayout')
 $renderer=$assembly.GetType('MochiDock.Services.TaskbarReadoutRenderer')
 $renderMethod=$renderer.GetMethod('Render')
 
@@ -291,6 +292,34 @@ $null = Assert-LayoutValid $rStableFull (Build-Blocks $full $stableOpt) 'stable 
 $null = Assert-LayoutValid $rStableHot (Build-Blocks $hot $stableOpt) 'stable width hot' 1 $false
 if($rStableFull.Width -ne $rStableHot.Width){throw "Stable width changed between full ($($rStableFull.Width) px) and hot ($($rStableHot.Width) px)"}
 $checks++
+
+# ---- device battery layouts (single tight Auto, 2-device stacked Auto, 2-device classic Horizontal) ------------------------------------
+$oneMouse = [Array]::CreateInstance($batType, 1)
+$oneMouse[0] = [Activator]::CreateInstance($batType,@([string][char]0xE962,'Mouse','2.4G',[Nullable[int]]39,$false,$false,$now))
+$oneSnap = New-Rec $snapType @{NetUpBytesPerSecond=[Nullable[double]](9*1024);NetDownBytesPerSecond=[Nullable[double]](16.9*1024);WeatherTempC=[Nullable[double]]13;WindMetersPerSecond=[Nullable[double]]4;WeatherGlyph=[string][char]0x2601;Batteries=$oneMouse}
+$oneBatOnly = Build-Blocks $oneSnap (New-Rec $optType @{Batteries=$true})
+$rOneBat = Invoke-Render $oneBatOnly 96 $true 48 $false $stableStyle
+$null = Assert-LayoutValid $rOneBat $oneBatOnly 'single battery tight width' 1 $false
+if($rOneBat.Width -ge 68){throw "Single battery block should stay compact without gap ($($rOneBat.Width) px)"}
+$oneCombo = Build-Blocks $oneSnap (New-Rec $optType @{WeatherTemp=$true;WeatherWind=$true;Upload=$true;Download=$true;NetworkArrows=([Enum]::Parse($arrowType,'Triangle'));Batteries=$true})
+$rOneCombo = Invoke-Render $oneCombo 96 $true 48 $false $stableStyle
+$null = Assert-LayoutValid $rOneCombo $oneCombo 'weather + network + single battery' 1 $false
+Save-Png $rOneCombo $true (Join-Path $output 'readout-battery-single-dark-100.png')
+
+$twoDevs = [Array]::CreateInstance($batType, 2); $twoDevs[0] = $oneMouse[0]; $twoDevs[1] = $keys
+$twoSnap = New-Rec $snapType @{Batteries=$twoDevs}
+$twoStacked = Build-Blocks $twoSnap (New-Rec $optType @{Batteries=$true;BatteryLayout=([Enum]::Parse($batLayoutType,'Auto'))})
+$rTwoStacked = Invoke-Render $twoStacked 96 $true 48 $false $stableStyle
+$null = Assert-LayoutValid $rTwoStacked $twoStacked 'two batteries stacked' 1 $false
+Save-Png $rTwoStacked $true (Join-Path $output 'readout-battery-two-stacked-dark-100.png')
+
+$horizStyle = New-Rec $styleType @{StableWidth=$true;BatteryLayout=([Enum]::Parse($batLayoutType,'Horizontal'))}
+$twoHoriz = Build-Blocks $twoSnap (New-Rec $optType @{Batteries=$true;BatteryLayout=([Enum]::Parse($batLayoutType,'Horizontal'))})
+if($twoHoriz.Count -ne 2){throw "Horizontal battery layout expected 2 blocks, got $($twoHoriz.Count)"}
+$rTwoHoriz = Invoke-Render $twoHoriz 96 $true 48 $false $horizStyle
+$null = Assert-LayoutValid $rTwoHoriz $twoHoriz 'two batteries horizontal classic' 1 $false
+Save-Png $rTwoHoriz $true (Join-Path $output 'readout-battery-horizontal-dark-100.png')
+$checks += 3
 
 $measure|Set-Content (Join-Path $output 'measurements.txt')
 

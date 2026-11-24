@@ -277,6 +277,21 @@ public partial class MainViewModel
         }
     }
 
+    public string TaskbarBatteryLayout
+    {
+        get => TaskbarStyle.FormatBatteryLayout(TaskbarStyle.ParseBatteryLayout(_settings.TaskbarBatteryLayout));
+        set
+        {
+            string normalized = TaskbarStyle.FormatBatteryLayout(TaskbarStyle.ParseBatteryLayout(value));
+            if (string.Equals(_settings.TaskbarBatteryLayout, normalized, StringComparison.Ordinal)) return;
+            _settings.TaskbarBatteryLayout = normalized;
+            SettingsService.Save(_settings);
+            OnPropertyChanged(nameof(TaskbarBatteryLayout));
+            RefreshTaskbarBlocks();
+            TaskbarStyleChanged?.Invoke();
+        }
+    }
+
     public TaskbarPlacementMode CurrentTaskbarPlacement => TaskbarStyle.ParsePlacement(_settings.TaskbarPlacement);
     public int EffectiveTaskbarOffsetPx => TaskbarStyle.ClampOffset(_settings.TaskbarOffsetPx);
     public int EffectiveTaskbarLeftOffsetPx => TaskbarStyle.ClampOffset(_settings.TaskbarLeftOffsetPx);
@@ -291,6 +306,7 @@ public partial class MainViewModel
         ValueColorHex = TaskbarStyle.NormalizeHexColor(_settings.TaskbarValueColor),
         BlockSpacing = TaskbarStyle.ClampBlockSpacing(_settings.TaskbarBlockSpacing),
         StableWidth = _settings.TaskbarStableWidth,
+        BatteryLayout = TaskbarStyle.ParseBatteryLayout(_settings.TaskbarBatteryLayout),
     };
 
     public void MoveTaskbarBlock(TaskbarBlockKind kind, int delta)
@@ -342,6 +358,7 @@ public partial class MainViewModel
         NetworkUnit = TaskbarStyle.ParseNetworkUnit(_settings.TaskbarNetworkUnit),
         SwapNetworkLines = _settings.TaskbarSwapNetworkLines,
         CompactLabels = _settings.TaskbarCompactLabels,
+        BatteryLayout = TaskbarStyle.ParseBatteryLayout(_settings.TaskbarBatteryLayout),
         CpuAlert = _settings.CpuAlertThreshold,
         GpuAlert = _settings.GpuAlertThreshold,
         TempAlert = _settings.TemperatureAlertThreshold,

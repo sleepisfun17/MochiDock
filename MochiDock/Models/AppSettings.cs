@@ -46,6 +46,7 @@ public class AppSettings
     public bool TaskbarSwapNetworkLines { get; set; }
     public bool TaskbarCompactLabels { get; set; }
     public int TaskbarRefreshSeconds { get; set; } = 1;
+    public string TaskbarBatteryLayout { get; set; } = "Auto";
     public bool ShowAiUsageTab { get; set; } = false;
     public bool ShowScriptTab { get; set; } = false;
     public bool ShowDownloadsTab { get; set; } = false;

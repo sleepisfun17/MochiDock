@@ -29,7 +29,7 @@ public static class SettingsTransfer
         "TaskbarLeftOffsetPx", "TaskbarVerticalOffsetPx",
         "TaskbarFontFamily", "TaskbarFontSize", "TaskbarFontBold", "TaskbarBlockSpacing", "TaskbarStableWidth",
         "TaskbarLabelColor", "TaskbarValueColor", "TaskbarNetworkArrows", "TaskbarNetworkUnit",
-        "TaskbarSwapNetworkLines", "TaskbarCompactLabels", "TaskbarRefreshSeconds",
+        "TaskbarSwapNetworkLines", "TaskbarCompactLabels", "TaskbarRefreshSeconds", "TaskbarBatteryLayout",
         "ShowDeviceBatteriesOnTaskbar", "ShowDeviceBatteryBackground",
     };
 

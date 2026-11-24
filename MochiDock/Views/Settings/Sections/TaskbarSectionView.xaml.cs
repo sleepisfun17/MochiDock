@@ -120,6 +120,7 @@ public partial class TaskbarSectionView : SettingsSectionBase
         SelectFontFamily(vm.TaskbarFontFamily);
         SelectFontSize(vm.TaskbarFontSize);
         SelectBlockSpacing(vm.TaskbarBlockSpacing);
+        SelectBatteryLayout(vm.TaskbarBatteryLayout);
         SelectRefreshSeconds(vm.TaskbarRefreshSeconds);
 
         BoldCheck.IsChecked = vm.TaskbarFontBold;
@@ -177,6 +178,10 @@ public partial class TaskbarSectionView : SettingsSectionBase
 
         foreach (int sec in RefreshChoices)
             RefreshCombo.Items.Add(new ComboBoxItem { Content = sec == 1 ? "1 second" : $"{sec} seconds", Tag = sec });
+
+        BatteryLayoutCombo.Items.Add(new ComboBoxItem { Content = "Auto (1 big, 2+ stacked)", Tag = "Auto" });
+        BatteryLayoutCombo.Items.Add(new ComboBoxItem { Content = "Side by side (classic)", Tag = "Horizontal" });
+        BatteryLayoutCombo.Items.Add(new ComboBoxItem { Content = "Always stacked (2-line)", Tag = "Stacked" });
     }
 
     private void PopulateMonitorCombo(string currentMonitor)
@@ -260,6 +265,19 @@ public partial class TaskbarSectionView : SettingsSectionBase
             if (item.Tag is int s && s == clamped)
             {
                 RefreshCombo.SelectedItem = item;
+                return;
+            }
+        }
+    }
+
+    private void SelectBatteryLayout(string layout)
+    {
+        string target = TaskbarStyle.FormatBatteryLayout(TaskbarStyle.ParseBatteryLayout(layout));
+        foreach (ComboBoxItem item in BatteryLayoutCombo.Items)
+        {
+            if (string.Equals(item.Tag as string, target, StringComparison.OrdinalIgnoreCase))
+            {
+                BatteryLayoutCombo.SelectedItem = item;
                 return;
             }
         }
@@ -563,6 +581,13 @@ public partial class TaskbarSectionView : SettingsSectionBase
         if (Loading || ViewModel == null) return;
         if (RefreshCombo.SelectedItem is ComboBoxItem item && item.Tag is int sec)
             ViewModel.TaskbarRefreshSeconds = sec;
+    }
+
+    private void BatteryLayout_Changed(object sender, SelectionChangedEventArgs e)
+    {
+        if (Loading || ViewModel == null) return;
+        if (BatteryLayoutCombo.SelectedItem is ComboBoxItem item && item.Tag is string layout)
+            ViewModel.TaskbarBatteryLayout = layout;
     }
 
     private void Arrows_Checked(object sender, RoutedEventArgs e)

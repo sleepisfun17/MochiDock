@@ -277,6 +277,22 @@ public class TaskbarReadoutsTests
     }
 
     [Fact]
+    public void HorizontalBatteryLayoutEmitsOneBlockPerDeviceUpToMaxItems()
+    {
+        var batteries = Enumerable.Range(0, 6).Select(i => Device("D" + i, 50 + i, charging: i == 1)).ToArray();
+        var horiz = TaskbarReadouts.Build(new TaskbarSnapshot { Batteries = batteries },
+            new TaskbarOptions { Batteries = true, BatteryLayout = TaskbarBatteryLayout.Horizontal });
+        Assert.Equal(TaskbarReadouts.MaxItems, horiz.Count);
+        Assert.All(horiz, b => Assert.False(b.HasBottom));
+        Assert.True(horiz[1].TopCharging);
+
+        var singleAuto = Assert.Single(TaskbarReadouts.Build(new TaskbarSnapshot { Batteries = new[] { Device("Mouse", 39) } },
+            new TaskbarOptions { Batteries = true, BatteryLayout = TaskbarBatteryLayout.Auto }));
+        Assert.Equal("39%", singleAuto.Top);
+        Assert.False(singleAuto.HasBottom);
+    }
+
+    [Fact]
     public void AClickableBlockHasATooltip()
     {
         foreach (var block in TaskbarReadouts.Build(Full(), All())) Assert.False(string.IsNullOrWhiteSpace(block.Tooltip), block.Kind.ToString());
@@ -480,7 +496,7 @@ public class TaskbarReadoutsTests
             "TaskbarLeftOffsetPx", "TaskbarVerticalOffsetPx",
             "TaskbarFontFamily", "TaskbarFontSize", "TaskbarFontBold", "TaskbarBlockSpacing", "TaskbarStableWidth",
             "TaskbarLabelColor", "TaskbarValueColor", "TaskbarNetworkArrows", "TaskbarNetworkUnit",
-            "TaskbarSwapNetworkLines", "TaskbarCompactLabels", "TaskbarRefreshSeconds",
+            "TaskbarSwapNetworkLines", "TaskbarCompactLabels", "TaskbarRefreshSeconds", "TaskbarBatteryLayout",
             "ShowDeviceBatteriesOnTaskbar", "ShowDeviceBatteryBackground",
         })
             Assert.Contains(key, SettingsTransfer.LocalOnlyKeys);

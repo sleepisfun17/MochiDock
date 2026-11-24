@@ -10,6 +10,8 @@ public enum TaskbarZone { Left, Right }
 
 public enum TaskbarNetworkUnit { Bytes, Bits }
 
+public enum TaskbarBatteryLayout { Auto, Horizontal, Stacked }
+
 /// <summary>Visual styling options for the taskbar readout (empty strings / 0 mean automatic defaults).</summary>
 public sealed record TaskbarAppearance
 {
@@ -20,6 +22,7 @@ public sealed record TaskbarAppearance
     public string ValueColorHex { get; init; } = "";
     public int BlockSpacing { get; init; } = 0;
     public bool StableWidth { get; init; } = true;
+    public TaskbarBatteryLayout BatteryLayout { get; init; } = TaskbarBatteryLayout.Auto;
 
     public static TaskbarAppearance Default { get; } = new();
 }
@@ -70,6 +73,20 @@ public static class TaskbarStyle
             : TaskbarNetworkUnit.Bytes;
 
     public static string FormatNetworkUnit(TaskbarNetworkUnit unit) => unit == TaskbarNetworkUnit.Bits ? "Bits" : "Bytes";
+
+    public static TaskbarBatteryLayout ParseBatteryLayout(string? value)
+    {
+        if (string.Equals(value?.Trim(), "Horizontal", StringComparison.OrdinalIgnoreCase)) return TaskbarBatteryLayout.Horizontal;
+        if (string.Equals(value?.Trim(), "Stacked", StringComparison.OrdinalIgnoreCase)) return TaskbarBatteryLayout.Stacked;
+        return TaskbarBatteryLayout.Auto;
+    }
+
+    public static string FormatBatteryLayout(TaskbarBatteryLayout layout) => layout switch
+    {
+        TaskbarBatteryLayout.Horizontal => "Horizontal",
+        TaskbarBatteryLayout.Stacked => "Stacked",
+        _ => "Auto",
+    };
 
     public static TaskbarArrowStyle ParseArrowStyle(string? value)
     {

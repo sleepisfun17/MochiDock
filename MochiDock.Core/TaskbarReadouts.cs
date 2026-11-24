@@ -78,6 +78,7 @@ public sealed record TaskbarOptions
     public TaskbarNetworkUnit NetworkUnit { get; init; } = TaskbarNetworkUnit.Bytes;
     public bool SwapNetworkLines { get; init; }
     public bool CompactLabels { get; init; }
+    public TaskbarBatteryLayout BatteryLayout { get; init; } = TaskbarBatteryLayout.Auto;
 
     /// <summary>CPU / GPU load at or over this is a warning (the existing alert settings).</summary>
     public double CpuAlert { get; init; } = 90;
@@ -460,10 +461,27 @@ public static class TaskbarReadouts
         };
     }
 
-    /// <summary>The devices packed two per block (the second one on the bottom line), at most <see cref="TaskbarOptions.MaxBatteries"/> in all.</summary>
+    /// <summary>The devices packed two per block in Auto/Stacked mode, or one per block side-by-side in Horizontal mode, at most <see cref="TaskbarOptions.MaxBatteries"/>.</summary>
     private static IEnumerable<TaskbarBlock> BatteryBlocks(TaskbarSnapshot s, TaskbarOptions o)
     {
         var devices = s.Batteries.Take(Math.Max(0, o.MaxBatteries)).ToArray();
+        if (o.BatteryLayout == TaskbarBatteryLayout.Horizontal)
+        {
+            foreach (var d in devices)
+            {
+                yield return new TaskbarBlock(TaskbarBlockKind.Batteries,
+                    BatteryText(d), "",
+                    IsLow(d, o), false,
+                    BatteryTooltip(d))
+                {
+                    TopGlyph = d.Glyph,
+                    TopCharging = d.Charging,
+                    TopDim = d.Stale,
+                };
+            }
+            yield break;
+        }
+
         for (int i = 0; i < devices.Length; i += 2)
         {
             var first = devices[i];

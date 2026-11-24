@@ -374,7 +374,7 @@ public partial class MainViewModel : INotifyPropertyChanged
         OnPropertyChanged(nameof(TaskbarBlockSpacing));OnPropertyChanged(nameof(TaskbarStableWidth));
         OnPropertyChanged(nameof(TaskbarLabelColor));OnPropertyChanged(nameof(TaskbarValueColor));
         OnPropertyChanged(nameof(TaskbarNetworkArrows));OnPropertyChanged(nameof(TaskbarNetworkUnit));
-        OnPropertyChanged(nameof(TaskbarSwapNetworkLines));OnPropertyChanged(nameof(TaskbarCompactLabels));OnPropertyChanged(nameof(TaskbarRefreshSeconds));
+        OnPropertyChanged(nameof(TaskbarSwapNetworkLines));OnPropertyChanged(nameof(TaskbarCompactLabels));OnPropertyChanged(nameof(TaskbarRefreshSeconds));OnPropertyChanged(nameof(TaskbarBatteryLayout));
         ApplyTaskbarRefreshInterval();ApplyTaskbarSampler();RefreshTaskbarBlocks();TaskbarStyleChanged?.Invoke();TaskbarStyleChanged?.Invoke();
         OnPropertyChanged(nameof(EnablePowerLogging));_powerComponentItems=null;OnPropertyChanged(nameof(PowerComponentItems));RecomputePowerAllowance();ApplyPowerLogConfiguration();
         OnPropertyChanged(nameof(HideInFullscreen));

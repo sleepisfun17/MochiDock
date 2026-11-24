@@ -15,8 +15,8 @@ public sealed record TaskbarRender(int Width, int Height, byte[] Pixels, IReadOn
 /// <summary>
 /// Draws the taskbar readout blocks into a bitmap, without any window, so the widget, live settings preview, and verify harness share one drawing.
 /// The colours follow the Windows taskbar's own light or dark theme (with optional user label/value colours adapted to stay >= 4.5:1).
-/// Two lines per block scale to fit the measured taskbar height (including tall Windhawk taskbars); a taskbar under
-/// <see cref="SmallTaskbarDip"/> DIPs high (small icons) gets one line per block, "CPU 2% · GPU 5%".
+/// Two lines per block scale to fit the measured taskbar height (including tall Windhawk taskbars); a single device battery uses the classic
+/// single-row proportions unless Stacked is chosen, and a taskbar under <see cref="SmallTaskbarDip"/> DIPs high gets one line per block.
 /// </summary>
 public static class TaskbarReadoutRenderer
 {
@@ -55,9 +55,10 @@ public static class TaskbarReadoutRenderer
         return new FontFamily($"{trimmed}, {DefaultTaskbarFont}");
     }
 
-    // One drawn piece of a line: an optional icon glyph, an optional colour emoji image, an optional charging bolt, an optional label, and the value.
+    // One drawn piece of a line: an optional icon glyph, an optional charging bolt, an optional colour emoji image, an optional label, and the value.
     private sealed record Segment(
         FormattedText? Glyph,
+        double GlyphGap,
         BitmapSource? Emoji,
         double EmojiSize,
         double EmojiGap,
@@ -68,9 +69,9 @@ public static class TaskbarReadoutRenderer
         public bool HasPrefix => Glyph is not null || Emoji is not null || Bolt is not null || Label is not null;
 
         public double Width =>
-            (Glyph is null ? 0 : Glyph.WidthIncludingTrailingWhitespace + 3)
+            (Glyph is null ? 0 : Glyph.WidthIncludingTrailingWhitespace + (Bolt is null ? GlyphGap : 0))
+            + (Bolt is null ? 0 : Bolt.WidthIncludingTrailingWhitespace + GlyphGap)
             + (Emoji is null ? 0 : EmojiSize + EmojiGap)
-            + (Bolt is null ? 0 : Bolt.WidthIncludingTrailingWhitespace)
             + (Label is null ? 0 : Label.WidthIncludingTrailingWhitespace)
             + (Value is null ? 0 : Value.WidthIncludingTrailingWhitespace);
 
@@ -88,7 +89,7 @@ public static class TaskbarReadoutRenderer
     /// <param name="dpi">Device DPI of the taskbar (96, 120, 144, 192 ...).</param>
     /// <param name="heightPx">The taskbar's height in device pixels.</param>
     /// <param name="background">A plate behind the text for transparent or restyled taskbars.</param>
-    /// <param name="style">Optional font, size, bold, spacing, stable-width and label/value colour preferences.</param>
+    /// <param name="style">Optional font, size, bold, spacing, stable-width, battery-layout and label/value colour preferences.</param>
     public static TaskbarRender? Render(IReadOnlyList<TaskbarBlock> blocks, double dpi, bool darkTaskbar, int heightPx, bool background = false, TaskbarAppearance? style = null)
     {
         if (blocks.Count == 0) return null;
@@ -105,20 +106,21 @@ public static class TaskbarReadoutRenderer
         double sample = new FormattedText("Ag", culture, FlowDirection.LeftToRight, textFace, 12.0, Brushes.Black, scale).Height;
         double lineHeightRatio = sample / 12.0;
         double fontSize = TaskbarStyle.ComputeFontSize(heightDip, lineHeightRatio, oneLine, style?.FontSize ?? 0);
+        var batteryLayout = style?.BatteryLayout ?? TaskbarBatteryLayout.Auto;
 
         var labelBase = ResolveInkColor(style?.LabelColorHex, darkTaskbar);
         var valueBase = ResolveInkColor(style?.ValueColorHex, darkTaskbar);
         var warnBase = WarnColor(darkTaskbar);
 
-        FormattedText Text(string text, Color color) => new(text, culture, FlowDirection.LeftToRight, textFace, fontSize, new SolidColorBrush(color), scale);
-        FormattedText Icon(string text, Color color) => new(text, culture, FlowDirection.LeftToRight, iconFace, fontSize + 1, new SolidColorBrush(color), scale);
+        FormattedText Text(string text, Color color, double size) => new(text, culture, FlowDirection.LeftToRight, textFace, size, new SolidColorBrush(color), scale);
+        FormattedText Icon(string text, Color color, double size) => new(text, culture, FlowDirection.LeftToRight, iconFace, size, new SolidColorBrush(color), scale);
         static Color Shade(Color c, bool dim) => dim ? Color.FromArgb(StaleAlpha, c.R, c.G, c.B) : c;
 
         double emojiSize = Math.Max(8, fontSize * 1.05);
         double emojiGap = Math.Max(2, Math.Round(fontSize * 0.22));
         bool stableWidth = !oneLine && (style?.StableWidth ?? false);
 
-        Segment MakeSegment(string glyph, string emojiKey, bool charging, string labelText, string valueText, bool warn, bool dim)
+        Segment MakeSegment(string glyph, string emojiKey, bool charging, string labelText, string valueText, bool warn, bool dim, double segFontSize, bool isBattery)
         {
             BitmapSource? emoji = emojiKey.Length > 0 ? EmojiImages.Get(emojiKey) : null;
             string effectiveLabel = labelText;
@@ -127,28 +129,31 @@ public static class TaskbarReadoutRenderer
 
             var lColor = Shade(warn ? warnBase : labelBase, dim);
             var vColor = Shade(warn ? warnBase : valueBase, dim);
+            double glyphGap = isBattery ? 4.0 : 3.0;
+            double glyphSize = segFontSize + 1;
+            double boltSize = isBattery ? Math.Max(8, segFontSize - 1) : glyphSize;
 
             return new Segment(
-                glyph.Length > 0 ? Icon(glyph, lColor) : null,
+                glyph.Length > 0 ? Icon(glyph, lColor, glyphSize) : null,
+                glyphGap,
                 emoji,
                 emojiSize,
                 emojiGap,
-                charging ? Icon(ChargingBolt, Shade(BoltBlue, dim)) : null,
-                effectiveLabel.Length > 0 ? Text(effectiveLabel, lColor) : null,
-                valueText.Length > 0 ? Text(valueText, vColor) : null);
+                charging ? Icon(ChargingBolt, Shade(BoltBlue, dim), boltSize) : null,
+                effectiveLabel.Length > 0 ? Text(effectiveLabel, lColor, segFontSize) : null,
+                valueText.Length > 0 ? Text(valueText, vColor, segFontSize) : null);
         }
 
-        double MeasureWidth(string text) => text.Length == 0 ? 0 : Text(text, labelBase).WidthIncludingTrailingWhitespace;
-        double BoltReserveWidth() => Icon(ChargingBolt, BoltBlue).WidthIncludingTrailingWhitespace;
+        double MeasureWidth(string text) => text.Length == 0 ? 0 : Text(text, labelBase, fontSize).WidthIncludingTrailingWhitespace;
 
         double ComputeStableMinWidth(TaskbarBlock block, List<Line> lines)
         {
-            if (!stableWidth || lines.Count == 0) return 0;
+            // Device batteries stay tight (icon + optional bolt + 4 DIP gap + percentage), never padded or right-aligned.
+            if (!stableWidth || lines.Count == 0 || block.Kind == TaskbarBlockKind.Batteries) return 0;
 
-            double LineProtoWidth(string rawLine, string labelText, string emojiKey, string glyph, bool isBottom)
+            double LineProtoWidth(string rawLine, string labelText, string emojiKey)
             {
                 double prefix = 0;
-                if (glyph.Length > 0) prefix += Icon(glyph, labelBase).WidthIncludingTrailingWhitespace + 3;
                 if (emojiKey.Length > 0)
                 {
                     if (EmojiImages.Get(emojiKey) is not null) prefix += emojiSize + emojiGap;
@@ -180,33 +185,38 @@ public static class TaskbarReadoutRenderer
                         if (rawLine.Contains('°')) protoVal = "-25°";
                         else if (rawLine.Contains("m/s", StringComparison.Ordinal)) protoVal = "99 m/s";
                         break;
-                    case TaskbarBlockKind.Batteries:
-                        prefix += BoltReserveWidth();
-                        protoVal = "100%";
-                        break;
                 }
                 return protoVal.Length == 0 ? 0 : prefix + MeasureWidth(protoVal);
             }
 
-            double w = LineProtoWidth(block.Top, block.TopLabel, block.TopEmojiKey, block.TopGlyph, false);
+            double w = LineProtoWidth(block.Top, block.TopLabel, block.TopEmojiKey);
             if (block.HasBottom)
-                w = Math.Max(w, LineProtoWidth(block.Bottom, block.BottomLabel, block.BottomEmojiKey, block.BottomGlyph, true));
+                w = Math.Max(w, LineProtoWidth(block.Bottom, block.BottomLabel, block.BottomEmojiKey));
             return w;
         }
 
         // The lines of every block: two per block, or one (the lines joined with a dot) on a small taskbar.
+        // A single device battery (1 item in Auto or any item in Horizontal) keeps the classic single-row size.
         var layout = new List<(TaskbarBlock Block, List<Line> Lines, double Width)>();
         foreach (var block in blocks)
         {
-            var top = MakeSegment(block.TopGlyph, block.TopEmojiKey, block.TopCharging, block.TopLabel, block.TopValue, block.TopWarn, block.TopDim);
+            bool isBattery = block.Kind == TaskbarBlockKind.Batteries;
+            bool classicSingleBattery = isBattery && !oneLine && !block.HasBottom && batteryLayout != TaskbarBatteryLayout.Stacked;
+            double blockFontSize = classicSingleBattery
+                ? ((style is null || style.FontSize <= 0)
+                    ? Math.Min(Math.Clamp(fontSize * 1.12, 13, 24), Math.Max(13, (heightDip - 6) / lineHeightRatio))
+                    : fontSize)
+                : fontSize;
+
+            var top = MakeSegment(block.TopGlyph, block.TopEmojiKey, block.TopCharging, block.TopLabel, block.TopValue, block.TopWarn, block.TopDim, blockFontSize, isBattery);
             var lines = new List<Line>();
             if (oneLine)
             {
                 var segments = new List<Segment> { top };
                 if (block.HasBottom)
                 {
-                    segments.Add(new Segment(null, null, 0, 0, null, Text("  ·  ", labelBase), null));
-                    segments.Add(MakeSegment(block.BottomGlyph, block.BottomEmojiKey, block.BottomCharging, block.BottomLabel, block.BottomValue, block.BottomWarn, block.BottomDim));
+                    segments.Add(new Segment(null, 0, null, 0, 0, null, Text("  ·  ", labelBase, fontSize), null));
+                    segments.Add(MakeSegment(block.BottomGlyph, block.BottomEmojiKey, block.BottomCharging, block.BottomLabel, block.BottomValue, block.BottomWarn, block.BottomDim, fontSize, isBattery));
                 }
                 lines.Add(new Line(segments));
             }
@@ -214,7 +224,7 @@ public static class TaskbarReadoutRenderer
             {
                 lines.Add(new Line(new List<Segment> { top }));
                 if (block.HasBottom)
-                    lines.Add(new Line(new List<Segment> { MakeSegment(block.BottomGlyph, block.BottomEmojiKey, block.BottomCharging, block.BottomLabel, block.BottomValue, block.BottomWarn, block.BottomDim) }));
+                    lines.Add(new Line(new List<Segment> { MakeSegment(block.BottomGlyph, block.BottomEmojiKey, block.BottomCharging, block.BottomLabel, block.BottomValue, block.BottomWarn, block.BottomDim, blockFontSize, isBattery) }));
             }
             double blockWidth = Math.Max(lines.Max(l => l.Width), ComputeStableMinWidth(block, lines));
             layout.Add((block, lines, blockWidth));
@@ -224,7 +234,18 @@ public static class TaskbarReadoutRenderer
         double blockGap = style is { BlockSpacing: > 0 }
             ? TaskbarStyle.ClampBlockSpacing(style.BlockSpacing)
             : Math.Max(BlockGap, Math.Round(fontSize * 1.15));
-        double widthDip = padding * 2 + layout.Sum(l => l.Width) + blockGap * (layout.Count - 1);
+
+        double GapBefore(int index) =>
+            index > 0
+            && batteryLayout == TaskbarBatteryLayout.Horizontal
+            && layout[index].Block.Kind == TaskbarBlockKind.Batteries
+            && layout[index - 1].Block.Kind == TaskbarBlockKind.Batteries
+                ? Math.Min(blockGap, 12.0)
+                : blockGap;
+
+        double totalGaps = 0;
+        for (int i = 1; i < layout.Count; i++) totalGaps += GapBefore(i);
+        double widthDip = padding * 2 + layout.Sum(l => l.Width) + totalGaps;
         int pixelWidth = Math.Max(1, (int)Math.Ceiling(widthDip * scale));
         int pixelHeight = Math.Max(1, heightPx);
 
@@ -244,27 +265,28 @@ public static class TaskbarReadoutRenderer
                 var (block, lines, blockWidth) = layout[i];
                 double total = lines.Sum(l => l.Height);
                 double y = (heightDip - total) / 2;
+                bool alignValueRight = stableWidth && block.Kind != TaskbarBlockKind.Batteries;
                 foreach (var line in lines)
                 {
                     double sx = x;
-                    bool alignValueRight = stableWidth && line.Segments.Count == 1 && line.Segments[0].HasPrefix && line.Segments[0].Value is not null;
+                    bool lineAlignRight = alignValueRight && line.Segments.Count == 1 && line.Segments[0].HasPrefix && line.Segments[0].Value is not null;
                     foreach (var segment in line.Segments)
                     {
                         if (segment.Glyph is { } glyph)
                         {
                             dc.DrawText(glyph, new Point(sx, y + (line.Height - glyph.Height) / 2));
-                            sx += glyph.WidthIncludingTrailingWhitespace + 3;
+                            sx += glyph.WidthIncludingTrailingWhitespace + (segment.Bolt is null ? segment.GlyphGap : 0);
+                        }
+                        if (segment.Bolt is { } bolt)
+                        {
+                            dc.DrawText(bolt, new Point(sx, y + (line.Height - bolt.Height) / 2));
+                            sx += bolt.WidthIncludingTrailingWhitespace + segment.GlyphGap;
                         }
                         if (segment.Emoji is { } emoji)
                         {
                             double ey = y + (line.Height - segment.EmojiSize) / 2;
                             dc.DrawImage(emoji, new Rect(sx, ey, segment.EmojiSize, segment.EmojiSize));
                             sx += segment.EmojiSize + segment.EmojiGap;
-                        }
-                        if (segment.Bolt is { } bolt)
-                        {
-                            dc.DrawText(bolt, new Point(sx, y + (line.Height - bolt.Height) / 2));
-                            sx += bolt.WidthIncludingTrailingWhitespace;
                         }
                         if (segment.Label is { } label)
                         {
@@ -273,7 +295,7 @@ public static class TaskbarReadoutRenderer
                         }
                         if (segment.Value is { } value)
                         {
-                            double vx = alignValueRight
+                            double vx = lineAlignRight
                                 ? Math.Max(sx, x + blockWidth - value.WidthIncludingTrailingWhitespace)
                                 : sx;
                             dc.DrawText(value, new Point(vx, y + (line.Height - value.Height) / 2));
@@ -283,10 +305,10 @@ public static class TaskbarReadoutRenderer
                     y += line.Height;
                 }
                 // The hit region: from the middle of the gap before this block to the middle of the gap after it.
-                double left = i == 0 ? 0 : x - blockGap / 2;
-                double right = i == layout.Count - 1 ? pixelWidth / scale : x + blockWidth + blockGap / 2;
+                double left = i == 0 ? 0 : x - GapBefore(i) / 2;
+                double right = i == layout.Count - 1 ? pixelWidth / scale : x + blockWidth + GapBefore(i + 1) / 2;
                 rects.Add(new TaskbarBlockRect(block.Kind, new Rect(left * scale, 0, (right - left) * scale, pixelHeight)));
-                x += blockWidth + blockGap;
+                if (i + 1 < layout.Count) x += blockWidth + GapBefore(i + 1);
             }
         }
 
