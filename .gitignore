@@ -31,11 +31,6 @@ gowa_service.log
 MochiDock.lnk
 MochiDock - Shortcut.lnk
 
-# Local reference source code
-Oyenza/
-oyenza/
-Oyenza-Studio
-
 # Local GOWA login storage
 gowa_storages/
 MochiDockDEV.lnk

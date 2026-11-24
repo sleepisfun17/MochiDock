@@ -4,7 +4,7 @@ Guidance for Claude Code in this repository. The root `AGENTS.md` is the authori
 
 ## What this is
 
-MochiDock: a Windows WPF "dynamic island" overlay (.NET 8, `net8.0-windows10.0.19041.0`). Source is in `MochiDock/`, `MochiDock.Core/`, `MochiDock.OutlookHelper/` and `MochiDock.Tests/`. Preserve the `MochiDock` storage, registry and mutex identities. Oyenza Studio (a local checkout outside this repository) is a **read-only reference project**: never modify it or apply its docs here. Code or designs ported from it, or from any other project, must be credited in `THIRD-PARTY-NOTICES.txt`.
+MochiDock: a Windows WPF "dynamic island" overlay (.NET 8, `net8.0-windows10.0.19041.0`). Source is in `MochiDock/`, `MochiDock.Core/`, `MochiDock.OutlookHelper/` and `MochiDock.Tests/`. Preserve the `MochiDock` storage, registry and mutex identities. Code or designs taken from any other project must be credited in `THIRD-PARTY-NOTICES.txt`.
 
 ## Commands
 
