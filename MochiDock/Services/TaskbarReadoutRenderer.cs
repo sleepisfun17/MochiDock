@@ -265,7 +265,7 @@ public static class TaskbarReadoutRenderer
                 var (block, lines, blockWidth) = layout[i];
                 double total = lines.Sum(l => l.Height);
                 double y = (heightDip - total) / 2;
-                bool alignValueRight = stableWidth && block.Kind != TaskbarBlockKind.Batteries;
+                bool alignValueRight = stableWidth && block.Kind != TaskbarBlockKind.Batteries && block.Kind != TaskbarBlockKind.Prayer;
                 foreach (var line in lines)
                 {
                     double sx = x;

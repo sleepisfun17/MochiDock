@@ -12,6 +12,8 @@ public enum TaskbarNetworkUnit { Bytes, Bits }
 
 public enum TaskbarBatteryLayout { Auto, Horizontal, Stacked }
 
+public enum TaskbarPrayerDisplay { TimeAndRemaining, Remaining, Time }
+
 /// <summary>Visual styling options for the taskbar readout (empty strings / 0 mean automatic defaults).</summary>
 public sealed record TaskbarAppearance
 {
@@ -100,6 +102,20 @@ public static class TaskbarStyle
         TaskbarArrowStyle.Triangle => "Triangle",
         TaskbarArrowStyle.Emoji => "Emoji",
         _ => "Arrow",
+    };
+
+    public static TaskbarPrayerDisplay ParsePrayerDisplay(string? value)
+    {
+        if (string.Equals(value?.Trim(), "Remaining", StringComparison.OrdinalIgnoreCase)) return TaskbarPrayerDisplay.Remaining;
+        if (string.Equals(value?.Trim(), "Time", StringComparison.OrdinalIgnoreCase)) return TaskbarPrayerDisplay.Time;
+        return TaskbarPrayerDisplay.TimeAndRemaining;
+    }
+
+    public static string FormatPrayerDisplay(TaskbarPrayerDisplay display) => display switch
+    {
+        TaskbarPrayerDisplay.Remaining => "Remaining",
+        TaskbarPrayerDisplay.Time => "Time",
+        _ => "TimeAndRemaining",
     };
 
     /// <summary>

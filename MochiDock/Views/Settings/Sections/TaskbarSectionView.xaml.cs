@@ -41,6 +41,7 @@ public partial class TaskbarSectionView : SettingsSectionBase
         NetDownBytesPerSecond = 2.4 * 1024 * 1024,
         PrayerName = "Asr",
         PrayerTime = "15:20",
+        PrayerRemaining = TimeSpan.FromMinutes(85),
         WeatherTempC = 18,
         WindMetersPerSecond = 6,
         WeatherGlyph = "\u2601",
@@ -121,6 +122,7 @@ public partial class TaskbarSectionView : SettingsSectionBase
         SelectFontSize(vm.TaskbarFontSize);
         SelectBlockSpacing(vm.TaskbarBlockSpacing);
         SelectBatteryLayout(vm.TaskbarBatteryLayout);
+        SelectPrayerDisplay(vm.TaskbarPrayerDisplay);
         SelectRefreshSeconds(vm.TaskbarRefreshSeconds);
 
         BoldCheck.IsChecked = vm.TaskbarFontBold;
@@ -182,6 +184,10 @@ public partial class TaskbarSectionView : SettingsSectionBase
         BatteryLayoutCombo.Items.Add(new ComboBoxItem { Content = "Auto (1 big, 2+ stacked)", Tag = "Auto" });
         BatteryLayoutCombo.Items.Add(new ComboBoxItem { Content = "Side by side (classic)", Tag = "Horizontal" });
         BatteryLayoutCombo.Items.Add(new ComboBoxItem { Content = "Always stacked (2-line)", Tag = "Stacked" });
+
+        PrayerDisplayCombo.Items.Add(new ComboBoxItem { Content = "Time & remaining (Asr 15:20 / in 1h 25m)", Tag = "TimeAndRemaining" });
+        PrayerDisplayCombo.Items.Add(new ComboBoxItem { Content = "Remaining only (Asr / in 1h 25m)", Tag = "Remaining" });
+        PrayerDisplayCombo.Items.Add(new ComboBoxItem { Content = "Time only (Asr / 15:20)", Tag = "Time" });
     }
 
     private void PopulateMonitorCombo(string currentMonitor)
@@ -278,6 +284,19 @@ public partial class TaskbarSectionView : SettingsSectionBase
             if (string.Equals(item.Tag as string, target, StringComparison.OrdinalIgnoreCase))
             {
                 BatteryLayoutCombo.SelectedItem = item;
+                return;
+            }
+        }
+    }
+
+    private void SelectPrayerDisplay(string display)
+    {
+        string target = TaskbarStyle.FormatPrayerDisplay(TaskbarStyle.ParsePrayerDisplay(display));
+        foreach (ComboBoxItem item in PrayerDisplayCombo.Items)
+        {
+            if (string.Equals(item.Tag as string, target, StringComparison.OrdinalIgnoreCase))
+            {
+                PrayerDisplayCombo.SelectedItem = item;
                 return;
             }
         }
@@ -588,6 +607,13 @@ public partial class TaskbarSectionView : SettingsSectionBase
         if (Loading || ViewModel == null) return;
         if (BatteryLayoutCombo.SelectedItem is ComboBoxItem item && item.Tag is string layout)
             ViewModel.TaskbarBatteryLayout = layout;
+    }
+
+    private void PrayerDisplay_Changed(object sender, SelectionChangedEventArgs e)
+    {
+        if (Loading || ViewModel == null) return;
+        if (PrayerDisplayCombo.SelectedItem is ComboBoxItem item && item.Tag is string display)
+            ViewModel.TaskbarPrayerDisplay = display;
     }
 
     private void Arrows_Checked(object sender, RoutedEventArgs e)

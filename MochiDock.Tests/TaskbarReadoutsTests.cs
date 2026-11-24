@@ -482,6 +482,37 @@ public class TaskbarReadoutsTests
         Assert.Equal(3, TaskbarStyle.ClampRefreshSeconds(10));
     }
 
+    [Fact]
+    public void PrayerDisplayModesFormatRemainingAndHighlightLastTenMinutes()
+    {
+        Assert.Equal(TaskbarPrayerDisplay.TimeAndRemaining, TaskbarStyle.ParsePrayerDisplay(null));
+        Assert.Equal(TaskbarPrayerDisplay.Remaining, TaskbarStyle.ParsePrayerDisplay("Remaining"));
+        Assert.Equal(TaskbarPrayerDisplay.Time, TaskbarStyle.ParsePrayerDisplay("Time"));
+        Assert.Equal("in 1h 25m", TaskbarReadouts.FormatPrayerRemaining(TimeSpan.FromMinutes(85)));
+        Assert.Equal("in 10m", TaskbarReadouts.FormatPrayerRemaining(TimeSpan.FromMinutes(10)));
+        Assert.Equal("<1m", TaskbarReadouts.FormatPrayerRemaining(TimeSpan.FromSeconds(25)));
+        Assert.Equal("now", TaskbarReadouts.FormatPrayerRemaining(TimeSpan.Zero));
+
+        var snap = new TaskbarSnapshot { PrayerName = "Maghrib", PrayerTime = "16:40", PrayerRemaining = TimeSpan.FromMinutes(85) };
+        var both = Assert.Single(TaskbarReadouts.Build(snap, new TaskbarOptions { Prayer = true }));
+        Assert.Equal(("Maghrib 16:40", "in 1h 25m"), (both.Top, both.Bottom));
+        Assert.Equal("Maghrib ", both.TopLabel);
+        Assert.Equal("16:40", both.TopValue);
+        Assert.False(both.BottomWarn);
+        Assert.Contains("in 1h 25m", both.Tooltip);
+
+        var remOnly = Assert.Single(TaskbarReadouts.Build(snap, new TaskbarOptions { Prayer = true, PrayerDisplay = TaskbarPrayerDisplay.Remaining }));
+        Assert.Equal(("Maghrib", "in 1h 25m"), (remOnly.Top, remOnly.Bottom));
+
+        var timeOnly = Assert.Single(TaskbarReadouts.Build(snap, new TaskbarOptions { Prayer = true, PrayerDisplay = TaskbarPrayerDisplay.Time }));
+        Assert.Equal(("Maghrib", "16:40"), (timeOnly.Top, timeOnly.Bottom));
+
+        var warn10 = Assert.Single(TaskbarReadouts.Build(snap with { PrayerRemaining = TimeSpan.FromMinutes(10) }, new TaskbarOptions { Prayer = true }));
+        Assert.True(warn10.BottomWarn);
+        var noWarn11 = Assert.Single(TaskbarReadouts.Build(snap with { PrayerRemaining = TimeSpan.FromMinutes(11) }, new TaskbarOptions { Prayer = true }));
+        Assert.False(noWarn11.BottomWarn);
+    }
+
     // ---- settings, migration & local-only keys ----
 
     [Fact]
@@ -497,6 +528,7 @@ public class TaskbarReadoutsTests
             "TaskbarFontFamily", "TaskbarFontSize", "TaskbarFontBold", "TaskbarBlockSpacing", "TaskbarStableWidth",
             "TaskbarLabelColor", "TaskbarValueColor", "TaskbarNetworkArrows", "TaskbarNetworkUnit",
             "TaskbarSwapNetworkLines", "TaskbarCompactLabels", "TaskbarRefreshSeconds", "TaskbarBatteryLayout",
+            "TaskbarPrayerDisplay",
             "ShowDeviceBatteriesOnTaskbar", "ShowDeviceBatteryBackground",
         })
             Assert.Contains(key, SettingsTransfer.LocalOnlyKeys);

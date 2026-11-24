@@ -36,6 +36,7 @@ $batType=$core.GetType('MochiDock.Core.TaskbarBattery');$kindType=$core.GetType(
 $arrowType=$core.GetType('MochiDock.Core.TaskbarArrowStyle');$styleType=$core.GetType('MochiDock.Core.TaskbarAppearance')
 $zoneType=$core.GetType('MochiDock.Core.TaskbarZone');$unitType=$core.GetType('MochiDock.Core.TaskbarNetworkUnit')
 $batLayoutType=$core.GetType('MochiDock.Core.TaskbarBatteryLayout')
+$prayerDisplayType=$core.GetType('MochiDock.Core.TaskbarPrayerDisplay')
 $renderer=$assembly.GetType('MochiDock.Services.TaskbarReadoutRenderer')
 $renderMethod=$renderer.GetMethod('Render')
 
@@ -320,6 +321,22 @@ $rTwoHoriz = Invoke-Render $twoHoriz 96 $true 48 $false $horizStyle
 $null = Assert-LayoutValid $rTwoHoriz $twoHoriz 'two batteries horizontal classic' 1 $false
 Save-Png $rTwoHoriz $true (Join-Path $output 'readout-battery-horizontal-dark-100.png')
 $checks += 3
+
+# ---- prayer remainder display modes and 10-minute warning highlight ---------------------------------------------------------------------
+$prayerSnap = New-Rec $snapType @{PrayerName='Maghrib';PrayerTime='16:40';PrayerRemaining=[Nullable[TimeSpan]][TimeSpan]::FromMinutes(85)}
+$prayerBoth = Build-Blocks $prayerSnap (New-Rec $optType @{Prayer=$true;PrayerDisplay=([Enum]::Parse($prayerDisplayType,'TimeAndRemaining'))})
+if($prayerBoth[0].Top -ne 'Maghrib 16:40' -or $prayerBoth[0].Bottom -ne 'in 1h 25m'){throw "TimeAndRemaining prayer mismatch: $($prayerBoth[0].Top) / $($prayerBoth[0].Bottom)"}
+$rPrayerBoth = Invoke-Render $prayerBoth 96 $true 48 $false $stableStyle
+$null = Assert-LayoutValid $rPrayerBoth $prayerBoth 'prayer time and remaining' 1 $false
+Save-Png $rPrayerBoth $true (Join-Path $output 'readout-prayer-both-dark-100.png')
+
+$prayerSoonSnap = New-Rec $snapType @{PrayerName='Asr';PrayerTime='15:20';PrayerRemaining=[Nullable[TimeSpan]][TimeSpan]::FromMinutes(8)}
+$prayerSoon = Build-Blocks $prayerSoonSnap (New-Rec $optType @{Prayer=$true;PrayerDisplay=([Enum]::Parse($prayerDisplayType,'Remaining'))})
+if(-not $prayerSoon[0].BottomWarn -or $prayerSoon[0].Bottom -ne 'in 8m'){throw '10-minute prayer warning state mismatch'}
+$rPrayerSoon = Invoke-Render $prayerSoon 96 $true 48 $false $stableStyle
+$null = Assert-LayoutValid $rPrayerSoon $prayerSoon 'prayer 10m warning remaining' 1 $false
+Save-Png $rPrayerSoon $true (Join-Path $output 'readout-prayer-soon-dark-100.png')
+$checks += 2
 
 $measure|Set-Content (Join-Path $output 'measurements.txt')
 

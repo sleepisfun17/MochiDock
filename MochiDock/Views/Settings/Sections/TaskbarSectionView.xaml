@@ -99,6 +99,9 @@
         <s:SettingRow Label="Device battery layout" Description="Auto uses the classic single-row size for 1 device and stacks 2+ devices top and bottom; Side by side always keeps devices on one row.">
             <ComboBox x:Name="BatteryLayoutCombo" Style="{StaticResource ModernDarkComboBox}" Width="220" SelectionChanged="BatteryLayout_Changed" AutomationProperties.Name="Device battery taskbar layout"/>
         </s:SettingRow>
+        <s:SettingRow Label="Next prayer display" Description="Show the scheduled time, remaining countdown, or both. Highlights in the last 10 minutes.">
+            <ComboBox x:Name="PrayerDisplayCombo" Style="{StaticResource ModernDarkComboBox}" Width="260" SelectionChanged="PrayerDisplay_Changed" AutomationProperties.Name="Next prayer taskbar display"/>
+        </s:SettingRow>
         <s:SettingRow Label="Network arrows" Description="Arrow style used for upload and download rates.">
             <StackPanel Orientation="Horizontal">
                 <RadioButton x:Name="ArrowClassicRadio" Style="{StaticResource ModernDarkRadioButton}" Content="↑ ↓" GroupName="TaskbarArrows" Checked="Arrows_Checked" Margin="0,0,14,0"/>

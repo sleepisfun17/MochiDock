@@ -47,6 +47,7 @@ public class AppSettings
     public bool TaskbarCompactLabels { get; set; }
     public int TaskbarRefreshSeconds { get; set; } = 1;
     public string TaskbarBatteryLayout { get; set; } = "Auto";
+    public string TaskbarPrayerDisplay { get; set; } = "TimeAndRemaining";
     public bool ShowAiUsageTab { get; set; } = false;
     public bool ShowScriptTab { get; set; } = false;
     public bool ShowDownloadsTab { get; set; } = false;

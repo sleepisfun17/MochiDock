@@ -30,6 +30,7 @@ public static class SettingsTransfer
         "TaskbarFontFamily", "TaskbarFontSize", "TaskbarFontBold", "TaskbarBlockSpacing", "TaskbarStableWidth",
         "TaskbarLabelColor", "TaskbarValueColor", "TaskbarNetworkArrows", "TaskbarNetworkUnit",
         "TaskbarSwapNetworkLines", "TaskbarCompactLabels", "TaskbarRefreshSeconds", "TaskbarBatteryLayout",
+        "TaskbarPrayerDisplay",
         "ShowDeviceBatteriesOnTaskbar", "ShowDeviceBatteryBackground",
     };
 

@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:controls="clr-namespace:MochiDock.Controls"
              mc:Ignorable="d"
              FontFamily="{DynamicResource IslandUiFont}">
     <Grid VerticalAlignment="Center">
@@ -35,9 +36,34 @@
                     </StackPanel>
                 </Grid>
 
-                <!-- City & Hijri / Location line -->
+                <!-- City, Hijri date & current lunar phase -->
                 <TextBlock Text="{Binding CurrentPrayerSchedule.City}" Foreground="{DynamicResource IslandSecondaryInkBrush}" FontSize="12" FontWeight="{DynamicResource IslandSmallLabelWeight}" TextTrimming="CharacterEllipsis" Margin="0,1,0,0" />
-                <TextBlock Text="{Binding CurrentPrayerSchedule.HijriDate, FallbackValue='From your location'}" Foreground="{DynamicResource IslandHighlightBrush}" FontSize="11" TextTrimming="CharacterEllipsis" />
+                <Grid Margin="0,4,0,0" ToolTip="{Binding CurrentPrayerSchedule.MoonPhaseToolTip, FallbackValue='Current lunar phase'}">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <controls:MoonPhaseIcon Grid.Column="0" Width="22" Height="22" VerticalAlignment="Center" Margin="0,0,8,0"
+                                            CycleFraction="{Binding CurrentPrayerSchedule.MoonCycleFraction, FallbackValue=0.38}"
+                                            SouthernHemisphere="{Binding CurrentPrayerSchedule.IsSouthernHemisphere, FallbackValue=False}"
+                                            LitBrush="{DynamicResource IslandWarningBrush}"
+                                            ShadowBrush="{DynamicResource IslandControlBackgroundBrush}"
+                                            OutlineBrush="{DynamicResource IslandMutedInkBrush}" />
+                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                        <TextBlock Text="{Binding CurrentPrayerSchedule.HijriDate, FallbackValue='From your location'}" Foreground="{DynamicResource IslandHighlightBrush}" FontSize="11" TextTrimming="CharacterEllipsis">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+                                    <Style.Triggers>
+                                        <Trigger Property="Text" Value="">
+                                            <Setter Property="Visibility" Value="Collapsed" />
+                                        </Trigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                        <TextBlock Text="{Binding CurrentPrayerSchedule.MoonPhaseSummary, FallbackValue='Waxing Gibbous · 78%'}" Foreground="{DynamicResource IslandMutedInkBrush}" FontSize="11" TextTrimming="CharacterEllipsis" />
+                    </StackPanel>
+                </Grid>
             </StackPanel>
 
             <!-- RIGHT: Horizon Arc with 5 Prayers and Qibla / Sunrise header -->

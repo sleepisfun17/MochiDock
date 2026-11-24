@@ -292,6 +292,21 @@ public partial class MainViewModel
         }
     }
 
+    public string TaskbarPrayerDisplay
+    {
+        get => TaskbarStyle.FormatPrayerDisplay(TaskbarStyle.ParsePrayerDisplay(_settings.TaskbarPrayerDisplay));
+        set
+        {
+            string normalized = TaskbarStyle.FormatPrayerDisplay(TaskbarStyle.ParsePrayerDisplay(value));
+            if (string.Equals(_settings.TaskbarPrayerDisplay, normalized, StringComparison.Ordinal)) return;
+            _settings.TaskbarPrayerDisplay = normalized;
+            SettingsService.Save(_settings);
+            OnPropertyChanged(nameof(TaskbarPrayerDisplay));
+            RefreshTaskbarBlocks();
+            TaskbarStyleChanged?.Invoke();
+        }
+    }
+
     public TaskbarPlacementMode CurrentTaskbarPlacement => TaskbarStyle.ParsePlacement(_settings.TaskbarPlacement);
     public int EffectiveTaskbarOffsetPx => TaskbarStyle.ClampOffset(_settings.TaskbarOffsetPx);
     public int EffectiveTaskbarLeftOffsetPx => TaskbarStyle.ClampOffset(_settings.TaskbarLeftOffsetPx);
@@ -359,6 +374,8 @@ public partial class MainViewModel
         SwapNetworkLines = _settings.TaskbarSwapNetworkLines,
         CompactLabels = _settings.TaskbarCompactLabels,
         BatteryLayout = TaskbarStyle.ParseBatteryLayout(_settings.TaskbarBatteryLayout),
+        PrayerDisplay = TaskbarStyle.ParsePrayerDisplay(_settings.TaskbarPrayerDisplay),
+        PrayerWarnMinutes = 10,
         CpuAlert = _settings.CpuAlertThreshold,
         GpuAlert = _settings.GpuAlertThreshold,
         TempAlert = _settings.TemperatureAlertThreshold,
@@ -382,6 +399,7 @@ public partial class MainViewModel
             NetDownBytesPerSecond = live.NetDownBytesPerSecond ?? sampleFallback.NetDownBytesPerSecond,
             PrayerName = !string.IsNullOrWhiteSpace(live.PrayerName) ? live.PrayerName : sampleFallback.PrayerName,
             PrayerTime = !string.IsNullOrWhiteSpace(live.PrayerTime) ? live.PrayerTime : sampleFallback.PrayerTime,
+            PrayerRemaining = live.PrayerRemaining ?? sampleFallback.PrayerRemaining,
             WeatherTempC = live.WeatherTempC ?? sampleFallback.WeatherTempC,
             WindMetersPerSecond = live.WindMetersPerSecond ?? sampleFallback.WindMetersPerSecond,
             WeatherGlyph = !string.IsNullOrWhiteSpace(live.WeatherGlyph) ? live.WeatherGlyph : sampleFallback.WeatherGlyph,
@@ -422,7 +440,8 @@ public partial class MainViewModel
 
     private void OnTaskbarScheduleChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
-        if (e.PropertyName == nameof(PrayerSchedule.NextPrayer)) RefreshTaskbarBlocks();
+        if (e.PropertyName is nameof(PrayerSchedule.NextPrayer) or nameof(PrayerSchedule.CountdownText))
+            RefreshTaskbarBlocks();
     }
 
     /// <summary>Starts or stops the sampler timer: it runs only while a sampled item is on and the PC is in use (not locked, display on).</summary>
@@ -463,6 +482,7 @@ public partial class MainViewModel
         NetDownBytesPerSecond = _taskbarSample.NetDownBytesPerSecond, NetUpBytesPerSecond = _taskbarSample.NetUpBytesPerSecond,
         PrayerName = CurrentPrayerSchedule?.NextPrayer?.Name ?? "",
         PrayerTime = CurrentPrayerSchedule?.NextPrayer?.FormattedTime ?? "",
+        PrayerRemaining = CurrentPrayerSchedule?.NextPrayerInstant is not null ? CurrentPrayerSchedule.TimeUntilNextPrayer : null,
         WeatherTempC = _weatherInfo?.Temperature,
         WindMetersPerSecond = _weatherInfo?.WindSpeed,
         WeatherGlyph = _weatherInfo?.WeatherIcon ?? "",

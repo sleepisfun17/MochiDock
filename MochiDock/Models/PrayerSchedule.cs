@@ -118,6 +118,16 @@ public class PrayerSchedule : INotifyPropertyChanged
     protected void OnPropertyChanged([CallerMemberName] string? name = null) =>
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
 
+    private string _lastMoonSummary = "";
+    private int _lastMoonPercent = -1;
+    private bool _lastSouthern;
+
+    public MochiDock.Core.MoonState Moon => MochiDock.Core.MoonPhase.At(NowUtc);
+    public double MoonCycleFraction => Moon.CycleFraction;
+    public bool IsSouthernHemisphere => Latitude < 0;
+    public string MoonPhaseSummary => Moon.Summary;
+    public string MoonPhaseToolTip => Moon.DetailTooltip;
+
     public Func<DateTimeOffset> Clock { get; set; } = () => DateTimeOffset.UtcNow;
     public DateTimeOffset? TomorrowFajr { get; set; }
     public DateTimeOffset? NextPrayerInstant { get; private set; }
@@ -154,5 +164,21 @@ public class PrayerSchedule : INotifyPropertyChanged
         IsDaytime=NowUtc>=MochiDock.Core.PrayerTime.At(Date.Date.Add(Sunrise.Time),zone)&&NowUtc<MochiDock.Core.PrayerTime.At(Date.Date.Add(Maghrib.Time),zone);
         SunProgress=MochiDock.Core.PrayerTimeline.Position(NowUtc,MochiDock.Core.PrayerTime.At(Date.Date,zone),MochiDock.Core.PrayerTime.At(Date.Date.AddDays(1),zone),items.Select(p=>MochiDock.Core.PrayerTime.At(Date.Date.Add(p.Time),zone)).ToArray()) ?? double.NaN;
         OnPropertyChanged(nameof(NowUtc));OnPropertyChanged(nameof(NextPrayerDayText));OnPropertyChanged(nameof(Source));
+        var moon = Moon;
+        if (!string.Equals(moon.Summary, _lastMoonSummary, StringComparison.Ordinal) || moon.IlluminationPercent != _lastMoonPercent)
+        {
+            _lastMoonSummary = moon.Summary;
+            _lastMoonPercent = moon.IlluminationPercent;
+            OnPropertyChanged(nameof(Moon));
+            OnPropertyChanged(nameof(MoonCycleFraction));
+            OnPropertyChanged(nameof(MoonPhaseSummary));
+            OnPropertyChanged(nameof(MoonPhaseToolTip));
+        }
+        bool southern = IsSouthernHemisphere;
+        if (southern != _lastSouthern)
+        {
+            _lastSouthern = southern;
+            OnPropertyChanged(nameof(IsSouthernHemisphere));
+        }
     }
 }

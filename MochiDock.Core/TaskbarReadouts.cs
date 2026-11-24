@@ -49,6 +49,7 @@ public sealed record TaskbarSnapshot
     public double? NetUpBytesPerSecond { get; init; }
     public string PrayerName { get; init; } = "";
     public string PrayerTime { get; init; } = "";
+    public TimeSpan? PrayerRemaining { get; init; }
     public double? WeatherTempC { get; init; }
     public double? WindMetersPerSecond { get; init; }
     public string WeatherGlyph { get; init; } = "";
@@ -79,6 +80,8 @@ public sealed record TaskbarOptions
     public bool SwapNetworkLines { get; init; }
     public bool CompactLabels { get; init; }
     public TaskbarBatteryLayout BatteryLayout { get; init; } = TaskbarBatteryLayout.Auto;
+    public TaskbarPrayerDisplay PrayerDisplay { get; init; } = TaskbarPrayerDisplay.TimeAndRemaining;
+    public int PrayerWarnMinutes { get; init; } = 10;
 
     /// <summary>CPU / GPU load at or over this is a warning (the existing alert settings).</summary>
     public double CpuAlert { get; init; } = 90;
@@ -219,7 +222,7 @@ public static class TaskbarReadouts
                     if (NetworkBlock(snapshot, options) is { } network) blocks.Add(network);
                     break;
                 case TaskbarBlockKind.Prayer:
-                    if (options.Prayer && PrayerBlock(snapshot) is { } prayer) blocks.Add(prayer);
+                    if (options.Prayer && PrayerBlock(snapshot, options) is { } prayer) blocks.Add(prayer);
                     break;
                 case TaskbarBlockKind.Weather:
                     if (WeatherBlock(snapshot, options) is { } weather) blocks.Add(weather);
@@ -417,12 +420,45 @@ public static class TaskbarReadouts
         };
     }
 
-    private static TaskbarBlock? PrayerBlock(TaskbarSnapshot s)
+    /// <summary>"in 1h 25m", "in 12m", "&lt;1m" or "now".</summary>
+    public static string FormatPrayerRemaining(TimeSpan remaining)
+    {
+        if (remaining <= TimeSpan.Zero) return "now";
+        if (remaining.TotalMinutes < 1) return "<1m";
+        int hours = (int)remaining.TotalHours;
+        int minutes = remaining.Minutes;
+        return hours > 0 ? $"in {hours}h {minutes}m" : $"in {minutes}m";
+    }
+
+    private static TaskbarBlock? PrayerBlock(TaskbarSnapshot s, TaskbarOptions o)
     {
         if (string.IsNullOrWhiteSpace(s.PrayerName) || string.IsNullOrWhiteSpace(s.PrayerTime)) return null;
-        return new TaskbarBlock(TaskbarBlockKind.Prayer, s.PrayerName, s.PrayerTime, false, false, $"Next prayer: {s.PrayerName} at {s.PrayerTime}")
+        string? rem = s.PrayerRemaining is { } span ? FormatPrayerRemaining(span) : null;
+        bool warnSoon = o.PrayerWarnMinutes > 0 && s.PrayerRemaining is { } r && r > TimeSpan.Zero && r <= TimeSpan.FromMinutes(o.PrayerWarnMinutes);
+        string tip = rem != null
+            ? $"Next prayer: {s.PrayerName} at {s.PrayerTime} ({rem})"
+            : $"Next prayer: {s.PrayerName} at {s.PrayerTime}";
+
+        if (rem is null || o.PrayerDisplay == TaskbarPrayerDisplay.Time)
         {
-            TopLabel = s.PrayerName,
+            return new TaskbarBlock(TaskbarBlockKind.Prayer, s.PrayerName, s.PrayerTime, false, warnSoon, tip)
+            {
+                TopLabel = s.PrayerName,
+            };
+        }
+
+        if (o.PrayerDisplay == TaskbarPrayerDisplay.Remaining)
+        {
+            return new TaskbarBlock(TaskbarBlockKind.Prayer, s.PrayerName, rem, false, warnSoon, tip)
+            {
+                TopLabel = s.PrayerName,
+            };
+        }
+
+        string topLabel = s.PrayerName + " ";
+        return new TaskbarBlock(TaskbarBlockKind.Prayer, topLabel + s.PrayerTime, rem, false, warnSoon, tip)
+        {
+            TopLabel = topLabel,
         };
     }
 
