@@ -38,7 +38,7 @@ A new install shows three tabs: **Media**, **Stats** and **Weather**. Everything
 | General | Start with Windows, hide in fullscreen, hide from screen capture. |
 | Appearance & Dock | Theme (Default, Hojicha, Kuro Night or Matcha), dock style, date format (Automatic follows the Windows region; or year first `2026/11/19 木`, day first `Thu 19 Nov 2026`, month first `Thu, Nov 19, 2026`, ISO `2026-11-19 Thu`), monitor, capsule content, interface size, Mascot (Auto is the theme's own: Mochi on Default, Hojicha Mochi on Hojicha, Matcha Mochi on Matcha and Kuro, the black electric cat, on Kuro Night; or choose grey Mochi, Matcha Mochi, Hojicha Mochi, Kuro or Shiro, the white cat, with any theme; the same choice is in the dock's quick settings under Theme). |
 | Tabs | Which tabs the dock shows. |
-| WhatsApp | Enable WhatsApp, pairing, engine (local or remote), ports, read sync, muted and listed chats. |
+| WhatsApp | Enable WhatsApp, pairing, short names for linked accounts (for example JP and ID), engine (local or remote), ports, read sync, muted and listed chats. |
 | Email | Mail accounts (Gmail, Yahoo, iCloud, Fastmail or any IMAP server), which Outlook folders to watch (empty by default) and ad filtering. |
 | Calendar | Calendar link, week start and holidays. |
 | Location & Prayer | City for weather and prayer, calculation method, prayer sound. |

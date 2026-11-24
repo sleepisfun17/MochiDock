@@ -140,6 +140,8 @@ public class AppSettings
     public bool WhatsAppOnlyListedPeople { get; set; }
     /// <summary>Chat id to display name, saved by the chat picker so the muted and notify lists show names instead of ids.</summary>
     public Dictionary<string, string> WhatsAppChatNames { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+    /// <summary>Short names for linked WhatsApp accounts by GOWA device id (for example "irfan-jp" -> "JP"); see WhatsAppAccountAlias.</summary>
+    public Dictionary<string, string> WhatsAppAccountAliases { get; set; } = new(StringComparer.OrdinalIgnoreCase);
 
     // Notification controls
     public bool MuteEmail { get; set; }

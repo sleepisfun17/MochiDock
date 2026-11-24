@@ -115,6 +115,7 @@ public class GowaService
         RemoteWebhookToken = settings.RemoteWebhookToken;
         ApplyRemoteAuth();
         IgnoreArchivedChats = settings.IgnoreArchivedChats;
+        _accountAliases = new Dictionary<string, string>(settings.WhatsAppAccountAliases ?? new());   // a copy: settings may change on another thread
         MuteAllWhatsAppGroups = settings.MuteAllWhatsAppGroups;
         OnlyNotifyListedGroups = settings.WhatsAppOnlyListedGroups;
         OnlyNotifyListedPeople = settings.WhatsAppOnlyListedPeople;
@@ -267,7 +268,18 @@ public class GowaService
         if (changed) AccountsChanged?.Invoke();
     }
 
-    private string AccountLabel(MochiDock.Core.GowaAccount account)
+    // Short names the user gave the accounts (Settings > WhatsApp), by device id. Replaced as a whole on every settings change.
+    private IReadOnlyDictionary<string, string> _accountAliases = new Dictionary<string, string>();
+
+    /// <summary>Every linked account: its device id and its own label (without the user's alias), for the alias boxes in Settings.</summary>
+    public IReadOnlyList<(string DeviceId, string OwnLabel)> LinkedAccounts =>
+        _accounts.Where(a => !string.IsNullOrWhiteSpace(a.DeviceId)).Select(a => (a.DeviceId, OwnLabel(a))).ToList();
+
+    // The alias when the user gave one, else the account's own label.
+    private string AccountLabel(MochiDock.Core.GowaAccount account) =>
+        MochiDock.Core.WhatsAppAccountAlias.Label(_accountAliases, account.DeviceId, OwnLabel(account));
+
+    private string OwnLabel(MochiDock.Core.GowaAccount account)
     {
         bool nameIsUnique = !string.IsNullOrWhiteSpace(account.Name) &&
                             _accounts.Count(a => string.Equals(a.Name, account.Name, StringComparison.OrdinalIgnoreCase)) <= 1;

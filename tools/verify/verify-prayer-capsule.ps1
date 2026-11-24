@@ -16,6 +16,8 @@ foreach($node in $source.SelectNodes('//*[local-name()="FontFamily"]')){$app.Res
 $app.Resources.MergedDictionaries.Add([Windows.Markup.XamlReader]::Parse((Get-Content (Join-Path $repo 'MochiDock/Views/TypographyResources.xaml') -Raw)))
 $weatherMarkup=(Get-Content (Join-Path $repo 'MochiDock/Views/WeatherIconResources.xaml') -Raw) -replace 'clr-namespace:MochiDock.Models','clr-namespace:MochiDock.Models;assembly=MochiDock'
 $app.Resources.MergedDictionaries.Add([Windows.Markup.XamlReader]::Parse($weatherMarkup,$context))
+# The capsule's notification icons (WhatsApp, Discord, email) are the header's line icons.
+$app.Resources.MergedDictionaries.Add([Windows.Markup.XamlReader]::Parse(((Get-Content (Join-Path $repo 'MochiDock/Views/NavigationIconResources.xaml') -Raw) -replace ' x:Shared="False"','')))
 $app.Resources['BoolToVisibility']=[Windows.Controls.BooleanToVisibilityConverter]::new()
 $app.Resources['InverseBoolToVisibility']=[Activator]::CreateInstance($assembly.GetType('MochiDock.Views.InverseBooleanToVisibilityConverter'))
 foreach($node in $source.SelectNodes('//*[local-name()="Style" and @*[local-name()="Key"]="IslandFocusVisual"]')){$app.Resources['IslandFocusVisual']=[Windows.Markup.XamlReader]::Parse($node.OuterXml,$context)}

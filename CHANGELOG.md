@@ -2,6 +2,16 @@
 
 All notable changes to MochiDock are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Added
+
+- **Short names for WhatsApp accounts**: Settings > WhatsApp > Account names gives each linked account a short name (for example JP or ID), shown after the sender instead of the long account name when several accounts are linked.
+
+### Changed
+
+- **Notification icons in the capsule**: WhatsApp, email and Discord notices use the same line icons as the tabs of the open dock, in the theme's colour, instead of the brand logos.
+
 ## [0.3.1-beta]
 
 ### Changed

@@ -25,6 +25,11 @@
         <TextBlock x:Name="LinkStatusText" Style="{StaticResource SettingsRowDescription}" TextWrapping="Wrap" Margin="0,0,0,4"/>
         <TextBlock x:Name="LinkStepsText" Style="{StaticResource CardCaptionText}" TextWrapping="Wrap" Margin="0,0,0,10"
                    Text="To link: 1) click Open QR dashboard. 2) On your phone open WhatsApp > Linked devices > Link a device. 3) Scan the QR code shown in the dashboard."/>
+        <!-- One box per linked account (built in code); shown once an account is linked. -->
+        <s:SettingRow x:Name="AccountAliasRow" Label="Account names" Visibility="Collapsed"
+                      Description="A short name for each linked account, for example JP or ID. With several accounts it is shown after the sender. Leave a box empty to use the account's own name.">
+            <StackPanel x:Name="AccountAliasPanel"/>
+        </s:SettingRow>
         <TextBlock Style="{StaticResource SettingsGroupHeader}" Text="Server" Margin="0,18,0,2"/>
         <s:SettingRow Label="Engine" Description="Run GOWA on this PC, or use a shared GOWA server (for example over Tailscale).">
             <StackPanel Orientation="Horizontal">

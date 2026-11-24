@@ -167,6 +167,24 @@ public partial class MainViewModel
         OnPropertyChanged(nameof(IntegrationStatus));
     }
 
+    /// <summary>The linked WhatsApp accounts (device id and own label) for the alias boxes in Settings; empty while none is linked.</summary>
+    public IReadOnlyList<(string DeviceId, string OwnLabel)> WhatsAppAccounts => _gowaService.LinkedAccounts;
+
+    /// <summary>Sets (or, when empty, removes) the short name of a linked WhatsApp account and pushes it to the running GOWA service.</summary>
+    public void SetWhatsAppAccountAlias(string deviceId, string alias)
+    {
+        string value = WhatsAppAccountAlias.Normalize(alias);
+        string? current = WhatsAppAccountAlias.Find(_settings.WhatsAppAccountAliases, deviceId);
+        if (string.Equals(current ?? "", value, StringComparison.Ordinal)) return;
+        UpdateSettings(x =>
+        {
+            x.WhatsAppAccountAliases ??= new(StringComparer.OrdinalIgnoreCase);
+            foreach (var key in x.WhatsAppAccountAliases.Keys.Where(k => string.Equals(k, deviceId, StringComparison.OrdinalIgnoreCase)).ToList())
+                x.WhatsAppAccountAliases.Remove(key);
+            if (value.Length > 0) x.WhatsAppAccountAliases[deviceId] = value;
+        }, SettingsApply.Gowa);
+    }
+
     /// <summary>Removes a group from the notify list and pushes the list to the running GOWA service.</summary>
     public void RemoveAllowedWhatsAppGroup(string entry) =>
         UpdateSettings(x => x.WhatsAppAllowedGroups.RemoveAll(j => string.Equals(j, entry, StringComparison.OrdinalIgnoreCase)), SettingsApply.Gowa);

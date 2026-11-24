@@ -50,12 +50,47 @@ public partial class WhatsAppSectionView : SettingsSectionBase
         Loaded += (s, e) => { _statusTimer.Start(); _linkTimer.Start(); UpdateReadSyncStatus(); UpdateLinkStatus(); };
         Unloaded += (s, e) => { _statusTimer.Stop(); _linkTimer.Stop(); };
         // The engine row follows downloads started elsewhere (startup, a mode change) through the same 3 s tick.
-        _linkTimer.Tick += (s, e) => { UpdateLinkStatus(); UpdateEngineRow(); };
+        _linkTimer.Tick += (s, e) => { UpdateLinkStatus(); UpdateEngineRow(); UpdateAliasRows(); };
         _statusTimer.Tick += (s, e) => UpdateReadSyncStatus();
     }
 
     // A box being edited keeps its text; everything else follows the settings.
     private static void SetText(TextBox box, string text) { if (!box.IsKeyboardFocused) box.Text = text; }
+
+    // ---- Account names: one alias box per linked account. Rebuilt only when the linked accounts change, so typing is never interrupted.
+    private string _aliasAccountsKey = "";
+
+    private void UpdateAliasRows()
+    {
+        if (ViewModel is not { } vm) return;
+        var accounts = vm.WhatsAppAccounts;
+        string key = string.Join("|", accounts.Select(a => a.DeviceId + "=" + a.OwnLabel));
+        if (key != _aliasAccountsKey && !AccountAliasPanel.IsKeyboardFocusWithin)
+        {
+            _aliasAccountsKey = key;
+            AccountAliasPanel.Children.Clear();
+            foreach (var (deviceId, ownLabel) in accounts)
+            {
+                var row = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 0, 0, 4) };
+                row.Children.Add(new TextBlock { Text = ownLabel, Width = 130, VerticalAlignment = VerticalAlignment.Center,
+                                                 Style = (Style)FindResource("SettingsRowDescription"), TextTrimming = TextTrimming.CharacterEllipsis, ToolTip = deviceId });
+                var box = new TextBox { Width = 90, Tag = deviceId, MaxLength = WhatsAppAccountAlias.MaxLength, Style = (Style)FindResource("ModernDarkTextBox") };
+                System.Windows.Automation.AutomationProperties.SetName(box, $"Short name for {ownLabel}");
+                box.LostFocus += (s, e) => SaveAlias((TextBox)s);
+                box.KeyDown += (s, e) => { if (e.Key == Key.Enter) { SaveAlias((TextBox)s); Keyboard.ClearFocus(); } };
+                row.Children.Add(box);
+                AccountAliasPanel.Children.Add(row);
+            }
+        }
+        AccountAliasRow.Visibility = accounts.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+        foreach (var box in AccountAliasPanel.Children.OfType<StackPanel>().SelectMany(r => r.Children.OfType<TextBox>()))
+            SetText(box, WhatsAppAccountAlias.Find(vm.Settings.WhatsAppAccountAliases, box.Tag as string) ?? "");
+    }
+
+    private void SaveAlias(TextBox box)
+    {
+        if (ViewModel is { } vm && box.Tag is string deviceId) vm.SetWhatsAppAccountAlias(deviceId, box.Text);
+    }
 
     protected override void LoadFromSettings()
     {
@@ -77,6 +112,7 @@ public partial class WhatsAppSectionView : SettingsSectionBase
             if (!RemotePasswordBox.IsKeyboardFocused) RemotePasswordBox.Password = credentials?.Password ?? "";
             IgnoreArchivedCheck.IsChecked = settings.IgnoreArchivedChats;
             MuteGroupsCheck.IsChecked = settings.MuteAllWhatsAppGroups;
+            UpdateAliasRows();
 
             var names = settings.WhatsAppChatNames;
             var muted = settings.MutedWhatsAppChatJids ?? new();
