@@ -22,6 +22,7 @@ public partial class AdvancedSettingsWindow : Window
 {
     private readonly MainViewModel _viewModel;
     private readonly Dictionary<string, UserControl> _sections = new(StringComparer.OrdinalIgnoreCase);
+    private readonly System.Windows.Data.ListCollectionView _sectionsView;
     private bool _selecting;
     private readonly Dictionary<string, double> _scrollOffsets = new(StringComparer.OrdinalIgnoreCase);
     private string? _shownSectionId;
@@ -32,9 +33,10 @@ public partial class AdvancedSettingsWindow : Window
         _viewModel = viewModel;
         DataContext = viewModel;
         // Grouped view: the group headings come from SettingsSection.Group; selection still holds the section objects.
-        var sections = new System.Windows.Data.ListCollectionView(SettingsSections.All.ToList());
-        sections.GroupDescriptions.Add(new System.Windows.Data.PropertyGroupDescription(nameof(SettingsSection.Group)));
-        SidebarList.ItemsSource = sections;
+        _sectionsView = new System.Windows.Data.ListCollectionView(SettingsSections.All.ToList());
+        _sectionsView.GroupDescriptions.Add(new System.Windows.Data.PropertyGroupDescription(nameof(SettingsSection.Group)));
+        _sectionsView.Filter = obj => obj is SettingsSection s && SettingsSections.Matches(s, SidebarSearchBox.Text);
+        SidebarList.ItemsSource = _sectionsView;
         SourceInitialized += (s, e) => ApplyChrome(_viewModel.CapsuleTheme);
         PreviewKeyDown += AdvancedSettingsWindow_PreviewKeyDown;
         ApplyInterfaceScale();
@@ -50,10 +52,27 @@ public partial class AdvancedSettingsWindow : Window
     private void AdvancedSettingsWindow_PreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
     {
         if (e.Key != Key.Escape || e.Handled) return;
+        if (!string.IsNullOrEmpty(SidebarSearchBox.Text))
+        {
+            SidebarSearchBox.Text = "";
+            e.Handled = true;
+            return;
+        }
         if (Keyboard.FocusedElement is System.Windows.Controls.TextBox { IsReadOnly: true }) return;
         if (Keyboard.FocusedElement is System.Windows.Controls.ComboBox { IsDropDownOpen: true }) return;
         Close();
         e.Handled = true;
+    }
+
+    private void SidebarSearchBox_TextChanged(object sender, TextChangedEventArgs e)
+    {
+        _sectionsView.Refresh();
+        bool empty = _sectionsView.Count == 0;
+        NoSearchMatchesText.Visibility = empty ? Visibility.Visible : Visibility.Collapsed;
+        if (!empty && (SidebarList.SelectedItem is not SettingsSection current || !SettingsSections.Matches(current, SidebarSearchBox.Text)))
+        {
+            SidebarList.SelectedItem = _sectionsView.GetItemAt(0);
+        }
     }
 
     private void ViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -100,6 +119,7 @@ public partial class AdvancedSettingsWindow : Window
     public void NavigateTo(string? target)
     {
         var section = SettingsSections.Find(SettingsSections.Resolve(target))!;
+        if (!SettingsSections.Matches(section, SidebarSearchBox.Text)) SidebarSearchBox.Text = "";
         if (!ReferenceEquals(SidebarList.SelectedItem, section)) SidebarList.SelectedItem = section;
         else ShowSection(section);
     }
@@ -115,8 +135,8 @@ public partial class AdvancedSettingsWindow : Window
         _selecting = true;
         try
         {
-            // Text boxes commit on LostFocus, so leaving the section commits whatever is being edited.
-            Keyboard.ClearFocus();
+            // Text boxes commit on LostFocus, so leaving the section commits whatever is being edited; keep focus when typing in the sidebar search box.
+            if (!SidebarSearchBox.IsKeyboardFocusWithin) Keyboard.ClearFocus();
             if (!_sections.TryGetValue(section.Id, out var view))
             {
                 view = CreateSection(section.Id);
@@ -151,6 +171,7 @@ public partial class AdvancedSettingsWindow : Window
         SettingsSections.Email => new EmailSectionView { DataContext = _viewModel },
         SettingsSections.Notifications => new NotificationsSectionView { DataContext = _viewModel },
         SettingsSections.Appearance => new AppearanceSectionView { DataContext = _viewModel },
+        SettingsSections.Mascot => new MascotSectionView { DataContext = _viewModel },
         SettingsSections.Gaming => new GamingSectionView { DataContext = _viewModel },
         SettingsSections.Hardware => new HardwareSectionView { DataContext = _viewModel },
         SettingsSections.Taskbar => new TaskbarSectionView { DataContext = _viewModel },

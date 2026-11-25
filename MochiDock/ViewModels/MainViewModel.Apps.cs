@@ -121,7 +121,8 @@ public partial class MainViewModel
 
     public void SelectAppMessage(AppNotification? notif)
     {
-        if (notif != null) CurrentApp = notif;
+        if (notif == null || ReferenceEquals(_currentApp, notif)) return;
+        CurrentApp = notif;
     }
 
     public void DismissAppMessage(AppNotification? notif)

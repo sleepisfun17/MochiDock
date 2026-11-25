@@ -14,5 +14,9 @@
         <s:SettingRow Label="Exclude from screen capture" Description="Keep the dock out of screenshots, recordings and screen sharing.">
             <CheckBox IsChecked="{Binding ExcludeFromScreenCapture, Mode=TwoWay}" Style="{StaticResource ModernDarkCheckBox}"/>
         </s:SettingRow>
+        <TextBlock Style="{StaticResource SettingsGroupHeader}" Text="Regional" Margin="0,18,0,2"/>
+        <s:SettingRow Label="Date format" Description="How dates are written in the header, the Today calendar, tasks, prayer times and power sessions. Automatic follows your Windows region.">
+            <ComboBox x:Name="DateFormatCombo" Style="{StaticResource ModernDarkComboBox}" Width="300" SelectionChanged="DateFormat_Changed" AutomationProperties.Name="Date format"/>
+        </s:SettingRow>
     </StackPanel>
 </s:SettingsSectionBase>

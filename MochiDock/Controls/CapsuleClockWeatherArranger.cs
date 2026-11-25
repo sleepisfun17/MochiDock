@@ -35,7 +35,18 @@ public static class CapsuleClockWeatherArranger
         double weatherWidth = weatherBadge.DesiredSize.Width;
         if (weatherWidth <= 0) return null; // collapsed until its trigger applies
 
-        return CapsuleClockLayout.Compute(MeasureText.DesiredSize.Width, mascot.Width, weatherWidth, alignment, border: border);
+        double leftWidth;
+        if (double.IsFinite(mascot.Width) && mascot.Width > 0)
+        {
+            leftWidth = mascot.Width;
+        }
+        else
+        {
+            mascot.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+            leftWidth = mascot.DesiredSize.Width;
+        }
+
+        return CapsuleClockLayout.Compute(MeasureText.DesiredSize.Width, leftWidth, weatherWidth, alignment, border: border);
     }
 
     public static void Apply(CapsuleClockLayoutResult layout, ColumnDefinition left, ColumnDefinition right,

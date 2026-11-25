@@ -400,7 +400,12 @@ public static class ThemeService
                 mascot.ApplyTheme(mascotTheme, kind);
                 continue; // Never step into MascotControl children so eyes stay #1A1412!
             }
-            if (child.GetType().Name.Contains("MascotControl"))
+            if (child is Controls.MascotStatusBadge badge)
+            {
+                badge.ApplyTheme(mascotTheme, kind);
+                continue;
+            }
+            if (child.GetType().Name.Contains("MascotControl") || child.GetType().Name.Contains("MascotStatusBadge"))
             {
                 continue;
             }
@@ -434,8 +439,8 @@ public static class ThemeService
 
     public static void ApplyElementStyle(DependencyObject elem, bool isMatcha)
     {
-        // Don't recolor the Mascot
-        if (elem.GetType().Name.Contains("MascotControl")) return;
+        // Don't recolor the Mascot or its status badge
+        if (elem.GetType().Name.Contains("MascotControl") || elem.GetType().Name.Contains("MascotStatusBadge")) return;
 
         if (elem is TextBlock tb)
         {

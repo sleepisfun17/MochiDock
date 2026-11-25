@@ -31,6 +31,7 @@
                 <Button Style="{StaticResource ActionButton}" Content="Reset" Click="HotkeyReset_Click" Margin="8,0,0,0"/>
             </StackPanel>
         </s:SettingRow>
+
         <TextBlock Style="{StaticResource SettingsGroupHeader}" Text="Window sizes" Margin="0,18,0,2"/>
         <s:SettingRow Label="Window size shortcuts" Description="Resize the window you are using to a set size and centre it on its screen, from anywhere. No AutoHotkey needed.">
             <CheckBox x:Name="WindowSizesCheck" Style="{StaticResource ModernDarkCheckBox}" Checked="WindowSizes_Changed" Unchecked="WindowSizes_Changed" AutomationProperties.Name="Window size shortcuts"/>
@@ -58,7 +59,8 @@
                 <TextBlock Text="{Binding Value, ElementName=OffsetSlider, StringFormat='{}{0:0} px'}" Style="{StaticResource CardCaptionText}" Width="50" TextAlignment="Right" VerticalAlignment="Center"/>
             </StackPanel>
         </s:SettingRow>
-        <TextBlock Style="{StaticResource SettingsGroupHeader}" Text="Session summary and ping" Margin="0,18,0,2"/>
+
+        <TextBlock Style="{StaticResource SettingsGroupHeader}" Text="Session summary and playtime" Margin="0,18,0,2"/>
         <s:SettingRow Label="Game session summary" Description="Record the FPS of each gaming session and show average FPS, 1% low (the average of the slowest 1% of frames), 0.1% low, minimum and stutters when you stop playing. Sessions shorter than a minute are ignored. Only gaming time is measured.">
             <StackPanel Orientation="Horizontal">
                 <CheckBox x:Name="SessionSummaryCheck" Style="{StaticResource ModernDarkCheckBox}" Checked="Option_Changed" Unchecked="Option_Changed" Margin="0,0,12,0"/>
@@ -76,39 +78,53 @@
                 <Button Style="{StaticResource ActionButton}" Content="Clear playtime" Click="ClearPlaytime_Click" Margin="0"/>
             </StackPanel>
         </s:SettingRow>
-        <s:SettingRow Label="Match stats (League of Legends)" Description="While you play League of Legends, read the result, champion, kills/deaths/assists, CS and best multi-kill from the game's own local Live Client Data API (nothing is injected into the game). It shows in the session summary and the Recent sessions tooltip. Other games have no such API; Valorant offers none.">
-            <CheckBox x:Name="LolStatsCheck" Style="{StaticResource ModernDarkCheckBox}" Checked="Option_Changed" Unchecked="Option_Changed"/>
-        </s:SettingRow>
-        <s:SettingRow Label="Match stats (PUBG)" Description="A few minutes after a PUBG match, look it up in the official PUBG API and show placement, kills, damage, headshots and time survived. It needs your in-game name and a free API key from developer.pubg.com (the key is kept in Windows Credential Manager, never in settings). The API publishes matches late and allows about 10 lookups a minute; MochiDock tries a few times, three minutes apart.">
-            <CheckBox x:Name="PubgCheck" Style="{StaticResource ModernDarkCheckBox}" Checked="Option_Changed" Unchecked="Option_Changed"/>
-        </s:SettingRow>
-        <s:SettingRow x:Name="PubgNameRow" Label="PUBG player name" Description="Exactly as in the game: the API is case-sensitive.">
-            <StackPanel Orientation="Horizontal">
-                <TextBox x:Name="PubgNameBox" Style="{StaticResource ModernDarkTextBox}" Width="180" LostFocus="PubgName_LostFocus" KeyDown="PubgName_KeyDown" AutomationProperties.Name="PUBG player name"/>
-                <ComboBox x:Name="PubgPlatformCombo" Style="{StaticResource ModernDarkComboBox}" Width="130" Margin="8,0,0,0" SelectionChanged="PubgPlatform_SelectionChanged">
-                    <ComboBoxItem Content="Steam (PC)" Tag="steam"/>
-                    <ComboBoxItem Content="Kakao (PC)" Tag="kakao"/>
-                    <ComboBoxItem Content="Xbox" Tag="xbox"/>
-                    <ComboBoxItem Content="PlayStation" Tag="psn"/>
-                </ComboBox>
-            </StackPanel>
-        </s:SettingRow>
-        <s:SettingRow x:Name="PubgKeyRow" Label="PUBG API key" Description="Create a free key at developer.pubg.com and paste it here.">
-            <StackPanel>
-                <StackPanel Orientation="Horizontal">
-                    <PasswordBox x:Name="PubgKeyBox" Style="{StaticResource ModernDarkPasswordBox}" PasswordChar="•" Width="220" AutomationProperties.Name="PUBG API key"/>
-                    <Button Style="{StaticResource ActionButton}" Content="Save key" Click="PubgSaveKey_Click" Margin="8,0,0,0"/>
-                    <Button Style="{StaticResource ActionButton}" Content="Remove" Click="PubgRemoveKey_Click" Margin="8,0,0,0"/>
+
+        <Expander Style="{StaticResource SettingsExpander}" IsExpanded="False">
+            <Expander.Header>
+                <StackPanel>
+                    <TextBlock Text="Match stats (League of Legends and PUBG)" Style="{StaticResource CardSectionLabel}"/>
+                    <TextBlock Text="Optional end-of-match stats and PUBG API credentials" Style="{StaticResource CardCaptionText}" Foreground="{DynamicResource IslandMutedInkBrush}"/>
                 </StackPanel>
-                <TextBlock x:Name="PubgKeyStatus" Style="{StaticResource CardCaptionText}" Margin="0,6,0,0"/>
+            </Expander.Header>
+            <StackPanel>
+                <s:SettingRow Label="Match stats (League of Legends)" Description="While you play League of Legends, read the result, champion, kills/deaths/assists, CS and best multi-kill from the game's own local Live Client Data API (nothing is injected into the game). It shows in the session summary and the Recent sessions tooltip. Other games have no such API; Valorant offers none.">
+                    <CheckBox x:Name="LolStatsCheck" Style="{StaticResource ModernDarkCheckBox}" Checked="Option_Changed" Unchecked="Option_Changed"/>
+                </s:SettingRow>
+                <s:SettingRow Label="Match stats (PUBG)" Description="A few minutes after a PUBG match, look it up in the official PUBG API and show placement, kills, damage, headshots and time survived. It needs your in-game name and a free API key from developer.pubg.com (the key is kept in Windows Credential Manager, never in settings). The API publishes matches late and allows about 10 lookups a minute; MochiDock tries a few times, three minutes apart.">
+                    <CheckBox x:Name="PubgCheck" Style="{StaticResource ModernDarkCheckBox}" Checked="Option_Changed" Unchecked="Option_Changed"/>
+                </s:SettingRow>
+                <s:SettingRow x:Name="PubgNameRow" Label="PUBG player name" Description="Exactly as in the game: the API is case-sensitive.">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBox x:Name="PubgNameBox" Style="{StaticResource ModernDarkTextBox}" Width="180" LostFocus="PubgName_LostFocus" KeyDown="PubgName_KeyDown" AutomationProperties.Name="PUBG player name"/>
+                        <ComboBox x:Name="PubgPlatformCombo" Style="{StaticResource ModernDarkComboBox}" Width="130" Margin="8,0,0,0" SelectionChanged="PubgPlatform_SelectionChanged">
+                            <ComboBoxItem Content="Steam (PC)" Tag="steam"/>
+                            <ComboBoxItem Content="Kakao (PC)" Tag="kakao"/>
+                            <ComboBoxItem Content="Xbox" Tag="xbox"/>
+                            <ComboBoxItem Content="PlayStation" Tag="psn"/>
+                        </ComboBox>
+                    </StackPanel>
+                </s:SettingRow>
+                <s:SettingRow x:Name="PubgKeyRow" Label="PUBG API key" Description="Create a free key at developer.pubg.com and paste it here.">
+                    <StackPanel>
+                        <StackPanel Orientation="Horizontal">
+                            <PasswordBox x:Name="PubgKeyBox" Style="{StaticResource ModernDarkPasswordBox}" PasswordChar="•" Width="220" AutomationProperties.Name="PUBG API key"/>
+                            <Button Style="{StaticResource ActionButton}" Content="Save key" Click="PubgSaveKey_Click" Margin="8,0,0,0"/>
+                            <Button Style="{StaticResource ActionButton}" Content="Remove" Click="PubgRemoveKey_Click" Margin="8,0,0,0"/>
+                        </StackPanel>
+                        <TextBlock x:Name="PubgKeyStatus" Style="{StaticResource CardCaptionText}" Margin="0,6,0,0"/>
+                    </StackPanel>
+                </s:SettingRow>
             </StackPanel>
-        </s:SettingRow>
+        </Expander>
+
+        <TextBlock Style="{StaticResource SettingsGroupHeader}" Text="Network ping" Margin="0,18,0,2"/>
         <s:SettingRow x:Name="PingHostRow" Label="Ping host" Description="The address pinged every 3 seconds during a game for the session's ping numbers (average, worst, jitter, spikes, lost). It measures your route to this host, not the game server. An IP address or a host name.">
             <TextBox x:Name="PingHostBox" Style="{StaticResource ModernDarkTextBox}" Width="180" LostFocus="PingHost_LostFocus" KeyDown="PingHost_KeyDown"/>
         </s:SettingRow>
         <s:SettingRow Label="Ping in the gaming capsule" Description="Show the ping next to the FPS when the readout is pinned to the capsule during a game.">
             <CheckBox x:Name="PingCapsuleCheck" Style="{StaticResource ModernDarkCheckBox}" Checked="Option_Changed" Unchecked="Option_Changed"/>
         </s:SettingRow>
+
         <TextBlock Style="{StaticResource SettingsGroupHeader}" Text="Per-game profiles" Margin="0,18,0,2"/>
         <s:SettingRow x:Name="ProfileAddRow" Label="Add a game" Description="Type the game's process or window name (for example VALORANT-Win64-Shipping) or use the game that is running now, then press Add. Each profile then shows a Resolution list (only sizes this display offers, for example FHD · 16:10 · 1728×1080; &quot;No change&quot; leaves it alone). A profile can switch the resolution while the game runs and restore it afterwards, override click-through, and hold or allow notifications for that game only. Nothing changes for a game without a profile.">
             <StackPanel Orientation="Horizontal">

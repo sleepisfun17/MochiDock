@@ -157,7 +157,7 @@ public partial class MainWindow
 
     private MochiDock.Core.CapsuleClockLayoutResult? MeasureClockWeatherLayout() =>
         _viewModel != null && IsClockWeatherPill()
-            ? MochiDock.Controls.CapsuleClockWeatherArranger.Measure(CapsuleMarquee, _viewModel.CompactCapsuleText, PillMascot, PillWeatherBadge,
+            ? MochiDock.Controls.CapsuleClockWeatherArranger.Measure(CapsuleMarquee, _viewModel.CompactCapsuleText, PillMascotHost, PillWeatherBadge,
                 CompactPillBorder.BorderThickness.Left + CompactPillBorder.BorderThickness.Right,
                 MochiDock.Core.CapsuleClockLayout.Parse(_viewModel.Settings.CapsuleClockLayout))
             : null;
@@ -165,9 +165,9 @@ public partial class MainWindow
     private void ApplyClockWeatherLayout()
     {
         if (MeasureClockWeatherLayout() is { } layout)
-            MochiDock.Controls.CapsuleClockWeatherArranger.Apply(layout, PillCol0, PillCol2, PillMascot, PillRightAnchors, PillWeatherBadge, PillTickerContent);
+            MochiDock.Controls.CapsuleClockWeatherArranger.Apply(layout, PillCol0, PillCol2, PillMascotHost, PillRightAnchors, PillWeatherBadge, PillTickerContent);
         else
-            MochiDock.Controls.CapsuleClockWeatherArranger.Reset(PillCol0, PillCol2, PillMascot, PillRightAnchors, PillTickerContent);
+            MochiDock.Controls.CapsuleClockWeatherArranger.Reset(PillCol0, PillCol2, PillMascotHost, PillRightAnchors, PillTickerContent);
     }
 
     private bool _gamingPillShown;

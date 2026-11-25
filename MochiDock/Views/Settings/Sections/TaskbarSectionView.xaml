@@ -77,7 +77,7 @@
             </StackPanel>
         </s:SettingRow>
 
-        <TextBlock Style="{StaticResource SettingsGroupHeader}" Text="Appearance and formatting" Margin="0,16,0,2"/>
+        <TextBlock Style="{StaticResource SettingsGroupHeader}" Text="Typography and layout" Margin="0,16,0,2"/>
         <s:SettingRow Label="Font" Description="Defaults to the Windows taskbar font (Segoe UI Variable / Segoe UI).">
             <ComboBox x:Name="FontFamilyCombo" Style="{StaticResource ModernDarkComboBox}" Width="240" SelectionChanged="FontFamily_Changed" AutomationProperties.Name="Taskbar readout font"/>
         </s:SettingRow>
@@ -96,63 +96,90 @@
         <s:SettingRow Label="Compact labels" Description="Use short C / G / M / D labels instead of CPU / GPU / MEM / DISK.">
             <CheckBox x:Name="CompactLabelsCheck" IsChecked="{Binding TaskbarCompactLabels, Mode=TwoWay}" Style="{StaticResource ModernDarkCheckBox}" AutomationProperties.Name="Use compact taskbar labels"/>
         </s:SettingRow>
-        <s:SettingRow Label="Device battery layout" Description="Auto uses the classic single-row size for 1 device and stacks 2+ devices top and bottom; Side by side always keeps devices on one row.">
-            <ComboBox x:Name="BatteryLayoutCombo" Style="{StaticResource ModernDarkComboBox}" Width="220" SelectionChanged="BatteryLayout_Changed" AutomationProperties.Name="Device battery taskbar layout"/>
-        </s:SettingRow>
-        <s:SettingRow Label="Next prayer display" Description="Show the scheduled time, remaining countdown, or both.">
-            <ComboBox x:Name="PrayerDisplayCombo" Style="{StaticResource ModernDarkComboBox}" Width="260" SelectionChanged="PrayerDisplay_Changed" AutomationProperties.Name="Next prayer taskbar display"/>
-        </s:SettingRow>
-        <s:SettingRow Label="Countdown before prayer" Description="Highlight and show 'in Xm' (even in Time only mode) when the next prayer is within this window.">
-            <ComboBox x:Name="PrayerApproachCombo" Style="{StaticResource ModernDarkComboBox}" Width="180" SelectionChanged="PrayerApproach_Changed" AutomationProperties.Name="Countdown window before next prayer"/>
-        </s:SettingRow>
-        <s:SettingRow Label="Show current prayer after start" Description="Show the ongoing prayer and elapsed time (for example 'Asr / +5m') for this long after it begins.">
-            <ComboBox x:Name="PrayerElapsedCombo" Style="{StaticResource ModernDarkComboBox}" Width="180" SelectionChanged="PrayerElapsed_Changed" AutomationProperties.Name="Show current prayer elapsed duration"/>
-        </s:SettingRow>
-        <s:SettingRow Label="Weather icon" Description="Draw the taskbar weather icon as a colour emoji or monochrome taskbar ink.">
-            <StackPanel Orientation="Horizontal">
-                <RadioButton x:Name="WeatherIconEmojiRadio" Style="{StaticResource ModernDarkRadioButton}" GroupName="TaskbarWeatherIcon" Checked="WeatherIcon_Checked" Margin="0,0,14,0">
-                    <TextBlock controls:Emoji.Text="⛅ Colour emoji" VerticalAlignment="Center"/>
-                </RadioButton>
-                <RadioButton x:Name="WeatherIconMonoRadio" Style="{StaticResource ModernDarkRadioButton}" Content="☁ Monochrome" GroupName="TaskbarWeatherIcon" Checked="WeatherIcon_Checked"/>
-            </StackPanel>
-        </s:SettingRow>
-        <s:SettingRow Label="Network arrows" Description="Arrow style used for upload and download rates.">
-            <StackPanel Orientation="Horizontal">
-                <RadioButton x:Name="ArrowClassicRadio" Style="{StaticResource ModernDarkRadioButton}" Content="↑ ↓" GroupName="TaskbarArrows" Checked="Arrows_Checked" Margin="0,0,14,0"/>
-                <RadioButton x:Name="ArrowTriangleRadio" Style="{StaticResource ModernDarkRadioButton}" Content="▲ ▼" GroupName="TaskbarArrows" Checked="Arrows_Checked" Margin="0,0,14,0"/>
-                <RadioButton x:Name="ArrowEmojiRadio" Style="{StaticResource ModernDarkRadioButton}" GroupName="TaskbarArrows" Checked="Arrows_Checked">
-                    <TextBlock controls:Emoji.Text="🔼 🔽" VerticalAlignment="Center"/>
-                </RadioButton>
-            </StackPanel>
-        </s:SettingRow>
-        <s:SettingRow Label="Network speed unit" Description="Show network throughput in bytes per second (KB/s, MB/s) or bits per second (Kb/s, Mb/s).">
-            <StackPanel Orientation="Horizontal">
-                <RadioButton x:Name="UnitBytesRadio" Style="{StaticResource ModernDarkRadioButton}" Content="Bytes (KB/s, MB/s)" GroupName="TaskbarNetUnit" Checked="NetUnit_Checked" Margin="0,0,14,0"/>
-                <RadioButton x:Name="UnitBitsRadio" Style="{StaticResource ModernDarkRadioButton}" Content="Bits (Kb/s, Mb/s)" GroupName="TaskbarNetUnit" Checked="NetUnit_Checked"/>
-            </StackPanel>
-        </s:SettingRow>
-        <s:SettingRow Label="Swap upload and download" Description="Show download on the top line and upload on the bottom line.">
-            <CheckBox x:Name="SwapNetCheck" IsChecked="{Binding TaskbarSwapNetworkLines, Mode=TwoWay}" Style="{StaticResource ModernDarkCheckBox}" AutomationProperties.Name="Swap upload and download lines"/>
-        </s:SettingRow>
         <s:SettingRow Label="Refresh interval" Description="How often CPU, GPU, memory, disk and network values update.">
             <ComboBox x:Name="RefreshCombo" Style="{StaticResource ModernDarkComboBox}" Width="140" SelectionChanged="Refresh_Changed" AutomationProperties.Name="Taskbar refresh interval"/>
         </s:SettingRow>
-        <s:SettingRow x:Name="LabelColorRow" Label="Label colour" Description="Optional #RRGGBB hex for labels (CPU, GPU, MEM, arrows). Leave empty for Auto; adapts automatically if contrast drops below 4.5:1 on a light or dark taskbar.">
-            <StackPanel Orientation="Horizontal">
-                <Border x:Name="LabelColorSwatch" Width="20" Height="20" CornerRadius="5" BorderThickness="1" BorderBrush="{DynamicResource IslandControlBorderBrush}" VerticalAlignment="Center"/>
-                <TextBox x:Name="LabelColorBox" Style="{StaticResource ModernDarkTextBox}" Width="96" Margin="8,0,0,0" controls:TextBoxHint.Text="Auto" LostFocus="LabelColor_LostFocus" KeyDown="LabelColor_KeyDown" AutomationProperties.Name="Label hex colour"/>
-                <Button Style="{StaticResource ActionButton}" Content="Auto" Margin="8,0,0,0" Click="LabelColorReset_Click" AutomationProperties.Name="Reset label colour to Auto"/>
+
+        <Expander Style="{StaticResource SettingsExpander}" IsExpanded="False">
+            <Expander.Header>
+                <StackPanel>
+                    <TextBlock Text="Colours and background" Style="{StaticResource CardSectionLabel}"/>
+                    <TextBlock Text="Custom label/value hex colours and taskbar plate" Style="{StaticResource CardCaptionText}" Foreground="{DynamicResource IslandMutedInkBrush}"/>
+                </StackPanel>
+            </Expander.Header>
+            <StackPanel>
+                <s:SettingRow x:Name="LabelColorRow" Label="Label colour" Description="Optional #RRGGBB hex for labels (CPU, GPU, MEM, arrows). Leave empty for Auto; adapts automatically if contrast drops below 4.5:1 on a light or dark taskbar.">
+                    <StackPanel Orientation="Horizontal">
+                        <Border x:Name="LabelColorSwatch" Width="20" Height="20" CornerRadius="5" BorderThickness="1" BorderBrush="{DynamicResource IslandControlBorderBrush}" VerticalAlignment="Center"/>
+                        <TextBox x:Name="LabelColorBox" Style="{StaticResource ModernDarkTextBox}" Width="96" Margin="8,0,0,0" controls:TextBoxHint.Text="Auto" LostFocus="LabelColor_LostFocus" KeyDown="LabelColor_KeyDown" AutomationProperties.Name="Label hex colour"/>
+                        <Button Style="{StaticResource ActionButton}" Content="Auto" Margin="8,0,0,0" Click="LabelColorReset_Click" AutomationProperties.Name="Reset label colour to Auto"/>
+                    </StackPanel>
+                </s:SettingRow>
+                <s:SettingRow x:Name="ValueColorRow" Label="Value colour" Description="Optional #RRGGBB hex for numbers and values. Warning lines always turn red at their alert threshold.">
+                    <StackPanel Orientation="Horizontal">
+                        <Border x:Name="ValueColorSwatch" Width="20" Height="20" CornerRadius="5" BorderThickness="1" BorderBrush="{DynamicResource IslandControlBorderBrush}" VerticalAlignment="Center"/>
+                        <TextBox x:Name="ValueColorBox" Style="{StaticResource ModernDarkTextBox}" Width="96" Margin="8,0,0,0" controls:TextBoxHint.Text="Auto" LostFocus="ValueColor_LostFocus" KeyDown="ValueColor_KeyDown" AutomationProperties.Name="Value hex colour"/>
+                        <Button Style="{StaticResource ActionButton}" Content="Auto" Margin="8,0,0,0" Click="ValueColorReset_Click" AutomationProperties.Name="Reset value colour to Auto"/>
+                    </StackPanel>
+                </s:SettingRow>
+                <s:SettingRow Label="Background behind taskbar text" Description="Draw a plate behind the readout so it stays readable on transparent or restyled taskbars.">
+                    <CheckBox IsChecked="{Binding ShowDeviceBatteryBackground, Mode=TwoWay}" Style="{StaticResource ModernDarkCheckBox}" AutomationProperties.Name="Background behind the taskbar readout"/>
+                </s:SettingRow>
             </StackPanel>
-        </s:SettingRow>
-        <s:SettingRow x:Name="ValueColorRow" Label="Value colour" Description="Optional #RRGGBB hex for numbers and values. Warning lines always turn red at their alert threshold.">
-            <StackPanel Orientation="Horizontal">
-                <Border x:Name="ValueColorSwatch" Width="20" Height="20" CornerRadius="5" BorderThickness="1" BorderBrush="{DynamicResource IslandControlBorderBrush}" VerticalAlignment="Center"/>
-                <TextBox x:Name="ValueColorBox" Style="{StaticResource ModernDarkTextBox}" Width="96" Margin="8,0,0,0" controls:TextBoxHint.Text="Auto" LostFocus="ValueColor_LostFocus" KeyDown="ValueColor_KeyDown" AutomationProperties.Name="Value hex colour"/>
-                <Button Style="{StaticResource ActionButton}" Content="Auto" Margin="8,0,0,0" Click="ValueColorReset_Click" AutomationProperties.Name="Reset value colour to Auto"/>
+        </Expander>
+
+        <Expander Style="{StaticResource SettingsExpander}" IsExpanded="False">
+            <Expander.Header>
+                <StackPanel>
+                    <TextBlock Text="Per-block formatting" Style="{StaticResource CardSectionLabel}"/>
+                    <TextBlock Text="Network arrows/units, Prayer countdown windows, Weather icon and Battery layout" Style="{StaticResource CardCaptionText}" Foreground="{DynamicResource IslandMutedInkBrush}"/>
+                </StackPanel>
+            </Expander.Header>
+            <StackPanel>
+                <TextBlock Style="{StaticResource SettingsGroupHeader}" Text="Network" Margin="0,4,0,2"/>
+                <s:SettingRow Label="Network arrows" Description="Arrow style used for upload and download rates.">
+                    <StackPanel Orientation="Horizontal">
+                        <RadioButton x:Name="ArrowClassicRadio" Style="{StaticResource ModernDarkRadioButton}" Content="↑ ↓" GroupName="TaskbarArrows" Checked="Arrows_Checked" Margin="0,0,14,0"/>
+                        <RadioButton x:Name="ArrowTriangleRadio" Style="{StaticResource ModernDarkRadioButton}" Content="▲ ▼" GroupName="TaskbarArrows" Checked="Arrows_Checked" Margin="0,0,14,0"/>
+                        <RadioButton x:Name="ArrowEmojiRadio" Style="{StaticResource ModernDarkRadioButton}" GroupName="TaskbarArrows" Checked="Arrows_Checked">
+                            <TextBlock controls:Emoji.Text="🔼 🔽" VerticalAlignment="Center"/>
+                        </RadioButton>
+                    </StackPanel>
+                </s:SettingRow>
+                <s:SettingRow Label="Network speed unit" Description="Show network throughput in bytes per second (KB/s, MB/s) or bits per second (Kb/s, Mb/s).">
+                    <StackPanel Orientation="Horizontal">
+                        <RadioButton x:Name="UnitBytesRadio" Style="{StaticResource ModernDarkRadioButton}" Content="Bytes (KB/s, MB/s)" GroupName="TaskbarNetUnit" Checked="NetUnit_Checked" Margin="0,0,14,0"/>
+                        <RadioButton x:Name="UnitBitsRadio" Style="{StaticResource ModernDarkRadioButton}" Content="Bits (Kb/s, Mb/s)" GroupName="TaskbarNetUnit" Checked="NetUnit_Checked"/>
+                    </StackPanel>
+                </s:SettingRow>
+                <s:SettingRow Label="Swap upload and download" Description="Show download on the top line and upload on the bottom line.">
+                    <CheckBox x:Name="SwapNetCheck" IsChecked="{Binding TaskbarSwapNetworkLines, Mode=TwoWay}" Style="{StaticResource ModernDarkCheckBox}" AutomationProperties.Name="Swap upload and download lines"/>
+                </s:SettingRow>
+
+                <TextBlock Style="{StaticResource SettingsGroupHeader}" Text="Prayer" Margin="0,12,0,2"/>
+                <s:SettingRow Label="Next prayer display" Description="Show the scheduled time, remaining countdown, or both.">
+                    <ComboBox x:Name="PrayerDisplayCombo" Style="{StaticResource ModernDarkComboBox}" Width="260" SelectionChanged="PrayerDisplay_Changed" AutomationProperties.Name="Next prayer taskbar display"/>
+                </s:SettingRow>
+                <s:SettingRow Label="Countdown before prayer" Description="Highlight and show 'in Xm' (even in Time only mode) when the next prayer is within this window.">
+                    <ComboBox x:Name="PrayerApproachCombo" Style="{StaticResource ModernDarkComboBox}" Width="180" SelectionChanged="PrayerApproach_Changed" AutomationProperties.Name="Countdown window before next prayer"/>
+                </s:SettingRow>
+                <s:SettingRow Label="Show current prayer after start" Description="Show the ongoing prayer and elapsed time (for example 'Asr / +5m') for this long after it begins.">
+                    <ComboBox x:Name="PrayerElapsedCombo" Style="{StaticResource ModernDarkComboBox}" Width="180" SelectionChanged="PrayerElapsed_Changed" AutomationProperties.Name="Show current prayer elapsed duration"/>
+                </s:SettingRow>
+
+                <TextBlock Style="{StaticResource SettingsGroupHeader}" Text="Weather and batteries" Margin="0,12,0,2"/>
+                <s:SettingRow Label="Weather icon" Description="Draw the taskbar weather icon as a colour emoji or monochrome taskbar ink.">
+                    <StackPanel Orientation="Horizontal">
+                        <RadioButton x:Name="WeatherIconEmojiRadio" Style="{StaticResource ModernDarkRadioButton}" GroupName="TaskbarWeatherIcon" Checked="WeatherIcon_Checked" Margin="0,0,14,0">
+                            <TextBlock controls:Emoji.Text="⛅ Colour emoji" VerticalAlignment="Center"/>
+                        </RadioButton>
+                        <RadioButton x:Name="WeatherIconMonoRadio" Style="{StaticResource ModernDarkRadioButton}" Content="☁ Monochrome" GroupName="TaskbarWeatherIcon" Checked="WeatherIcon_Checked"/>
+                    </StackPanel>
+                </s:SettingRow>
+                <s:SettingRow Label="Device battery layout" Description="Auto uses the classic single-row size for 1 device and stacks 2+ devices top and bottom; Side by side always keeps devices on one row.">
+                    <ComboBox x:Name="BatteryLayoutCombo" Style="{StaticResource ModernDarkComboBox}" Width="220" SelectionChanged="BatteryLayout_Changed" AutomationProperties.Name="Device battery taskbar layout"/>
+                </s:SettingRow>
             </StackPanel>
-        </s:SettingRow>
-        <s:SettingRow Label="Background behind taskbar text" Description="Draw a plate behind the readout so it stays readable on transparent or restyled taskbars.">
-            <CheckBox IsChecked="{Binding ShowDeviceBatteryBackground, Mode=TwoWay}" Style="{StaticResource ModernDarkCheckBox}" AutomationProperties.Name="Background behind the taskbar readout"/>
-        </s:SettingRow>
+        </Expander>
     </StackPanel>
 </s:SettingsSectionBase>

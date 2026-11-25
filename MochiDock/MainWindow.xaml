@@ -498,16 +498,13 @@
 
                         <!-- Mascot Living in the Pill (Always centered: dead-center in idle circle, centered in 48px left cap when expanded) -->
 
-                        <controls:MascotControl Grid.Column="0"
-
-                                                x:Name="PillMascot"
-
-                                                Mood="{Binding MascotMood}"
-
-                                                Width="22" Height="19"
-                                                VerticalAlignment="Center">
-                            <controls:MascotControl.Style>
-                                <Style TargetType="controls:MascotControl">
+                        <Grid Grid.Column="0"
+                              x:Name="PillMascotHost"
+                              Width="22" Height="19"
+                              ClipToBounds="False"
+                              VerticalAlignment="Center">
+                            <Grid.Style>
+                                <Style TargetType="Grid">
                                     <Setter Property="HorizontalAlignment" Value="Center" />
                                     <Setter Property="Margin" Value="0" />
                                     <Style.Triggers>
@@ -517,8 +514,16 @@
                                         </DataTrigger>
                                     </Style.Triggers>
                                 </Style>
-                            </controls:MascotControl.Style>
-                        </controls:MascotControl>
+                            </Grid.Style>
+                            <controls:MascotControl x:Name="PillMascot"
+                                                    Mood="{Binding MascotMood}"
+                                                    ShowCornerBadge="False"
+                                                    Width="22" Height="19" />
+                            <controls:MascotStatusBadge x:Name="PillMascotBadge"
+                                                        Mood="{Binding MascotMood}"
+                                                        IsOverlay="True"
+                                                        Width="14" Height="14" />
+                        </Grid>
 
                         <!-- Ticker Content: High-Res Color Icon + Text (Stretches across all available center width) -->
 
@@ -935,7 +940,10 @@
                     </Grid>
 
                     <StackPanel x:Name="GamingCapsuleContent" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Collapsed" Margin="12,0,12,0">
-                        <controls:MascotControl Width="22" Height="19" Mood="{Binding MascotMood}" Margin="0,0,9,0" VerticalAlignment="Center"/>
+                        <Grid Width="22" Height="19" ClipToBounds="False" Margin="0,0,14,0" VerticalAlignment="Center">
+                            <controls:MascotControl Width="22" Height="19" Mood="{Binding MascotMood}" ShowCornerBadge="False" />
+                            <controls:MascotStatusBadge Width="14" Height="14" Mood="{Binding MascotMood}" IsOverlay="True" />
+                        </Grid>
                         <controls:GamingReadout x:Name="CompactGamingReadout"/>
                     </StackPanel>
                     <!-- Interactive iOS-style Volume Slider Overlay (Shows while scrolling wheel or external volume change) -->
@@ -1280,7 +1288,7 @@
                             <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
 
-                        <!-- Mascot inside Expanded Card -->
+                        <!-- Mascot inside Expanded Card (badge sits inside the mascot's own area so header tabs never shift) -->
                         <controls:MascotControl Grid.Column="0" x:Name="CardMascot" Mood="{Binding MascotMood}" Width="32" Height="28" Margin="0,0,8,0" VerticalAlignment="Center" />
 
                         <!-- Segmented Activity Tabs (Strict constrained width so right close/pin buttons never crop) -->

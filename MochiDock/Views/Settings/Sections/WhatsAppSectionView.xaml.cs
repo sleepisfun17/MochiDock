@@ -104,6 +104,7 @@ public partial class WhatsAppSectionView : SettingsSectionBase
             bool remote = string.Equals(settings.GowaMode, "Remote", StringComparison.OrdinalIgnoreCase);
             LocalModeRadio.IsChecked = !remote;
             RemoteModeRadio.IsChecked = remote;
+            if (remote) ServerExpander.IsExpanded = true;
             SetText(LocalPortBox, (settings.GowaPort > 0 ? settings.GowaPort : 3099).ToString());
             SetText(WebhookPortBox, (settings.WebhookPort > 0 ? settings.WebhookPort : 47823).ToString());
             SetText(RemoteUrlBox, settings.RemoteGowaUrl ?? "");

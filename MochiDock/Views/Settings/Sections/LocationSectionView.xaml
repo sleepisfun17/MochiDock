@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:s="clr-namespace:MochiDock.Views.Settings">
     <StackPanel>
+        <TextBlock Style="{StaticResource SettingsGroupHeader}" Text="Weather" Margin="0,0,0,2"/>
         <s:SettingRow Label="City" Description="Used for weather and prayer times. Include the country or district if the city is ambiguous, for example Serpong, Indonesia.">
             <StackPanel>
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
@@ -16,6 +17,8 @@
         <s:SettingRow Label="Rain soon" Description="A short capsule notice when rain, snow or a thunderstorm is expected within the hour in this city. Tap it to open Weather.">
             <CheckBox IsChecked="{Binding RainSoonNotice, Mode=TwoWay}" Style="{StaticResource ModernDarkCheckBox}"/>
         </s:SettingRow>
+
+        <TextBlock Style="{StaticResource SettingsGroupHeader}" Text="Prayer" Margin="0,18,0,2"/>
         <s:SettingRow Label="Prayer times" Description="Show the Prayer tab and schedule prayer reminders.">
             <CheckBox IsChecked="{Binding EnablePrayerTimes, Mode=TwoWay}" Style="{StaticResource ModernDarkCheckBox}"/>
         </s:SettingRow>

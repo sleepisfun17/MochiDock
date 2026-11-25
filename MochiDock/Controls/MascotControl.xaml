@@ -371,15 +371,107 @@
                     <TransformGroup>
                         <ScaleTransform x:Name="BadgeSize" ScaleX="1" ScaleY="1" />
                         <ScaleTransform x:Name="BadgeScale" ScaleX="1" ScaleY="1" />
-                        <TranslateTransform x:Name="BadgePos" X="25.2" Y="3.8" />
+                        <TranslateTransform x:Name="BadgePos" X="27.8" Y="2.2" />
                         <!-- Cancels the body's bounce and sway (bound, negated, to BodyBounceTransform in code), so the small glyph stays sharp
                              while the mascot dances: moved by fractions of a pixel every frame it shimmered into a blob -->
                         <TranslateTransform x:Name="BadgeSteady" X="0" Y="0" />
                     </TransformGroup>
                 </Canvas.RenderTransform>
-                <Ellipse x:Name="BadgeRing" Canvas.Left="-4.9" Canvas.Top="-4.9" Width="9.8" Height="9.8" Fill="#FFFFFF" />
-                <Ellipse x:Name="BadgeDisc" Canvas.Left="-4" Canvas.Top="-4" Width="8" Height="8" Fill="#D13438" />
-                <Path x:Name="BadgeGlyph" Fill="#FFFFFF" Data="M 0,0" />
+                <Grid x:Name="BadgeCharm" Visibility="Collapsed" Canvas.Left="-6.75" Canvas.Top="-6.75" Width="13.5" Height="13.5">
+                    <Grid.Effect>
+                        <DropShadowEffect x:Name="BadgeShadow" BlurRadius="3.2" ShadowDepth="1.1"
+                                          Direction="270" Color="#000000" Opacity="0.42" />
+                    </Grid.Effect>
+                    <Border x:Name="BadgeBody" CornerRadius="5" BorderThickness="0.95" BorderBrush="#FFFFFF" ClipToBounds="True">
+                        <Border.Background>
+                            <LinearGradientBrush StartPoint="0.25,0" EndPoint="0.75,1">
+                                <GradientStop x:Name="BadgeGradTop" Color="#DE5558" Offset="0" />
+                                <GradientStop x:Name="BadgeGradMid" Color="#D13438" Offset="0.48" />
+                                <GradientStop x:Name="BadgeGradBottom" Color="#9B2629" Offset="1" />
+                            </LinearGradientBrush>
+                        </Border.Background>
+                        <Grid>
+                            <!-- Top-left specular sheen mirroring Mochi's BodySheen -->
+                            <Ellipse Width="9.2" Height="4.6" HorizontalAlignment="Left" VerticalAlignment="Top"
+                                     Margin="0.8,0.5,0,0" IsHitTestVisible="False">
+                                <Ellipse.Fill>
+                                    <RadialGradientBrush Center="0.5,0.5" RadiusX="0.5" RadiusY="0.5">
+                                        <GradientStop Color="#68FFFFFF" Offset="0" />
+                                        <GradientStop Color="#00FFFFFF" Offset="1" />
+                                    </RadialGradientBrush>
+                                </Ellipse.Fill>
+                            </Ellipse>
+                            <!-- Subtle emboss shadow + crisp centred foreground glyph -->
+                            <Viewbox Stretch="Uniform" Margin="1.6" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                <Canvas Width="10" Height="10">
+                                    <Path x:Name="BadgeGlyphShadow" Fill="#48000000" Data="M 0,0" Canvas.Top="0.5" />
+                                    <Path x:Name="BadgeGlyph" Fill="#FFFFFF" Data="M 0,0" />
+                                </Canvas>
+                            </Viewbox>
+                        </Grid>
+                    </Border>
+                </Grid>
+                <!-- Style 2: 3D Speech Bubble (glossy bright ivory bubble + coloured glyph + pointer tail) -->
+                <Grid x:Name="BadgeBubble" Visibility="Collapsed" Canvas.Left="-7.4" Canvas.Top="-6.6" Width="14.8" Height="13.2">
+                    <Grid.Effect>
+                        <DropShadowEffect BlurRadius="3.2" ShadowDepth="1.1" Direction="270" Color="#000000" Opacity="0.44" />
+                    </Grid.Effect>
+                    <!-- Pointer tail sits behind the bubble border so the join is seamless -->
+                    <Path x:Name="BadgeBubbleTail" Fill="#E6EAF2" Stroke="#B8C0D0" StrokeThickness="0.85" StrokeLineJoin="Round"
+                          Data="M 2.2,11.0 L -0.4,13.6 L 5.4,12.1 Z" />
+                    <Border x:Name="BadgeBubbleBody" CornerRadius="6.2" BorderThickness="0.9" BorderBrush="#B8C0D0" ClipToBounds="True">
+                        <Border.Background>
+                            <LinearGradientBrush StartPoint="0.25,0" EndPoint="0.75,1">
+                                <GradientStop Color="#FFFFFF" Offset="0" />
+                                <GradientStop Color="#F4F6FA" Offset="0.55" />
+                                <GradientStop Color="#D9DFEA" Offset="1" />
+                            </LinearGradientBrush>
+                        </Border.Background>
+                        <Grid>
+                            <Ellipse Width="10" Height="4.4" HorizontalAlignment="Left" VerticalAlignment="Top"
+                                     Margin="1.0,0.5,0,0" IsHitTestVisible="False">
+                                <Ellipse.Fill>
+                                    <RadialGradientBrush Center="0.5,0.5" RadiusX="0.5" RadiusY="0.5">
+                                        <GradientStop Color="#88FFFFFF" Offset="0" />
+                                        <GradientStop Color="#00FFFFFF" Offset="1" />
+                                    </RadialGradientBrush>
+                                </Ellipse.Fill>
+                            </Ellipse>
+                            <Viewbox Stretch="Uniform" Margin="1.8" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                <Canvas Width="10" Height="10">
+                                    <Path x:Name="BadgeBubbleGlyphShadow" Fill="#28000000" Data="M 0,0" Canvas.Top="0.4" />
+                                    <Path x:Name="BadgeBubbleGlyph" Fill="#D13438" Data="M 0,0" />
+                                </Canvas>
+                            </Viewbox>
+                        </Grid>
+                    </Border>
+                </Grid>
+                <!-- Style 3: 3D Die-Cut Sticker (thick glossy silhouette outline + gradient icon + sheen) -->
+                <Canvas x:Name="BadgeSticker" Visibility="Collapsed" Canvas.Left="-5" Canvas.Top="-5" Width="10" Height="10">
+                    <Path x:Name="BadgeStickerBack" Fill="#FFFFFF" Stroke="#FFFFFF" StrokeThickness="2.4"
+                          StrokeLineJoin="Round" StrokeStartLineCap="Round" StrokeEndLineCap="Round" Data="M 0,0">
+                        <Path.Effect>
+                            <DropShadowEffect BlurRadius="3.2" ShadowDepth="1.1" Direction="270" Color="#000000" Opacity="0.48" />
+                        </Path.Effect>
+                    </Path>
+                    <Path x:Name="BadgeStickerFill" Data="M 0,0">
+                        <Path.Fill>
+                            <LinearGradientBrush StartPoint="0.3,0" EndPoint="0.7,1">
+                                <GradientStop x:Name="StickerGradTop" Color="#DE5558" Offset="0" />
+                                <GradientStop x:Name="StickerGradMid" Color="#D13438" Offset="0.48" />
+                                <GradientStop x:Name="StickerGradBottom" Color="#9B2629" Offset="1" />
+                            </LinearGradientBrush>
+                        </Path.Fill>
+                    </Path>
+                    <Path x:Name="BadgeStickerSheen" Data="M 0,0" IsHitTestVisible="False">
+                        <Path.Fill>
+                            <LinearGradientBrush StartPoint="0.3,0" EndPoint="0.5,0.65">
+                                <GradientStop Color="#55FFFFFF" Offset="0" />
+                                <GradientStop Color="#00FFFFFF" Offset="1" />
+                            </LinearGradientBrush>
+                        </Path.Fill>
+                    </Path>
+                </Canvas>
             </Canvas>
         </Grid>
 

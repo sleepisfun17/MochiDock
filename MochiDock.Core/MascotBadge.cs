@@ -3,6 +3,25 @@ namespace MochiDock.Core;
 /// <summary>One status badge: the glyph to draw, the disc colour and the glyph colour. Hex strings, "#RRGGBB".</summary>
 public readonly record struct BadgeSpec(string Glyph, string Fill, string Ink);
 
+/// <summary>Three-stop dome gradient stops for the 3D charm: lighter top highlight, base mid and deeper bottom shade.</summary>
+public readonly record struct BadgeShades(string Top, string Mid, string Bottom);
+
+/// <summary>Position and scale of the status charm in the mascot's 30 x 26 canvas.</summary>
+public readonly record struct BadgePlacement(double X, double Y, double Scale);
+
+/// <summary>Visual style of the mascot's status badge.</summary>
+public enum MascotBadgeStyle
+{
+    /// <summary>3D glossy squircle charm.</summary>
+    Charm,
+    /// <summary>3D glossy speech bubble with a coloured glyph.</summary>
+    Bubble,
+    /// <summary>3D die-cut silhouette sticker with a thick ring outline.</summary>
+    Sticker,
+    /// <summary>No status badge (eyes and face expressions only).</summary>
+    Off,
+}
+
 /// <summary>
 /// The small status badge in the corner of the mascot (like a phone app badge). At the capsule size (about 22 x 19 px) the little props that
 /// used to float above the head were 3 to 5 px thin lines, so every face whose meaning was such a prop now shows it as a glyph in one disc.
@@ -64,12 +83,66 @@ public static class MascotBadge
         _ => null,
     };
 
+    public static MascotBadgeStyle ParseStyle(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return MascotBadgeStyle.Charm;
+        return value.Trim().ToLowerInvariant() switch
+        {
+            "bubble" => MascotBadgeStyle.Bubble,
+            "sticker" => MascotBadgeStyle.Sticker,
+            "off" or "none" => MascotBadgeStyle.Off,
+            _ => MascotBadgeStyle.Charm,
+        };
+    }
+
+    public static string NormalizeStyle(string? value) => ParseStyle(value).ToString();
+
     /// <summary>
-    /// The cats (Kuro and Shiro) show their icon without the disc: the glyph alone, bigger, beside the head on the tail side, filled with the
-    /// badge's own colour and outlined like a sticker in the ring colour (<see cref="RingFor(string?)"/>), so it reads on the ground, on Kuro's
-    /// charcoal and on Shiro's white alike. A glyph in a 6 px disc between the ears was too small to read.
+    /// Position of the status badge in the mascot's 30 x 26 canvas: Mochi kinds sit at the top-right shoulder (anchored slightly outward to
+    /// clear the right eye); the cats (Kuro and Shiro) sit at the bottom-right cheek/shoulder so both ears stay clear and the left tail is balanced.
     /// </summary>
-    public static bool IsSideIcon(MascotKind kind) => kind is MascotKind.Kuro or MascotKind.Shiro;
+    public static BadgePlacement PlacementFor(MascotKind kind) => PlacementFor(kind, MascotBadgeStyle.Charm);
+
+    public static BadgePlacement PlacementFor(MascotKind kind, MascotBadgeStyle style)
+    {
+        bool isCat = kind is MascotKind.Kuro or MascotKind.Shiro;
+        return style switch
+        {
+            MascotBadgeStyle.Bubble => isCat ? new BadgePlacement(28.2, 21.5, 1.0) : new BadgePlacement(28.2, 1.8, 1.0),
+            MascotBadgeStyle.Sticker => isCat ? new BadgePlacement(28.2, 21.2, 1.24) : new BadgePlacement(27.8, 2.2, 1.24),
+            _ => isCat ? new BadgePlacement(28.0, 21.5, 1.0) : new BadgePlacement(27.8, 2.2, 1.0),
+        };
+    }
+
+    /// <summary>
+    /// Computes top highlight (+16% toward white), mid (normalized base) and bottom shade (-26% toward black) "#RRGGBB" stops for the
+    /// 3D dome gradient while keeping semantic colours recognizable.
+    /// </summary>
+    public static BadgeShades ShadePair(string fillHex)
+    {
+        var (r, g, b) = ParseRgb(fillHex);
+        string top = FormatHex(
+            Math.Clamp((int)Math.Round(r + (255 - r) * 0.16), 0, 255),
+            Math.Clamp((int)Math.Round(g + (255 - g) * 0.16), 0, 255),
+            Math.Clamp((int)Math.Round(b + (255 - b) * 0.16), 0, 255));
+        string mid = FormatHex(r, g, b);
+        string bottom = FormatHex(
+            Math.Clamp((int)Math.Round(r * 0.74), 0, 255),
+            Math.Clamp((int)Math.Round(g * 0.74), 0, 255),
+            Math.Clamp((int)Math.Round(b * 0.74), 0, 255));
+        return new BadgeShades(top, mid, bottom);
+    }
+
+    private static (int R, int G, int B) ParseRgb(string hex)
+    {
+        string h = hex.Trim().TrimStart('#');
+        return (
+            Convert.ToInt32(h.Substring(0, 2), 16),
+            Convert.ToInt32(h.Substring(2, 2), 16),
+            Convert.ToInt32(h.Substring(4, 2), 16));
+    }
+
+    private static string FormatHex(int r, int g, int b) => $"#{r:X2}{g:X2}{b:X2}";
 
     /// <summary>The ring that separates the badge from the body: white on the dark grounds, dark on the light Matcha ground.</summary>
     public static string RingFor(string? theme) => ThemePolicy.Normalize(theme) == ThemePolicy.Matcha ? DarkRing : White;
@@ -92,8 +165,59 @@ public static class MascotBadge
 
     private static double Luminance(string hex)
     {
-        string h = hex.TrimStart('#');
-        int r = Convert.ToInt32(h.Substring(0, 2), 16), g = Convert.ToInt32(h.Substring(2, 2), 16), b = Convert.ToInt32(h.Substring(4, 2), 16);
+        var (r, g, b) = ParseRgb(hex);
         return MascotTint.Luminance(r, g, b);
+    }
+
+    /// <summary>Human-readable tooltip describing the mascot and its current mood/badge.</summary>
+    public static string DescribeMood(MascotMood mood, MascotKind kind)
+    {
+        string name = kind switch
+        {
+            MascotKind.Kuro => "Kuro",
+            MascotKind.Shiro => "Shiro",
+            MascotKind.MatchaMochi => "Matcha Mochi",
+            MascotKind.HojichaMochi => "Hojicha Mochi",
+            _ => "Mochi",
+        };
+        string state = mood switch
+        {
+            MascotMood.Alert => "Notice",
+            MascotMood.Excited => "New message",
+            MascotMood.Sleeping => "Sleeping",
+            MascotMood.Yawning => "Up late",
+            MascotMood.Coffee => "Coffee break",
+            MascotMood.Praying => "Prayer time",
+            MascotMood.BreakTime => "Break time",
+            MascotMood.Victory => "Victory!",
+            MascotMood.Angry => "Overdue task",
+            MascotMood.Drained => "Low battery",
+            MascotMood.Money => "FX up",
+            MascotMood.MoneyDown => "FX down",
+            MascotMood.Sunny => "Sunny",
+            MascotMood.Rainy => "Rainy",
+            MascotMood.Snowy => "Snowy",
+            MascotMood.Cloudy => "Cloudy",
+            MascotMood.Studying => "Studying",
+            MascotMood.Proud => "All tasks done",
+            MascotMood.Music => "Listening to music",
+            MascotMood.Focused => "Gaming",
+            MascotMood.Worried => "Low FPS",
+            MascotMood.Meeting => "In a meeting",
+            MascotMood.Happy => "Happy",
+            MascotMood.Hot => "Running hot",
+            MascotMood.Freezing => "Freezing",
+            MascotMood.Dizzy => "High CPU / RAM",
+            MascotMood.Defeat => "Tough match",
+            MascotMood.Surprised => "Surprised",
+            MascotMood.Cheering => "Cheering",
+            MascotMood.Bored => "Bored",
+            MascotMood.Waking => "Waking up",
+            MascotMood.Electric => "Battery & power",
+            MascotMood.Birthday => "Happy birthday!",
+            MascotMood.Waiting => "Thinking",
+            _ => "Chilling",
+        };
+        return $"{name} · {state}";
     }
 }

@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:s="clr-namespace:MochiDock.Views.Settings">
     <StackPanel>
+        <TextBlock Style="{StaticResource SettingsGroupHeader}" Text="Updates" Margin="0,0,0,2"/>
         <s:SettingRow Label="Updates" Description="MochiDock asks GitHub for a newer release and tells you. Update now downloads the release's setup, checks it against the checksum GitHub publishes, installs it silently and restarts MochiDock; nothing is installed without your click.">
             <StackPanel>
                 <TextBlock Text="{Binding UpdateStatusText}" Style="{StaticResource CardCaptionText}" TextWrapping="Wrap" MaxWidth="300" Margin="0,0,0,6"/>
@@ -22,6 +23,8 @@
         <s:SettingRow Label="Check for updates automatically" Description="At startup and every 12 hours. Only a generic request to GitHub is sent; nothing about you or your PC.">
             <CheckBox x:Name="AutoUpdateCheck" Style="{StaticResource ModernDarkCheckBox}" Checked="AutoUpdate_Changed" Unchecked="AutoUpdate_Changed"/>
         </s:SettingRow>
+
+        <TextBlock Style="{StaticResource SettingsGroupHeader}" Text="Backup and files" Margin="0,18,0,2"/>
         <s:SettingRow Label="Export settings" Description="Save your settings and tasks to a file for another PC. Passwords, keys and values that belong to this PC (monitor, positions, ports, startup) stay here.">
             <Button Style="{StaticResource ActionButton}" Content="Export…" Click="Export_Click" Margin="0"/>
         </s:SettingRow>
@@ -37,6 +40,8 @@
         <s:SettingRow Label="Data folder" Description="Caches, the WhatsApp session and other local data.">
             <Button Style="{StaticResource ActionButton}" Content="Open folder" Click="OpenDataFolder_Click" Margin="0"/>
         </s:SettingRow>
+
+        <TextBlock Style="{StaticResource SettingsGroupHeader}" Text="Diagnostics" Margin="0,18,0,2"/>
         <s:SettingRow Label="Diagnostic logs" Description="Failures that would otherwise be hidden are written here.">
             <StackPanel Orientation="Horizontal">
                 <TextBlock x:Name="IssueCountText" Style="{StaticResource CardCaptionText}" Foreground="{DynamicResource IslandWarningBrush}" VerticalAlignment="Center" Margin="0,0,10,0" Visibility="Collapsed"/>

@@ -22,17 +22,9 @@ public class MascotNoteTests
     }
 }
 
-public class MascotSideIconTests
+public class MascotBadgeRingTests
 {
-    // The cats show the glyph alone beside the head (no disc); its sticker outline is the ring colour, which must stand out on every ground.
-    [Theory]
-    [InlineData(MascotKind.Kuro, true)]
-    [InlineData(MascotKind.Shiro, true)]
-    [InlineData(MascotKind.Mochi, false)]
-    [InlineData(MascotKind.MatchaMochi, false)]
-    [InlineData(MascotKind.HojichaMochi, false)]
-    public void OnlyTheCatsUseSideIcons(MascotKind kind, bool side) => Assert.Equal(side, MascotBadge.IsSideIcon(kind));
-
+    // Both Mochi and the cats use the unified 3D charm; its outer rim must stand out against every theme ground.
     [Theory]
     [InlineData("Default")]
     [InlineData("Hojicha")]

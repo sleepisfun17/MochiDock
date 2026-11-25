@@ -202,6 +202,9 @@ public class AppSettings
     // Who is drawn: Auto (Kuro in KuroNight, Mochi elsewhere), Mochi, Kuro or Shiro. Old settings files without the key load as Auto.
     private string mascot = "Auto";
     public string Mascot { get => mascot; set => mascot = MochiDock.Core.MascotChoice.Normalize(value); }
+    private string mascotBadgeStyle = nameof(MochiDock.Core.MascotBadgeStyle.Charm);
+    /// <summary>How the mascot status badge is drawn: "Charm" (3D squircle), "Bubble" (3D speech bubble), "Sticker" (3D die-cut silhouette) or "Off".</summary>
+    public string MascotBadgeStyle { get => mascotBadgeStyle; set => mascotBadgeStyle = MochiDock.Core.MascotBadge.NormalizeStyle(value); }
     public double CapsuleScrollSpeed { get; set; } = 35;
     public double CpuAlertThreshold { get; set; } = 90;
     public double GpuAlertThreshold { get; set; } = 90;

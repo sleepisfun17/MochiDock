@@ -19,9 +19,6 @@
                 <RadioButton x:Name="DockNotchRadio" Style="{StaticResource ModernDarkRadioButton}" Content="Notch" GroupName="AppearanceDock" Checked="DockStyle_Checked"/>
             </StackPanel>
         </s:SettingRow>
-        <s:SettingRow Label="Date format" Description="How dates are written in the header, the Today calendar, tasks, prayer times and power sessions. Automatic follows your Windows region.">
-            <ComboBox x:Name="DateFormatCombo" Style="{StaticResource ModernDarkComboBox}" Width="300" SelectionChanged="DateFormat_Changed" AutomationProperties.Name="Date format"/>
-        </s:SettingRow>
         <s:SettingRow x:Name="ScaleRow" Label="Interface size" Description="Makes MochiDock bigger or smaller, on top of Windows display scaling. Useful on small laptop screens. If the dock would not fit on this display, it uses the largest size that fits.">
             <StackPanel Orientation="Horizontal">
                 <Button Style="{StaticResource ActionButton}" Content="&#x2212;" Width="30" Click="ScaleDown_Click" ToolTip="Smaller" AutomationProperties.Name="Smaller interface"/>
@@ -53,18 +50,6 @@
             <StackPanel Orientation="Horizontal">
                 <RadioButton x:Name="ClockEdgesRadio" Style="{StaticResource ModernDarkRadioButton}" Content="At the edges" GroupName="CapsuleClockLayout" Checked="ClockLayout_Checked" Margin="0,0,14,0"/>
                 <RadioButton x:Name="ClockEvenRadio" Style="{StaticResource ModernDarkRadioButton}" Content="Even spacing" GroupName="CapsuleClockLayout" Checked="ClockLayout_Checked"/>
-            </StackPanel>
-        </s:SettingRow>
-        <s:SettingRow Label="Mascot" Description="Auto is the theme's own mascot: Mochi on Default, Hojicha Mochi on Hojicha, Matcha Mochi on Matcha and Kuro, a black electric cat, on Kuro Night. Any other choice works with every theme; Shiro is a white cat. The same choice is in the dock's quick settings.">
-            <ComboBox x:Name="MascotCombo" Style="{StaticResource ModernDarkComboBox}" Width="200" SelectionChanged="Mascot_Changed" AutomationProperties.Name="Mascot"/>
-        </s:SettingRow>
-        <s:SettingRow Label="Expressive Mochi" Description="Mochi shows more faces: angry for an overdue task you ignored, hot or freezing with the weather and a hot GPU, dizzy when the CPU or RAM is maxed out, drained on a low battery. Turn off to keep the simple faces.">
-            <CheckBox x:Name="ExpressiveCheck" Style="{StaticResource ModernDarkCheckBox}" Checked="Expressive_Changed" Unchecked="Expressive_Changed"/>
-        </s:SettingRow>
-        <s:SettingRow x:Name="BirthdayRow" Label="Your birthday" Description="Mochi wears a party hat all day on your birthday. Only the month and day are kept, on this PC.">
-            <StackPanel Orientation="Horizontal">
-                <ComboBox x:Name="BirthdayMonthCombo" Style="{StaticResource ModernDarkComboBox}" Width="120" SelectionChanged="Birthday_Changed" AutomationProperties.Name="Birthday month"/>
-                <ComboBox x:Name="BirthdayDayCombo" Style="{StaticResource ModernDarkComboBox}" Width="70" Margin="8,0,0,0" SelectionChanged="Birthday_Changed" AutomationProperties.Name="Birthday day"/>
             </StackPanel>
         </s:SettingRow>
     </StackPanel>

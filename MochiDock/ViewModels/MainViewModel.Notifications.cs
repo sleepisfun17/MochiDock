@@ -196,10 +196,16 @@ public partial class MainViewModel
             _currentWhatsApp = value;
             OnPropertyChanged();
             OnPropertyChanged(nameof(CanAllowCurrentWhatsAppGroup));
+            OnPropertyChanged(nameof(WhatsAppReplyHint));
             if (value != null) { if (!_recordSilently) EnqueueNotification(IslandCardType.WhatsApp); }
             else RemoveFromNotificationQueue(IslandCardType.WhatsApp);
         }
     }
+
+    public string WhatsAppReplyHint =>
+        !string.IsNullOrWhiteSpace(_currentWhatsApp?.Sender)
+            ? $"Reply to {_currentWhatsApp.Sender}…"
+            : "Reply…";
 
     public DiscordNotification? CurrentDiscord
     {
@@ -742,7 +748,7 @@ public partial class MainViewModel
 
     public void SelectEmailMessage(EmailNotification? notif)
     {
-        if (notif == null) return;
+        if (notif == null || ReferenceEquals(_currentEmail, notif)) return;
         CurrentEmail = notif;
     }
 
@@ -797,7 +803,7 @@ public partial class MainViewModel
 
     public void SelectDiscordMessage(DiscordNotification? notif)
     {
-        if (notif == null) return;
+        if (notif == null || ReferenceEquals(_currentDiscord, notif)) return;
         CurrentDiscord = notif;
     }
 
@@ -868,7 +874,7 @@ public partial class MainViewModel
 
     public void SelectWhatsAppMessage(WhatsAppNotification? notif)
     {
-        if (notif == null) return;
+        if (notif == null || ReferenceEquals(_currentWhatsApp, notif)) return;
         CurrentWhatsApp = notif;
         ReplyText = "";
     }

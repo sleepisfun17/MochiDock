@@ -111,6 +111,7 @@
         <views:InverseBooleanToVisibilityConverter x:Key="InverseBoolToVisibility" />
         <views:BoolToActiveTagConverter x:Key="BoolToActiveTag" />
         <views:BooleanToTextConverter x:Key="BoolToTextConverter" />
+        <views:ReferenceEqualsConverter x:Key="ReferenceEqualsConverter" />
         <BooleanToVisibilityConverter x:Key="BoolToVisibility" />
 
         <!-- Interface size (zoom). MainWindow replaces this with the real scale; tooltips and combo-box drop-downs open in their own windows,

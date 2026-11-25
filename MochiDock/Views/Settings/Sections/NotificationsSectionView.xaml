@@ -4,16 +4,24 @@
              xmlns:s="clr-namespace:MochiDock.Views.Settings"
              xmlns:controls="clr-namespace:MochiDock.Controls">
     <StackPanel>
-        <TextBlock Style="{StaticResource SettingsGroupHeader}" Text="Do not disturb" Margin="0,0,0,2"/>
-        <s:SettingRow Label="Quiet hours" Description="Silence notifications every day between the start and end time. A window that crosses midnight is fine; equal times mean no quiet period.">
-            <CheckBox x:Name="QuietHoursCheck" Style="{StaticResource ModernDarkCheckBox}" Checked="Option_Changed" Unchecked="Option_Changed"/>
+        <TextBlock Style="{StaticResource SettingsGroupHeader}" Text="Sounds and mutes" Margin="0,0,0,2"/>
+        <s:SettingRow Label="Notification sounds" Description="Play a sound with notifications.">
+            <CheckBox IsChecked="{Binding EnableSounds, Mode=TwoWay}" Style="{StaticResource ModernDarkCheckBox}"/>
         </s:SettingRow>
-        <s:SettingRow x:Name="QuietStartRow" Label="Quiet hours start" Description="24-hour time, for example 22:00.">
-            <TextBox x:Name="QuietStartBox" Style="{StaticResource ModernDarkTextBox}" Width="80" LostFocus="Quiet_LostFocus" KeyDown="Quiet_KeyDown"/>
+        <s:SettingRow Label="Mute WhatsApp" Description="No pop-ups for WhatsApp messages.">
+            <CheckBox x:Name="MuteWhatsAppCheck" Style="{StaticResource ModernDarkCheckBox}" Checked="Option_Changed" Unchecked="Option_Changed"/>
         </s:SettingRow>
-        <s:SettingRow x:Name="QuietEndRow" Label="Quiet hours end" Description="24-hour time, for example 07:00.">
-            <TextBox x:Name="QuietEndBox" Style="{StaticResource ModernDarkTextBox}" Width="80" LostFocus="Quiet_LostFocus" KeyDown="Quiet_KeyDown"/>
+        <s:SettingRow Label="Mute email" Description="No pop-ups for new email.">
+            <CheckBox x:Name="MuteEmailCheck" Style="{StaticResource ModernDarkCheckBox}" Checked="Option_Changed" Unchecked="Option_Changed"/>
         </s:SettingRow>
+        <s:SettingRow Label="Mute Discord" Description="No pop-ups for Discord notifications.">
+            <CheckBox x:Name="MuteDiscordCheck" Style="{StaticResource ModernDarkCheckBox}" Checked="Option_Changed" Unchecked="Option_Changed"/>
+        </s:SettingRow>
+        <s:SettingRow Label="Mute other apps" Description="No pop-ups for the apps listed under Other apps.">
+            <CheckBox x:Name="MuteAppsCheck" Style="{StaticResource ModernDarkCheckBox}" Checked="Option_Changed" Unchecked="Option_Changed"/>
+        </s:SettingRow>
+
+        <TextBlock Style="{StaticResource SettingsGroupHeader}" Text="Do not disturb and snooze" Margin="0,18,0,2"/>
         <s:SettingRow Label="Snooze" Description="Pause every notification for a while.">
             <StackPanel>
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
@@ -23,6 +31,15 @@
                 </StackPanel>
                 <TextBlock x:Name="SnoozeStatusText" Style="{StaticResource CardCaptionText}" HorizontalAlignment="Right" Margin="0,6,0,0"/>
             </StackPanel>
+        </s:SettingRow>
+        <s:SettingRow Label="Quiet hours" Description="Silence notifications every day between the start and end time. A window that crosses midnight is fine; equal times mean no quiet period.">
+            <CheckBox x:Name="QuietHoursCheck" Style="{StaticResource ModernDarkCheckBox}" Checked="Option_Changed" Unchecked="Option_Changed"/>
+        </s:SettingRow>
+        <s:SettingRow x:Name="QuietStartRow" Label="Quiet hours start" Description="24-hour time, for example 22:00.">
+            <TextBox x:Name="QuietStartBox" Style="{StaticResource ModernDarkTextBox}" Width="80" LostFocus="Quiet_LostFocus" KeyDown="Quiet_KeyDown"/>
+        </s:SettingRow>
+        <s:SettingRow x:Name="QuietEndRow" Label="Quiet hours end" Description="24-hour time, for example 07:00.">
+            <TextBox x:Name="QuietEndBox" Style="{StaticResource ModernDarkTextBox}" Width="80" LostFocus="Quiet_LostFocus" KeyDown="Quiet_KeyDown"/>
         </s:SettingRow>
         <s:SettingRow Label="Do not disturb while gaming" Description="Hold notifications while a game is running.">
             <CheckBox x:Name="GamingDndCheck" Style="{StaticResource ModernDarkCheckBox}" Checked="Option_Changed" Unchecked="Option_Changed"/>
@@ -54,6 +71,7 @@
                 </DataTemplate>
             </ItemsControl.ItemTemplate>
         </ItemsControl>
+
         <TextBlock Style="{StaticResource SettingsGroupHeader}" Text="Pop-ups" Margin="0,18,0,2"/>
         <s:SettingRow Label="Minimal capsule notice" Description="Show a small notice in the capsule and expand only when you hover. Turn off to expand the dock on arrival.">
             <CheckBox x:Name="MinimalNoticeCheck" Style="{StaticResource ModernDarkCheckBox}" Checked="Option_Changed" Unchecked="Option_Changed"/>
@@ -64,6 +82,7 @@
         <s:SettingRow Label="Overnight greeting" Description="Summarise what arrived while the PC was locked when you come back.">
             <CheckBox x:Name="OvernightGreetingCheck" Style="{StaticResource ModernDarkCheckBox}" Checked="Option_Changed" Unchecked="Option_Changed"/>
         </s:SettingRow>
+
         <TextBlock Style="{StaticResource SettingsGroupHeader}" Text="Reminders" Margin="0,18,0,2"/>
         <s:SettingRow Label="Event and task reminders" Description="Show a notice with a sound shortly before a calendar event or a task with a due time starts. One switch for both. Snooze, quiet hours, games and a locked PC hold it back.">
             <CheckBox x:Name="RemindersCheck" Style="{StaticResource ModernDarkCheckBox}" Checked="Reminders_Changed" Unchecked="Reminders_Changed"/>
@@ -87,6 +106,7 @@
                 <ComboBoxItem Content="Nothing" Tag="Off"/>
             </ComboBox>
         </s:SettingRow>
+
         <TextBlock Style="{StaticResource SettingsGroupHeader}" Text="Other apps" Margin="0,18,0,2"/>
         <s:SettingRow x:Name="AppsAddRow" Label="Show notifications from" Description="Apps such as LINE, Telegram, Slack or Teams whose Windows notifications appear on the Apps card. Apps that notified you since MochiDock started are listed; you can also type the name Windows shows for the app. Discord has its own card.">
             <StackPanel>
@@ -116,22 +136,5 @@
                 </DataTemplate>
             </ItemsControl.ItemTemplate>
         </ItemsControl>
-        <TextBlock Style="{StaticResource SettingsGroupHeader}" Text="Sounds" Margin="0,18,0,2"/>
-        <s:SettingRow Label="Notification sounds" Description="Play a sound with notifications.">
-            <CheckBox IsChecked="{Binding EnableSounds, Mode=TwoWay}" Style="{StaticResource ModernDarkCheckBox}"/>
-        </s:SettingRow>
-        <TextBlock Style="{StaticResource SettingsGroupHeader}" Text="Mutes" Margin="0,18,0,2"/>
-        <s:SettingRow Label="Mute email" Description="No pop-ups for new email.">
-            <CheckBox x:Name="MuteEmailCheck" Style="{StaticResource ModernDarkCheckBox}" Checked="Option_Changed" Unchecked="Option_Changed"/>
-        </s:SettingRow>
-        <s:SettingRow Label="Mute Discord" Description="No pop-ups for Discord notifications.">
-            <CheckBox x:Name="MuteDiscordCheck" Style="{StaticResource ModernDarkCheckBox}" Checked="Option_Changed" Unchecked="Option_Changed"/>
-        </s:SettingRow>
-        <s:SettingRow Label="Mute other apps" Description="No pop-ups for the apps listed under Other apps.">
-            <CheckBox x:Name="MuteAppsCheck" Style="{StaticResource ModernDarkCheckBox}" Checked="Option_Changed" Unchecked="Option_Changed"/>
-        </s:SettingRow>
-        <s:SettingRow Label="Mute WhatsApp" Description="No pop-ups for WhatsApp messages.">
-            <CheckBox x:Name="MuteWhatsAppCheck" Style="{StaticResource ModernDarkCheckBox}" Checked="Option_Changed" Unchecked="Option_Changed"/>
-        </s:SettingRow>
     </StackPanel>
 </s:SettingsSectionBase>

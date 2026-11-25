@@ -85,10 +85,31 @@ public class SettingsXamlTokenTests
             .ToList();
         Assert.True(offenders.Count == 0, "Sections duplicating SettingsChanged boilerplate instead of inheriting SettingsSectionBase: " + string.Join(", ", offenders));
 
-        foreach (string name in new[] { "Appearance", "Email", "Gaming", "Hardware", "Notifications", "Tabs", "WhatsApp" })
+        foreach (string name in new[] { "Appearance", "Email", "Gaming", "Hardware", "Mascot", "Notifications", "Tabs", "WhatsApp" })
         {
             string path = Path.Combine(sectionsDir, $"{name}SectionView.xaml.cs");
             Assert.Matches(@"class\s+\w+SectionView\s*:\s*SettingsSectionBase\b", File.ReadAllText(path));
         }
+    }
+
+    [Fact]
+    public void SettingsResourcesStaticResourcesAreDefinedBeforeUse()
+    {
+        // SettingsResources.xaml is merged at the top of App.xaml before App-level styles (like IslandFocusVisual),
+        // so StaticResource references inside it must exist in SettingsResources.xaml or TypographyResources.xaml.
+        string settingsDir = FindSettingsViews();
+        string settingsRes = File.ReadAllText(Path.Combine(settingsDir, "SettingsResources.xaml"));
+        string typographyRes = File.ReadAllText(Path.Combine(settingsDir, "..", "TypographyResources.xaml"));
+
+        var defined = Regex.Matches(settingsRes + "\n" + typographyRes, @"x:Key=""([^""]+)""")
+            .Select(m => m.Groups[1].Value)
+            .ToHashSet(StringComparer.Ordinal);
+        var used = Regex.Matches(settingsRes, @"\{StaticResource\s+([^}\s,]+)")
+            .Select(m => m.Groups[1].Value)
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
+
+        var missing = used.Where(k => !defined.Contains(k)).ToList();
+        Assert.True(missing.Count == 0, "Forward StaticResource references in SettingsResources.xaml: " + string.Join(", ", missing));
     }
 }

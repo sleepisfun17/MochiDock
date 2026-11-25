@@ -33,7 +33,7 @@ public class SettingsSectionsTests
     [Fact]
     public void EveryAliasResolvesToAKnownSection()
     {
-        foreach (var alias in new[] { "prayer-place", "weather-city", "calendar-connect", "gowa", "outlook", "logs", "import-export" })
+        foreach (var alias in new[] { "prayer-place", "weather-city", "calendar-connect", "gowa", "outlook", "logs", "import-export", "taskbar-readouts", "updates", "badge", "mochi", "fx" })
             Assert.NotNull(SettingsSections.Find(SettingsSections.Resolve(alias)));
     }
 
@@ -45,6 +45,25 @@ public class SettingsSectionsTests
         // A group heading must not appear twice, so the sections of one group sit next to each other.
         var runs = all.Select(s => s.Group).Aggregate(new List<string>(), (list, g) => { if (list.Count == 0 || list[^1] != g) list.Add(g); return list; });
         Assert.Equal(runs.Count, runs.Distinct().Count());
-        Assert.Equal(new[] { "Dock", "Integrations", "Features", "Data" }, runs);
+        Assert.Equal(new[] { "Dock & Look", "Messaging & Alerts", "Daily & Media", "PC & Gaming", "System" }, runs);
+    }
+
+    [Theory]
+    [InlineData("badge", SettingsSections.Mascot)]
+    [InlineData("speech bubble", SettingsSections.Mascot)]
+    [InlineData("date", SettingsSections.General)]
+    [InlineData("updates", SettingsSections.Data)]
+    [InlineData("fx", SettingsSections.Tabs)]
+    public void SearchMatchesSectionsByTitleDescriptionOrKeywords(string query, string expectedId)
+    {
+        var matches = SettingsSections.All.Where(s => SettingsSections.Matches(s, query)).Select(s => s.Id).ToList();
+        Assert.Contains(expectedId, matches);
+    }
+
+    [Fact]
+    public void BlankSearchMatchesAllAndUnknownQueryMatchesNone()
+    {
+        Assert.Equal(SettingsSections.All.Count, SettingsSections.All.Count(s => SettingsSections.Matches(s, "   ")));
+        Assert.DoesNotContain(SettingsSections.All, s => SettingsSections.Matches(s, "zzznonexistentxyz"));
     }
 }

@@ -556,6 +556,7 @@ public partial class MainViewModel : INotifyPropertyChanged
 
         _settings = initialSettings ?? SettingsService.Load();
         MochiDock.Core.DateDisplay.Set(MochiDock.Core.DateDisplay.Parse(_settings.DateFormat));
+        Controls.MascotControl.CurrentBadgeStyle = MochiDock.Core.MascotBadge.ParseStyle(_settings.MascotBadgeStyle);
         _aiUsageService = new AiUsageService { HiddenProviders = _settings.HiddenAiProviders ?? new() };
         _aiUsageService.AlertsEnabled = _settings.EnableAiUsageAlerts;
         _aiUsageService.LowUsageDetected += OnAiLowUsage;
@@ -1491,10 +1492,19 @@ public partial class MainViewModel : INotifyPropertyChanged
         UpdateSettings(x => x.Mascot = choice, SettingsApply.Theme);
     }
 
+    /// <summary>The Mascot status badge style (Charm, Bubble, Sticker or Off): saves it and redraws every mascot.</summary>
+    public void ApplyMascotBadgeStyle(string style)
+    {
+        style = MochiDock.Core.MascotBadge.NormalizeStyle(style);
+        Controls.MascotControl.CurrentBadgeStyle = MochiDock.Core.MascotBadge.ParseStyle(style);
+        UpdateSettings(x => x.MascotBadgeStyle = style, SettingsApply.None);
+    }
+
     public void ApplyCapsuleTheme(string theme)
     {
         theme = MochiDock.Core.ThemePolicy.Normalize(theme);
         Controls.MascotControl.CurrentChoice = _settings.Mascot;   // the mascot picker; ThemeService resolves Auto against the theme
+        Controls.MascotControl.CurrentBadgeStyle = MochiDock.Core.MascotBadge.ParseStyle(_settings.MascotBadgeStyle);
         bool changed = !string.Equals(_settings.CapsuleTheme, theme, StringComparison.Ordinal);
         CapsuleTheme = theme;
         if (changed)

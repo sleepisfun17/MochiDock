@@ -148,4 +148,88 @@ public class MascotBadgeTests
             Assert.True(MascotTint.Luminance(r, g, Convert.ToInt32(b.Fill.Substring(5, 2), 16)) < 0.2);
         }
     }
+
+    [Fact]
+    public void ShadePairProducesBrighterTopAndDarkerBottomForEveryBadge()
+    {
+        foreach (var kind in Enum.GetValues<MascotKind>())
+        {
+            foreach (var mood in Enum.GetValues<MascotMood>())
+            {
+                if (MascotBadge.For(mood, kind) is not { } b) continue;
+                var shades = MascotBadge.ShadePair(b.Fill);
+                Assert.Matches(@"^#[0-9A-F]{6}$", shades.Top);
+                Assert.Matches(@"^#[0-9A-F]{6}$", shades.Mid);
+                Assert.Matches(@"^#[0-9A-F]{6}$", shades.Bottom);
+                Assert.Equal(b.Fill.ToUpperInvariant(), shades.Mid);
+
+                double lumTop = HexLuminance(shades.Top);
+                double lumMid = HexLuminance(shades.Mid);
+                double lumBottom = HexLuminance(shades.Bottom);
+                Assert.True(lumTop > lumMid, $"{mood}: Top {shades.Top} not brighter than Mid {shades.Mid}");
+                Assert.True(lumMid > lumBottom, $"{mood}: Mid {shades.Mid} not brighter than Bottom {shades.Bottom}");
+            }
+        }
+    }
+
+    [Fact]
+    public void PlacementSeparatesMochiTopRightFromNekoBottomRight()
+    {
+        foreach (var kind in Enum.GetValues<MascotKind>())
+        {
+            foreach (var style in Enum.GetValues<MascotBadgeStyle>())
+            {
+                var p = MascotBadge.PlacementFor(kind, style);
+                Assert.True(p.X > 25, $"{kind}/{style}: X={p.X} should anchor on the right side");
+                Assert.True(p.Scale > 0, $"{kind}/{style}: Scale={p.Scale} must be positive");
+                if (kind is MascotKind.Kuro or MascotKind.Shiro)
+                    Assert.True(p.Y > 18, $"{kind}/{style}: Y={p.Y} should sit at bottom-right cheek/shoulder");
+                else
+                    Assert.True(p.Y < 6, $"{kind}/{style}: Y={p.Y} should sit at top-right shoulder");
+            }
+            Assert.True(MascotBadge.PlacementFor(kind, MascotBadgeStyle.Sticker).Scale > 1.0);
+        }
+    }
+
+    [Theory]
+    [InlineData(null, MascotBadgeStyle.Charm)]
+    [InlineData("", MascotBadgeStyle.Charm)]
+    [InlineData("charm", MascotBadgeStyle.Charm)]
+    [InlineData("Bubble", MascotBadgeStyle.Bubble)]
+    [InlineData("  sticker ", MascotBadgeStyle.Sticker)]
+    [InlineData("off", MascotBadgeStyle.Off)]
+    [InlineData("None", MascotBadgeStyle.Off)]
+    [InlineData("unknown", MascotBadgeStyle.Charm)]
+    public void ParseStyleAndNormalizeStyleHandleAllValues(string? raw, MascotBadgeStyle expected)
+    {
+        Assert.Equal(expected, MascotBadge.ParseStyle(raw));
+        Assert.Equal(expected.ToString(), MascotBadge.NormalizeStyle(raw));
+    }
+
+    private static double HexLuminance(string hex) => MascotTint.Luminance(
+        Convert.ToInt32(hex.Substring(1, 2), 16),
+        Convert.ToInt32(hex.Substring(3, 2), 16),
+        Convert.ToInt32(hex.Substring(5, 2), 16));
+
+    [Fact]
+    public void DescribeMoodReturnsNonEmptyLabelWithMascotName()
+    {
+        foreach (var kind in Enum.GetValues<MascotKind>())
+        {
+            string expectedName = kind switch
+            {
+                MascotKind.Kuro => "Kuro",
+                MascotKind.Shiro => "Shiro",
+                MascotKind.MatchaMochi => "Matcha Mochi",
+                MascotKind.HojichaMochi => "Hojicha Mochi",
+                _ => "Mochi",
+            };
+            foreach (var mood in Enum.GetValues<MascotMood>())
+            {
+                string label = MascotBadge.DescribeMood(mood, kind);
+                Assert.StartsWith(expectedName + " · ", label);
+                Assert.True(label.Length > expectedName.Length + 3);
+            }
+        }
+    }
 }

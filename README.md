@@ -21,34 +21,34 @@ MochiDock is a small capsule that lives at the top of your screen. Notifications
 
 ## Features
 
-A new install starts small: the **Media**, **Stats** and **Weather** tabs, plus the notifications and gaming mode. Everything else is one switch away. Tabs are switched in **Settings > Tabs** (or the switches on the dock's own Settings tab); the other features in the Settings section named below. Open Settings from the tray icon or the gear on the dock.
+A new install starts small: the **Media**, **Stats** and **Weather** tabs, plus the notifications and gaming mode. Everything else is one switch away. Tabs are switched in **Settings > Tabs & Modules** (or the switches on the dock's own Settings tab); the other features in the Settings section named below. Open Settings from the tray icon or the gear on the dock (use the sidebar search box to jump straight to any option).
 
 | Feature | What it does | New install | Where to switch it |
 | --- | --- | --- | --- |
-| **Media and lyrics** | Controls for Spotify, YouTube Music and browser playback, a seekable timeline and synced lyrics (LRCLIB) with readings for Japanese, Korean and Chinese. | On | Always shown; lyrics in Music & lyrics |
-| **Stats** | CPU, GPU, memory, drives, network, top processes and a Battery page. | On | Tabs |
-| **Weather** | Current weather, hourly and three-day forecast, and the temperature in the capsule. | On | Tabs; city in Location & Prayer |
+| **Media and lyrics** | Controls for Spotify, YouTube Music and browser playback, a seekable timeline and synced lyrics (LRCLIB) with readings for Japanese, Korean and Chinese. | On | Always shown; lyrics in Music & Lyrics |
+| **Stats** | CPU, GPU, memory, drives, network, top processes and a Battery page. | On | Tabs & Modules |
+| **Weather** | Current weather, hourly and three-day forecast, and the temperature in the capsule. | On | Tabs & Modules; city in Location & Prayer |
 | **Gaming mode** | In games the dock moves to the bottom, becomes click-through and shows FPS, GPU and CPU, with a session summary afterwards. Ctrl+Alt+R switches between screen resolution presets. | On | Gaming & Display |
-| **Notifications** | WhatsApp, Email and Discord messages appear as a small capsule first and expand on hover. Notifications from other apps you choose (LINE, Telegram, Slack...) get their own Apps card. | Email and Discord on, WhatsApp off, other apps none | WhatsApp, Email, Notifications |
+| **Notifications** | WhatsApp, Email and Discord messages appear as a small capsule first and expand on hover; when several arrive, clicking one highlights the active message you are viewing or replying to. Notifications from other apps you choose (LINE, Telegram, Slack...) get their own Apps card. | Email and Discord on, WhatsApp off, other apps none | WhatsApp, Email, Notifications |
 | **WhatsApp** | Recent messages, quick replies and reactions through a local or shared GOWA engine. Starts nothing until you enable it. | Off | WhatsApp |
 | **Email** | New-mail notices from Gmail or other IMAP accounts (app password), Outlook Classic and Mailspring; verification codes can be copied. | Ready, add an account | Email |
-| **Prayer times** | Location-aware schedule, qibla bearing, reminders and a Tone or Silent chime. | Off | Tabs, or Location & Prayer |
-| **Today and calendar** | Month calendar, events from a Google Calendar link ([how to connect it](docs/USER_GUIDE.md#connecting-google-calendar)), tasks with reminders, optional Japan and Indonesia holidays. | Off | Tabs; link and holidays in Calendar |
-| **FX rates** | Three currency pairs of your choice from 25 currencies (default USD/JPY, USD/IDR and JPY/IDR) with a trajectory chart, no API key needed. | Off | Tabs |
-| **AI usage** | Remaining usage for Claude, Codex, Antigravity, Cursor, Gemini and GitHub Copilot, with an optional low-usage alert. | Off | Tabs; providers in AI usage |
+| **Prayer times** | Location-aware schedule, qibla bearing, reminders and a Tone or Silent chime. | Off | Tabs & Modules, or Location & Prayer |
+| **Today and calendar** | Month calendar, events from a Google Calendar link ([how to connect it](docs/USER_GUIDE.md#connecting-google-calendar)), tasks with reminders, optional Japan and Indonesia holidays. | Off | Tabs & Modules; link and holidays in Calendar |
+| **FX rates** | Three currency pairs of your choice from 25 currencies (default USD/JPY, USD/IDR and JPY/IDR) with a trajectory chart, no API key needed. | Off | Tabs & Modules |
+| **AI usage** | Remaining usage for Claude, Codex, Antigravity, Cursor, Gemini and GitHub Copilot, with an optional low-usage alert. | Off | Tabs & Modules; providers in AI Usage |
 | **Taskbar readouts** | Two-line blocks beside the system tray: CPU and GPU, memory and disk, network speed, the next prayer, the weather and device batteries; click one to open its card. | Off | Taskbar |
-| **Wireless device batteries** | Mouse, keyboard and headset levels on the Stats Battery page and an optional taskbar readout. | Off | Hardware & power, Taskbar |
+| **Wireless device batteries** | Mouse, keyboard and headset levels on the Stats Battery page and an optional taskbar readout. | Off | Hardware & Power, Taskbar |
 | **Window-size shortcuts** | Resize the window you are using to a set size and centre it (Ctrl+Alt+1 to 4, Ctrl+Alt+F to swap width and height; editable). | Off | Gaming & Display |
-| **Pomodoro** | Focus timer. | Off | Tabs |
-| **File Shelf** | A temporary shelf for files, and phone drop over your Wi-Fi (you approve each file). | Off | Tabs |
-| **Clipboard** | Clipboard history. | Off | Tabs |
-| **Script** | A teleprompter-style script reader (Alt+Shift+S). | Off | Tabs |
-| **Downloads** | A media downloader (yt-dlp and ffmpeg). | Off | Tabs |
+| **Pomodoro** | Focus timer. | Off | Tabs & Modules |
+| **File Shelf** | A temporary shelf for files, and phone drop over your Wi-Fi (you approve each file). | Off | Tabs & Modules |
+| **Clipboard** | Clipboard history. | Off | Tabs & Modules |
+| **Script** | A teleprompter-style script reader (Alt+Shift+S). | Off | Tabs & Modules |
+| **Downloads** | A media downloader (yt-dlp and ffmpeg). | Off | Tabs & Modules |
 | **Sounds** | Short notification and Mochi sounds. | On | Notifications |
-| **Mochi** | The mascot's faces follow what is going on (music, messages, games, the weather, a hot GPU, overdue tasks…) and the card you open (Electric on the Battery page, Money on FX, the sky on Weather, Studying during a Pomodoro). He spins round in a little whirlwind when his face changes. [Every face and its trigger](docs/USER_GUIDE.md#mochis-faces). | On | Appearance & Dock (Expressive Mochi) |
-| **Updates** | Checks GitHub for a new version and shows a one-time capsule notice when one is out; until you dismiss that version, a small accent ↑ dot stays on the compact capsule (it steps aside for gaming, notifications and notices) and the expanded dock shows a banner with **Update**, **Release notes** and **Dismiss**. The version button at the top of the dock's quick settings checks on click and turns into **Update to x** when an update is waiting; it downloads the update, verifies its checksum, installs it silently and restarts MochiDock. Nothing installs without your click. | Check on | Quick settings button; automatic checks in Data & diagnostics |
+| **Mochi** | The mascot's faces follow what is going on (music, messages, games, the weather, a hot GPU, overdue tasks…) and the card you open (Electric on the Battery page, Money on FX, the sky on Weather, Studying during a Pomodoro). He spins round in a little whirlwind when his face changes, and you can choose his corner status badge style (**3D Charm**, **Speech Bubble**, **3D Sticker** or **Off**) with a live preview. [Every face and its trigger](docs/USER_GUIDE.md#mochis-faces). | On | Mascot |
+| **Updates** | Checks GitHub for a new version and shows a one-time capsule notice when one is out; until you dismiss that version, a small accent ↑ dot stays on the compact capsule (it steps aside for gaming, notifications and notices) and the expanded dock shows a banner with **Update**, **Release notes** and **Dismiss**. The version button at the top of the dock's quick settings checks on click and turns into **Update to x** when an update is waiting; it downloads the update, verifies its checksum, installs it silently and restarts MochiDock. Nothing installs without your click. | Check on | Quick settings button; automatic checks in Updates & Data |
 
-Four themes, `Default` (dark), `Hojicha` (warm roasted-tea brown with a caramel accent), `Kuro Night` (storm-night indigo with an electric-yellow accent, where Mochi becomes Kuro, a black electric cat) and `Matcha` (warm oat and green), are in Appearance & Dock, together with the Mascot (Auto, grey Mochi, Matcha Mochi, Hojicha Mochi, Kuro the black cat or Shiro the white cat, with any theme; also in the dock's quick settings), along with the dock style, date format, monitor and interface size. MochiDock is multi-monitor and high-DPI aware. The [user guide](docs/USER_GUIDE.md) explains every tab and setting.
+Four themes, `Default` (dark), `Hojicha` (warm roasted-tea brown with a caramel accent), `Kuro Night` (storm-night indigo with an electric-yellow accent, where Mochi becomes Kuro, a black electric cat) and `Matcha` (warm oat and green), are in **Appearance & Dock** alongside the dock style, monitor and interface size. **Mascot** holds the character picker (Auto, grey Mochi, Matcha Mochi, Hojicha Mochi, Kuro the black cat or Shiro the white cat, with any theme; also in the dock's quick settings), status badge style with a live preview, Expressive Mochi and your birthday; **General** holds startup, fullscreen/capture behavior and date format. MochiDock is multi-monitor and high-DPI aware. The [user guide](docs/USER_GUIDE.md) explains every tab and setting.
 
 ## Screenshots
 
@@ -105,8 +105,8 @@ Every mascot works on every theme:
 
 - Windows 10 version 2004 (build 19041) or later, or Windows 11, 64-bit.
 - Nothing else is required for the basics. Optional, each for its own feature:
-  - **GPU stats:** GPU name, driver and usage come from Windows itself (WMI and the GPU Engine counters), so they work with NVIDIA, AMD and Intel graphics. An NVIDIA driver adds more detail (temperature, memory, clock and power through NVML); on AMD and Intel those extra values are read from hardware sensors when available and show as `-` otherwise. Only NVIDIA has been checked on real hardware so far.
-  - **PawnIO:** a real CPU temperature (a separate third-party driver; the setup can install it for you with winget if you tick the option, or see Settings > Hardware & power > CPU sensors). Without it the CPU temperature is an estimate, marked with `~`. It is not needed for the power total on the Battery page: CPU power is read from Windows' own Energy Meter counters when PawnIO is missing (on Intel CPUs with integrated graphics that figure already includes the graphics). GPU power needs an NVIDIA card or a sensor that provides it; the total is always marked as an estimate.
+  - **GPU stats:** GPU name, driver and usage come from Windows itself (WMI and the GPU Engine counters), so they work with NVIDIA, AMD and Intel graphics. An NVIDIA driver adds more detail (temperature, memory, clock and power through NVML); on AMD and Intel those extra values are read from hardware sensors when available and show as `-` otherwise. Checked on real hardware with an NVIDIA laptop GPU, an AMD desktop GPU and an Intel CPU with integrated graphics (on the Intel iGPU no GPU temperature sensor is reported, so temperature stays as `-`).
+  - **PawnIO:** a real CPU temperature (a separate third-party driver; the setup can install it for you with winget if you tick the option, or see Settings > Hardware & Power > CPU sensors). Without it the CPU temperature is an estimate, marked with `~`. It is not needed for the power total on the Battery page: CPU power is read from Windows' own Energy Meter counters when PawnIO is missing (on Intel CPUs with integrated graphics that figure already includes the graphics). GPU power needs an NVIDIA card or a sensor that provides it; the total is always marked as an estimate.
   - **Email:** a Gmail, Yahoo, iCloud or other IMAP account with an app password (Gmail only offers app passwords once 2-step verification is on; see [setting up email](docs/USER_GUIDE.md#setting-up-email-gmail-and-other-imap-accounts)), or classic Outlook or Mailspring.
   - **Calendar:** a Google Calendar (or other `.ics`) link, see the [user guide](docs/USER_GUIDE.md#connecting-google-calendar).
   - **`ffmpeg.exe`** (MP3 in Downloads).
@@ -117,7 +117,7 @@ Every mascot works on every theme:
 2. The installer is an **unsigned beta**, so Windows SmartScreen may warn. Choose "More info", then "Run anyway".
 3. MochiDock needs **Administrator rights** (FPS capture uses ETW), so Windows asks for approval each time it starts. The optional "Start with Windows" task launches it elevated without a prompt.
 
-**Updating:** you only download the setup once. Later versions install from inside MochiDock (the version button in the dock's quick settings, the tray menu, or Settings > Data & diagnostics), keeping your settings.
+**Updating:** you only download the setup once. Later versions install from inside MochiDock (the version button in the dock's quick settings, the tray menu, or Settings > Updates & Data), keeping your settings.
 
 **Uninstalling:** use Windows Settings > Apps. The uninstaller asks whether to keep your settings and data, always deletes saved passwords, and reminds you to revoke a mail app password at your provider. See [updating and uninstalling](docs/USER_GUIDE.md#updating-and-uninstalling).
 

@@ -190,7 +190,8 @@ public partial class MascotControl : System.Windows.Controls.UserControl
         Loaded += (s, e) =>
 
         {
-
+            BadgeStyleChanged += OnBadgeStyleChanged;
+            ApplyBadge(Mood);
             UpdateActivityTimers();
 
         };
@@ -200,7 +201,7 @@ public partial class MascotControl : System.Windows.Controls.UserControl
         Unloaded += (s, e) =>
 
         {
-
+            BadgeStyleChanged -= OnBadgeStyleChanged;
             StopRenderingHook();
 
             _cursorWatchTimer.Stop();
@@ -528,7 +529,7 @@ public partial class MascotControl : System.Windows.Controls.UserControl
     private static bool? _animationsOverride = null;   // only the harness assigns it (by reflection)
     private static bool AnimationsEnabled => _animationsOverride ?? SystemParameters.ClientAreaAnimation;
 
-    private static SolidColorBrush Ink(string hex) => new((System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(hex));
+    internal static SolidColorBrush Ink(string hex) => new((System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(hex));
 
     // The face last drawn: the spin policy compares the next face with it (a re-apply of the same face does not turn).
     private MascotMood? _appliedMood;
@@ -540,6 +541,7 @@ public partial class MascotControl : System.Windows.Controls.UserControl
         else ApplyBaseMood(mood);
         if (mood == MascotMood.Focused) ApplyFocusedFace();
         ApplyBadge(mood);
+        ToolTip = MochiDock.Core.MascotBadge.DescribeMood(mood, _kind);
         _appliedMood = mood;
     }
 
@@ -563,7 +565,7 @@ public partial class MascotControl : System.Windows.Controls.UserControl
     private void RequestMood(MascotMood mood)
     {
         if (_spinning) { _pendingMood = mood; return; }
-        if (SpinEnabled && AnimationsEnabled && IsLoaded && IsVisible && MascotSpinPolicy.ShouldSpin(_appliedMood, mood)) Spin(mood);
+        if (SpinEnabled && !DisableSpin && AnimationsEnabled && IsLoaded && IsVisible && MascotSpinPolicy.ShouldSpin(_appliedMood, mood)) Spin(mood);
         else ApplyMood(mood);
         if (IsLoaded && IsVisible)
         {
@@ -854,7 +856,7 @@ public partial class MascotControl : System.Windows.Controls.UserControl
     private bool _onLightGround => MochiDock.Core.MascotRim.IsLightGround(ThemeName);
     private bool _kuroGlows => _isKuro && !_onLightGround;
 
-    private static string ThemeNameOf(MascotTheme theme) => theme switch
+    internal static string ThemeNameOf(MascotTheme theme) => theme switch
     {
         MascotTheme.Matcha => MochiDock.Core.ThemePolicy.Matcha,
         MascotTheme.Hojicha => MochiDock.Core.ThemePolicy.Hojicha,
@@ -1040,74 +1042,130 @@ public partial class MascotControl : System.Windows.Controls.UserControl
     };
 
     // ---------------- The status badge ----------------
-    // One disc in the top-right corner (MascotBadge says which glyph and colour each face gets). The glyph shapes are filled paths drawn for
-    // about 7 px, in a box of about -3..3 units around the disc's centre.
-    private static readonly Dictionary<string, Geometry> BadgeGlyphs = new()
+    // One plump 3D squircle charm (MascotBadge says which glyph, colour and placement each face/mascot gets).
+    // The glyph shapes are bolded paths in about a -4..4 unit box inside the 13.5 x 13.5 charm so they stay readable at compact dock size.
+    internal static readonly Dictionary<string, Geometry> BadgeGlyphs = new()
     {
-        ["exclaim"] = Glyph("M -0.85,-2.9 L 0.85,-2.9 L 0.6,0.9 L -0.6,0.9 Z M 0,1.55 A 0.95,0.95 0 1 1 0,3.45 A 0.95,0.95 0 1 1 0,1.55 Z"),
-        ["z"] = Glyph("M -2,-2.3 L 2,-2.3 L 2,-1.2 L -0.5,1.3 L 2.1,1.3 L 2.1,2.5 L -2.1,2.5 L -2.1,1.4 L 0.4,-1.1 L -2,-1.1 Z"),
-        ["moon"] = Glyph("M 0.7,-3 A 3.1,3.1 0 1 0 2.8,1.2 A 2.5,2.5 0 0 1 0.7,-3 Z"),
-        ["cup"] = Glyph("M -2.7,-2 L 1.2,-2 L 1.2,2.6 L -2.7,2.6 Z M 1.2,-1.1 L 3,-1.1 L 3,1.5 L 1.2,1.5 L 1.2,0.6 L 2.1,0.6 L 2.1,-0.2 L 1.2,-0.2 Z"),
-        ["bell"] = Glyph("M 0,-3 C -1.9,-3 -2.4,-1.3 -2.4,0.2 L -2.4,1.2 L -3.1,2 L 3.1,2 L 2.4,1.2 L 2.4,0.2 C 2.4,-1.3 1.9,-3 0,-3 Z M -1,2.5 L 1,2.5 A 1,1 0 0 1 -1,2.5 Z"),
-        ["pause"] = Glyph("M -2.1,-2.4 L -0.6,-2.4 L -0.6,2.4 L -2.1,2.4 Z M 0.6,-2.4 L 2.1,-2.4 L 2.1,2.4 L 0.6,2.4 Z"),
-        ["trophy"] = Glyph("M -2.3,-2.8 L 2.3,-2.8 L 2.3,0 C 2.3,1.4 1.3,1.9 0,1.9 C -1.3,1.9 -2.3,1.4 -2.3,0 Z M -3.3,-2.2 L -2.3,-2.2 L -2.3,-0.5 L -3.3,-0.5 Z M 3.3,-2.2 L 2.3,-2.2 L 2.3,-0.5 L 3.3,-0.5 Z M -0.7,1.7 L 0.7,1.7 L 0.7,2.2 L 1.9,2.2 L 1.9,3.1 L -1.9,3.1 L -1.9,2.2 L -0.7,2.2 Z"),
-        ["clock"] = Glyph("F0 M 0,-3 A 3,3 0 1 1 0,3 A 3,3 0 1 1 0,-3 Z M 0,-2.1 A 2.1,2.1 0 1 0 0,2.1 A 2.1,2.1 0 1 0 0,-2.1 Z M -0.45,-1.5 L 0.45,-1.5 L 0.45,0.3 L 1.5,0.3 L 1.5,1.1 L -0.45,1.1 Z"),
-        ["battery"] = Glyph("F0 M -3,-1.9 L 2.1,-1.9 L 2.1,1.9 L -3,1.9 Z M -2.2,-1.1 L 1.3,-1.1 L 1.3,1.1 L -2.2,1.1 Z M -2,-0.8 L -1.1,-0.8 L -1.1,0.8 L -2,0.8 Z M 2.1,-0.9 L 3.1,-0.9 L 3.1,0.9 L 2.1,0.9 Z"),
-        ["up"] = Glyph("M 0,-2.8 L 2.9,2.2 L -2.9,2.2 Z"),
-        ["down"] = Glyph("M 0,2.8 L 2.9,-2.2 L -2.9,-2.2 Z"),
-        ["sun"] = Glyph("M 0,-1.6 A 1.6,1.6 0 1 1 0,1.6 A 1.6,1.6 0 1 1 0,-1.6 Z M -0.4,-3.1 L 0.4,-3.1 L 0.4,-2.2 L -0.4,-2.2 Z M -0.4,2.2 L 0.4,2.2 L 0.4,3.1 L -0.4,3.1 Z M -3.1,-0.4 L -2.2,-0.4 L -2.2,0.4 L -3.1,0.4 Z M 2.2,-0.4 L 3.1,-0.4 L 3.1,0.4 L 2.2,0.4 Z M 1.6,-2.5 L 2.5,-1.6 L 1.9,-1.0 L 1.0,-1.9 Z M -1.6,-2.5 L -2.5,-1.6 L -1.9,-1.0 L -1.0,-1.9 Z M 1.6,2.5 L 2.5,1.6 L 1.9,1.0 L 1.0,1.9 Z M -1.6,2.5 L -2.5,1.6 L -1.9,1.0 L -1.0,1.9 Z"),
-        ["umbrella"] = Glyph("M -3,0.4 A 3,3 0 0 1 3,0.4 Z M -0.25,0.4 L 0.25,0.4 L 0.25,2.3 L -0.25,2.3 Z M -1.3,2.3 L 0.25,2.3 L 0.25,1.9 L -0.9,1.9 L -0.9,2.9 L -1.3,2.9 Z"),
-        ["snow"] = Glyph("M -3,-0.6 L 3,-0.6 L 3,0.6 L -3,0.6 Z M 1.02,2.87 L 1.98,2.32 L -1.02,-2.87 L -1.98,-2.32 Z M -1.02,2.87 L -1.98,2.32 L 1.02,-2.87 L 1.98,-2.32 Z"),
-        ["cloud"] = Glyph("M -2.7,1.7 A 1.6,1.6 0 0 1 -2.1,-1.2 A 2.1,2.1 0 0 1 1.9,-1.4 A 1.7,1.7 0 0 1 2.7,1.7 Z"),
-        ["timer"] = Glyph("F0 M 0,-2.3 A 2.6,2.6 0 1 1 0,2.9 A 2.6,2.6 0 1 1 0,-2.3 Z M 0,-1.5 A 1.8,1.8 0 1 0 0,2.1 A 1.8,1.8 0 1 0 0,-1.5 Z M -0.35,-1.1 L 0.35,-1.1 L 0.35,0.8 L -0.35,0.8 Z M -0.8,-3.4 L 0.8,-3.4 L 0.8,-2.6 L -0.8,-2.6 Z"),
-        ["tick"] = Glyph("M -2.8,0.2 L -1.7,-0.9 L -0.6,0.2 L 1.8,-2.4 L 2.9,-1.3 L -0.6,2.4 Z"),
-        ["note"] = Glyph("M 0.6,-3 L 1.8,-3 L 1.8,2 L 0.6,2 Z M 1.8,-3 L 3.2,-2 L 3.2,-0.6 L 1.8,-1.6 Z M -0.5,0.8 A 1.7,1.3 0 1 1 -0.5,3.4 A 1.7,1.3 0 1 1 -0.5,0.8 Z"),
-        ["controller"] = Glyph("F0 M -3,-0.6 C -3,-1.8 -2.2,-2.3 -1.4,-2.3 L 1.4,-2.3 C 2.2,-2.3 3,-1.8 3,-0.6 L 3.3,1.7 C 3.4,2.6 2.9,3 2.3,3 C 1.7,3 1.4,2.7 1.1,2.2 L 0.7,1.6 L -0.7,1.6 L -1.1,2.2 C -1.4,2.7 -1.7,3 -2.3,3 C -2.9,3 -3.4,2.6 -3.3,1.7 Z M -1.9,-0.35 L -1.25,-0.35 L -1.25,-1 L -0.75,-1 L -0.75,-0.35 L -0.1,-0.35 L -0.1,0.15 L -0.75,0.15 L -0.75,0.8 L -1.25,0.8 L -1.25,0.15 L -1.9,0.15 Z M 1.6,-0.7 A 0.5,0.5 0 1 1 0.6,-0.7 A 0.5,0.5 0 1 1 1.6,-0.7 Z M 2.4,0.3 A 0.5,0.5 0 1 1 1.4,0.3 A 0.5,0.5 0 1 1 2.4,0.3 Z"),
-        ["mic"] = Glyph("M -1.2,-1.9 A 1.2,1.2 0 0 1 1.2,-1.9 L 1.2,0.3 A 1.2,1.2 0 0 1 -1.2,0.3 Z M -2.4,-0.5 L -1.7,-0.5 A 1.7,1.7 0 0 0 1.7,-0.5 L 2.4,-0.5 A 2.4,2.4 0 0 1 -2.4,-0.5 Z M -0.4,1.8 L 0.4,1.8 L 0.4,2.7 L -0.4,2.7 Z M -1.6,2.6 L 1.6,2.6 L 1.6,3.2 L -1.6,3.2 Z"),
+        ["exclaim"] = Glyph("M -1.1,-3.9 L 1.1,-3.9 L 0.8,1.1 L -0.8,1.1 Z M 0,1.9 A 1.1,1.1 0 1 1 0,4.1 A 1.1,1.1 0 1 1 0,1.9 Z"),
+        ["z"] = Glyph("M -2.8,-3.1 L 2.8,-3.1 L 2.8,-1.7 L -0.7,1.7 L 2.9,1.7 L 2.9,3.1 L -2.9,3.1 L -2.9,1.7 L 0.6,-1.7 L -2.8,-1.7 Z"),
+        ["moon"] = Glyph("M 0.9,-3.8 A 4.0,4.0 0 1 0 3.7,1.6 A 3.1,3.1 0 0 1 0.9,-3.8 Z"),
+        ["cup"] = Glyph("M -3.6,-2.7 L 1.5,-2.7 L 1.5,1.8 A 1.6,1.6 0 0 1 -0.1,3.4 L -2.0,3.4 A 1.6,1.6 0 0 1 -3.6,1.8 Z M 1.5,-1.8 L 2.8,-1.8 C 3.7,-1.8 4.1,-1.1 4.1,-0.1 L 4.1,0.5 C 4.1,1.5 3.7,2.2 2.8,2.2 L 1.5,2.2 L 1.5,1.1 L 2.6,1.1 C 2.9,1.1 3.0,0.8 3.0,0.4 L 3.0,0.0 C 3.0,-0.4 2.9,-0.7 2.6,-0.7 L 1.5,-0.7 Z"),
+        ["bell"] = Glyph("M 0,-3.9 C -2.4,-3.9 -3.1,-1.7 -3.1,0.3 L -3.9,1.9 L 3.9,1.9 L 3.1,0.3 C 3.1,-1.7 2.4,-3.9 0,-3.9 Z M -1.3,2.5 L 1.3,2.5 A 1.3,1.3 0 0 1 -1.3,2.5 Z"),
+        ["pause"] = Glyph("M -2.8,-3.2 L -0.8,-3.2 L -0.8,3.2 L -2.8,3.2 Z M 0.8,-3.2 L 2.8,-3.2 L 2.8,3.2 L 0.8,3.2 Z"),
+        ["trophy"] = Glyph("M -2.7,-3.7 L 2.7,-3.7 L 2.7,-0.2 C 2.7,1.4 1.5,2.3 0,2.3 C -1.5,2.3 -2.7,1.4 -2.7,-0.2 Z M -2.7,-2.9 L -4.1,-2.9 L -4.1,-0.3 L -2.7,-0.3 L -2.7,-1.1 L -3.3,-1.1 L -3.3,-2.1 L -2.7,-2.1 Z M 2.7,-2.9 L 4.1,-2.9 L 4.1,-0.3 L 2.7,-0.3 L 2.7,-1.1 L 3.3,-1.1 L 3.3,-2.1 L 2.7,-2.1 Z M -0.8,2.1 L 0.8,2.1 L 0.8,2.8 L 2.4,2.8 L 2.4,3.9 L -2.4,3.9 L -2.4,2.8 L -0.8,2.8 Z"),
+        ["clock"] = Glyph("F0 M 0,-3.9 A 3.9,3.9 0 1 1 0,3.9 A 3.9,3.9 0 1 1 0,-3.9 Z M 0,-2.7 A 2.7,2.7 0 1 0 0,2.7 A 2.7,2.7 0 1 0 0,-2.7 Z M -0.6,-2.0 L 0.6,-2.0 L 0.6,0.4 L 2.1,0.4 L 2.1,1.5 L -0.6,1.5 Z"),
+        ["battery"] = Glyph("F0 M -4.0,-2.5 L 2.9,-2.5 L 2.9,2.5 L -4.0,2.5 Z M -2.9,-1.4 L 1.8,-1.4 L 1.8,1.4 L -2.9,1.4 Z M -2.4,-0.9 L -1.0,-0.9 L -1.0,0.9 L -2.4,0.9 Z M 2.9,-1.2 L 4.1,-1.2 L 4.1,1.2 L 2.9,1.2 Z"),
+        ["up"] = Glyph("M 0,-3.6 L 3.8,2.8 L -3.8,2.8 Z"),
+        ["down"] = Glyph("M 0,3.6 L 3.8,-2.8 L -3.8,-2.8 Z"),
+        ["sun"] = Glyph("M 0,-2.0 A 2.0,2.0 0 1 1 0,2.0 A 2.0,2.0 0 1 1 0,-2.0 Z M -0.55,-4.0 L 0.55,-4.0 L 0.55,-2.7 L -0.55,-2.7 Z M -0.55,2.7 L 0.55,2.7 L 0.55,4.0 L -0.55,4.0 Z M -4.0,-0.55 L -2.7,-0.55 L -2.7,0.55 L -4.0,0.55 Z M 2.7,-0.55 L 4.0,-0.55 L 4.0,0.55 L 2.7,0.55 Z M 2.0,-3.2 L 3.2,-2.0 L 2.4,-1.2 L 1.2,-2.4 Z M -2.0,-3.2 L -3.2,-2.0 L -2.4,-1.2 L -1.2,-2.4 Z M 2.0,3.2 L 3.2,2.0 L 2.4,1.2 L 1.2,2.4 Z M -2.0,3.2 L -3.2,2.0 L -2.4,1.2 L -1.2,2.4 Z"),
+        ["umbrella"] = Glyph("M -3.9,0.5 A 3.9,3.9 0 0 1 3.9,0.5 Z M -0.45,0.5 L 0.45,0.5 L 0.45,2.9 C 0.45,3.7 -0.2,4.0 -0.9,4.0 C -1.6,4.0 -2.1,3.5 -2.1,2.7 L -1.2,2.7 C -1.2,3.1 -1.0,3.2 -0.8,3.2 C -0.6,3.2 -0.45,3.0 -0.45,2.7 Z"),
+        ["snow"] = Glyph("F1 M -4.0,-0.75 L 4.0,-0.75 L 4.0,0.75 L -4.0,0.75 Z M 1.35,3.84 L 2.65,3.09 L -1.35,-3.84 L -2.65,-3.09 Z M -1.35,3.84 L -2.65,3.09 L 1.35,-3.84 L 2.65,-3.09 Z"),
+        ["cloud"] = Glyph("M -3.4,2.3 A 2.1,2.1 0 0 1 -2.7,-1.5 A 2.8,2.8 0 0 1 2.5,-1.8 A 2.2,2.2 0 0 1 3.5,2.3 Z"),
+        ["timer"] = Glyph("F0 M 0,-2.9 A 3.4,3.4 0 1 1 0,3.9 A 3.4,3.4 0 1 1 0,-2.9 Z M 0,-1.8 A 2.3,2.3 0 1 0 0,2.8 A 2.3,2.3 0 1 0 0,-1.8 Z M -0.5,-1.3 L 0.5,-1.3 L 0.5,1.1 L -0.5,1.1 Z M -1.2,-4.1 L 1.2,-4.1 L 1.2,-3.2 L -1.2,-3.2 Z"),
+        ["tick"] = Glyph("M -3.7,0.3 L -2.3,-1.2 L -0.8,0.3 L 2.4,-3.1 L 3.8,-1.7 L -0.8,3.2 Z"),
+        ["note"] = Glyph("F1 M 0.6,-3.8 L 2.1,-3.8 L 2.1,2.4 L 0.6,2.4 Z M 2.1,-3.8 L 4.0,-2.5 L 4.0,-0.7 L 2.1,-2.0 Z M -0.8,0.9 A 2.1,1.6 0 1 1 -0.8,4.1 A 2.1,1.6 0 1 1 -0.8,0.9 Z"),
+        ["controller"] = Glyph("F0 M -4.0,-0.8 C -4.0,-2.4 -2.9,-3.0 -1.8,-3.0 L 1.8,-3.0 C 2.9,-3.0 4.0,-2.4 4.0,-0.8 L 4.3,2.2 C 4.4,3.4 3.8,3.9 3.0,3.9 C 2.2,3.9 1.8,3.5 1.4,2.8 L 0.9,2.1 L -0.9,2.1 L -1.4,2.8 C -1.8,3.5 -2.2,3.9 -3.0,3.9 C -3.8,3.9 -4.4,3.4 -4.3,2.2 Z M -2.6,-0.45 L -1.7,-0.45 L -1.7,-1.35 L -0.95,-1.35 L -0.95,-0.45 L -0.05,-0.45 L -0.05,0.3 L -0.95,0.3 L -0.95,1.2 L -1.7,1.2 L -1.7,0.3 L -2.6,0.3 Z M 2.2,-0.9 A 0.7,0.7 0 1 1 0.8,-0.9 A 0.7,0.7 0 1 1 2.2,-0.9 Z M 3.3,0.45 A 0.7,0.7 0 1 1 1.9,0.45 A 0.7,0.7 0 1 1 3.3,0.45 Z"),
+        ["mic"] = Glyph("F1 M -1.5,-2.4 A 1.5,1.5 0 0 1 1.5,-2.4 L 1.5,0.4 A 1.5,1.5 0 0 1 -1.5,0.4 Z M -3.1,-0.6 L -2.15,-0.6 A 2.15,2.15 0 0 0 2.15,-0.6 L 3.1,-0.6 A 3.1,3.1 0 0 1 -3.1,-0.6 Z M -0.55,2.3 L 0.55,2.3 L 0.55,3.3 L -0.55,3.3 Z M -2.1,3.2 L 2.1,3.2 L 2.1,4.0 L -2.1,4.0 Z"),
     };
 
-    // The cats' side icon: where its centre sits (left of the head, by the left ear) and how much bigger than the disc glyph it is drawn.
-    private const double CatIconX = -2.6, CatIconY = 1.2, CatIconScale = 1.45;
-
     private static Geometry Glyph(string data)
+    {
+        var raw = Geometry.Parse(data);
+        var b = raw.Bounds;
+        if (!b.IsEmpty && b.Width > 0 && b.Height > 0)
+        {
+            double dx = (10.0 - b.Width) / 2.0 - b.Left;
+            double dy = (10.0 - b.Height) / 2.0 - b.Top;
+            var centered = raw.Clone();
+            centered.Transform = new TranslateTransform(dx, dy);
+            centered.Freeze();
+            return centered;
+        }
+        raw.Freeze();
+        return raw;
+    }
+
+    internal static Geometry RawFrozen(string data)
     {
         var g = Geometry.Parse(data);
         g.Freeze();
         return g;
     }
 
+    internal static System.Windows.Media.Color ParseHexColor(string hex) =>
+        (System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(hex);
+
     // Shows the badge of the face (none for the faces the eyes tell). Notice and New message pop it in once and pulse it once, no loop.
     private void ApplyBadge(MascotMood mood)
     {
-        if (MochiDock.Core.MascotBadge.For(mood, _kind) is not { } b) { StatusBadge.Visibility = Visibility.Collapsed; return; }
-        BadgeGlyph.Data = BadgeGlyphs.TryGetValue(b.Glyph, out var glyph) ? glyph : Geometry.Empty;
-        if (MochiDock.Core.MascotBadge.IsSideIcon(_kind))
+        var style = BadgeStyleOverride ?? CurrentBadgeStyle;
+        if (!ShowCornerBadge || style == MochiDock.Core.MascotBadgeStyle.Off || MochiDock.Core.MascotBadge.For(mood, _kind) is not { } b)
         {
-            // The cats: no disc; the glyph alone, about 1.5 times the disc glyph, in the badge's colour with a sticker outline, beside the
-            // head on the tail side (left, away from the clock), where the music note floats.
-            BadgeRing.Visibility = BadgeDisc.Visibility = Visibility.Collapsed;
-            BadgeGlyph.Fill = Ink(b.Fill);
-            BadgeGlyph.Stroke = Ink(MochiDock.Core.MascotBadge.RingFor(ThemeName));
-            BadgeGlyph.StrokeThickness = 0.55;
-            BadgeGlyph.StrokeLineJoin = PenLineJoin.Round;
-            BadgePos.X = CatIconX;
-            BadgePos.Y = CatIconY;
-            BadgeSize.ScaleX = BadgeSize.ScaleY = CatIconScale;
+            StatusBadge.Visibility = Visibility.Collapsed;
+            return;
         }
-        else
+
+        var glyph = BadgeGlyphs.TryGetValue(b.Glyph, out var g) ? g : Geometry.Empty;
+        var shades = MochiDock.Core.MascotBadge.ShadePair(b.Fill);
+        var pos = MochiDock.Core.MascotBadge.PlacementFor(_kind, style);
+
+        BadgeCharm.Visibility = Visibility.Collapsed;
+        BadgeBubble.Visibility = Visibility.Collapsed;
+        BadgeSticker.Visibility = Visibility.Collapsed;
+
+        switch (style)
         {
-            // The Mochi kinds: a disc with a ring in the top-right corner.
-            BadgeRing.Visibility = BadgeDisc.Visibility = Visibility.Visible;
-            BadgeDisc.Fill = Ink(b.Fill);
-            BadgeGlyph.Fill = Ink(b.Ink);
-            BadgeGlyph.Stroke = null;
-            BadgeRing.Fill = Ink(MochiDock.Core.MascotBadge.RingFor(ThemeName, b.Fill));
-            BadgePos.X = 25.2;
-            BadgePos.Y = 3.8;
-            BadgeSize.ScaleX = BadgeSize.ScaleY = 1;
+            case MochiDock.Core.MascotBadgeStyle.Bubble:
+            {
+                BadgeBubbleGlyph.Data = glyph;
+                BadgeBubbleGlyphShadow.Data = glyph;
+                BadgeBubbleGlyph.Fill = Ink(b.Fill);
+                var border = Ink(MochiDock.Core.ThemePolicy.Normalize(ThemeName) == MochiDock.Core.ThemePolicy.Matcha
+                    ? MochiDock.Core.MascotBadge.DarkRing
+                    : "#B8C0D0");
+                BadgeBubbleBody.BorderBrush = border;
+                BadgeBubbleTail.Stroke = border;
+                BadgeBubbleTail.Fill = Ink(_isCat ? "#F7F8FB" : "#E4E8F0");
+                BadgeBubbleTail.Data = RawFrozen(_isCat
+                    ? "M 2.2,2.2 L -0.4,-0.4 L 5.4,1.1 Z"
+                    : "M 2.2,11.0 L -0.4,13.6 L 5.4,12.1 Z");
+                BadgeBubble.Visibility = Visibility.Visible;
+                break;
+            }
+            case MochiDock.Core.MascotBadgeStyle.Sticker:
+            {
+                BadgeStickerBack.Data = glyph;
+                BadgeStickerFill.Data = glyph;
+                BadgeStickerSheen.Data = glyph;
+                var ring = Ink(MochiDock.Core.MascotBadge.RingFor(ThemeName, b.Fill));
+                BadgeStickerBack.Fill = ring;
+                BadgeStickerBack.Stroke = ring;
+                StickerGradTop.Color = ParseHexColor(shades.Top);
+                StickerGradMid.Color = ParseHexColor(shades.Mid);
+                StickerGradBottom.Color = ParseHexColor(shades.Bottom);
+                BadgeSticker.Visibility = Visibility.Visible;
+                break;
+            }
+            default:
+            {
+                BadgeGlyph.Data = glyph;
+                BadgeGlyphShadow.Data = glyph;
+                BadgeGradTop.Color = ParseHexColor(shades.Top);
+                BadgeGradMid.Color = ParseHexColor(shades.Mid);
+                BadgeGradBottom.Color = ParseHexColor(shades.Bottom);
+                BadgeBody.BorderBrush = Ink(MochiDock.Core.MascotBadge.RingFor(ThemeName, b.Fill));
+                BadgeGlyph.Fill = Ink(b.Ink);
+                BadgeCharm.Visibility = Visibility.Visible;
+                break;
+            }
         }
+
+        BadgePos.X = pos.X;
+        BadgePos.Y = pos.Y;
+        BadgeSize.ScaleX = BadgeSize.ScaleY = pos.Scale;
+
         StatusBadge.Visibility = Visibility.Visible;
-        if (mood is MascotMood.Alert or MascotMood.Excited && AnimationsEnabled && IsLoaded && IsVisible) PopBadge();
+        if (mood is MascotMood.Alert or MascotMood.Excited && !DisableSpin && AnimationsEnabled && IsLoaded && IsVisible) PopBadge();
     }
 
     private void PopBadge()
@@ -1493,6 +1551,32 @@ public partial class MascotControl : System.Windows.Controls.UserControl
     /// <summary>The Mascot setting (Auto, Mochi, Kuro or Shiro), set by the view model; ThemeService resolves it against the theme.</summary>
     public static string CurrentChoice { get; set; } = MochiDock.Core.MascotChoice.Auto;
 
+    private static MochiDock.Core.MascotBadgeStyle _currentBadgeStyle = MochiDock.Core.MascotBadgeStyle.Charm;
+    internal static event Action? BadgeStyleChanged;
+
+    /// <summary>The Mascot status badge style (Charm, Bubble, Sticker or Off), set by the view model from settings.</summary>
+    public static MochiDock.Core.MascotBadgeStyle CurrentBadgeStyle
+    {
+        get => _currentBadgeStyle;
+        set
+        {
+            if (_currentBadgeStyle == value) return;
+            _currentBadgeStyle = value;
+            BadgeStyleChanged?.Invoke();
+        }
+    }
+
+    private void OnBadgeStyleChanged() => ApplyBadge(Mood);
+
+    /// <summary>Whether this MascotControl draws the small corner badge itself (false when paired with a side MascotStatusBadge).</summary>
+    public bool ShowCornerBadge { get; set; } = true;
+
+    /// <summary>Optional per-instance badge style override (used by the Settings live preview).</summary>
+    public MochiDock.Core.MascotBadgeStyle? BadgeStyleOverride { get; set; }
+
+    /// <summary>Disables the transformation spin animation on this control (used by Settings previews).</summary>
+    public bool DisableSpin { get; set; }
+
     /// <summary>Kept for the render harnesses: true means Matcha, false Default.</summary>
     public static bool CurrentIsMatcha
     {
@@ -1719,7 +1803,7 @@ public partial class MascotControl : System.Windows.Controls.UserControl
         bool kindChanged = kind != (_pendingKind ?? _kind);
         // A new mascot (the Mascot picker, or Auto on a theme change) turns into the other one inside the whirlwind, like a new face does;
         // without animations, or while he is not shown, he changes at once.
-        if (kindChanged && (_spinning || (SpinEnabled && AnimationsEnabled && IsLoaded && IsVisible)))
+        if (kindChanged && (_spinning || (SpinEnabled && !DisableSpin && AnimationsEnabled && IsLoaded && IsVisible)))
         {
             _pendingKind = kind;
             if (!_spinning) Spin(Mood);   // the same face comes round on the new mascot

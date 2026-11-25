@@ -1,16 +1,15 @@
 using System;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
-using MochiDock.Controls;
 using MochiDock.Core;
 using MochiDock.Services;
 using MochiDock.ViewModels;
 using KeyEventArgs = System.Windows.Input.KeyEventArgs;
-using UserControl = System.Windows.Controls.UserControl;
 
 namespace MochiDock.Views.Settings.Sections;
 
-/// <summary>Theme, dock style, monitor and capsule content. Writes go through <see cref="MainViewModel.UpdateSettings"/>; fullscreen and capture options bind to the view model.</summary>
+/// <summary>Theme, dock style, monitor and capsule layout. Writes go through <see cref="MainViewModel.UpdateSettings"/>.</summary>
 public partial class AppearanceSectionView : SettingsSectionBase
 {
     public AppearanceSectionView()
@@ -25,56 +24,24 @@ public partial class AppearanceSectionView : SettingsSectionBase
         var vm = ViewModel;
         if (vm == null) return;
         var settings = vm.Settings;
-        {
-            string theme = MochiDock.Core.ThemePolicy.Normalize(settings.CapsuleTheme);
-            ThemeMatchaRadio.IsChecked = theme == MochiDock.Core.ThemePolicy.Matcha;
-            ThemeHojichaRadio.IsChecked = theme == MochiDock.Core.ThemePolicy.Hojicha;
-            ThemeKuroNightRadio.IsChecked = theme == MochiDock.Core.ThemePolicy.KuroNight;
-            ThemeDefaultRadio.IsChecked = theme == MochiDock.Core.ThemePolicy.Default;
-            bool notch = string.Equals(settings.DockStyle, "Notch", StringComparison.OrdinalIgnoreCase);
-            DockNotchRadio.IsChecked = notch;
-            DockFloatingRadio.IsChecked = !notch;
-            int chosen = vm.InterfaceScalePercent;
-            ScaleCombo.SelectedItem = ScaleCombo.Items.OfType<ComboBoxItem>().FirstOrDefault(i => i.Tag is int p && p == chosen);
-            ScaleRow.Validation = vm.IsInterfaceScaleLimited ? $"Limited to {vm.EffectiveInterfaceScalePercent}% on this display." : "";
-            if (!TopMarginBox.IsKeyboardFocused) TopMarginBox.Text = settings.TopMargin.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
-            if (!ScrollSpeedSlider.IsMouseCaptureWithin) ScrollSpeedSlider.Value = settings.CapsuleScrollSpeed;
-            WeatherCheck.IsChecked = settings.ShowWeatherInCapsule;
-            bool even = MochiDock.Core.CapsuleClockLayout.Parse(settings.CapsuleClockLayout) == MochiDock.Core.CapsuleClockAlignment.EvenSpacing;
-            ClockEvenRadio.IsChecked = even;
-            ClockEdgesRadio.IsChecked = !even;
-            ExpressiveCheck.IsChecked = settings.ExpressiveMochi;
-            string mascot = MochiDock.Core.MascotChoice.Normalize(settings.Mascot);
-            if (MascotCombo.Items.Count == 0)
-            {
-                MascotCombo.Items.Add(new ComboBoxItem { Content = "Auto", Tag = MochiDock.Core.MascotChoice.Auto });
-                MascotCombo.Items.Add(new ComboBoxItem { Content = "Mochi (grey)", Tag = MochiDock.Core.MascotChoice.Mochi });
-                MascotCombo.Items.Add(new ComboBoxItem { Content = "Matcha Mochi (green)", Tag = MochiDock.Core.MascotChoice.MatchaMochi });
-                MascotCombo.Items.Add(new ComboBoxItem { Content = "Hojicha Mochi (tan)", Tag = MochiDock.Core.MascotChoice.HojichaMochi });
-                MascotCombo.Items.Add(new ComboBoxItem { Content = "Kuro (black cat)", Tag = MochiDock.Core.MascotChoice.Kuro });
-                MascotCombo.Items.Add(new ComboBoxItem { Content = "Shiro (white cat)", Tag = MochiDock.Core.MascotChoice.Shiro });
-            }
-            MascotCombo.SelectedItem = MascotCombo.Items.OfType<ComboBoxItem>().FirstOrDefault(i => (string)i.Tag == mascot);
-            LoadBirthday(settings.BirthdayMonthDay);
-            // Labels carry today's date as the example, so rebuild them each time the page is shown.
-            var chosenDate = DateDisplay.Parse(settings.DateFormat);
-            DateFormatCombo.Items.Clear();
-            foreach (var style in Enum.GetValues<DateStyle>())
-                DateFormatCombo.Items.Add(new ComboBoxItem { Content = DateDisplay.Label(style, DateTime.Today), Tag = style });
-            DateFormatCombo.SelectedItem = DateFormatCombo.Items.OfType<ComboBoxItem>().FirstOrDefault(i => i.Tag is DateStyle s && s == chosenDate);
-        }
-    }
 
-    private void Mascot_Changed(object sender, SelectionChangedEventArgs e)
-    {
-        if (!IsLoaded || Loading) return;
-        if (MascotCombo.SelectedItem is ComboBoxItem { Tag: string choice }) ViewModel?.ApplyMascotChoice(choice);
-    }
-
-    private void DateFormat_Changed(object sender, SelectionChangedEventArgs e)
-    {
-        if (!IsLoaded || Loading) return;
-        if (DateFormatCombo.SelectedItem is ComboBoxItem { Tag: DateStyle style }) ViewModel?.UpdateSettings(x => x.DateFormat = style.ToString());
+        string theme = ThemePolicy.Normalize(settings.CapsuleTheme);
+        ThemeMatchaRadio.IsChecked = theme == ThemePolicy.Matcha;
+        ThemeHojichaRadio.IsChecked = theme == ThemePolicy.Hojicha;
+        ThemeKuroNightRadio.IsChecked = theme == ThemePolicy.KuroNight;
+        ThemeDefaultRadio.IsChecked = theme == ThemePolicy.Default;
+        bool notch = string.Equals(settings.DockStyle, "Notch", StringComparison.OrdinalIgnoreCase);
+        DockNotchRadio.IsChecked = notch;
+        DockFloatingRadio.IsChecked = !notch;
+        int chosen = vm.InterfaceScalePercent;
+        ScaleCombo.SelectedItem = ScaleCombo.Items.OfType<ComboBoxItem>().FirstOrDefault(i => i.Tag is int p && p == chosen);
+        ScaleRow.Validation = vm.IsInterfaceScaleLimited ? $"Limited to {vm.EffectiveInterfaceScalePercent}% on this display." : "";
+        if (!TopMarginBox.IsKeyboardFocused) TopMarginBox.Text = settings.TopMargin.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
+        if (!ScrollSpeedSlider.IsMouseCaptureWithin) ScrollSpeedSlider.Value = settings.CapsuleScrollSpeed;
+        WeatherCheck.IsChecked = settings.ShowWeatherInCapsule;
+        bool even = CapsuleClockLayout.Parse(settings.CapsuleClockLayout) == CapsuleClockAlignment.EvenSpacing;
+        ClockEvenRadio.IsChecked = even;
+        ClockEdgesRadio.IsChecked = !even;
     }
 
     private void Scale_Changed(object sender, SelectionChangedEventArgs e)
@@ -89,10 +56,10 @@ public partial class AppearanceSectionView : SettingsSectionBase
     private void Theme_Checked(object sender, RoutedEventArgs e)
     {
         if (!IsLoaded || Loading) return;
-        string theme = ThemeMatchaRadio.IsChecked == true ? MochiDock.Core.ThemePolicy.Matcha
-                     : ThemeHojichaRadio.IsChecked == true ? MochiDock.Core.ThemePolicy.Hojicha
-                     : ThemeKuroNightRadio.IsChecked == true ? MochiDock.Core.ThemePolicy.KuroNight
-                     : MochiDock.Core.ThemePolicy.Default;
+        string theme = ThemeMatchaRadio.IsChecked == true ? ThemePolicy.Matcha
+                     : ThemeHojichaRadio.IsChecked == true ? ThemePolicy.Hojicha
+                     : ThemeKuroNightRadio.IsChecked == true ? ThemePolicy.KuroNight
+                     : ThemePolicy.Default;
         ViewModel?.UpdateSettings(x => x.CapsuleTheme = theme, SettingsApply.Theme);
     }
 
@@ -134,51 +101,10 @@ public partial class AppearanceSectionView : SettingsSectionBase
         ViewModel?.SetCapsuleScrollSpeed(ScrollSpeedSlider.Value);
     }
 
-    // Month and day pickers; "None" in either clears the birthday. The month list is built once.
-    private void LoadBirthday(string? monthDay)
-    {
-        if (BirthdayMonthCombo.Items.Count == 0)
-        {
-            BirthdayMonthCombo.Items.Add(new ComboBoxItem { Content = "None", Tag = 0 });
-            for (int m = 1; m <= 12; m++)
-                BirthdayMonthCombo.Items.Add(new ComboBoxItem { Content = System.Globalization.CultureInfo.InvariantCulture.DateTimeFormat.GetMonthName(m), Tag = m });
-            BirthdayDayCombo.Items.Add(new ComboBoxItem { Content = "-", Tag = 0 });
-            for (int d = 1; d <= 31; d++) BirthdayDayCombo.Items.Add(new ComboBoxItem { Content = d.ToString(System.Globalization.CultureInfo.InvariantCulture), Tag = d });
-        }
-        var parsed = MochiDock.Core.MascotTriggers.ParseMonthDay(monthDay);
-        BirthdayMonthCombo.SelectedIndex = parsed?.Month ?? 0;
-        BirthdayDayCombo.SelectedIndex = parsed?.Day ?? 0;
-    }
-
-    private void Birthday_Changed(object sender, SelectionChangedEventArgs e)
-    {
-        if (!IsLoaded || Loading) return;
-        int month = (BirthdayMonthCombo.SelectedItem as ComboBoxItem)?.Tag is int m ? m : 0;
-        int day = (BirthdayDayCombo.SelectedItem as ComboBoxItem)?.Tag is int d ? d : 0;
-        if (month == 0 || day == 0)
-        {
-            BirthdayRow.Validation = month == 0 && day == 0 ? "" : "Choose both a month and a day.";
-            if (month == 0 && day == 0) ViewModel?.UpdateSettings(x => x.BirthdayMonthDay = "");
-            return;
-        }
-        string value = $"{month:00}-{day:00}";
-        if (MochiDock.Core.MascotTriggers.ParseMonthDay(value) == null) { BirthdayRow.Validation = "That day does not exist in this month."; return; }
-        BirthdayRow.Validation = "";
-        ViewModel?.UpdateSettings(x => x.BirthdayMonthDay = value);
-        ViewModel?.RefreshDayFace();
-    }
-
-    private void Expressive_Changed(object sender, RoutedEventArgs e)
-    {
-        if (!IsLoaded || Loading) return;
-        bool on = ExpressiveCheck.IsChecked == true;
-        ViewModel?.UpdateSettings(x => x.ExpressiveMochi = on);
-    }
-
     private void ClockLayout_Checked(object sender, RoutedEventArgs e)
     {
         if (!IsLoaded || Loading) return;
-        string value = ClockEvenRadio.IsChecked == true ? nameof(MochiDock.Core.CapsuleClockAlignment.EvenSpacing) : nameof(MochiDock.Core.CapsuleClockAlignment.EqualEdges);
+        string value = ClockEvenRadio.IsChecked == true ? nameof(CapsuleClockAlignment.EvenSpacing) : nameof(CapsuleClockAlignment.EqualEdges);
         ViewModel?.UpdateSettings(x => x.CapsuleClockLayout = value, SettingsApply.CapsuleRefresh);
     }
 
