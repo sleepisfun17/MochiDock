@@ -1,10 +1,15 @@
 param([string]$OutDir = (Join-Path $PSScriptRoot '..\..\promo\clips'),
       [int]$Width = 660, [int]$Height = 420,
-      [string[]]$Only = @())
+      [string[]]$Only = @(), [switch]$Gaming, [int]$GamingCountdown = 20, [int]$GamingSeconds = 12,
+      [int]$GamingWidth = 1100, [int]$GamingHeight = 420)
 # Records the raw MP4 clips for the vertical promo video (promo/) from the RUNNING dock, in one go. Nothing is converted to GIF and the
 # README clips (capture-clips.ps1) are not touched. Needs an ELEVATED shell, the backdrop window (backdrop.ps1) and the tabs used below
 # switched on; MochiDock is never launched from here. Keep the mouse still while it runs (about two minutes).
 # -Only promo-media,promo-stats records just those clips.
+# promo-gaming is never part of the default run: record it with -Only promo-gaming (or -Gaming, which records only that clip). Do NOT run the
+# backdrop for it (the backdrop would cover the game). It counts down (-GamingCountdown seconds) so a game can be put in borderless windowed
+# mode (or fullscreen with fullscreen optimizations; not exclusive fullscreen), then records -GamingSeconds of the top of the screen,
+# centred on the gaming dock, with no mouse movement.
 . (Join-Path $PSScriptRoot 'capture-lib.ps1')
 $ffmpeg = (Get-Command ffmpeg -ErrorAction SilentlyContinue | Select-Object -First 1).Source
 if (-not $ffmpeg -and (Test-Path 'C:\Program Files\FFmpeg\bin\ffmpeg.exe')) { $ffmpeg = 'C:\Program Files\FFmpeg\bin\ffmpeg.exe' }
@@ -17,7 +22,9 @@ $null = New-Item -ItemType Directory -Force $OutDir
 $OutDir = (Resolve-Path $OutDir).Path
 $Width -= $Width % 2; $Height -= $Height % 2   # libx264 refuses odd sizes
 
-Raise-Dock
+$gamingOnly = $Gaming -or ($Only.Count -gt 0 -and ($Only | Where-Object { $_ -ne 'promo-gaming' }).Count -eq 0 -and $Only -contains 'promo-gaming')
+if ($Gaming -and $Only.Count -eq 0) { $Only = @('promo-gaming') }
+if (-not $gamingOnly) { Raise-Dock }
 $dock = Get-MainDock
 # Same left offset as capture-clips.ps1, so the quick-settings blur rectangle below lines up.
 $x = $dock.L + 10; $y = 0
@@ -48,7 +55,7 @@ function Finish-Clip($p, [string]$name, [string]$blur = '') {
   } else { Move-Item -Force $raw $out }
   '{0}: {1:N1} MB' -f $out, ((Get-Item $out).Length / 1MB)
 }
-function Want([string]$name) { $Only.Count -eq 0 -or $Only -contains $name }
+function Want([string]$name) { if ($Only.Count -eq 0) { return $name -ne 'promo-gaming' }; $Only -contains $name }
 function Away { Move-Mouse ($dock.L - 150) 3 15; Move-Mouse ($dock.L - 150) 700 15 }
 # Records one card: opens its tab before recording (so the clip starts on it), then holds still.
 function Card([string]$name, [string]$tip, [int]$seconds, [scriptblock]$prepare = $null) {
@@ -58,6 +65,23 @@ function Card([string]$name, [string]$tip, [int]$seconds, [scriptblock]$prepare 
   Rest-Mouse
   $p = Start-Clip $name $seconds
   Finish-Clip $p $name
+}
+
+# 0. Gaming mode: the dock stays at the top of the screen and shows FPS / GPU / CPU. Leaves the mouse alone.
+if (Want 'promo-gaming') {
+  for ($i = $GamingCountdown; $i -gt 0; $i--) { Write-Host ("Gaming clip in {0} s: switch to a borderless-windowed game now (hands off the mouse once it records)" -f $i); Start-Sleep 1 }
+  $gd = Get-MainDock
+  $cx = if ($gd) { [int](($gd.L + $gd.R) / 2) } else { [int]([Windows.Forms.Screen]::PrimaryScreen.Bounds.Width / 2) }
+  Write-Host ("Gaming dock window: {0}" -f $(if ($gd) { "$($gd.L),$($gd.T) - $($gd.R),$($gd.B)" } else { 'not found, centring on the screen' }))
+  $screenW = [Windows.Forms.Screen]::PrimaryScreen.Bounds.Width
+  $gw = $GamingWidth - $GamingWidth % 2; $gh = $GamingHeight - $GamingHeight % 2
+  $gx = [Math]::Max(0, [Math]::Min($screenW - $gw, $cx - [int]($gw / 2)))
+  $mp4 = Join-Path $OutDir 'promo-gaming.raw.mp4'; if (Test-Path $mp4) { Remove-Item $mp4 }
+  $a = @('-y', '-f', 'gdigrab', '-framerate', '30', '-offset_x', $gx, '-offset_y', 0, '-video_size', "${gw}x${gh}", '-draw_mouse', 0, '-i', 'desktop',
+         '-t', $GamingSeconds, '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-crf', '12', '-preset', 'slow', "`"$mp4`"")
+  $p = Start-Process $ffmpeg -ArgumentList $a -PassThru -WindowStyle Hidden
+  Finish-Clip $p 'promo-gaming'
+  if ($gamingOnly) { 'Done. Clips are in ' + $OutDir; return }
 }
 
 # 1. Hover: the capsule expanding and collapsing, slower than the README clip.
@@ -72,7 +96,7 @@ if (Want 'promo-hover') {
 }
 
 # 2. Cards, each held long enough to cut from. Clipboard, Today, AI usage and the message cards are never recorded (personal data).
-Move-Mouse ($dock.L + 340) 12 20; Start-Sleep -Milliseconds 1600
+if ('promo-media', 'promo-stats', 'promo-weather', 'promo-prayer', 'promo-fx' | Where-Object { Want $_ }) { Move-Mouse ($dock.L + 340) 12 20; Start-Sleep -Milliseconds 1600 }
 Card 'promo-media' 'Media Player' 8
 Card 'promo-stats' 'System Performance' 7 { Rest-Mouse; Click-At ($dock.L + 85) 62 }   # the CPU chip (live hardware page)
 Card 'promo-weather' 'Weather Forecast' 7 { Start-Sleep 3 }   # the hourly strip loads a moment after the page opens

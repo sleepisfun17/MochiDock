@@ -18,24 +18,34 @@ const fontFaces = `
 const FPS = 30;
 const s = (sec: number) => Math.round(sec * FPS);
 
-// Every clip is 660 x 420 (the dock at the top of a capture backdrop). cropH keeps only the dock; from = where in the clip to start.
-type Beat = { clip: string; cropH: number; from: number; dur: number; rate?: number; kicker: string; title: string };
-const BEATS: Beat[] = [
-  { clip: 'promo-hover', cropH: 180, from: 2.3, dur: 4, kicker: 'MochiDock for Windows', title: 'Your PC needs a Dynamic Island' },
-  { clip: 'promo-media', cropH: 180, from: 0.4, dur: 3, kicker: 'Media', title: 'Now playing, with synced lyrics' },
-  { clip: 'promo-stats', cropH: 350, from: 0.4, dur: 3.5, kicker: 'Stats', title: 'Live CPU, GPU & memory' },
-  { clip: 'promo-weather', cropH: 282, from: 0.4, dur: 3, kicker: 'Weather', title: 'The forecast at a glance' },
-  { clip: 'promo-prayer', cropH: 276, from: 0.4, dur: 3, kicker: 'Prayer times', title: 'Next prayer & qibla' },
-  { clip: 'promo-fx', cropH: 366, from: 0.4, dur: 3, kicker: 'FX rates', title: 'Currencies, no API key' },
-  { clip: 'promo-theme', cropH: 410, from: 0.6, dur: 5.5, rate: 1.75, kicker: 'Themes', title: 'Four cozy themes' },
-  { clip: 'promo-mascot', cropH: 410, from: 0.6, dur: 5.5, rate: 1.8, kicker: 'Mascots', title: 'Meet Mochi & friends' },
+// Each clip is the dock at the top of a capture backdrop (880 x 580, or the gaming strip). `crop` is the part of the clip that is shown, as
+// [x, y, w, h] in clip pixels; it is zoomed to fill the frame so the key part is readable on a phone. from = where in the clip to start.
+type Beat = {
+  clip: string; src: [number, number]; crop: [number, number, number, number]; from: number; dur: number; rate?: number;
+  kicker: string; title: string; optional?: boolean;
+};
+const DOCK: [number, number] = [880, 580];   // the dock itself spans x 28 to 801 of the clip
+const ALL_BEATS: Beat[] = [
+  { clip: 'promo-hover', src: DOCK, crop: [24, 0, 782, 215], from: 2.3, dur: 4, kicker: 'MochiDock for Windows', title: 'Your PC needs a Dynamic Island' },
+  { clip: 'promo-media', src: DOCK, crop: [24, 0, 782, 215], from: 0.4, dur: 3, kicker: 'Media', title: 'Now playing, with synced lyrics' },
+  { clip: 'promo-stats', src: DOCK, crop: [24, 0, 532, 430], from: 0.4, dur: 3.5, kicker: 'Stats', title: 'Live CPU, GPU & memory' },
+  { clip: 'promo-gaming', src: [1100, 420], crop: [270, 0, 560, 200], from: 1, dur: 3.5, kicker: 'Gaming mode', title: 'FPS, GPU & CPU while you play', optional: true },
+  { clip: 'promo-weather', src: DOCK, crop: [24, 0, 782, 344], from: 0.4, dur: 3, kicker: 'Weather', title: 'The forecast at a glance' },
+  { clip: 'promo-prayer', src: DOCK, crop: [24, 50, 782, 240], from: 0.4, dur: 3, kicker: 'Prayer times', title: 'Next prayer & qibla' },
+  { clip: 'promo-fx', src: DOCK, crop: [24, 0, 782, 450], from: 0.4, dur: 3, kicker: 'FX rates', title: 'Currencies, no API key' },
+  { clip: 'promo-theme', src: DOCK, crop: [24, 0, 782, 500], from: 0.6, dur: 5.5, rate: 1.75, kicker: 'Themes', title: 'Four cozy themes' },
+  { clip: 'promo-mascot', src: DOCK, crop: [24, 0, 782, 500], from: 0.6, dur: 5.5, rate: 1.8, kicker: 'Mascots', title: 'Meet Mochi & friends' },
 ];
 const OUTRO = 3.5;
-const STARTS = BEATS.reduce<number[]>((a, b, i) => [...a, i === 0 ? 0 : a[i - 1] + s(BEATS[i - 1].dur)], []);
-export const TOTAL_FRAMES = STARTS[STARTS.length - 1] + s(BEATS[BEATS.length - 1].dur) + s(OUTRO);
+// public/clips/manifest.json (written by `npm run clips`) lists the clips that exist; optional scenes without a clip are skipped.
+export const buildBeats = (available: string[] | null): Beat[] =>
+  ALL_BEATS.filter((b) => !b.optional || (available?.includes(b.clip) ?? false));
+export const totalFrames = (beats: Beat[]) => beats.reduce((n, b) => n + s(b.dur), 0) + s(OUTRO);
 
-const SRC_W = 660;
-const FRAME_W = 1000;   // the dock frame on screen; the clip is scaled by FRAME_W / SRC_W
+// Frame area for the zoomed dock: below the caption, above the bottom safe area (Shorts / Reels cover roughly y > 1520 and y < 250).
+const AREA_TOP = 650;
+const AREA_H = 860;
+const FRAME_W = 1040;
 
 const Caption: React.FC<{ kicker: string; title: string }> = ({ kicker, title }) => {
   const f = useCurrentFrame();
@@ -54,15 +64,17 @@ const Caption: React.FC<{ kicker: string; title: string }> = ({ kicker, title })
 const DockClip: React.FC<{ beat: Beat }> = ({ beat }) => {
   const f = useCurrentFrame();
   const { fps } = useVideoConfig();
-  const scale = FRAME_W / SRC_W;
-  const h = beat.cropH * scale;
+  const [cx, cy, cw, ch] = beat.crop;
+  // Zoom so the crop fills FRAME_W; if that is too tall, shrink the frame to the available height instead.
+  const scale = Math.min(FRAME_W / cw, AREA_H / ch);
+  const w = cw * scale;
+  const h = ch * scale;
   const enter = spring({ frame: f - 4, fps, config: { damping: 16, mass: 0.7 } });
-  const push = interpolate(f, [0, s(beat.dur)], [1, 1.06], { easing: Easing.inOut(Easing.quad) });
-  // Centre the dock frame in the space between the caption and the bottom safe area (y 760 to 1520).
-  const top = 760 + Math.max(0, (760 - h) / 2);
+  const push = interpolate(f, [0, s(beat.dur)], [1, 1.05], { easing: Easing.inOut(Easing.quad) });
+  const top = AREA_TOP + (AREA_H - h) / 2;
   return (
     <div style={{
-      position: 'absolute', left: (1080 - FRAME_W) / 2, top, width: FRAME_W, height: h, borderRadius: 40, overflow: 'hidden',
+      position: 'absolute', left: (1080 - w) / 2, top, width: w, height: h, borderRadius: 40, overflow: 'hidden',
       boxShadow: '0 40px 90px rgba(40, 51, 34, 0.35)', transform: `scale(${(0.9 + 0.1 * enter) * push})`, opacity: enter,
     }}>
       <OffthreadVideo
@@ -70,7 +82,7 @@ const DockClip: React.FC<{ beat: Beat }> = ({ beat }) => {
         startFrom={s(beat.from)}
         playbackRate={beat.rate ?? 1}
         muted
-        style={{ width: FRAME_W, height: 420 * scale, position: 'absolute', top: 0, left: 0 }}
+        style={{ width: beat.src[0] * scale, height: beat.src[1] * scale, position: 'absolute', top: -cy * scale, left: -cx * scale }}
       />
     </div>
   );
@@ -93,17 +105,26 @@ const Outro: React.FC = () => {
   );
 };
 
-export const MochiDockShort: React.FC = () => (
-  <AbsoluteFill style={{ background: `linear-gradient(160deg, ${CREAM} 0%, ${SAGE} 100%)`, fontFamily: 'Quicksand, sans-serif' }}>
-    <style>{fontFaces}</style>
-    {BEATS.map((b, i) => (
-      <Sequence key={b.clip} from={STARTS[i]} durationInFrames={s(b.dur)}>
-        <DockClip beat={b} />
-        <Caption kicker={b.kicker} title={b.title} />
+export const MochiDockShort: React.FC<{ available: string[] | null }> = ({ available }) => {
+  const beats = buildBeats(available);
+  const total = totalFrames(beats);
+  let at = 0;
+  return (
+    <AbsoluteFill style={{ background: `linear-gradient(160deg, ${CREAM} 0%, ${SAGE} 100%)`, fontFamily: 'Quicksand, sans-serif' }}>
+      <style>{fontFaces}</style>
+      {beats.map((b) => {
+        const from = at;
+        at += s(b.dur);
+        return (
+          <Sequence key={b.clip} from={from} durationInFrames={s(b.dur)}>
+            <DockClip beat={b} />
+            <Caption kicker={b.kicker} title={b.title} />
+          </Sequence>
+        );
+      })}
+      <Sequence from={total - s(OUTRO)} durationInFrames={s(OUTRO)}>
+        <Outro />
       </Sequence>
-    ))}
-    <Sequence from={TOTAL_FRAMES - s(OUTRO)} durationInFrames={s(OUTRO)}>
-      <Outro />
-    </Sequence>
-  </AbsoluteFill>
-);
+    </AbsoluteFill>
+  );
+};
