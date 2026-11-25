@@ -2,15 +2,23 @@
 
 All notable changes to MochiDock are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [Unreleased]
+## [0.5.0-beta]
 
 ### Added
 
-- **Update nudge**: while an update is available and not dismissed, the compact capsule shows a small static accent ↑ dot (tooltip "Update available") that steps aside for gaming, notifications, hardware notices and the audio waveform, and the expanded dock shows a banner with **Update**, **Release notes** and **Dismiss** (progress and **Cancel** while downloading). Dismiss is remembered per version (`DismissedUpdateVersion`, local-only); a newer release shows the dot and banner again, and the quick settings button, tray item and Settings > Data still show the update.
+- **Update nudge**: while an update is available and not dismissed, the compact capsule shows a small static accent ↑ dot (tooltip "Update available") that steps aside for gaming, notifications, hardware notices and the audio waveform, and the expanded dock shows a banner with **Update**, **Release notes** and **Dismiss** (progress and **Cancel** while downloading). Dismiss is remembered per version (`DismissedUpdateVersion`, local-only); a newer release shows the dot and banner again, and the quick settings button, tray item and Settings > Updates & Data still show the update.
+- **Notification selection indicator & reply hint**: email, WhatsApp, and Discord cards now highlight the actively selected item with a clear visual badge/ring and reply target cue when multiple notifications are queued.
+- **Mascot status badge styles & live preview**: added selectable status badge styles (`3D Charm`, `Speech Bubble`, `3D Sticker`, and `Off`) positioned beside the mascot in the compact capsule and inside the mascot frame in the expanded dock, complete with a live multi-scale preview in Settings > Mascot.
+- **Settings sidebar search**: instant filtering across all Settings pages, controls, and descriptions without losing cursor focus while typing.
+
+### Changed
+
+- **Reorganized Settings**: grouped pages into 5 Title Case categories (**Dock & Look**, **Mascot & Media**, **Integrations**, **System & Gaming**, and **Updates & Data**), gave **Mascot** its own dedicated page, moved `Date format` to **General** and **Taskbar** into **Dock & Look**, renamed modules/data sections to **Tabs & Modules** and **Updates & Data**, and added collapsible cards with priority ordering in dense pages.
 
 ### Fixed
 
-- The README no longer pins an old version in its beta note.
+- The README no longer pins an old version in its beta note and reflects verified hardware testing across laptop NVIDIA GPU, desktop AMD GPU, and Intel iGPU configurations.
+- Fixed a crash when opening the Taskbar settings page caused by a missing `DynamicResource IslandFocusVisual` reference inside `SettingsExpander`.
 
 ## [0.4.1-beta]
 

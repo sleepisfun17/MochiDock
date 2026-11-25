@@ -13,7 +13,7 @@ $name = "MochiDock-Setup-$Version.exe"
 $out = @(
     $section
     ''
-    "**Updating:** if MochiDock was installed with the setup, **Update now** (Settings > Data & diagnostics, or the tray) installs this release and restarts MochiDock, keeping your settings. Otherwise run ``$name``."
+    "**Updating:** if MochiDock was installed with the setup, **Update now** (Settings > Updates & Data, or the tray) installs this release and restarts MochiDock, keeping your settings. Otherwise run ``$name``."
     ''
     '**Unsigned beta.** Windows SmartScreen may warn on first run: choose "More info", then "Run anyway". Requires Windows 10 version 2004 or later, or Windows 11, 64-bit; no .NET runtime needed.'
     ''
