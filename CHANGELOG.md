@@ -2,6 +2,14 @@
 
 All notable changes to MochiDock are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.5.2-beta]
+
+### Fixed
+
+- **Idling compact update pop-up**: update notices now wait until the dock is collapsed/idle (never firing invisibly behind the open dock), stay on screen for 12 seconds with the notification pop sound (when sounds are enabled), hide the right-side weather/anchors while shown, dynamically size the pill to fit the full text without clipping, and start the update flow directly when tapped.
+- **Resting `↑` update dot & expanded `UpdateBanner` layout**: measured the persistent `↑` update indicator alongside the weather badge so it no longer crowds the clock, and reserved height for `UpdateBanner` so short expanded cards are not clipped.
+- **Update confirmation prompt**: owned the confirmation dialog to `MainWindow` and paused auto-collapse while it is open so it never hides behind the topmost dock; shortened periodic background update checks from 12 hours to 4 hours.
+
 ## [0.5.1-beta]
 
 ### Added
