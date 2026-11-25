@@ -112,4 +112,30 @@ public class SettingsXamlTokenTests
         var missing = used.Where(k => !defined.Contains(k)).ToList();
         Assert.True(missing.Count == 0, "Forward StaticResource references in SettingsResources.xaml: " + string.Join(", ", missing));
     }
+
+    [Fact]
+    public void QuickSettingsCardUsesThemeTokensNotHexColours()
+    {
+        string quickPath = Path.GetFullPath(Path.Combine(FindSettingsViews(), "..", "Cards", "SettingsCardView.xaml"));
+        var hex = new Regex("\"#[0-9A-Fa-f]{6}", RegexOptions.Compiled);
+        var offenders = File.ReadLines(quickPath)
+            .Select((line, i) => (line, n: i + 1))
+            .Where(x => hex.IsMatch(x.line))
+            .Select(x => $"SettingsCardView.xaml:{x.n}")
+            .ToList();
+        Assert.True(offenders.Count == 0, "Hex colours in Quick Settings XAML: " + string.Join(", ", offenders));
+    }
+
+    [Fact]
+    public void TaskbarHoverCardUsesThemeTokensNotHexColours()
+    {
+        string cardPath = Path.GetFullPath(Path.Combine(FindSettingsViews(), "..", "TaskbarHoverCardWindow.xaml"));
+        var hex = new Regex("\"#[0-9A-Fa-f]{6}", RegexOptions.Compiled);
+        var offenders = File.ReadLines(cardPath)
+            .Select((line, i) => (line, n: i + 1))
+            .Where(x => hex.IsMatch(x.line))
+            .Select(x => $"TaskbarHoverCardWindow.xaml:{x.n}")
+            .ToList();
+        Assert.True(offenders.Count == 0, "Hex colours in Taskbar Hover Card XAML: " + string.Join(", ", offenders));
+    }
 }

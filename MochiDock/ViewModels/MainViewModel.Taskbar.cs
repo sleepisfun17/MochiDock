@@ -586,6 +586,54 @@ public partial class MainViewModel
         }
     }
 
+    /// <summary>Hides every item in <paramref name="kind"/> from the taskbar readout.</summary>
+    public void HideTaskbarBlock(TaskbarBlockKind kind)
+    {
+        switch (kind)
+        {
+            case TaskbarBlockKind.System:
+                _settings.TaskbarShowCpuLoad = false;
+                _settings.TaskbarShowCpuTemp = false;
+                _settings.TaskbarShowGpuLoad = false;
+                _settings.TaskbarShowGpuTemp = false;
+                OnPropertyChanged(nameof(TaskbarShowCpuLoad));
+                OnPropertyChanged(nameof(TaskbarShowCpuTemp));
+                OnPropertyChanged(nameof(TaskbarShowGpuLoad));
+                OnPropertyChanged(nameof(TaskbarShowGpuTemp));
+                break;
+            case TaskbarBlockKind.MemoryDisk:
+                _settings.TaskbarShowMemory = false;
+                _settings.TaskbarShowDisk = false;
+                OnPropertyChanged(nameof(TaskbarShowMemory));
+                OnPropertyChanged(nameof(TaskbarShowDisk));
+                break;
+            case TaskbarBlockKind.Network:
+                _settings.TaskbarShowUpload = false;
+                _settings.TaskbarShowDownload = false;
+                OnPropertyChanged(nameof(TaskbarShowUpload));
+                OnPropertyChanged(nameof(TaskbarShowDownload));
+                break;
+            case TaskbarBlockKind.Prayer:
+                _settings.TaskbarShowPrayer = false;
+                OnPropertyChanged(nameof(TaskbarShowPrayer));
+                break;
+            case TaskbarBlockKind.Weather:
+                _settings.TaskbarShowWeatherTemp = false;
+                _settings.TaskbarShowWeatherWind = false;
+                OnPropertyChanged(nameof(TaskbarShowWeatherTemp));
+                OnPropertyChanged(nameof(TaskbarShowWeatherWind));
+                break;
+            case TaskbarBlockKind.Batteries:
+                ShowDeviceBatteriesOnTaskbar = false;
+                return;
+        }
+
+        SettingsService.Save(_settings);
+        ApplyTaskbarSampler();
+        RefreshTaskbarBlocks();
+        TaskbarStyleChanged?.Invoke();
+    }
+
     private void OpenStatsModule(string module)
     {
         SelectSystemModule(module);

@@ -7,102 +7,91 @@
              xmlns:controls="clr-namespace:MochiDock.Controls"
              mc:Ignorable="d"
              FontFamily="{DynamicResource IslandUiFont}">
+    <UserControl.Resources>
+        <Style x:Key="QuickSectionLinkButton" TargetType="Button">
+            <Setter Property="FocusVisualStyle" Value="{StaticResource IslandFocusVisual}" />
+            <Setter Property="FontFamily" Value="{DynamicResource IslandUiFont}" />
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="FontWeight" Value="{DynamicResource IslandSmallLabelWeight}" />
+            <Setter Property="Foreground" Value="{DynamicResource IslandMutedInkBrush}" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="6,2" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd"
+                                Background="{TemplateBinding Background}"
+                                CornerRadius="6"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Foreground" Value="{DynamicResource IslandInkBrush}" />
+                    <Setter Property="Background" Value="{DynamicResource IslandTabHoverBrush}" />
+                </Trigger>
+                <Trigger Property="IsPressed" Value="True">
+                    <Setter Property="Opacity" Value="0.75" />
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+    </UserControl.Resources>
+
     <Grid VerticalAlignment="Stretch">
         <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <!-- Main Scrollable Settings Body -->
-        <ScrollViewer Grid.Row="0" Style="{StaticResource ModernCardScrollViewer}" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+        <!-- Row 0: Pinned Top Header & Live Integration Status -->
+        <Border Grid.Row="0" BorderBrush="{DynamicResource IslandBorderBrush}" BorderThickness="0,0,0,1" Padding="3,2,3,8" Margin="0,0,0,6">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="0">
+                    <TextBlock Text="MochiDock Preferences" Style="{StaticResource CardHeadingText}" />
+                    <TextBlock Text="{Binding IntegrationStatus}" Style="{StaticResource CardCaptionText}" Foreground="{DynamicResource IslandMutedInkBrush}" Margin="0,2,0,0"
+                               TextTrimming="CharacterEllipsis" ToolTip="{Binding IntegrationStatus}" />
+                </StackPanel>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                    <!-- Update button: the running version (click checks now), or in accent "Update to x" when a new version waits.
+                         Two buttons so each keeps its own style's hover; only one is visible. The full update options are in Settings > Updates & Data. -->
+                    <Button x:Name="UpdateChip" Style="{StaticResource IslandSecondaryButtonStyle}" Content="{Binding UpdateChipText}" Click="UpdateChip_Click" Margin="0,0,8,0"
+                            ToolTip="{Binding UpdateChipToolTip}" AutomationProperties.Name="{Binding UpdateChipToolTip}"
+                            Visibility="{Binding IsUpdateChipHighlighted, Converter={StaticResource InverseBoolToVisibility}}"/>
+                    <Button x:Name="UpdateChipAccent" Style="{StaticResource IslandPrimaryButtonStyle}" Content="{Binding UpdateChipText}" Click="UpdateChip_Click" Margin="0,0,8,0"
+                            ToolTip="{Binding UpdateChipToolTip}" AutomationProperties.Name="{Binding UpdateChipToolTip}"
+                            Visibility="{Binding IsUpdateChipHighlighted, Converter={StaticResource BoolToVisibility}}"/>
+                    <Button Style="{StaticResource IslandSecondaryButtonStyle}" Content="↻ Reconnect" Click="RetryIntegrations_Click" ToolTip="Test &amp; Reconnect WhatsApp / Outlook" />
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- Row 1: Scrollable Quick Settings Body (prioritized for daily controls above the fold) -->
+        <ScrollViewer Grid.Row="1" Style="{StaticResource ModernCardScrollViewer}" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
             <!-- 3-DIP inset so the keyboard focus ring (drawn 2 DIPs outside each control) is not clipped by the scroll viewport. -->
-            <StackPanel VerticalAlignment="Top" Margin="3,3,5,3">
-                <!-- Top Header & Live Integration Status -->
-                <Grid Margin="0,0,0,8">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-                    <StackPanel Grid.Column="0">
-                        <TextBlock Text="MochiDock Preferences" Style="{StaticResource CardHeadingText}" />
-                        <TextBlock Text="{Binding IntegrationStatus}" Style="{StaticResource CardCaptionText}" Foreground="{DynamicResource IslandMutedInkBrush}" Margin="0,2,0,0"
-                                   TextTrimming="CharacterEllipsis" ToolTip="{Binding IntegrationStatus}" />
-                    </StackPanel>
-                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                        <!-- Update button: the running version (click checks now), or in accent "Update to x" when a new version waits.
-                             Two buttons so each keeps its own style's hover; only one is visible. The full update options are in Settings > Data. -->
-                        <Button x:Name="UpdateChip" Style="{StaticResource IslandSecondaryButtonStyle}" Content="{Binding UpdateChipText}" Click="UpdateChip_Click" Margin="0,0,8,0"
-                                ToolTip="{Binding UpdateChipToolTip}" AutomationProperties.Name="{Binding UpdateChipToolTip}"
-                                Visibility="{Binding IsUpdateChipHighlighted, Converter={StaticResource InverseBoolToVisibility}}"/>
-                        <Button x:Name="UpdateChipAccent" Style="{StaticResource IslandPrimaryButtonStyle}" Content="{Binding UpdateChipText}" Click="UpdateChip_Click" Margin="0,0,8,0"
-                                ToolTip="{Binding UpdateChipToolTip}" AutomationProperties.Name="{Binding UpdateChipToolTip}"
-                                Visibility="{Binding IsUpdateChipHighlighted, Converter={StaticResource BoolToVisibility}}"/>
-                        <Button Style="{StaticResource IslandSecondaryButtonStyle}" Content="↻ Reconnect" Click="RetryIntegrations_Click" ToolTip="Test &amp; Reconnect WhatsApp / Outlook" />
-                    </StackPanel>
-                </Grid>
+            <StackPanel VerticalAlignment="Top" Margin="3,2,5,3">
 
-                <!-- Quick settings. Everything else lives in the Advanced Settings window (Open all settings). -->
-                <Border Background="{DynamicResource IslandSubCardBackgroundBrush}" CornerRadius="10" Padding="10,8" Margin="0,0,0,8" BorderBrush="{DynamicResource IslandSubCardBorderBrush}" BorderThickness="1">
-                    <StackPanel>
-                        <TextBlock Text="Appearance" Style="{StaticResource CardSectionLabel}" Margin="0,0,0,6" />
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="78"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                            </Grid.RowDefinitions>
-                            <TextBlock Grid.Row="0" Text="Theme" Style="{StaticResource CardBodyText}" VerticalAlignment="Center" Margin="0,0,0,6"/>
-                            <WrapPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,0,6">
-                                <RadioButton x:Name="ThemeClassicRadio" Style="{StaticResource ModernDarkRadioButton}" Content="Default" GroupName="CapsuleThemeGroup" Margin="0,0,14,0" Checked="ThemeRadio_Checked" />
-                                <RadioButton x:Name="ThemeHojichaRadio" Style="{StaticResource ModernDarkRadioButton}" Content="Hojicha" GroupName="CapsuleThemeGroup" Margin="0,0,14,0" Checked="ThemeRadio_Checked" />
-                                <RadioButton x:Name="ThemeKuroNightRadio" Style="{StaticResource ModernDarkRadioButton}" Content="Kuro Night" GroupName="CapsuleThemeGroup" Margin="0,0,14,0" Checked="ThemeRadio_Checked" />
-                                <RadioButton x:Name="ThemeMatchaRadio" Style="{StaticResource ModernDarkRadioButton}" Content="Matcha" GroupName="CapsuleThemeGroup" Margin="0,0,14,0" Checked="ThemeRadio_Checked" />
-                            </WrapPanel>
-                            <TextBlock Grid.Row="1" Text="Mascot" Style="{StaticResource CardBodyText}" VerticalAlignment="Center" Margin="0,0,0,6" ToolTip="Who is drawn: Auto is the theme's own mascot (Kuro in Kuro Night); the others work with every theme."/>
-                            <WrapPanel Grid.Row="1" Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,0,6">
-                                <RadioButton x:Name="MascotAutoRadio" Style="{StaticResource ModernDarkRadioButton}" Content="Auto" ToolTip="The theme's own mascot" GroupName="QuickMascotGroup" Margin="0,0,14,0" Checked="MascotRadio_Checked" />
-                                <RadioButton x:Name="MascotMochiRadio" Style="{StaticResource ModernDarkRadioButton}" Content="Mochi" ToolTip="Grey Mochi" GroupName="QuickMascotGroup" Margin="0,0,14,0" Checked="MascotRadio_Checked" />
-                                <RadioButton x:Name="MascotMatchaMochiRadio" Style="{StaticResource ModernDarkRadioButton}" Content="Matcha" ToolTip="Matcha Mochi (green)" GroupName="QuickMascotGroup" Margin="0,0,14,0" Checked="MascotRadio_Checked" />
-                                <RadioButton x:Name="MascotHojichaMochiRadio" Style="{StaticResource ModernDarkRadioButton}" Content="Hojicha" ToolTip="Hojicha Mochi (tan)" GroupName="QuickMascotGroup" Margin="0,0,14,0" Checked="MascotRadio_Checked" />
-                                <RadioButton x:Name="MascotKuroRadio" Style="{StaticResource ModernDarkRadioButton}" Content="Kuro" ToolTip="Kuro, the black cat" GroupName="QuickMascotGroup" Margin="0,0,14,0" Checked="MascotRadio_Checked" />
-                                <RadioButton x:Name="MascotShiroRadio" Style="{StaticResource ModernDarkRadioButton}" Content="Shiro" ToolTip="Shiro, the white cat" GroupName="QuickMascotGroup" Margin="0,0,14,0" Checked="MascotRadio_Checked" />
-                            </WrapPanel>
-                            <TextBlock Grid.Row="2" Text="Dock style" Style="{StaticResource CardBodyText}" VerticalAlignment="Center" Margin="0,0,0,6" ToolTip="Floating is a pill below the top edge; Notch attaches to the top edge of the screen."/>
-                            <WrapPanel Grid.Row="2" Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,0,6">
-                                <RadioButton x:Name="DockFloatingRadio" Style="{StaticResource ModernDarkRadioButton}" Content="Floating" GroupName="QuickDockStyleGroup" Margin="0,0,14,0" Checked="DockStyle_Checked" />
-                                <RadioButton x:Name="DockNotchRadio" Style="{StaticResource ModernDarkRadioButton}" Content="Notch" GroupName="QuickDockStyleGroup" Margin="0,0,14,0" Checked="DockStyle_Checked" />
-                            </WrapPanel>
-                            <TextBlock Grid.Row="3" Text="Display" Style="{StaticResource CardBodyText}" VerticalAlignment="Top" Margin="0,5,0,0" ToolTip="Which display the dock appears on."/>
-                            <controls:MonitorPicker Grid.Row="3" Grid.Column="1"/>
-                            <TextBlock Grid.Row="4" Text="Size" Style="{StaticResource CardBodyText}" VerticalAlignment="Center" Margin="0,2,0,0" ToolTip="Interface size: makes MochiDock bigger or smaller (80% to 200%)."/>
-                            <StackPanel Grid.Row="4" Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,2,0,0">
-                                <Button Style="{StaticResource IslandSecondaryButtonStyle}" Content="&#x2212;" Width="28" Padding="0,3" Click="ScaleDown_Click" ToolTip="Smaller" AutomationProperties.Name="Smaller interface"/>
-                                <TextBlock x:Name="QuickScaleText" Style="{StaticResource CardBodyText}" MinWidth="64" TextAlignment="Center" VerticalAlignment="Center" Margin="8,0,0,0"/>
-                                <Button Style="{StaticResource IslandSecondaryButtonStyle}" Content="+" Width="28" Padding="0,3" Margin="8,0,0,0" Click="ScaleUp_Click" ToolTip="Bigger" AutomationProperties.Name="Bigger interface"/>
-                            </StackPanel>
-                        </Grid>
-                    </StackPanel>
-                </Border>
-
-                <Border Background="{DynamicResource IslandSubCardBackgroundBrush}" CornerRadius="10" Padding="10,8" Margin="0,0,0,8" BorderBrush="{DynamicResource IslandSubCardBorderBrush}" BorderThickness="1">
-                    <StackPanel>
-                        <TextBlock Text="Tabs" Style="{StaticResource CardSectionLabel}" Margin="0,0,0,4" />
-                        <settings:TabToggleList />
-                    </StackPanel>
-                </Border>
-
+                <!-- 1. Focus & Alerts (immediately accessible without scrolling) -->
                 <Border Background="{DynamicResource IslandSubCardBackgroundBrush}" CornerRadius="10" Padding="10,8" Margin="0,0,0,8" BorderBrush="{DynamicResource IslandSubCardBorderBrush}" BorderThickness="1">
                     <StackPanel>
                         <Grid Margin="0,0,0,6">
-                            <TextBlock Text="Notifications &amp; Snooze" Style="{StaticResource CardSectionLabel}" VerticalAlignment="Center" />
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <TextBlock Text="Focus &amp; Alerts" Style="{StaticResource CardSectionLabel}" VerticalAlignment="Center" />
+                                <Button Style="{StaticResource QuickSectionLinkButton}" Content="More ›" Margin="6,0,0,0"
+                                        Click="OpenNotificationsSettings_Click" ToolTip="Open Notifications in full Settings" />
+                            </StackPanel>
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                                <Button Style="{StaticResource ActionButton}" Content="Snooze 1h" Click="Snooze_Click"  Margin="0"/>
+                                <Button Style="{StaticResource ActionButton}" Content="Snooze 1h" Click="Snooze_Click" Margin="0"/>
                                 <Button Style="{StaticResource ActionButton}" Content="Snooze 8h" Click="SnoozeLong_Click" Margin="8,0,0,0" />
                                 <Button x:Name="ClearSnoozeBtn" Style="{StaticResource IslandSecondaryButtonStyle}" Content="✕ Clear" Click="ClearSnooze_Click" Foreground="{DynamicResource IslandNegativeBrush}" Margin="8,0,0,0" Visibility="Collapsed" />
                             </StackPanel>
@@ -122,27 +111,125 @@
                             <CheckBox x:Name="MuteDiscordCheck" Style="{StaticResource ModernDarkCheckBox}" Content="Mute Discord" Checked="NotificationSetting_Changed" Unchecked="NotificationSetting_Changed" Margin="0,2,14,2" />
                             <CheckBox x:Name="MuteWhatsAppCheck" Style="{StaticResource ModernDarkCheckBox}" Content="Mute WhatsApp" Checked="NotificationSetting_Changed" Unchecked="NotificationSetting_Changed" Margin="0,2,14,2" />
                         </WrapPanel>
-                    </StackPanel>
-                </Border>
 
-                <!-- One-tap switches; each is also in the Advanced Settings window (General / Notifications). -->
-                <Border Background="{DynamicResource IslandSubCardBackgroundBrush}" CornerRadius="10" Padding="10,8" Margin="0,0,0,8" BorderBrush="{DynamicResource IslandSubCardBorderBrush}" BorderThickness="1">
-                    <StackPanel>
-                        <TextBlock Text="Quick switches" Style="{StaticResource CardSectionLabel}" Margin="0,0,0,4" />
+                        <Border Height="1" Background="{DynamicResource IslandSubCardBorderBrush}" Opacity="0.6" Margin="0,6,0,6" />
+
                         <WrapPanel>
-                            <CheckBox Style="{StaticResource ModernDarkCheckBox}" Width="196" Margin="0,3,8,3" Content="Notification sounds" IsChecked="{Binding EnableSounds, Mode=TwoWay}" ToolTip="Play a sound with notifications." />
-                            <CheckBox x:Name="GamingDndCheck" Style="{StaticResource ModernDarkCheckBox}" Width="196" Margin="0,3,8,3" Content="Quiet while gaming" Checked="QuickSetting_Changed" Unchecked="QuickSetting_Changed" ToolTip="Hold notifications while a game is running." />
-                            <CheckBox x:Name="RemindersCheck" Style="{StaticResource ModernDarkCheckBox}" Width="196" Margin="0,3,8,3" Content="Event and task reminders" Checked="QuickSetting_Changed" Unchecked="QuickSetting_Changed" ToolTip="Show a notice shortly before a calendar event or timed task." />
-                            <CheckBox Style="{StaticResource ModernDarkCheckBox}" Width="196" Margin="0,3,8,3" Content="Hide in fullscreen apps" IsChecked="{Binding HideInFullscreen, Mode=TwoWay}" ToolTip="Hide the dock while a fullscreen app or game is in front." />
-                            <CheckBox Style="{StaticResource ModernDarkCheckBox}" Width="196" Margin="0,3,8,3" Content="Hide from screen capture" IsChecked="{Binding ExcludeFromScreenCapture, Mode=TwoWay}" ToolTip="Keep the dock out of screenshots, recordings and screen sharing." />
+                            <CheckBox Style="{StaticResource ModernDarkCheckBox}" Margin="0,2,14,2" Content="Notification sounds" IsChecked="{Binding EnableSounds, Mode=TwoWay}" ToolTip="Play a sound with notifications." />
+                            <CheckBox x:Name="GamingDndCheck" Style="{StaticResource ModernDarkCheckBox}" Margin="0,2,14,2" Content="Quiet while gaming" Checked="QuickSetting_Changed" Unchecked="QuickSetting_Changed" ToolTip="Hold notifications while a game is running." />
+                            <CheckBox x:Name="RemindersCheck" Style="{StaticResource ModernDarkCheckBox}" Margin="0,2,0,2" Content="Event &amp; task reminders" Checked="QuickSetting_Changed" Unchecked="QuickSetting_Changed" ToolTip="Show a notice shortly before a calendar event or timed task." />
                         </WrapPanel>
                     </StackPanel>
                 </Border>
+
+                <!-- 2. Privacy & Dock -->
+                <Border Background="{DynamicResource IslandSubCardBackgroundBrush}" CornerRadius="10" Padding="10,8" Margin="0,0,0,8" BorderBrush="{DynamicResource IslandSubCardBorderBrush}" BorderThickness="1">
+                    <StackPanel>
+                        <Grid>
+                            <TextBlock Text="Privacy &amp; Dock" Style="{StaticResource CardSectionLabel}" VerticalAlignment="Center" />
+                            <Button Style="{StaticResource QuickSectionLinkButton}" Content="More ›" HorizontalAlignment="Right"
+                                    Click="OpenAppearanceSettings_Click" ToolTip="Open Appearance &amp; Dock in full Settings" />
+                        </Grid>
+
+                        <WrapPanel Margin="0,6,0,0">
+                            <CheckBox Style="{StaticResource ModernDarkCheckBox}" Margin="0,2,18,2" Content="Hide from screen capture" IsChecked="{Binding ExcludeFromScreenCapture, Mode=TwoWay}" ToolTip="Keep the dock out of screenshots, recordings and screen sharing." />
+                            <CheckBox Style="{StaticResource ModernDarkCheckBox}" Margin="0,2,0,2" Content="Hide in fullscreen apps" IsChecked="{Binding HideInFullscreen, Mode=TwoWay}" ToolTip="Hide the dock while a fullscreen app or game is in front." />
+                        </WrapPanel>
+
+                        <Border Height="1" Background="{DynamicResource IslandSubCardBorderBrush}" Opacity="0.6" Margin="0,6,0,6" />
+
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="78"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            <TextBlock Grid.Row="0" Text="Display" Style="{StaticResource CardBodyText}" VerticalAlignment="Top" Margin="0,5,0,0" ToolTip="Which display the dock appears on."/>
+                            <controls:MonitorPicker Grid.Row="0" Grid.Column="1"/>
+                            <TextBlock Grid.Row="1" Text="Dock style" Style="{StaticResource CardBodyText}" VerticalAlignment="Center" Margin="0,0,0,6" ToolTip="Floating is a pill below the top edge; Notch attaches to the top edge of the screen."/>
+                            <WrapPanel Grid.Row="1" Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,0,6">
+                                <RadioButton x:Name="DockFloatingRadio" Style="{StaticResource ModernDarkRadioButton}" Content="Floating" GroupName="QuickDockStyleGroup" Margin="0,0,14,0" Checked="DockStyle_Checked" />
+                                <RadioButton x:Name="DockNotchRadio" Style="{StaticResource ModernDarkRadioButton}" Content="Notch" GroupName="QuickDockStyleGroup" Margin="0,0,14,0" Checked="DockStyle_Checked" />
+                            </WrapPanel>
+                            <TextBlock Grid.Row="2" Text="Size" Style="{StaticResource CardBodyText}" VerticalAlignment="Center" Margin="0,2,0,0" ToolTip="Interface size: makes MochiDock bigger or smaller (80% to 200%)."/>
+                            <StackPanel Grid.Row="2" Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,2,0,0">
+                                <Button Style="{StaticResource IslandSecondaryButtonStyle}" Content="&#x2212;" Width="28" Padding="0,3" Click="ScaleDown_Click" ToolTip="Smaller" AutomationProperties.Name="Smaller interface"/>
+                                <TextBlock x:Name="QuickScaleText" Style="{StaticResource CardBodyText}" MinWidth="64" TextAlignment="Center" VerticalAlignment="Center" Margin="8,0,0,0"/>
+                                <Button Style="{StaticResource IslandSecondaryButtonStyle}" Content="+" Width="28" Padding="0,3" Margin="8,0,0,0" Click="ScaleUp_Click" ToolTip="Bigger" AutomationProperties.Name="Bigger interface"/>
+                            </StackPanel>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <!-- 3. Look & Mascot -->
+                <Border Background="{DynamicResource IslandSubCardBackgroundBrush}" CornerRadius="10" Padding="10,8" Margin="0,0,0,8" BorderBrush="{DynamicResource IslandSubCardBorderBrush}" BorderThickness="1">
+                    <StackPanel>
+                        <Grid>
+                            <TextBlock Text="Look &amp; Mascot" Style="{StaticResource CardSectionLabel}" VerticalAlignment="Center" />
+                            <Button Style="{StaticResource QuickSectionLinkButton}" Content="Mascot ›" HorizontalAlignment="Right"
+                                    Click="OpenMascotSettings_Click" ToolTip="Open Mascot preview and settings" />
+                        </Grid>
+
+                        <Grid Margin="0,6,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="78"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            <TextBlock Grid.Row="0" Text="Theme" Style="{StaticResource CardBodyText}" VerticalAlignment="Center" Margin="0,0,0,6"/>
+                            <WrapPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,0,6">
+                                <RadioButton x:Name="ThemeClassicRadio" Style="{StaticResource ModernDarkRadioButton}" Content="Default" GroupName="CapsuleThemeGroup" Margin="0,0,14,0" Checked="ThemeRadio_Checked" />
+                                <RadioButton x:Name="ThemeHojichaRadio" Style="{StaticResource ModernDarkRadioButton}" Content="Hojicha" GroupName="CapsuleThemeGroup" Margin="0,0,14,0" Checked="ThemeRadio_Checked" />
+                                <RadioButton x:Name="ThemeKuroNightRadio" Style="{StaticResource ModernDarkRadioButton}" Content="Kuro Night" GroupName="CapsuleThemeGroup" Margin="0,0,14,0" Checked="ThemeRadio_Checked" />
+                                <RadioButton x:Name="ThemeMatchaRadio" Style="{StaticResource ModernDarkRadioButton}" Content="Matcha" GroupName="CapsuleThemeGroup" Margin="0,0,14,0" Checked="ThemeRadio_Checked" />
+                            </WrapPanel>
+                            <TextBlock Grid.Row="1" Text="Mascot" Style="{StaticResource CardBodyText}" VerticalAlignment="Top" Margin="0,2,0,6" ToolTip="Who is drawn: Auto is the theme's own mascot (Kuro in Kuro Night); the others work with every theme."/>
+                            <WrapPanel Grid.Row="1" Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,0,4">
+                                <RadioButton x:Name="MascotAutoRadio" Style="{StaticResource ModernDarkRadioButton}" Content="Auto" ToolTip="The theme's own mascot" GroupName="QuickMascotGroup" Margin="0,0,12,4" Checked="MascotRadio_Checked" />
+                                <RadioButton x:Name="MascotMochiRadio" Style="{StaticResource ModernDarkRadioButton}" Content="Mochi" ToolTip="Grey Mochi" GroupName="QuickMascotGroup" Margin="0,0,12,4" Checked="MascotRadio_Checked" />
+                                <RadioButton x:Name="MascotMatchaMochiRadio" Style="{StaticResource ModernDarkRadioButton}" Content="Matcha" ToolTip="Matcha Mochi (green)" GroupName="QuickMascotGroup" Margin="0,0,12,4" Checked="MascotRadio_Checked" />
+                                <RadioButton x:Name="MascotHojichaMochiRadio" Style="{StaticResource ModernDarkRadioButton}" Content="Hojicha" ToolTip="Hojicha Mochi (tan)" GroupName="QuickMascotGroup" Margin="0,0,12,4" Checked="MascotRadio_Checked" />
+                                <RadioButton x:Name="MascotKuroRadio" Style="{StaticResource ModernDarkRadioButton}" Content="Kuro" ToolTip="Kuro, the black cat" GroupName="QuickMascotGroup" Margin="0,0,12,4" Checked="MascotRadio_Checked" />
+                                <RadioButton x:Name="MascotShiroRadio" Style="{StaticResource ModernDarkRadioButton}" Content="Shiro" ToolTip="Shiro, the white cat" GroupName="QuickMascotGroup" Margin="0,0,12,4" Checked="MascotRadio_Checked" />
+                            </WrapPanel>
+                            <TextBlock Grid.Row="2" Text="Badge" Style="{StaticResource CardBodyText}" VerticalAlignment="Center" ToolTip="How mascot status badges are styled on the dock."/>
+                            <WrapPanel Grid.Row="2" Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                <RadioButton x:Name="QuickBadgeCharmRadio" Style="{StaticResource ModernDarkRadioButton}" Content="3D Charm" Tag="Charm" GroupName="QuickBadgeStyleGroup" Margin="0,0,12,0" Checked="BadgeStyle_Checked" />
+                                <RadioButton x:Name="QuickBadgeBubbleRadio" Style="{StaticResource ModernDarkRadioButton}" Content="Speech Bubble" Tag="Bubble" GroupName="QuickBadgeStyleGroup" Margin="0,0,12,0" Checked="BadgeStyle_Checked" />
+                                <RadioButton x:Name="QuickBadgeStickerRadio" Style="{StaticResource ModernDarkRadioButton}" Content="3D Sticker" Tag="Sticker" GroupName="QuickBadgeStyleGroup" Margin="0,0,12,0" Checked="BadgeStyle_Checked" />
+                                <RadioButton x:Name="QuickBadgeOffRadio" Style="{StaticResource ModernDarkRadioButton}" Content="Off" Tag="Off" GroupName="QuickBadgeStyleGroup" Margin="0" Checked="BadgeStyle_Checked" />
+                            </WrapPanel>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <!-- 4. Tabs (collapsed by default so daily controls stay unobstructed) -->
+                <Expander Style="{StaticResource SettingsExpander}" IsExpanded="False" Margin="0,0,0,4" Padding="10,0,10,8">
+                    <Expander.Header>
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <TextBlock Text="Tabs" Style="{StaticResource CardSectionLabel}" VerticalAlignment="Center" />
+                            <TextBlock x:Name="TabsSummaryText" Style="{StaticResource CardCaptionText}" Foreground="{DynamicResource IslandMutedInkBrush}" Margin="8,0,0,0" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Expander.Header>
+                    <StackPanel>
+                        <settings:TabToggleList />
+                        <Button Style="{StaticResource QuickSectionLinkButton}" Content="Tabs &amp; FX settings ›" HorizontalAlignment="Right" Margin="0,4,0,0"
+                                Click="OpenTabsSettings_Click" ToolTip="Open Tabs &amp; Modules in full Settings" />
+                    </StackPanel>
+                </Expander>
             </StackPanel>
         </ScrollViewer>
 
-        <!-- Row 1: Fixed Bottom Action Bar with Visual Feedback -->
-        <Border Grid.Row="1" Background="{DynamicResource IslandGroundBrush}" BorderBrush="{DynamicResource IslandBorderBrush}" BorderThickness="0,1,0,0" Padding="0,8,0,0" Margin="0,4,0,0">
+        <!-- Row 2: Fixed Bottom Action Bar with Visual Feedback -->
+        <Border Grid.Row="2" Background="{DynamicResource IslandGroundBrush}" BorderBrush="{DynamicResource IslandBorderBrush}" BorderThickness="0,1,0,0" Padding="0,8,0,0" Margin="0,4,0,0">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
@@ -151,7 +238,7 @@
 
                 <!-- Left: Subtle Auto-save indicator -->
                 <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
-                    <TextBlock Text="✓ All changes are saved automatically" Foreground="{DynamicResource IslandMutedInkBrush}" FontSize="11" VerticalAlignment="Center" />
+                    <TextBlock Text="✓ Saved automatically" Foreground="{DynamicResource IslandMutedInkBrush}" FontSize="11" VerticalAlignment="Center" />
                 </StackPanel>
 
                 <!-- Right: all settings, Back -->

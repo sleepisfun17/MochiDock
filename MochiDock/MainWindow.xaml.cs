@@ -372,7 +372,7 @@ public partial class MainWindow : Window
         try
         {
             _batteryWidget = new MochiDock.Services.TaskbarReadoutWidget(_viewModel);
-            _batteryWidget.ContextMenuRequested += ShowBatteryWidgetMenu;
+            _batteryWidget.ContextMenuRequested += ShowTaskbarWidgetMenu;
             _batteryWidget.BlockClicked += kind => _viewModel.OpenTaskbarBlock(kind);   // Stats (CPU, Memory, Network), Prayer, Weather or the Battery page
         }
         catch (System.Exception logEx) { MochiDock.Services.AppLog.Warn("Window", logEx); }

@@ -8,7 +8,8 @@ using UserControl = System.Windows.Controls.UserControl;
 namespace MochiDock.Views.Cards;
 
 /// <summary>
-/// The quick Settings tab of the dock: header tab switches, theme, snooze, the three mutes and a few one-tap switches. Everything else is in the Advanced Settings window.
+/// The quick Settings tab of the dock: Focus &amp; Alerts, Privacy &amp; Dock, Look &amp; Mascot, and collapsible Tabs with section deep-links.
+/// Everything else lives in the Advanced Settings window.
 /// The view model owns the only <see cref="AppSettings"/> object; this card reads it for display and writes through
 /// <see cref="MainViewModel.UpdateSettings"/>.
 /// </summary>
@@ -111,16 +112,48 @@ public partial class SettingsCardView : UserControl
             MascotHojichaMochiRadio.IsChecked = mascot == MochiDock.Core.MascotChoice.HojichaMochi;
             MascotKuroRadio.IsChecked = mascot == MochiDock.Core.MascotChoice.Kuro;
             MascotShiroRadio.IsChecked = mascot == MochiDock.Core.MascotChoice.Shiro;
+
+            var badgeStyle = MochiDock.Core.MascotBadge.ParseStyle(settings.MascotBadgeStyle);
+            QuickBadgeCharmRadio.IsChecked = badgeStyle == MochiDock.Core.MascotBadgeStyle.Charm;
+            QuickBadgeBubbleRadio.IsChecked = badgeStyle == MochiDock.Core.MascotBadgeStyle.Bubble;
+            QuickBadgeStickerRadio.IsChecked = badgeStyle == MochiDock.Core.MascotBadgeStyle.Sticker;
+            QuickBadgeOffRadio.IsChecked = badgeStyle == MochiDock.Core.MascotBadgeStyle.Off;
+
             bool notch = string.Equals(settings.DockStyle, "Notch", StringComparison.OrdinalIgnoreCase);
             DockNotchRadio.IsChecked = notch;
             DockFloatingRadio.IsChecked = !notch;
             UpdateQuickScaleText();
             UpdateSnoozeUi();
+            UpdateTabsSummary(settings);
         }
         finally
         {
             _isLoadingPreferences = false;
         }
+    }
+
+    private void UpdateTabsSummary(AppSettings settings)
+    {
+        int enabled = 0;
+        if (settings.ShowStatsTab) enabled++;
+        if (settings.ShowWeatherTab) enabled++;
+        if (settings.ShowPomodoroTab) enabled++;
+        if (settings.EnablePrayerTimes) enabled++;
+        if (settings.ShowFileShelfTab) enabled++;
+        if (settings.ShowClipboardTab) enabled++;
+        if (settings.ShowTodayTab) enabled++;
+        if (settings.ShowAiUsageTab) enabled++;
+        if (settings.ShowScriptTab) enabled++;
+        if (settings.ShowDownloadsTab) enabled++;
+        if (settings.ShowFxRatesTab) enabled++;
+        TabsSummaryText.Text = $"{enabled} of 11 shown";
+    }
+
+    private void BadgeStyle_Checked(object sender, RoutedEventArgs e)
+    {
+        if (!IsLoaded || _isLoadingPreferences) return;
+        if (sender is System.Windows.Controls.RadioButton { Tag: string style })
+            ViewModel?.ApplyMascotBadgeStyle(style);
     }
 
     // The Mascot row mirrors the Mascot dropdown in Advanced Settings: both save the same setting and both reload when it changes.
@@ -219,4 +252,12 @@ public partial class SettingsCardView : UserControl
     private void BackFromSettings_Click(object sender, RoutedEventArgs e) => ViewModel?.ShowMedia();
 
     private void OpenAllSettings_Click(object sender, RoutedEventArgs e) => App.OpenSettings();
+
+    private void OpenNotificationsSettings_Click(object sender, RoutedEventArgs e) => App.OpenSettings(MochiDock.Core.SettingsSections.Notifications);
+
+    private void OpenAppearanceSettings_Click(object sender, RoutedEventArgs e) => App.OpenSettings(MochiDock.Core.SettingsSections.Appearance);
+
+    private void OpenMascotSettings_Click(object sender, RoutedEventArgs e) => App.OpenSettings(MochiDock.Core.SettingsSections.Mascot);
+
+    private void OpenTabsSettings_Click(object sender, RoutedEventArgs e) => App.OpenSettings(MochiDock.Core.SettingsSections.Tabs);
 }

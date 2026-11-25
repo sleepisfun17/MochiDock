@@ -29,6 +29,9 @@ public sealed record TaskbarBlock(TaskbarBlockKind Kind, string Top, string Bott
     public string BottomValue => BottomLabel.Length > 0 && Bottom.StartsWith(BottomLabel, StringComparison.Ordinal) ? Bottom[BottomLabel.Length..] : Bottom;
 }
 
+/// <summary>Structured content for the themed taskbar hover card.</summary>
+public sealed record TaskbarHoverInfo(string Title, string IconKey, IReadOnlyList<string> Lines, bool HasWarning);
+
 /// <summary>One wireless device for the Batteries block. <see cref="Glyph"/> is the icon-font character the app draws for its kind.</summary>
 public sealed record TaskbarBattery(string Glyph, string Name, string Via, int? Percent, bool Charging, bool Stale, DateTimeOffset ReadAt);
 
@@ -208,6 +211,36 @@ public static class TaskbarReadouts
     /// <summary>Splits the readout into separate Left and Right zone lists in the configured order.</summary>
     public static (IReadOnlyList<TaskbarBlock> Left, IReadOnlyList<TaskbarBlock> Right) BuildSplit(TaskbarSnapshot snapshot, TaskbarOptions options) =>
         (BuildFiltered(snapshot, options, TaskbarZone.Left), BuildFiltered(snapshot, options, TaskbarZone.Right));
+
+    /// <summary>Builds the themed hover card title, icon key, lines, and warning flag for a hovered taskbar block.</summary>
+    public static TaskbarHoverInfo? BuildHoverInfo(TaskbarBlockKind kind, IReadOnlyList<TaskbarBlock> blocks)
+    {
+        var matching = blocks.Where(b => b.Kind == kind).ToList();
+        if (matching.Count == 0) return null;
+
+        var (title, iconKey) = kind switch
+        {
+            TaskbarBlockKind.System => ("CPU & GPU", "NavGauge"),
+            TaskbarBlockKind.MemoryDisk => ("Memory & Disk", "NavGauge"),
+            TaskbarBlockKind.Network => ("Network", "NavFx"),
+            TaskbarBlockKind.Prayer => ("Prayer Times", "NavMoon"),
+            TaskbarBlockKind.Weather => ("Weather", "NavWeather"),
+            TaskbarBlockKind.Batteries => ("Device Batteries", "NavGauge"),
+            _ => ("Taskbar", "NavGauge"),
+        };
+
+        var lines = new List<string>();
+        foreach (var block in matching)
+        {
+            if (string.IsNullOrWhiteSpace(block.Tooltip)) continue;
+            foreach (var raw in block.Tooltip.Split(new[] { "\r\n", "\n" }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                lines.Add(raw);
+        }
+        if (lines.Count == 0) return null;
+
+        bool hasWarning = matching.Any(b => b.TopWarn || b.BottomWarn);
+        return new TaskbarHoverInfo(title, iconKey, lines, hasWarning);
+    }
 
     private static IReadOnlyList<TaskbarBlock> BuildFiltered(TaskbarSnapshot snapshot, TaskbarOptions options, TaskbarZone? zoneFilter)
     {

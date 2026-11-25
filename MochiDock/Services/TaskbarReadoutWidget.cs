@@ -25,8 +25,6 @@ public sealed class TaskbarReadoutWidget : IDisposable
     const uint SWP_NOZORDER = 4, SWP_NOACTIVATE = 0x10, SWP_SHOWWINDOW = 0x40;
     const int WM_MOUSEMOVE = 0x0200, WM_MOUSELEAVE = 0x02A3, WM_RBUTTONUP = 0x0205, WM_LBUTTONUP = 0x0202, WM_NCHITTEST = 0x0084, HTCLIENT = 1, WM_MOUSEACTIVATE = 0x21, MA_NOACTIVATE = 3;
     const uint TME_LEAVE = 0x00000002;
-    const int TTM_ADDTOOLW = 0x0432, TTM_UPDATETIPTEXTW = 0x0439, TTM_SETMAXTIPWIDTH = 0x0418;
-    const uint TTF_SUBCLASS = 0x10, TTS_ALWAYSTIP = 1, TTS_NOPREFIX = 2;
 
     delegate IntPtr WndProcDelegate(IntPtr hwnd, uint msg, IntPtr wParam, IntPtr lParam);
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
@@ -37,8 +35,6 @@ public sealed class TaskbarReadoutWidget : IDisposable
     [StructLayout(LayoutKind.Sequential)] struct Blend { public byte Op, Flags, Alpha, Format; }
     [StructLayout(LayoutKind.Sequential)] struct AppBarData { public uint Size; public IntPtr Hwnd; public uint Callback, Edge; public Rect Rc; public IntPtr Param; }
     [StructLayout(LayoutKind.Sequential)] struct BitmapInfoHeader { public uint Size; public int Width, Height; public ushort Planes, BitCount; public uint Compression, SizeImage; public int XPels, YPels; public uint ClrUsed, ClrImportant; }
-    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
-    struct ToolInfo { public uint Size, Flags; public IntPtr Hwnd; public UIntPtr Id; public Rect Rc; public IntPtr Instance; public IntPtr Text; }
     [StructLayout(LayoutKind.Sequential)]
     struct TrackMouseEventStruct { public uint Size, Flags; public IntPtr HwndTrack; public uint HoverTime; }
 
@@ -60,8 +56,6 @@ public sealed class TaskbarReadoutWidget : IDisposable
     [DllImport("user32.dll")] static extern uint GetDpiForWindow(IntPtr hwnd);
     [DllImport("user32.dll")] static extern IntPtr GetDC(IntPtr hwnd);
     [DllImport("user32.dll")] static extern int ReleaseDC(IntPtr hwnd, IntPtr dc);
-    [DllImport("user32.dll", EntryPoint = "SendMessageW")] static extern IntPtr SendMessage(IntPtr hwnd, int msg, IntPtr wParam, ref ToolInfo info);
-    [DllImport("user32.dll", EntryPoint = "SendMessageW")] static extern IntPtr SendMessage(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam);
     [DllImport("user32.dll")] static extern bool UpdateLayeredWindow(IntPtr hwnd, IntPtr dst, IntPtr pos, ref Size size, IntPtr src, ref Point srcPos, int key, ref Blend blend, int flags);
     [DllImport("shell32.dll")] static extern UIntPtr SHAppBarMessage(uint message, ref AppBarData data);
     [DllImport("gdi32.dll")] static extern IntPtr CreateCompatibleDC(IntPtr dc);
@@ -70,13 +64,11 @@ public sealed class TaskbarReadoutWidget : IDisposable
     [DllImport("gdi32.dll")] static extern bool DeleteObject(IntPtr obj);
     [DllImport("gdi32.dll")] static extern bool DeleteDC(IntPtr dc);
     [DllImport("kernel32.dll", CharSet = CharSet.Unicode)] static extern IntPtr GetModuleHandleW(string? name);
-    [DllImport("comctl32.dll")] static extern bool InitCommonControlsEx(ref InitCommonControls init);
-    [StructLayout(LayoutKind.Sequential)] struct InitCommonControls { public uint Size, Classes; }
 
     private sealed class StripWindow
     {
-        public IntPtr Widget, Tooltip, Parent, TooltipBuffer;
-        public string RenderKey = "", TooltipText = "";
+        public IntPtr Widget, Parent;
+        public string RenderKey = "";
         public int Width, Height;
         public int LastX = int.MinValue, LastY = int.MinValue, LastWidth = -1, LastHeight = -1;
         public IReadOnlyList<TaskbarBlock> ShownBlocks = Array.Empty<TaskbarBlock>();
@@ -98,6 +90,7 @@ public sealed class TaskbarReadoutWidget : IDisposable
 
     readonly MainViewModel viewModel;
     readonly DispatcherTimer timer = new() { Interval = TimeSpan.FromSeconds(1) };
+    readonly DispatcherTimer hoverTimer = new() { Interval = TimeSpan.FromMilliseconds(350) };
     readonly WndProcDelegate wndProc; // kept in a field so the native callback is not garbage-collected
     readonly Dictionary<(IntPtr Taskbar, TaskbarZone Zone), StripWindow> strips = new();
     readonly Dictionary<IntPtr, StripWindow> stripsByHwnd = new();
@@ -105,9 +98,11 @@ public sealed class TaskbarReadoutWidget : IDisposable
     bool classRegistered, disposed;
     IntPtr rebar;
     int rebarOriginalWidth;
+    Views.TaskbarHoverCardWindow? hoverCard;
+    StripWindow? hoveredStrip;
 
-    /// <summary>Raised on the UI thread when any strip is right-clicked.</summary>
-    public event Action? ContextMenuRequested;
+    /// <summary>Raised on the UI thread when any strip is right-clicked, carrying the block under the cursor when any.</summary>
+    public event Action<TaskbarBlockKind?>? ContextMenuRequested;
 
     /// <summary>Raised on the UI thread when a block is left-clicked (the owner opens the matching card).</summary>
     public event Action<TaskbarBlockKind>? BlockClicked;
@@ -117,6 +112,7 @@ public sealed class TaskbarReadoutWidget : IDisposable
         this.viewModel = viewModel;
         wndProc = WndProc;
         timer.Tick += (_, _) => Tick();
+        hoverTimer.Tick += (_, _) => OnHoverTimerTick();
         viewModel.TaskbarBlocksChanged += Refresh;
         viewModel.TaskbarStyleChanged += Refresh;
         viewModel.DeviceBatterySettingsChanged += Refresh;   // the plate behind the text
@@ -268,6 +264,20 @@ public sealed class TaskbarReadoutWidget : IDisposable
                 DestroyStrip(strips[obsolete]);
                 strips.Remove(obsolete);
             }
+
+            if (hoverCard is { IsVisible: true } && hoveredStrip is { } hs)
+            {
+                if (hs.Widget == IntPtr.Zero || hs.Hovered is not { } hk
+                    || !GetWindowRect(hs.Widget, out var wr) || !GetCursorPos(out var cur)
+                    || cur.X < wr.Left || cur.X >= wr.Right || cur.Y < wr.Top || cur.Y >= wr.Bottom)
+                {
+                    ClearHover();
+                }
+                else
+                {
+                    ShowHoverCard(hs, hk);
+                }
+            }
         }
         catch (Exception ex) { AppLog.Warn("Taskbar", ex); }
     }
@@ -322,9 +332,6 @@ public sealed class TaskbarReadoutWidget : IDisposable
                     strip.Hovered = null;
                 }
             }
-            // Keep the active hovered block's tooltip steady on 1 s ticks so Win32 tooltips_class32 does not jump or resize.
-            if (strip.Hovered == null || strip.Hovered != previousHovered)
-                UpdateTooltip(strip, strip.Hovered);
             strips[key] = strip;
         }
         return strip;
@@ -573,35 +580,61 @@ public sealed class TaskbarReadoutWidget : IDisposable
         strip.Widget = hwnd;
         strip.Parent = taskbar;
         stripsByHwnd[hwnd] = strip;
-        CreateTooltip(strip, instance);
         return true;
     }
 
-    static void CreateTooltip(StripWindow strip, IntPtr instance)
+    void OnHoverTimerTick()
     {
-        var init = new InitCommonControls { Size = (uint)Marshal.SizeOf<InitCommonControls>(), Classes = 0xFF };
-        InitCommonControlsEx(ref init);
-        strip.Tooltip = CreateWindowExW(WS_EX_TOPMOST, "tooltips_class32", null, WS_POPUP | TTS_ALWAYSTIP | TTS_NOPREFIX, 0, 0, 0, 0, strip.Widget, IntPtr.Zero, instance, IntPtr.Zero);
-        if (strip.Tooltip == IntPtr.Zero) return;
-        strip.TooltipBuffer = Marshal.AllocHGlobal(2048 * 2);
-        Marshal.WriteInt16(strip.TooltipBuffer, 0);
-        SendMessage(strip.Tooltip, TTM_SETMAXTIPWIDTH, IntPtr.Zero, new IntPtr(600));
-        var info = new ToolInfo { Size = (uint)Marshal.SizeOf<ToolInfo>(), Flags = TTF_SUBCLASS, Hwnd = strip.Widget, Id = (UIntPtr)1, Rc = new Rect { Right = 4000, Bottom = 400 }, Text = strip.TooltipBuffer };
-        SendMessage(strip.Tooltip, TTM_ADDTOOLW, IntPtr.Zero, ref info);
+        hoverTimer.Stop();
+        if (disposed || hoveredStrip is not { } strip || strip.Hovered is not { } kind || strip.Widget == IntPtr.Zero) return;
+        if (!GetWindowRect(strip.Widget, out var wr) || !GetCursorPos(out var pt)
+            || pt.X < wr.Left || pt.X >= wr.Right || pt.Y < wr.Top || pt.Y >= wr.Bottom)
+        {
+            ClearHover();
+            return;
+        }
+        ShowHoverCard(strip, kind);
     }
 
-    static void UpdateTooltip(StripWindow strip, TaskbarBlockKind? kind)
+    void ShowHoverCard(StripWindow strip, TaskbarBlockKind kind)
     {
-        if (strip.Tooltip == IntPtr.Zero || strip.TooltipBuffer == IntPtr.Zero) return;
-        var shown = kind is { } k ? strip.ShownBlocks.Where(b => b.Kind == k) : strip.ShownBlocks;
-        var text = string.Join("\r\n", shown.Select(b => b.Tooltip));
-        var next = text.Length > 2000 ? text[..2000] : text;
-        if (string.Equals(next, strip.TooltipText, StringComparison.Ordinal)) return;
-        strip.TooltipText = next;
-        var bytes = Encoding.Unicode.GetBytes(strip.TooltipText + "\0");
-        Marshal.Copy(bytes, 0, strip.TooltipBuffer, bytes.Length);
-        var info = new ToolInfo { Size = (uint)Marshal.SizeOf<ToolInfo>(), Hwnd = strip.Widget, Id = (UIntPtr)1, Text = strip.TooltipBuffer };
-        SendMessage(strip.Tooltip, TTM_UPDATETIPTEXTW, IntPtr.Zero, ref info);
+        var info = TaskbarReadouts.BuildHoverInfo(kind, strip.ShownBlocks);
+        if (info is null) { DismissHoverCard(); return; }
+        if (strip.Parent == IntPtr.Zero || strip.Widget == IntPtr.Zero
+            || !GetWindowRect(strip.Parent, out var tbRect)
+            || !GetWindowRect(strip.Widget, out var widgetRect))
+            return;
+
+        var mon = MultiMonitorHelper.FromHandle(strip.Parent)?.Bounds
+            ?? new MonitorRect(tbRect.Left, tbRect.Top - 1080, Math.Max(1, tbRect.Right - tbRect.Left), 1080 + Math.Max(1, tbRect.Bottom - tbRect.Top));
+
+        int anchorX;
+        if (strip.BlockRects.FirstOrDefault(r => r.Kind == kind && r.Pixels.Width > 0) is { } rect)
+            anchorX = widgetRect.Left + (int)Math.Round(rect.Pixels.Left + rect.Pixels.Width / 2.0);
+        else
+            anchorX = GetCursorPos(out var pt) ? pt.X : (widgetRect.Left + widgetRect.Right) / 2;
+
+        uint rawDpi = GetDpiForWindow(strip.Parent);
+        double dpi = rawDpi == 0 ? 96 : rawDpi;
+
+        hoverCard ??= new Views.TaskbarHoverCardWindow();
+        hoverCard.ShowAt(info, anchorX, tbRect.Top, tbRect.Bottom, mon, dpi);
+    }
+
+    void DismissHoverCard()
+    {
+        hoverTimer.Stop();
+        hoverCard?.Dismiss();
+    }
+
+    void ClearHover()
+    {
+        if (hoveredStrip != null)
+        {
+            hoveredStrip.Hovered = null;
+            hoveredStrip = null;
+        }
+        DismissHoverCard();
     }
 
     IntPtr WndProc(IntPtr hwnd, uint msg, IntPtr wParam, IntPtr lParam)
@@ -620,7 +653,27 @@ public sealed class TaskbarReadoutWidget : IDisposable
                             strip.TrackingMouse = TrackMouseEvent(ref tme);
                         }
                         var over = TaskbarReadoutRenderer.HitTest(strip.BlockRects, (short)(lParam.ToInt64() & 0xFFFF));
-                        if (over != strip.Hovered) { strip.Hovered = over; UpdateTooltip(strip, over); }
+                        if (over != strip.Hovered || !ReferenceEquals(hoveredStrip, strip))
+                        {
+                            if (hoveredStrip != null && !ReferenceEquals(hoveredStrip, strip))
+                                hoveredStrip.Hovered = null;
+                            strip.Hovered = over;
+                            hoveredStrip = over is not null ? strip : null;
+                            if (over is null)
+                            {
+                                DismissHoverCard();
+                            }
+                            else if (hoverCard is { IsVisible: true })
+                            {
+                                hoverTimer.Stop();
+                                ShowHoverCard(strip, over.Value);
+                            }
+                            else
+                            {
+                                hoverTimer.Stop();
+                                hoverTimer.Start();
+                            }
+                        }
                     }
                     return IntPtr.Zero;
                 }
@@ -629,12 +682,14 @@ public sealed class TaskbarReadoutWidget : IDisposable
                     if (stripsByHwnd.TryGetValue(hwnd, out var strip))
                     {
                         strip.TrackingMouse = false;
-                        if (strip.Hovered != null) { strip.Hovered = null; UpdateTooltip(strip, null); }
+                        if (ReferenceEquals(hoveredStrip, strip)) ClearHover();
+                        else strip.Hovered = null;
                     }
                     return IntPtr.Zero;
                 }
             case WM_LBUTTONUP:
                 {
+                    ClearHover();
                     if (stripsByHwnd.TryGetValue(hwnd, out var strip))
                     {
                         var clicked = TaskbarReadoutRenderer.HitTest(strip.BlockRects, (short)(lParam.ToInt64() & 0xFFFF));
@@ -643,8 +698,14 @@ public sealed class TaskbarReadoutWidget : IDisposable
                     return IntPtr.Zero;
                 }
             case WM_RBUTTONUP:
-                Application.Current?.Dispatcher.BeginInvoke(() => { if (!disposed) ContextMenuRequested?.Invoke(); });
-                return IntPtr.Zero;
+                {
+                    ClearHover();
+                    TaskbarBlockKind? clicked = null;
+                    if (stripsByHwnd.TryGetValue(hwnd, out var strip))
+                        clicked = TaskbarReadoutRenderer.HitTest(strip.BlockRects, (short)(lParam.ToInt64() & 0xFFFF));
+                    Application.Current?.Dispatcher.BeginInvoke(() => { if (!disposed) ContextMenuRequested?.Invoke(clicked); });
+                    return IntPtr.Zero;
+                }
         }
         return DefWindowProcW(hwnd, msg, wParam, lParam);
     }
@@ -674,6 +735,7 @@ public sealed class TaskbarReadoutWidget : IDisposable
 
     void HideAll()
     {
+        ClearHover();
         RestoreRebar();
         foreach (var strip in strips.Values) DestroyStrip(strip);
         strips.Clear();
@@ -682,13 +744,11 @@ public sealed class TaskbarReadoutWidget : IDisposable
 
     void DestroyStrip(StripWindow strip)
     {
+        if (ReferenceEquals(hoveredStrip, strip)) ClearHover();
         if (strip.Widget != IntPtr.Zero) stripsByHwnd.Remove(strip.Widget);
-        if (strip.Tooltip != IntPtr.Zero) { DestroyWindow(strip.Tooltip); strip.Tooltip = IntPtr.Zero; }
         if (strip.Widget != IntPtr.Zero) { DestroyWindow(strip.Widget); strip.Widget = IntPtr.Zero; }
-        if (strip.TooltipBuffer != IntPtr.Zero) { Marshal.FreeHGlobal(strip.TooltipBuffer); strip.TooltipBuffer = IntPtr.Zero; }
         strip.Parent = IntPtr.Zero;
         strip.RenderKey = "";
-        strip.TooltipText = "";
         strip.LastX = int.MinValue;
         strip.LastY = int.MinValue;
         strip.LastWidth = -1;
@@ -702,10 +762,13 @@ public sealed class TaskbarReadoutWidget : IDisposable
         if (disposed) return;
         disposed = true;
         timer.Stop();
+        hoverTimer.Stop();
         viewModel.TaskbarBlocksChanged -= Refresh;
         viewModel.TaskbarStyleChanged -= Refresh;
         viewModel.DeviceBatterySettingsChanged -= Refresh;
         HideAll();
+        hoverCard?.CloseSafely();
+        hoverCard = null;
         if (classRegistered) UnregisterClassW(ClassName, GetModuleHandleW(null));
     }
 }

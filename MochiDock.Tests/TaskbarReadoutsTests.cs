@@ -716,6 +716,101 @@ public class TaskbarReadoutsTests
         Assert.True(new TaskbarOptions { Upload = true }.NeedsSampler);
         Assert.True(new TaskbarOptions { Download = true }.NeedsSampler);
     }
+
+    [Fact]
+    public void ComputeTooltipPositionStaysInsideTaskbarMonitorWhenSecondScreenIsBelow()
+    {
+        // Top monitor [0,0..1920,1080] with bottom taskbar [1032..1080]; 2nd monitor sits below at Y >= 1080.
+        var (x, y) = TaskbarLayout.ComputeTooltipPosition(
+            anchorX: 1600,
+            tipWidth: 240,
+            tipHeight: 64,
+            taskbarTop: 1032,
+            taskbarBottom: 1080,
+            monitorLeft: 0,
+            monitorTop: 0,
+            monitorRight: 1920,
+            monitorBottom: 1080,
+            gapPx: 6);
+
+        Assert.Equal(1480, x);
+        Assert.Equal(962, y);
+        Assert.True(y + 64 <= 1032);
+        Assert.True(y + 64 < 1080); // never spills onto the bottom screen
+    }
+
+    [Fact]
+    public void ComputeTooltipPositionClampsHorizontallyAndSupportsTopTaskbar()
+    {
+        // Right edge clamping inside [0..1920] so it does not cross onto a right-side monitor.
+        var (rx, _) = TaskbarLayout.ComputeTooltipPosition(
+            anchorX: 1900,
+            tipWidth: 240,
+            tipHeight: 64,
+            taskbarTop: 1032,
+            taskbarBottom: 1080,
+            monitorLeft: 0,
+            monitorTop: 0,
+            monitorRight: 1920,
+            monitorBottom: 1080,
+            gapPx: 6);
+        Assert.Equal(1674, rx);
+
+        // Left edge clamping on a left-side negative-coordinate monitor [-1920,0..0,1080].
+        var (lx, _) = TaskbarLayout.ComputeTooltipPosition(
+            anchorX: -1900,
+            tipWidth: 240,
+            tipHeight: 64,
+            taskbarTop: 1032,
+            taskbarBottom: 1080,
+            monitorLeft: -1920,
+            monitorTop: 0,
+            monitorRight: 0,
+            monitorBottom: 1080,
+            gapPx: 6);
+        Assert.Equal(-1914, lx);
+
+        // Top-edge taskbar [0..48] opens the tooltip below the taskbar, inside the monitor.
+        var (tx, ty) = TaskbarLayout.ComputeTooltipPosition(
+            anchorX: 500,
+            tipWidth: 200,
+            tipHeight: 50,
+            taskbarTop: 0,
+            taskbarBottom: 48,
+            monitorLeft: 0,
+            monitorTop: 0,
+            monitorRight: 1920,
+            monitorBottom: 1080,
+            gapPx: 6);
+        Assert.Equal(400, tx);
+        Assert.Equal(54, ty);
+    }
+
+    [Fact]
+    public void BuildHoverInfoFormatsTitleIconLinesAndWarning()
+    {
+        var blocks = new[]
+        {
+            new TaskbarBlock(TaskbarBlockKind.System, "CPU 12%", "GPU 4%", TopWarn: true, BottomWarn: false, "CPU 12%, 62°\r\nGPU 4%, 44°"),
+            new TaskbarBlock(TaskbarBlockKind.Weather, "18°C", "", TopWarn: false, BottomWarn: false, "Clear, 18°C"),
+        };
+
+        var sys = TaskbarReadouts.BuildHoverInfo(TaskbarBlockKind.System, blocks);
+        Assert.NotNull(sys);
+        Assert.Equal("CPU & GPU", sys!.Title);
+        Assert.Equal("NavGauge", sys.IconKey);
+        Assert.Equal(new[] { "CPU 12%, 62°", "GPU 4%, 44°" }, sys.Lines);
+        Assert.True(sys.HasWarning);
+
+        var weather = TaskbarReadouts.BuildHoverInfo(TaskbarBlockKind.Weather, blocks);
+        Assert.NotNull(weather);
+        Assert.Equal("Weather", weather!.Title);
+        Assert.Equal("NavWeather", weather.IconKey);
+        Assert.Equal(new[] { "Clear, 18°C" }, weather.Lines);
+        Assert.False(weather.HasWarning);
+
+        Assert.Null(TaskbarReadouts.BuildHoverInfo(TaskbarBlockKind.Network, blocks));
+    }
 }
 
 public class TaskbarSamplingTests

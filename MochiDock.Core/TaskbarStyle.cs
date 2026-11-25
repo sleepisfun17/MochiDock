@@ -374,6 +374,53 @@ public static class TaskbarLayout
         screenLeft = Math.Clamp(screenLeft, taskbarLeft, Math.Max(taskbarLeft, taskbarRight - widgetWidth));
         return rtl ? taskbarRight - screenLeft - widgetWidth : screenLeft - taskbarLeft;
     }
+
+    /// <summary>
+    /// Computes screen coordinates for a taskbar hover tooltip so it always appears on the taskbar's own monitor:
+    /// above a bottom-edge taskbar, below a top-edge taskbar, horizontally centered on <paramref name="anchorX"/>,
+    /// and clamped strictly inside the monitor bounds (preventing spillover onto a stacked bottom or side screen).
+    /// </summary>
+    public static (int X, int Y) ComputeTooltipPosition(
+        int anchorX,
+        int tipWidth,
+        int tipHeight,
+        int taskbarTop,
+        int taskbarBottom,
+        int monitorLeft,
+        int monitorTop,
+        int monitorRight,
+        int monitorBottom,
+        int gapPx)
+    {
+        int width = Math.Max(0, tipWidth);
+        int height = Math.Max(0, tipHeight);
+        int gap = Math.Max(0, gapPx);
+
+        int maxX = Math.Max(monitorLeft, monitorRight - width - gap);
+        int minX = Math.Min(monitorLeft + gap, maxX);
+        int x = Math.Clamp(anchorX - width / 2, minX, maxX);
+
+        int monitorMidY = monitorTop + (monitorBottom - monitorTop) / 2;
+        bool bottomTaskbar = taskbarTop >= monitorMidY;
+
+        int y;
+        if (bottomTaskbar)
+        {
+            int preferred = taskbarTop - height - gap;
+            int maxY = Math.Max(monitorTop, taskbarTop - height);
+            int minY = Math.Min(monitorTop + gap, maxY);
+            y = Math.Clamp(preferred, minY, maxY);
+        }
+        else
+        {
+            int preferred = taskbarBottom + gap;
+            int maxY = Math.Max(taskbarBottom, monitorBottom - height - gap);
+            int minY = Math.Min(taskbarBottom, maxY);
+            y = Math.Clamp(preferred, minY, maxY);
+        }
+
+        return (x, y);
+    }
 }
 
 /// <summary>Selects which taskbar windows receive readout strips based on Primary, FollowDock, All, or a specific device name.</summary>
