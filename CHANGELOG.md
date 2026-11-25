@@ -2,6 +2,16 @@
 
 All notable changes to MochiDock are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Added
+
+- **Update nudge**: while an update is available and not dismissed, the compact capsule shows a small static accent ↑ dot (tooltip "Update available") that steps aside for gaming, notifications, hardware notices and the audio waveform, and the expanded dock shows a banner with **Update**, **Release notes** and **Dismiss** (progress and **Cancel** while downloading). Dismiss is remembered per version (`DismissedUpdateVersion`, local-only); a newer release shows the dot and banner again, and the quick settings button, tray item and Settings > Data still show the update.
+
+### Fixed
+
+- The README no longer pins an old version in its beta note.
+
 ## [0.4.1-beta]
 
 ### Fixed

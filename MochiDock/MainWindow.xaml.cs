@@ -1355,6 +1355,31 @@ public partial class MainWindow : Window
         e.Handled = true;
     }
 
+    private async void UpdateBannerAction_Click(object sender, RoutedEventArgs e)
+    {
+        e.Handled = true;
+        try { await _viewModel.UpdateBannerActionAsync(); }
+        catch (Exception ex) { MochiDock.Services.AppLog.Warn("Update", ex); }
+    }
+
+    private void UpdateBannerNotes_Click(object sender, RoutedEventArgs e)
+    {
+        _viewModel.OpenUpdatePage();
+        e.Handled = true;
+    }
+
+    private void UpdateBannerDismiss_Click(object sender, RoutedEventArgs e)
+    {
+        _viewModel.DismissUpdateNudge();
+        e.Handled = true;
+    }
+
+    private void UpdateBannerCancel_Click(object sender, RoutedEventArgs e)
+    {
+        _viewModel.CancelUpdateDownload();
+        e.Handled = true;
+    }
+
     private bool _policyHidden;
     private MochiDock.Services.PowerNotifications? _powerNotifications;
     private readonly System.Windows.Threading.DispatcherTimer _policyTimer = new(){Interval=TimeSpan.FromMilliseconds(500)};

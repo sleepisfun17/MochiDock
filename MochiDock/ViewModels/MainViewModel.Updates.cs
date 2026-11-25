@@ -67,12 +67,21 @@ public partial class MainViewModel
         _ => UpdateStatusText,
     };
 
+    /// <summary>The persistent nudge (capsule dot and expanded-dock banner): an update is available, not dismissed, not installing.</summary>
+    public bool IsUpdateNudgeVisible => UpdateNudgePolicy.ShouldNudge(_availableUpdate?.Version, _settings?.DismissedUpdateVersion, _installing);
+    /// <summary>A download or install is running: the banner then shows the progress text and only a cancel button.</summary>
+    public bool IsUpdateBannerBusy => _availableUpdate != null && (_installing || IsUpdateDownloading);
+    public bool IsUpdateBannerShown => IsUpdateNudgeVisible || IsUpdateBannerBusy;
+    public string UpdateBannerText => _availableUpdate == null ? "" : IsUpdateBannerBusy ? UpdateChipText : $"MochiDock {_availableUpdate.Version} is available";
+    public string UpdateBannerActionText => CanInstallUpdate ? "Update" : "Download";
+
     private void NotifyUpdateChip()
     {
         OnPropertyChanged(nameof(UpdateChipState));
         OnPropertyChanged(nameof(UpdateChipText));
         OnPropertyChanged(nameof(IsUpdateChipHighlighted));
         OnPropertyChanged(nameof(UpdateChipToolTip));
+        OnPropertyChanged(nameof(UpdateBannerText));
     }
 
     /// <summary>A click on the header's update button: check, install (after its confirmation), open the release page, or cancel.</summary>
@@ -88,9 +97,26 @@ public partial class MainViewModel
         return Task.CompletedTask;
     }
 
+    /// <summary>Dismiss on the dot/banner: remembers the version; a newer release nudges again. The chip, tray and Settings keep showing the update.</summary>
+    public void DismissUpdateNudge()
+    {
+        if (_availableUpdate is not { } offer) return;
+        UpdateSettings(x => x.DismissedUpdateVersion = offer.Version, SettingsApply.None);
+        _updateNoticeRetry?.Stop();
+        _pendingUpdateNotice = null;
+        NotifyUpdateState();
+    }
+
+    /// <summary>The banner's Update button: installs after the usual confirmation, or opens the release page on copies that cannot self-update.</summary>
+    public Task UpdateBannerActionAsync() => UpdateChipClickAsync();
+
     private void NotifyUpdateState()
     {
         NotifyUpdateChip();
+        OnPropertyChanged(nameof(IsUpdateNudgeVisible));
+        OnPropertyChanged(nameof(IsUpdateBannerBusy));
+        OnPropertyChanged(nameof(IsUpdateBannerShown));
+        OnPropertyChanged(nameof(UpdateBannerActionText));
         OnPropertyChanged(nameof(AvailableUpdate));
         OnPropertyChanged(nameof(HasUpdate));
         OnPropertyChanged(nameof(TrayUpdateText));
@@ -150,7 +176,8 @@ public partial class MainViewModel
             {
                 _updateStatus = result.Message;
             }
-            if (UpdateAnnouncePolicy.ShouldAnnounce(result.Offer?.Version, _settings.LastAnnouncedUpdate, manual))
+            if (UpdateAnnouncePolicy.ShouldAnnounce(result.Offer?.Version, _settings.LastAnnouncedUpdate, manual) &&
+                UpdateNudgePolicy.ShouldNudge(result.Offer?.Version, _settings.DismissedUpdateVersion, _installing))
             {
                 _pendingUpdateNotice = result.Offer!.Version;
                 TryShowUpdateNotice();

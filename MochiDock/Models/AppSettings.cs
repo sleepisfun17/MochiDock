@@ -148,6 +148,8 @@ public class AppSettings
     public DateTime? LastUpdateCheckUtc { get; set; }
     /// <summary>The newest version the "update available" capsule notice has shown for, so each version is announced once.</summary>
     public string LastAnnouncedUpdate { get; set; } = "";
+    /// <summary>The update version whose dot, banner and notice the user dismissed; a newer release shows them again.</summary>
+    public string DismissedUpdateVersion { get; set; } = "";
     public bool EnableWhatsApp { get; set; }
     /// <summary>Set once the opt-in switch was introduced; fresh installs start with it set (and WhatsApp off).</summary>
     public bool WhatsAppOptInMigrated { get; set; }

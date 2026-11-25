@@ -864,6 +864,27 @@
 
                             <!-- Dynamic Right Anchors: Pomodoro & Weather side-by-side without overlap -->
                             <StackPanel Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="0,0,4,0">
+                                <!-- Update available dot: static, no sound or text; yields to gaming, notifications, hardware notices and the waveform -->
+                                <TextBlock Text="&#x2191;" Foreground="{DynamicResource IslandAccentBrush}" FontSize="10" FontWeight="Bold" VerticalAlignment="Center"
+                                           HorizontalAlignment="Center" Margin="0,0,3,0" ToolTip="Update available">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Visibility" Value="Collapsed" />
+                                            <Style.Triggers>
+                                                <MultiDataTrigger>
+                                                    <MultiDataTrigger.Conditions>
+                                                        <Condition Binding="{Binding IsUpdateNudgeVisible}" Value="True" />
+                                                        <Condition Binding="{Binding IsGamingSessionActive}" Value="False" />
+                                                        <Condition Binding="{Binding IsNotificationInMainPill}" Value="False" />
+                                                        <Condition Binding="{Binding IsHardwareNoticeVisible}" Value="False" />
+                                                        <Condition Binding="{Binding IsAudioWaveformVisible}" Value="False" />
+                                                    </MultiDataTrigger.Conditions>
+                                                    <Setter Property="Visibility" Value="Visible" />
+                                                </MultiDataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
                                 <!-- Pomodoro Icon (Visible when Pomodoro is active) -->
                                 <Viewbox Width="13" Height="13" VerticalAlignment="Center" Margin="0,0,6,0">
                                     <Viewbox.Style>
@@ -1437,35 +1458,74 @@
 
                 </Grid>
 
-                <!-- First-Run Onboarding Banner -->
-                <Border Grid.Row="1"
-                        x:Name="FirstRunWelcomeBanner"
-                        Visibility="{Binding IsFirstRunWelcomeVisible, Converter={StaticResource BoolToVisibility}}"
-                        Background="{DynamicResource IslandAccentSubtleBrush}"
-                        BorderBrush="{DynamicResource IslandSelectionBorderBrush}"
-                        BorderThickness="1"
-                        CornerRadius="12"
-                        Padding="10,7"
-                        Margin="0,0,0,8">
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
-                        <TextBlock Grid.Column="0"
-                                   Text="Welcome! Hover to expand, scroll the pill to adjust volume or switch tabs, and drag to move."
-                                   Foreground="{DynamicResource IslandInkBrush}"
-                                   FontSize="11.5"
-                                   TextWrapping="Wrap"
-                                   VerticalAlignment="Center"
-                                   Margin="0,0,8,0" />
-                        <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                            <Button Content="Set city" Click="WelcomeSetCity_Click" Style="{StaticResource ActionButton}" FontSize="11" Padding="8,3" Margin="0,0,4,0" ToolTip="Set your city for Weather &amp; Prayer" />
-                            <Button Content="Tabs" Click="WelcomeTabs_Click" Style="{StaticResource ActionButton}" FontSize="11" Padding="8,3" Margin="0,0,4,0" ToolTip="Choose which tabs appear in the dock" />
-                            <Button Content="Got it" Click="WelcomeDismiss_Click" Style="{StaticResource ActionButton}" FontSize="11" Padding="8,3" ToolTip="Dismiss welcome banner" />
-                        </StackPanel>
-                    </Grid>
-                </Border>
+                <StackPanel Grid.Row="1">
+                    <!-- First-Run Onboarding Banner -->
+                    <Border
+                            x:Name="FirstRunWelcomeBanner"
+                            Visibility="{Binding IsFirstRunWelcomeVisible, Converter={StaticResource BoolToVisibility}}"
+                            Background="{DynamicResource IslandAccentSubtleBrush}"
+                            BorderBrush="{DynamicResource IslandSelectionBorderBrush}"
+                            BorderThickness="1"
+                            CornerRadius="12"
+                            Padding="10,7"
+                            Margin="0,0,0,8">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0"
+                                       Text="Welcome! Hover to expand, scroll the pill to adjust volume or switch tabs, and drag to move."
+                                       Foreground="{DynamicResource IslandInkBrush}"
+                                       FontSize="11.5"
+                                       TextWrapping="Wrap"
+                                       VerticalAlignment="Center"
+                                       Margin="0,0,8,0" />
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                <Button Content="Set city" Click="WelcomeSetCity_Click" Style="{StaticResource ActionButton}" FontSize="11" Padding="8,3" Margin="0,0,4,0" ToolTip="Set your city for Weather &amp; Prayer" />
+                                <Button Content="Tabs" Click="WelcomeTabs_Click" Style="{StaticResource ActionButton}" FontSize="11" Padding="8,3" Margin="0,0,4,0" ToolTip="Choose which tabs appear in the dock" />
+                                <Button Content="Got it" Click="WelcomeDismiss_Click" Style="{StaticResource ActionButton}" FontSize="11" Padding="8,3" ToolTip="Dismiss welcome banner" />
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+
+                    <!-- Update banner: the version with Update / Release notes / Dismiss; only Cancel while downloading -->
+                    <Border x:Name="UpdateBanner"
+                            Visibility="{Binding IsUpdateBannerShown, Converter={StaticResource BoolToVisibility}}"
+                            Background="{DynamicResource IslandAccentSubtleBrush}"
+                            BorderBrush="{DynamicResource IslandSelectionBorderBrush}"
+                            BorderThickness="1"
+                            CornerRadius="12"
+                            Padding="10,7"
+                            Margin="0,0,0,8">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="{Binding UpdateBannerText}"
+                                       Foreground="{DynamicResource IslandInkBrush}"
+                                       FontSize="11.5" TextWrapping="Wrap" VerticalAlignment="Center" Margin="0,0,8,0" />
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                <StackPanel.Style>
+                                    <Style TargetType="StackPanel">
+                                        <Setter Property="Visibility" Value="Visible" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsUpdateBannerBusy}" Value="True">
+                                                <Setter Property="Visibility" Value="Collapsed" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </StackPanel.Style>
+                                <Button Content="{Binding UpdateBannerActionText}" Click="UpdateBannerAction_Click" Style="{StaticResource ActionButton}" FontSize="11" Padding="8,3" Margin="0,0,4,0" ToolTip="Install the update, or open the release page" />
+                                <Button Content="Release notes" Click="UpdateBannerNotes_Click" Style="{StaticResource ActionButton}" FontSize="11" Padding="8,3" Margin="0,0,4,0" ToolTip="Open the release page" />
+                                <Button Content="Dismiss" Click="UpdateBannerDismiss_Click" Style="{StaticResource ActionButton}" FontSize="11" Padding="8,3" ToolTip="Hide this reminder for this version" />
+                            </StackPanel>
+                            <Button Grid.Column="1" Content="Cancel" Click="UpdateBannerCancel_Click" Style="{StaticResource ActionButton}" FontSize="11" Padding="8,3" VerticalAlignment="Center"
+                                    Visibility="{Binding IsUpdateDownloading, Converter={StaticResource BoolToVisibility}}" ToolTip="Cancel the download" />
+                        </Grid>
+                    </Border>
+                </StackPanel>
 
                 <!-- Main Dynamic Content: MODULAR CARDS -->
 

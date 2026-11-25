@@ -20,7 +20,7 @@ public static class SettingsTransfer
     public static IReadOnlyList<string> LocalOnlyKeys { get; } = new[]
     {
         "RemoteWebhookToken", "TargetMonitor", "TopMargin", "GamingTopOffset", "IslandHorizontalRatio",
-        "SettingsWindowWidth", "SettingsWindowHeight", "PrayerAudioWavPath", "StartWithWindows", "LastUpdateCheckUtc", "LastAnnouncedUpdate",
+        "SettingsWindowWidth", "SettingsWindowHeight", "PrayerAudioWavPath", "StartWithWindows", "LastUpdateCheckUtc", "LastAnnouncedUpdate", "DismissedUpdateVersion",
         "SnoozeUntilTicks", "GowaPort", "WebhookPort", "PowerComponents", "HiddenDeviceBatteryKeys", "PreferredGamingResolution",
         "TaskbarItemsMigrated", "TaskbarShowCpuLoad", "TaskbarShowCpuTemp", "TaskbarShowGpuLoad", "TaskbarShowGpuTemp",
         "TaskbarShowMemory", "TaskbarShowDisk", "TaskbarShowUpload", "TaskbarShowDownload",

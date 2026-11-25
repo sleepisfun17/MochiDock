@@ -9,7 +9,7 @@ A native .NET 8 WPF overlay that sits at the top of your screen (or at the botto
 
 <p align="center"><a href="https://github.com/sleepisfun17/MochiDock/actions/workflows/ci.yml"><img src="https://github.com/sleepisfun17/MochiDock/actions/workflows/ci.yml/badge.svg" alt="Build and tests"></a> <a href="https://github.com/sleepisfun17/MochiDock/releases/latest"><img src="https://img.shields.io/github/v/release/sleepisfun17/MochiDock?include_prereleases&amp;label=release" alt="Latest release"></a></p>
 
-> **Beta (0.1.5-beta).** Many features have been built and unit-tested but not yet verified on a wide range of machines. See the [known limitations](CHANGELOG.md).
+> **Beta.** Many features have been built and unit-tested but not yet verified on a wide range of machines. See the [known limitations](CHANGELOG.md).
 
 <p align="center">
   <img src="docs/media/hover-expand.gif" alt="The capsule expanding on hover and collapsing again" width="660">
@@ -46,7 +46,7 @@ A new install starts small: the **Media**, **Stats** and **Weather** tabs, plus 
 | **Downloads** | A media downloader (yt-dlp and ffmpeg). | Off | Tabs |
 | **Sounds** | Short notification and Mochi sounds. | On | Notifications |
 | **Mochi** | The mascot's faces follow what is going on (music, messages, games, the weather, a hot GPU, overdue tasks…) and the card you open (Electric on the Battery page, Money on FX, the sky on Weather, Studying during a Pomodoro). He spins round in a little whirlwind when his face changes. [Every face and its trigger](docs/USER_GUIDE.md#mochis-faces). | On | Appearance & Dock (Expressive Mochi) |
-| **Updates** | Checks GitHub for a new version and shows a one-time notice when one is out. The version button at the top of the dock's quick settings checks on click and turns into **Update to x** when an update is waiting; it downloads the update, verifies its checksum, installs it silently and restarts MochiDock. Nothing installs without your click. | Check on | Quick settings button; automatic checks in Data & diagnostics |
+| **Updates** | Checks GitHub for a new version and shows a one-time capsule notice when one is out; until you dismiss that version, a small accent ↑ dot stays on the compact capsule (it steps aside for gaming, notifications and notices) and the expanded dock shows a banner with **Update**, **Release notes** and **Dismiss**. The version button at the top of the dock's quick settings checks on click and turns into **Update to x** when an update is waiting; it downloads the update, verifies its checksum, installs it silently and restarts MochiDock. Nothing installs without your click. | Check on | Quick settings button; automatic checks in Data & diagnostics |
 
 Four themes, `Default` (dark), `Hojicha` (warm roasted-tea brown with a caramel accent), `Kuro Night` (storm-night indigo with an electric-yellow accent, where Mochi becomes Kuro, a black electric cat) and `Matcha` (warm oat and green), are in Appearance & Dock, together with the Mascot (Auto, grey Mochi, Matcha Mochi, Hojicha Mochi, Kuro the black cat or Shiro the white cat, with any theme; also in the dock's quick settings), along with the dock style, date format, monitor and interface size. MochiDock is multi-monitor and high-DPI aware. The [user guide](docs/USER_GUIDE.md) explains every tab and setting.
 
