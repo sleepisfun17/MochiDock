@@ -2,6 +2,22 @@
 
 All notable changes to MochiDock are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.5.1-beta]
+
+### Added
+
+- **Themed taskbar hover card**: hovering a taskbar readout block now shows a rounded MochiDock-themed card matching the active theme and tray menu, with an icon header, live 1-second updates, warning badge, and click/right-click hint.
+- **Block-aware taskbar widget menu**: right-clicking any taskbar block now adapts to that block with quick actions to open its card, move it between the Left and Right sides of the taskbar, open Taskbar settings, or hide that specific block.
+
+### Changed
+
+- **Reorganized Quick Settings**: pinned the top status/update header above the scroll area, moved **Focus & Alerts** (Snooze, Mutes, Sounds, Gaming DND, Reminders) above the fold, grouped **Privacy & Dock** and **Look & Mascot** (including a quick **Badge** style switcher), collapsed **Tabs** by default with a live enabled count, and added `More ›` links to full Settings sections.
+- **Reorganized system tray menu**: grouped daily controls into **Quick Toggles ▸** (adding `Quiet while Gaming` and `Hide from Screen Capture`) and secondary items into **More ▸** (`Lyrics ▸`, alerts, settings files), with distinct theme-aware icons.
+
+### Fixed
+
+- Fixed taskbar hover cards spilling onto a stacked bottom second monitor or adjacent display by clamping placement strictly above a bottom taskbar (or below a top taskbar) inside that taskbar's own monitor bounds.
+
 ## [0.5.0-beta]
 
 ### Added
