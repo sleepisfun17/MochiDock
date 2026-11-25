@@ -2,6 +2,12 @@
 
 All notable changes to MochiDock are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.5.3-beta]
+
+### Changed
+
+- **Shiro & Kuro cat silhouette**: raised and sharpened the cat ears, seamlessly blended the ear bases into the head, added a subtle cat nose, `:3` mouth, and cheek whiskers (following gaze and spin) for Shiro and Kuro, enriched Shiro's inner-ear pink, and added a soft cool-white ear/tail halo for Shiro on dark themes.
+
 ## [0.5.2-beta]
 
 ### Fixed
