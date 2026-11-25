@@ -1,0 +1,84 @@
+:root {
+  color-scheme: dark;
+  background: #0a0a0a;
+  color: #fafafa;
+  font-family: "Segoe UI", system-ui, sans-serif;
+}
+
+* { box-sizing: border-box; }
+body, h1, p { margin: 0; }
+
+#film {
+  position: relative;
+  width: 1080px;
+  height: 1920px;
+  overflow: hidden;
+}
+
+.canvas {
+  position: absolute;
+  width: 1080px;
+  height: 1920px;
+  transform: scale(var(--preview-scale, 1));
+  transform-origin: top left;
+}
+
+.scene { position: absolute; inset: 0; visibility: hidden; }
+.opening { visibility: visible; }
+
+.caption, .stage, .outro-content {
+  position: absolute;
+  left: 64px;
+  width: 832px;
+}
+
+.caption { top: 22px; }
+.caption h1 { font-size: 56px; font-weight: 750; letter-spacing: -.045em; line-height: 1.06; }
+.caption p { margin-top: 9px; color: #c1c1c6; font-size: 31px; font-weight: 450; line-height: 1.16; }
+
+.stage {
+  top: 171px;
+  height: 1341px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 24px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, .12);
+  border-radius: 28px;
+  background: radial-gradient(ellipse at 50% 38%, #1b1b1f, #101012 65%);
+  box-shadow: 0 24px 65px rgba(0, 0, 0, .55);
+}
+
+.viewport {
+  position: relative;
+  flex: none;
+  width: var(--pane-width, 800px);
+  height: var(--pane-height);
+  overflow: hidden;
+  border-radius: 16px;
+  background: #0a0a0a;
+  box-shadow: 0 10px 27px rgba(0, 0, 0, .42);
+}
+
+.viewport::after {
+  position: absolute;
+  inset: 0;
+  border: 1px solid rgba(255, 255, 255, .12);
+  border-radius: inherit;
+  content: "";
+  pointer-events: none;
+}
+
+.lens { position: absolute; inset: 0; }
+.lens video { position: absolute; max-width: none; }
+.redaction { position: absolute; backdrop-filter: blur(16px); }
+.opening-detail { visibility: hidden; }
+
+.outro { background: #0a0a0a; }
+.outro-content { top: 508px; }
+.outro img { display: block; margin-bottom: 35px; }
+.outro h1 { font-size: 109px; line-height: 1; letter-spacing: -.075em; }
+.outro p { margin-top: 22px; color: #c1c1c6; font-size: 40px; line-height: 1.18; }
+.outro .address { display: inline-block; margin-top: 42px; padding: 14px 22px 16px; border: 1px solid rgba(255, 255, 255, .12); border-radius: 10px; color: #fafafa; background: #141416; font-size: 31px; }

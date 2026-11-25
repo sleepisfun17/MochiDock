@@ -1,0 +1,135 @@
+@font-face {
+  font-family: Quicksand;
+  font-weight: 600;
+  src: url("assets/Quicksand-SemiBold.ttf") format("truetype");
+}
+
+@font-face {
+  font-family: Quicksand;
+  font-weight: 700;
+  src: url("assets/Quicksand-Bold.ttf") format("truetype");
+}
+
+:root {
+  color-scheme: dark;
+  --paper: #f8f4ff;
+  --muted: #c6bedb;
+  --accent: #d7f69c;
+  --background: #171327;
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; font: 600 40px Quicksand, sans-serif; }
+
+#mochidock {
+  position: relative;
+  width: 1080px;
+  height: 1920px;
+  overflow: hidden;
+  background: var(--background);
+}
+
+.canvas {
+  position: absolute;
+  width: 1080px;
+  height: 1920px;
+  color: var(--paper);
+  background:
+    radial-gradient(ellipse at 18% 26%, #433862 0%, transparent 57%),
+    linear-gradient(160deg, #251c3d 0%, var(--background) 52%, #211832 100%);
+  transform: scale(var(--canvas-scale, 1));
+  transform-origin: top left;
+}
+
+.brand {
+  position: absolute;
+  top: 276px;
+  left: 76px;
+  right: 138px;
+  height: 62px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.wordmark { display: flex; align-items: center; gap: 16px; font-size: 35px; font-weight: 700; }
+.wordmark::before { content: ""; width: 54px; height: 54px; background: url("assets/mochi-icon.png") center / contain no-repeat; }
+.platform { color: var(--muted); font-size: 25px; }
+
+.stage {
+  position: absolute;
+  top: 386px;
+  left: 60px;
+  width: 960px;
+  height: 668px;
+  padding: 8px;
+  border: 2px solid #75658c;
+  border-radius: 34px;
+  background: #231b34;
+  box-shadow: 0 30px 75px #0b091379;
+}
+
+.mat {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border-radius: 25px;
+  background:
+    linear-gradient(90deg, transparent calc(50% - .5px), #a897bf26 50%, transparent calc(50% + .5px)),
+    radial-gradient(ellipse at 50% 45%, #63557b 0%, #302643 78%);
+}
+
+.window {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: 940px;
+  height: var(--clip-height);
+  overflow: hidden;
+  visibility: hidden;
+  border-radius: 16px;
+  box-shadow: 0 10px 30px #110e2066;
+}
+
+.window video { position: absolute; max-width: none; }
+.redaction { position: absolute; backdrop-filter: blur(12px); }
+
+.captions, .outro-copy {
+  position: absolute;
+  top: 1121px;
+  left: 80px;
+  right: 130px;
+  height: 380px;
+}
+
+.caption { position: absolute; inset: 0; }
+.label { display: block; color: var(--accent); font-size: 27px; font-weight: 700; letter-spacing: .13em; text-transform: uppercase; }
+.heading { display: block; margin-top: 19px; font-size: 91px; font-weight: 700; line-height: 1.04; letter-spacing: -.048em; }
+em { color: var(--accent); font-style: normal; }
+.detail { display: block; margin-top: 22px; color: var(--muted); font-size: 35px; line-height: 1.15; }
+
+.outro {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 50% 34%, #58466f 0%, #211832 48%, var(--background) 75%);
+}
+
+.outro-icon {
+  position: absolute;
+  top: 448px;
+  left: 178px;
+  width: 724px;
+  height: 538px;
+  display: grid;
+  place-items: center;
+  border: 2px solid #a995c47a;
+  border-radius: 50%;
+  box-shadow: 0 0 0 34px #bfa4de12, 0 0 0 68px #bfa4de09;
+}
+
+.outro-logo { width: 264px; height: 264px; background: url("assets/mochi-icon.png") center / contain no-repeat; }
+.outro-copy .heading { font-size: 120px; }
+.repository { display: inline-block; margin-top: 36px; padding: 15px 27px; border-radius: 999px; color: #261d32; background: var(--accent); font-size: 32px; font-weight: 700; }
+
+.progress { position: absolute; top: 1502px; left: 80px; right: 130px; height: 5px; overflow: hidden; border-radius: 9px; background: #ccc0e240; }
+.progress-fill { width: 100%; height: 100%; background: var(--accent); transform-origin: left; }

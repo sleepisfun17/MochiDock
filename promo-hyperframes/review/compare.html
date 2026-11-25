@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MochiDock promo comparison</title>
+  <style>
+    :root { color-scheme: dark; font: 16px/1.5 system-ui, sans-serif; background: #171420; color: #f6f1ff; }
+    * { box-sizing: border-box; }
+    body { max-width: 1050px; margin: 0 auto; padding: 24px clamp(12px, 4vw, 36px) 48px; }
+    h1, h2, p { margin: 0; }
+    h1 { font-size: clamp(26px, 5vw, 42px); }
+    h2 { font-size: 17px; }
+    .edits { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: clamp(10px, 3vw, 24px); margin: 22px 0 16px; }
+    .edit { display: grid; justify-items: center; gap: 8px; text-align: center; }
+    video { display: block; width: 100%; max-width: 340px; max-height: 66vh; aspect-ratio: 9 / 16; background: #0e0c15; border-radius: 10px; }
+    .controls { display: flex; align-items: center; gap: 12px; max-width: 690px; margin: 0 auto; }
+    button { border: 0; border-radius: 6px; padding: 8px 12px; background: #302940; color: inherit; font: inherit; cursor: pointer; }
+    #play { min-width: 104px; background: #d7f69c; color: #1f1928; font-weight: 700; }
+    input { flex: 1; min-width: 40px; accent-color: #d7f69c; }
+    output { font-variant-numeric: tabular-nums; }
+    .chapters { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; margin: 10px 0 26px; }
+    .chapters button { font-size: 13px; }
+    .spec { color: #c6bedb; font-size: 13px; }
+    .storyboard { display: block; width: 100%; margin-top: 8px; }
+    a { color: #d7f69c; }
+  </style>
+</head>
+<body>
+  <h1>MochiDock promo comparison</h1>
+  <div class="edits">
+    <section class="edit" aria-labelledby="draft-title">
+      <h2 id="draft-title">HyperFrames draft</h2>
+      <video id="draft" src="mochidock-hyperframes-draft.mp4" muted playsinline preload="auto" aria-label="HyperFrames draft"></video>
+      <p class="spec">540 × 960 · 30 fps · silent</p>
+    </section>
+    <section class="edit" aria-labelledby="reference-title">
+      <h2 id="reference-title">Approved Remotion</h2>
+      <video id="reference" src="../../promo/out/mochidock-short.mp4" muted playsinline preload="auto" aria-label="Approved Remotion reference"></video>
+      <p class="spec">1080 × 1920 · 30 fps · silent</p>
+    </section>
+  </div>
+  <div class="controls">
+    <button id="play" type="button">Play both</button>
+    <input id="seek" type="range" min="0" max="31.9667" step="0.0333333" value="0" aria-label="Seek both edits">
+    <output id="time" for="seek">00.0 / 32 s</output>
+  </div>
+  <nav class="chapters" aria-label="Jump to a beat">
+    <button type="button" data-at="0">Idle</button>
+    <button type="button" data-at="2.60">Media open</button>
+    <button type="button" data-at="4.20">CPU</button>
+    <button type="button" data-at="9.20">Power</button>
+    <button type="button" data-at="11.50">Gaming</button>
+    <button type="button" data-at="13.80">FX</button>
+    <button type="button" data-at="16.30">Weather</button>
+    <button type="button" data-at="18.80">Prayer</button>
+    <button type="button" data-at="21.20">Lyrics</button>
+    <button type="button" data-at="24.10">Themes</button>
+    <button type="button" data-at="27.05">Mascots</button>
+    <button type="button" data-at="30.30">End card</button>
+  </nav>
+  <h2>Storyboard</h2>
+  <a href="mochidock-hyperframes-storyboard.png" aria-label="Open the full-size comparison storyboard">
+    <img class="storyboard" src="mochidock-hyperframes-storyboard.png" alt="Twelve matched-time frame pairs from the two edits">
+  </a>
+  <script>
+    const draft = document.getElementById('draft');
+    const reference = document.getElementById('reference');
+    const play = document.getElementById('play');
+    const seek = document.getElementById('seek');
+    const time = document.getElementById('time');
+
+    function updateTime() {
+      seek.value = draft.currentTime;
+      time.value = `${draft.currentTime.toFixed(1).padStart(4, '0')} / 32 s`;
+    }
+
+    function jump(seconds) {
+      draft.currentTime = seconds;
+      reference.currentTime = seconds;
+      updateTime();
+    }
+
+    play.addEventListener('click', async () => {
+      if (!draft.paused) {
+        draft.pause();
+        reference.pause();
+        return;
+      }
+      if (draft.ended) jump(0);
+      try {
+        await Promise.all([draft.play(), reference.play()]);
+      } catch {
+        draft.pause();
+        reference.pause();
+        time.value = 'Playback unavailable';
+      }
+    });
+    draft.addEventListener('play', () => { play.textContent = 'Pause both'; });
+    draft.addEventListener('pause', () => { play.textContent = 'Play both'; });
+    draft.addEventListener('timeupdate', () => {
+      if (!draft.paused && Math.abs(draft.currentTime - reference.currentTime) > 0.16) {
+        reference.currentTime = draft.currentTime;
+      }
+      updateTime();
+    });
+    seek.addEventListener('input', () => jump(Number(seek.value)));
+    document.querySelectorAll('[data-at]').forEach(button => {
+      button.addEventListener('click', () => jump(Number(button.dataset.at)));
+    });
+  </script>
+</body>
+</html>

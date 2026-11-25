@@ -315,6 +315,13 @@ SOFTWARE.
 - ffmpeg (Downloads card MP3 extraction and stream merging), LGPL 2.1+ or GPL 2+ depending on the build. Not bundled by default; placing ffmpeg.exe in installer\redist or the Tools folder means redistributing a build under its own licence. Source and licence: https://ffmpeg.org/legal.html
 
 ==============================================================================
+HyperFrames promo tooling (separate from the app)
+
+- HyperFrames, Apache License 2.0. Source: https://github.com/heygen-com/hyperframes
+- GSAP, GSAP Standard License. Source: https://gsap.com/standard-license/
+- The promo reuses the Quicksand font files credited above.
+
+==============================================================================
 Online data sources (no code included)
 
 - Weather and the weather used for prayer times: Open-Meteo

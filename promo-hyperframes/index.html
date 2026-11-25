@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MochiDock for Windows</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main id="mochidock" data-composition-id="mochidock" data-start="0" data-duration="32" data-width="1080" data-height="1920" data-fps="30">
+    <div class="canvas">
+      <header class="brand">
+        <div class="wordmark">MochiDock</div>
+        <div class="platform">For Windows</div>
+      </header>
+
+      <div class="stage" aria-hidden="true">
+        <div class="mat">
+          <div class="window opening" data-crop="16 0 798 217" data-source="880 580">
+            <video id="idle-media" class="clip" src="assets/promo-idle-media.mp4" data-start="0" data-duration="3.1" data-track-index="1" data-media-start="1.033333" muted playsinline></video>
+          </div>
+          <div class="window" data-crop="16 0 798 436" data-source="880 580">
+            <video id="cpu" class="clip" src="assets/promo-cpu-ready.mp4" data-start="3.1" data-duration="2.2" data-track-index="1" data-media-start="0.5" muted playsinline></video>
+          </div>
+          <div class="window" data-crop="26 0 778 436" data-source="880 580">
+            <video id="gpu" class="clip" src="assets/promo-stats-tour.mp4" data-start="5.3" data-duration="1" data-track-index="1" data-media-start="4.166667" muted playsinline></video>
+          </div>
+          <div class="window" data-crop="26 0 778 436" data-source="880 580">
+            <video id="ram" class="clip" src="assets/promo-stats-tour.mp4" data-start="6.3" data-duration="1" data-track-index="1" data-media-start="6.866667" muted playsinline></video>
+          </div>
+          <div class="window" data-crop="26 0 778 436" data-source="880 580" data-cover="54 155 109 183">
+            <video id="drives" class="clip" src="assets/promo-stats-tour.mp4" data-start="7.3" data-duration="1.1" data-track-index="1" data-media-start="9.6" muted playsinline></video>
+            <div class="redaction" data-layout-ignore></div>
+          </div>
+          <div class="window" data-crop="26 0 778 436" data-source="880 580">
+            <video id="power" class="clip" src="assets/promo-stats-tour.mp4" data-start="8.4" data-duration="1.9" data-track-index="1" data-media-start="12.166667" muted playsinline></video>
+          </div>
+          <div class="window" data-crop="244 0 612 265" data-source="1100 420">
+            <video id="gaming" class="clip" src="assets/promo-gaming.mp4" data-start="10.3" data-duration="2.4" data-track-index="1" data-media-start="2" muted playsinline></video>
+          </div>
+          <div class="window" data-crop="24 0 782 454" data-source="880 580">
+            <video id="fx" class="clip" src="assets/promo-fx.mp4" data-start="12.7" data-duration="2.5" data-track-index="1" data-media-start="2" muted playsinline></video>
+          </div>
+          <div class="window" data-crop="24 0 782 347" data-source="880 580">
+            <video id="weather" class="clip" src="assets/promo-weather.mp4" data-start="15.2" data-duration="2.4" data-track-index="1" data-media-start="2.8" muted playsinline></video>
+          </div>
+          <div class="window" data-crop="24 0 782 342" data-source="880 580">
+            <video id="prayer" class="clip" src="assets/promo-prayer.mp4" data-start="17.6" data-duration="2.4" data-track-index="1" data-media-start="0.8" muted playsinline></video>
+          </div>
+          <div class="window" data-crop="24 0 782 216" data-source="880 580">
+            <video id="lyrics" class="clip" src="assets/promo-media.mp4" data-start="20" data-duration="2.5" data-track-index="1" data-media-start="1.2" muted playsinline></video>
+          </div>
+          <div class="window" data-crop="24 0 782 503" data-source="880 580">
+            <video id="theme" class="clip" src="assets/promo-theme.mp4" data-start="22.5" data-duration="3.1" data-track-index="1" data-media-start="1.466667" data-playback-rate="1.9" muted playsinline></video>
+          </div>
+          <div class="window" data-crop="24 0 782 503" data-source="880 580">
+            <video id="mascot" class="clip" src="assets/promo-mascot.mp4" data-start="25.6" data-duration="3.1" data-track-index="1" data-media-start="1.5" data-playback-rate="1.9" muted playsinline></video>
+          </div>
+        </div>
+      </div>
+
+      <div class="captions">
+        <section id="caption-hover" class="clip caption" data-start="0" data-duration="3.1" data-track-index="2">
+          <span class="label">The dock</span><span class="heading">Hover to <em>open.</em></span>
+          <span class="detail">Your media controls are right there.</span>
+        </section>
+        <section id="caption-stats" class="clip caption" data-start="3.1" data-duration="4.2" data-track-index="2">
+          <span class="label">Live stats</span><span class="heading">CPU, GPU<br><em>&amp; memory.</em></span>
+          <span class="detail">See what your PC is doing.</span>
+        </section>
+        <section id="caption-power" class="clip caption" data-start="7.3" data-duration="3" data-track-index="2">
+          <span class="label">Disk, network &amp; power</span><span class="heading">Track your<br><em>power use.</em></span>
+          <span class="detail">See estimated watts over time.</span>
+        </section>
+        <section id="caption-gaming" class="clip caption" data-start="10.3" data-duration="2.4" data-track-index="2">
+          <span class="label">Gaming mode</span><span class="heading">See PC load<br><em>while you play.</em></span>
+        </section>
+        <section id="caption-fx" class="clip caption" data-start="12.7" data-duration="2.5" data-track-index="2">
+          <span class="label">FX rates</span><span class="heading">See how exchange<br><em>rates move.</em></span>
+        </section>
+        <section id="caption-weather" class="clip caption" data-start="15.2" data-duration="2.4" data-track-index="2">
+          <span class="label">Weather</span><span class="heading">Check the next<br><em>few hours.</em></span>
+        </section>
+        <section id="caption-prayer" class="clip caption" data-start="17.6" data-duration="2.4" data-track-index="2">
+          <span class="label">Prayer times</span><span class="heading">See the next<br><em>prayer time.</em></span>
+        </section>
+        <section id="caption-lyrics" class="clip caption" data-start="20" data-duration="2.5" data-track-index="2">
+          <span class="label">Media</span><span class="heading">Follow along<br><em>with lyrics.</em></span>
+        </section>
+        <section id="caption-theme" class="clip caption" data-start="22.5" data-duration="3.1" data-track-index="2">
+          <span class="label">Themes</span><span class="heading">Match your<br><em>desktop.</em></span>
+        </section>
+        <section id="caption-mascot" class="clip caption" data-start="25.6" data-duration="3.1" data-track-index="2">
+          <span class="label">Mascots</span><span class="heading">Pick your<br><em>dock mascot.</em></span>
+        </section>
+      </div>
+
+      <section id="end-card" class="clip outro" data-start="28.7" data-duration="3.3" data-track-index="2">
+        <span class="outro-icon"><span class="outro-logo" aria-hidden="true"></span></span>
+        <span class="outro-copy">
+          <span class="label">A desktop dock for Windows</span>
+          <span class="heading">MochiDock</span>
+          <span class="repository">github.com/sleepisfun17/MochiDock</span>
+        </span>
+      </section>
+
+      <div class="progress" aria-hidden="true"><div class="progress-fill"></div></div>
+    </div>
+  </main>
+  <script src="assets/gsap.min.js"></script>
+  <script src="timeline.js"></script>
+</body>
+</html>

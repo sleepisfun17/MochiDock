@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MochiDock v2</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main id="film" data-composition-id="mochidock-v2" data-start="0" data-duration="44" data-width="1080" data-height="1920" data-fps="30">
+    <div class="canvas">
+      <article id="media" class="scene opening" aria-labelledby="media-title">
+        <header class="caption">
+          <h1 id="media-title">Media Controls and Lyrics</h1>
+          <p>Hover for playback controls and follow lyrics as songs play.</p>
+        </header>
+        <div class="stage" aria-hidden="true">
+          <div class="viewport overview" data-crop="20 0 790 226" data-zoom="1.10" data-focus="54 0">
+            <div class="lens"><video id="media-hover" class="clip" src="assets/promo-idle-media.mp4" data-start="0" data-duration="6.95" data-track-index="1" data-media-start="1.04" data-playback-rate="0.95" muted playsinline></video></div>
+          </div>
+          <div class="viewport opening-detail" data-crop="431 0 380 226" data-zoom="1.14" data-focus="72 24">
+            <div class="lens"><video id="media-lyrics" class="clip" src="assets/promo-media.mp4" data-start="2.9" data-duration="4.05" data-track-index="2" data-media-start="1.2" data-playback-rate="0.90" muted playsinline></video></div>
+          </div>
+        </div>
+      </article>
+
+      <article id="stats" class="scene" aria-labelledby="stats-title">
+        <header class="caption">
+          <h1 id="stats-title">Live PC Performance</h1>
+          <p>Check processor, graphics, and memory usage in one dashboard.</p>
+        </header>
+        <div class="stage" aria-hidden="true">
+          <div class="viewport" data-crop="22 0 786 436" data-zoom="1.012" data-focus="50 0">
+            <div class="lens"><video id="stats-overview" class="clip" src="assets/promo-cpu-ready.mp4" data-start="6.5" data-duration="6.45" data-track-index="3" data-media-start="0.42" data-playback-rate="0.68" muted playsinline></video></div>
+          </div>
+          <div class="viewport" data-width="690" data-crop="263 111 324 314" data-zoom="1.13" data-focus="57 45">
+            <div class="lens"><video id="stats-detail" class="clip" src="assets/promo-cpu-ready.mp4" data-start="6.5" data-duration="6.45" data-track-index="4" data-media-start="0.42" data-playback-rate="0.68" muted playsinline></video></div>
+          </div>
+        </div>
+      </article>
+
+      <article id="power" class="scene" aria-labelledby="power-title">
+        <header class="caption">
+          <h1 id="power-title">Power Over Time</h1>
+          <p>See estimated power use and how it changes over time.</p>
+        </header>
+        <div class="stage" aria-hidden="true">
+          <div class="viewport" data-crop="22 0 786 306" data-zoom="1.016" data-focus="50 0">
+            <div class="lens"><video id="power-overview" class="clip" src="assets/promo-stats-tour.mp4" data-start="12.5" data-duration="5.45" data-track-index="1" data-media-start="12.15" data-playback-rate="0.50" muted playsinline></video></div>
+          </div>
+          <div class="viewport" data-crop="224 119 569 235" data-zoom="1.18" data-focus="58 54">
+            <div class="lens"><video id="power-detail" class="clip" src="assets/promo-stats-tour.mp4" data-start="12.5" data-duration="5.45" data-track-index="2" data-media-start="12.15" data-playback-rate="0.50" muted playsinline></video></div>
+          </div>
+        </div>
+      </article>
+
+      <article id="gaming" class="scene" aria-labelledby="gaming-title">
+        <header class="caption">
+          <h1 id="gaming-title">Stats While Gaming</h1>
+          <p>Watch CPU and GPU load without leaving your game.</p>
+        </header>
+        <div class="stage" aria-hidden="true">
+          <div class="viewport" data-source-width="1100" data-source-height="420" data-crop="136 0 828 420" data-zoom="1.10" data-focus="50 0">
+            <div class="lens"><video id="game-overview" class="clip" src="assets/promo-gaming.mp4" data-start="17.5" data-duration="5.95" data-track-index="3" data-media-start="2" data-playback-rate="0.83" muted playsinline></video></div>
+          </div>
+          <div class="viewport" data-source-width="1100" data-source-height="420" data-width="738" data-crop="322 0 456 377" data-zoom="1.14" data-focus="50 0">
+            <div class="lens"><video id="game-detail" class="clip" src="assets/promo-gaming.mp4" data-start="17.5" data-duration="5.95" data-track-index="4" data-media-start="2" data-playback-rate="0.83" muted playsinline></video></div>
+          </div>
+        </div>
+      </article>
+
+      <article id="rates" class="scene" aria-labelledby="rates-title">
+        <header class="caption">
+          <h1 id="rates-title">Exchange Rates at a Glance</h1>
+          <p>Check exchange rates and recent trends before converting currencies.</p>
+        </header>
+        <div class="stage" aria-hidden="true">
+          <div class="viewport" data-crop="21 0 789 455" data-zoom="1.016" data-focus="50 0">
+            <div class="lens"><video id="fx-overview" class="clip" src="assets/promo-fx.mp4" data-start="23" data-duration="5.95" data-track-index="1" data-media-start="1.1" data-playback-rate="0.60" muted playsinline></video></div>
+          </div>
+          <div class="viewport" data-crop="43 181 739 259" data-zoom="1.16" data-focus="71 49">
+            <div class="lens"><video id="fx-detail" class="clip" src="assets/promo-fx.mp4" data-start="23" data-duration="5.95" data-track-index="2" data-media-start="1.1" data-playback-rate="0.60" muted playsinline></video></div>
+          </div>
+        </div>
+      </article>
+
+      <article id="daily" class="scene" aria-labelledby="daily-title">
+        <header class="caption">
+          <h1 id="daily-title">Weather and Prayer</h1>
+          <p>Check the hourly forecast and see when the next prayer starts.</p>
+        </header>
+        <div class="stage" aria-hidden="true">
+          <div class="viewport" data-crop="23 0 788 346" data-zoom="1.022" data-focus="48 17">
+            <div class="lens"><video id="weather-forecast" class="clip" src="assets/promo-weather.mp4" data-start="28.5" data-duration="6.45" data-track-index="3" data-media-start="2.8" data-playback-rate="0.61" muted playsinline></video></div>
+          </div>
+          <div class="viewport" data-crop="23 0 788 341" data-zoom="1.022" data-focus="42 26">
+            <div class="lens"><video id="prayer-countdown" class="clip" src="assets/promo-prayer.mp4" data-start="28.5" data-duration="6.45" data-track-index="4" data-media-start="0.9" data-playback-rate="0.55" muted playsinline></video></div>
+          </div>
+          <div class="viewport" data-width="703" data-crop="33 45 323 132" data-zoom="1.18" data-focus="34 49">
+            <div class="lens"><video id="prayer-detail" class="clip" src="assets/promo-prayer.mp4" data-start="28.5" data-duration="6.45" data-track-index="5" data-media-start="0.9" data-playback-rate="0.55" muted playsinline></video></div>
+          </div>
+        </div>
+      </article>
+
+      <article id="appearance" class="scene" aria-labelledby="appearance-title">
+        <header class="caption">
+          <h1 id="appearance-title">Make the Dock Yours</h1>
+          <p>Switch themes and pick a mascot to personalize your dock.</p>
+        </header>
+        <div class="stage" aria-hidden="true">
+          <div class="viewport" data-crop="22 0 789 507" data-zoom="1.016" data-focus="52 9" data-cover="41 68 278 40">
+            <div class="lens">
+              <video id="appearance-theme" class="clip" src="assets/promo-theme.mp4" data-start="34.5" data-duration="6.45" data-track-index="1" data-media-start="1" data-playback-rate="1.04" muted playsinline></video>
+              <div class="redaction"></div>
+            </div>
+          </div>
+          <div class="viewport" data-crop="27 0 720 328" data-zoom="1.075" data-focus="30 4" data-cover="41 68 278 40">
+            <div class="lens">
+              <video id="appearance-mascot" class="clip" src="assets/promo-mascot.mp4" data-start="34.5" data-duration="6.45" data-track-index="2" data-media-start="0.85" data-playback-rate="1.06" muted playsinline></video>
+              <div class="redaction"></div>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <article id="end-card" class="scene outro" aria-labelledby="outro-title">
+        <div class="outro-content">
+          <img src="assets/mochi-icon.png" alt="" width="145" height="145">
+          <h1 id="outro-title">MochiDock</h1>
+          <p>Keep media, PC stats, and daily tools in one Windows dock.</p>
+          <p class="address">github.com/sleepisfun17/MochiDock</p>
+        </div>
+      </article>
+    </div>
+  </main>
+  <script src="assets/gsap.min.js"></script>
+  <script src="timeline.js"></script>
+</body>
+</html>

@@ -6,6 +6,9 @@ param([string]$OutDir = (Join-Path $PSScriptRoot '..\..\promo\clips'),
 # README clips (capture-clips.ps1) are not touched. Needs an ELEVATED shell, the backdrop window (backdrop.ps1) and the tabs used below
 # switched on; MochiDock is never launched from here. Keep the mouse still while it runs (about two minutes).
 # -Only promo-media,promo-stats records just those clips.
+# -Only promo-stats-tour records the live CPU, GPU, Memory, Drives and Power pages in one take.
+# -Only promo-idle-hover records the resting capsule opening directly into Stats. Pause media first.
+# -Only promo-idle-media,promo-cpu-ready records the resting capsule opening into Media and the loaded CPU page.
 # promo-gaming is never part of the default run: record it with -Only promo-gaming (or -Gaming, which records only that clip). Do NOT run the
 # backdrop for it (the backdrop would cover the game). It counts down (-GamingCountdown seconds) so a game can be put in borderless windowed
 # mode (or fullscreen with fullscreen optimizations; not exclusive fullscreen), then records -GamingSeconds of the top of the screen,
@@ -55,8 +58,19 @@ function Finish-Clip($p, [string]$name, [string]$blur = '') {
   } else { Move-Item -Force $raw $out }
   '{0}: {1:N1} MB' -f $out, ((Get-Item $out).Length / 1MB)
 }
-function Want([string]$name) { if ($Only.Count -eq 0) { return $name -ne 'promo-gaming' }; $Only -contains $name }
+function Want([string]$name) {
+  if ($Only.Count -eq 0) { return $name -notin 'promo-gaming', 'promo-stats-tour', 'promo-idle-hover', 'promo-idle-media', 'promo-cpu-ready' }
+  return $Only -contains $name
+}
 function Away { Move-Mouse ($dock.L - 150) 3 15; Move-Mouse ($dock.L - 150) 700 15 }
+function Get-StatsChipRect([string]$label) {
+  $chip = Find-Control $label 'ControlType.Text'
+  if (-not $chip -and $label -eq 'Power') { $chip = Find-Control 'Battery' 'ControlType.Text' }
+  if (-not $chip -or $chip.Current.IsOffscreen -or $chip.Current.BoundingRectangle.IsEmpty) {
+    throw "Could not locate the Stats chip '$label'. Make sure the full Stats card is visible."
+  }
+  return $chip.Current.BoundingRectangle
+}
 # Records one card: opens its tab before recording (so the clip starts on it), then holds still.
 function Card([string]$name, [string]$tip, [int]$seconds, [scriptblock]$prepare = $null) {
   if (-not (Want $name)) { return }
@@ -95,13 +109,59 @@ if (Want 'promo-hover') {
   Finish-Clip $p 'promo-hover'
 }
 
+function Record-IdleHover([string]$name, [string]$tab) {
+  if (-not (Want $name)) { return }
+  $center = [int](($dock.L + $dock.R) / 2)
+  Move-Mouse $center ($dock.T + 3) 15
+  Start-Sleep -Milliseconds 1600
+  Click-TabNamed $tab
+  Rest-Mouse
+  if ($tab -eq 'System Performance') { Click-Rect (Get-StatsChipRect 'CPU') }
+  Away
+  Start-Sleep -Milliseconds 2200
+
+  $p = Start-Clip $name 8
+  Start-Sleep -Milliseconds 1200
+  Move-Mouse $center ($dock.T + 3) 28 13
+  Finish-Clip $p $name
+}
+Record-IdleHover 'promo-idle-hover' 'System Performance'
+Record-IdleHover 'promo-idle-media' 'Media Player'
+
 # 2. Cards, each held long enough to cut from. Clipboard, Today, AI usage and the message cards are never recorded (personal data).
-if ('promo-media', 'promo-stats', 'promo-weather', 'promo-prayer', 'promo-fx' | Where-Object { Want $_ }) { Move-Mouse ($dock.L + 340) 12 20; Start-Sleep -Milliseconds 1600 }
+if ('promo-media', 'promo-stats', 'promo-cpu-ready', 'promo-weather', 'promo-prayer', 'promo-fx' | Where-Object { Want $_ }) { Move-Mouse ($dock.L + 340) 12 20; Start-Sleep -Milliseconds 1600 }
 Card 'promo-media' 'Media Player' 8
 Card 'promo-stats' 'System Performance' 7 { Rest-Mouse; Click-At ($dock.L + 85) 62 }   # the CPU chip (live hardware page)
+Card 'promo-cpu-ready' 'System Performance' 5 {
+  Rest-Mouse
+  Click-Rect (Get-StatsChipRect 'CPU')
+  Move-Mouse ($dock.L + 340) ($dock.T + 3) 10
+  Start-Sleep -Milliseconds 3000
+}
 Card 'promo-weather' 'Weather Forecast' 7 { Start-Sleep 3 }   # the hourly strip loads a moment after the page opens
 Card 'promo-prayer' 'Islamic Prayer Times' 5
 Card 'promo-fx' 'FX Rates' 5
+
+if (Want 'promo-stats-tour') {
+  Move-Mouse ($dock.L + 340) ($dock.T + 3) 15
+  Start-Sleep -Milliseconds 1600
+  Click-TabNamed 'System Performance'
+  Rest-Mouse
+
+  # Button labels stay in the same row as the dashboard changes. Battery is called Power on desktops.
+  $chipRects = foreach ($label in 'CPU', 'GPU', 'Memory', 'Drives', 'Power') {
+    Get-StatsChipRect $label
+  }
+  Click-Rect $chipRects[0]
+  Rest-Mouse
+  $p = Start-Clip 'promo-stats-tour' 15
+  foreach ($rect in $chipRects | Select-Object -Skip 1) {
+    Start-Sleep -Milliseconds 2200
+    Click-Rect $rect
+    Move-Mouse ($dock.L + 340) ($dock.T + 3) 10
+  }
+  Finish-Clip $p 'promo-stats-tour'
+}
 
 # 3. Theme and mascot switches in quick settings; the look in use before is put back afterwards.
 if ((Want 'promo-theme') -or (Want 'promo-mascot')) {

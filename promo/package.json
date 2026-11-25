@@ -5,7 +5,7 @@
     "clips": "pwsh -NoProfile -File prepare-clips.ps1",
     "studio": "remotion studio src/index.ts",
     "render": "remotion render src/index.ts MochiDockShort out/mochidock-short.mp4",
-    "cover": "remotion still src/index.ts MochiDockShort out/cover.png --frame=60"
+    "cover": "remotion still src/index.ts MochiDockShort out/cover.png --frame=120"
   },
   "dependencies": {
     "@remotion/cli": "4.0.547",
