@@ -43,17 +43,17 @@
                 <Path x:Name="HeadbandBack" Data="M 1.5,9 C 1.5,-4.5 28.5,-4.5 28.5,9" Stroke="#3A3D4A" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
             </Canvas>
 
-            <!-- Kuro (KuroNight theme only): the ears behind the body, tips about 3 units above the box; one glow effect for both -->
+            <!-- Kuro & Shiro: the ears behind the body, taller pointed silhouette so both cats read cleanly even at 22 x 19; one glow effect for both -->
             <Canvas x:Name="KuroEars" Visibility="Collapsed" Width="30" Height="26" IsHitTestVisible="False">
                 <Canvas.Effect>
                     <DropShadowEffect x:Name="EarGlow" BlurRadius="5" ShadowDepth="0" Color="#FFD43B" Opacity="0.55" />
                 </Canvas.Effect>
-                <Path x:Name="EarLeft" Data="M 2.6,9 L 3.4,-0.6 Q 3.7,-3 5.6,-2.2 L 12.6,2.6 L 12.6,8 Z"
+                <Path x:Name="EarLeft" Data="M 2.2,9.2 L 2.7,-1.6 Q 3.0,-4.6 5.4,-3.4 L 12.8,2.2 L 12.8,8 Z"
                       Fill="#3B3D52" Stroke="#FFD43B" StrokeThickness="0.6" StrokeLineJoin="Round" />
-                <Path x:Name="EarRight" Data="M 27.4,9 L 26.6,-0.6 Q 26.3,-3 24.4,-2.2 L 17.4,2.6 L 17.4,8 Z"
+                <Path x:Name="EarRight" Data="M 27.8,9.2 L 27.3,-1.6 Q 27.0,-4.6 24.6,-3.4 L 17.2,2.2 L 17.2,8 Z"
                       Fill="#3B3D52" Stroke="#FFD43B" StrokeThickness="0.6" StrokeLineJoin="Round" />
-                <Path x:Name="InnerEarLeft" Data="M 5.2,6 L 5.4,0.6 L 9.6,3.4 Z" Fill="#FFD43B" Opacity="0.55" />
-                <Path x:Name="InnerEarRight" Data="M 24.8,6 L 24.6,0.6 L 20.4,3.4 Z" Fill="#FFD43B" Opacity="0.55" />
+                <Path x:Name="InnerEarLeft" Data="M 4.9,5.8 L 5.1,-1.0 L 10.0,2.8 Z" Fill="#FFD43B" Opacity="0.55" />
+                <Path x:Name="InnerEarRight" Data="M 25.1,5.8 L 24.9,-1.0 L 20.0,2.8 Z" Fill="#FFD43B" Opacity="0.55" />
             </Canvas>
 
             <!-- Kuro's tail (KuroNight theme only): a filled tail tapering to a curled tip, behind the body so the body hides its base. It pokes out
@@ -274,6 +274,16 @@
                             <Path Data="M 12.8,11.4 Q 15,10.4 17.2,11.4" Stroke="{DynamicResource MascotInkBrush}" StrokeThickness="0.8" StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
                             <Path Data="M 7.6,11.4 L 9.2,11.4 M 18.4,11.4 L 20,11.4" Stroke="#9CC9FF" StrokeThickness="0.6" StrokeStartLineCap="Round" StrokeEndLineCap="Round" Opacity="0.85" />
                         </Canvas>
+                        <!-- Cat facial details (Kuro & Shiro only): tiny nose, :3 mouth and subtle whiskers; follows gaze and spin -->
+                        <Canvas x:Name="CatFaceFeatures" Visibility="Collapsed" IsHitTestVisible="False" UseLayoutRounding="False" SnapsToDevicePixels="False">
+                            <Ellipse x:Name="CatNose" Canvas.Left="14.1" Canvas.Top="14.5" Width="1.8" Height="1.2" Fill="#F08CA4" />
+                            <Path x:Name="CatMouth" Data="M 12.6,16.4 Q 13.8,17.8 15.0,16.4 Q 16.2,17.8 17.4,16.4"
+                                  Stroke="{DynamicResource MascotEyeBrush}" StrokeThickness="1.05"
+                                  StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" Fill="Transparent" />
+                            <Path x:Name="CatWhiskers" Data="M 1.8,14.5 L 5.2,15.2 M 2.0,17.1 L 5.3,16.5 M 28.2,14.5 L 24.8,15.2 M 28.0,17.1 L 24.7,16.5"
+                                  Stroke="{DynamicResource MascotEyeBrush}" StrokeThickness="0.85"
+                                  StrokeStartLineCap="Round" StrokeEndLineCap="Round" Opacity="0.62" />
+                        </Canvas>
                     </Canvas>
                     <!-- Vector Sweat Droplet (Shown when GPU/CPU runs hot) -->
                     <Path x:Name="SweatDrop" Visibility="Collapsed" IsHitTestVisible="False"
@@ -284,6 +294,12 @@
                     </Grid>
                 </Grid>
             </Border>
+
+            <!-- Blends cat ear bases seamlessly into the forehead so the squircle border does not slice across the ears -->
+            <Canvas x:Name="CatEarBlend" Visibility="Collapsed" Width="30" Height="26" IsHitTestVisible="False">
+                <Path x:Name="EarBlendLeft" Data="M 2.9,3.8 Q 5.2,0.5 9.6,0.1 L 9.5,2.4 Q 5.8,2.5 3.6,5.2 Z" Fill="#F4F4F8" />
+                <Path x:Name="EarBlendRight" Data="M 27.1,3.8 Q 24.8,0.5 20.4,0.1 L 20.5,2.4 Q 24.2,2.5 26.4,5.2 Z" Fill="#F4F4F8" />
+            </Canvas>
 
 
             <!-- Faces: things outside the body (icicles, dizzy stars, confetti, bolts); every child starts collapsed. The meaning of a face
