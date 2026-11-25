@@ -20,3 +20,15 @@ Before capturing: turn on the tabs the scripts visit (Media, Stats, Weather, Pom
 `tools/capture/capture-lib.ps1` holds the shared helpers (dock lookup, auto-crop, mouse movement, redaction, and `Set-Theme` / `Set-Mascot` / `Get-Look` / `Restore-Look`, which click the quick-settings radios by their AutomationId because the labels "Matcha" and "Hojicha" appear in both the Theme and the Mascot row). Review every image for private data before committing, and put your settings back (theme, Pomodoro tab, Stats module) when done.
 
 Not captured: the Gaming readout, notification capsules, and the WhatsApp, Email and Discord cards (they show real conversations).
+
+## Promo video (Shorts / Reels)
+
+`promo/` is a [Remotion](https://www.remotion.dev) project (an npm dependency under its own licence, free for individuals and small teams; not part of the app) that edits recorded clips into a 1080 x 1920, 30 fps vertical video (`MochiDockShort`, about 34 s). Rendering runs on the CPU; no GPU is needed. Recorded clips, renders, music and `node_modules` are git-ignored; only the source is committed.
+
+1. Prerequisites: ffmpeg (`winget install Gyan.FFmpeg`) and Node.js (`winget install OpenJS.NodeJS.LTS`).
+2. Start MochiDock yourself, turn off "Exclude from screen capture", switch on the Media, Stats, Weather, Prayer and FX Rates tabs, and play a track you may publish (Pixabay Music or the YouTube Audio Library; most are instrumental, so the Media card shows no lyrics).
+3. From the repository root, in an **elevated** PowerShell, start `pwsh -NoProfile -STA -File tools/capture/backdrop.ps1`; in a second elevated window run `pwsh -NoProfile -STA -File tools/capture/capture-promo.ps1` and leave the mouse alone for about two minutes. It writes `promo/clips/promo-*.mp4` (hover, media, stats, weather, prayer, fx, theme, mascot), blurs the integration status line in the quick-settings clips, and puts the theme and mascot back. Options: `-Only promo-media,promo-hover` re-records single clips; `-Width` / `-Height` (default 660 x 420 physical pixels) widen the area on a high-DPI screen, for example `-Width 990 -Height 630` at 150 % scaling (the Remotion crop heights in `promo/src/MochiDockShort.tsx` assume 660 x 420 and scale with the width).
+4. Review every clip for private data. If a clip shows cover art or lyrics you may not publish, make a `<name>-blur.mp4` beside it (ffmpeg `crop` + `boxblur` + `overlay` over the cover, title and lyric areas, as was done for the first cut); `prepare-clips.ps1` prefers it.
+5. In `promo/`: `npm install`, then `npm run clips` (copies the clips into `public/clips`), `npm run studio` to preview, `npm run render` for `out/mochidock-short.mp4` and `npm run cover` for a cover frame.
+
+Gaming mode is not scripted (it needs a running game); record it with OBS if wanted and add a scene for it in `MochiDockShort.tsx`.

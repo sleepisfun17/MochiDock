@@ -37,3 +37,10 @@ MochiDockDEV.lnk
 
 # WPF temporary project files created during a build
 *_wpftmp.csproj
+
+# Promo video: recorded clips, music, renders and node modules stay local
+promo/clips/
+promo/out/
+promo/music.*
+promo/node_modules/
+promo/public/clips/
