@@ -818,6 +818,12 @@ public partial class MainViewModel : INotifyPropertyChanged
                 {
                     _autoCollapseTimer.Stop();
                 }
+                if (!_isExpanded && _pendingUpdateNotice != null)
+                {
+                    System.Windows.Application.Current?.Dispatcher.BeginInvoke(
+                        System.Windows.Threading.DispatcherPriority.Background,
+                        new Action(OnDockCollapsedForUpdateNotice));
+                }
             }
         }
     }
@@ -1436,7 +1442,16 @@ public partial class MainViewModel : INotifyPropertyChanged
     public Func<bool>? IsDockInteractionActive {get;set;}
     public bool IsHardwareNoticeVisible => !_hardwarePresentationSuppressed && (EnableHardwareAlerts || _noticeIsAi || _noticeIsAgenda || _noticeIsGame || _noticeIsDevice || _noticeIsWeather || _noticeIsUpdate) && !_isWorkstationLocked && _displayAwake && !_wasGaming && !IsNotificationInMainPill && !IsPrayerReminderVisible && ShouldShowNotification("Hardware") && DateTimeOffset.UtcNow<_hardwareNoticeUntil;
     public string HardwareNoticeText => _hardwareNoticeText;
-    private void NotifyHardwareNotice(){OnPropertyChanged(nameof(IsHardwareNoticeVisible));OnPropertyChanged(nameof(HardwareNoticeText));OnPropertyChanged(nameof(CompactCapsuleText));OnPropertyChanged(nameof(HasCompactLyricRomaji));OnPropertyChanged(nameof(IsAudioWaveformVisible));}
+    public string HardwareNoticeToolTip => _noticeIsUpdate
+        ? (CanInstallUpdate ? "Click to update MochiDock" : "Click to view update details")
+        : _noticeIsWelcome ? "Hover or click to explore MochiDock"
+        : _noticeIsAgenda ? "Open Today"
+        : _noticeIsWeather ? "Open Weather"
+        : _noticeIsAi ? "Open AI Usage"
+        : _noticeIsDevice ? "Open Battery"
+        : "Open Performance";
+    private void StartHardwareNoticeTimer(int seconds) { _hardwareNoticeTimer.Stop(); _hardwareNoticeTimer.Interval = TimeSpan.FromSeconds(seconds); _hardwareNoticeTimer.Start(); }
+    private void NotifyHardwareNotice(){OnPropertyChanged(nameof(IsHardwareNoticeVisible));OnPropertyChanged(nameof(HardwareNoticeText));OnPropertyChanged(nameof(HardwareNoticeToolTip));OnPropertyChanged(nameof(CompactCapsuleText));OnPropertyChanged(nameof(HasCompactLyricRomaji));OnPropertyChanged(nameof(IsAudioWaveformVisible));}
     public bool IsFirstRunWelcomeVisible => MochiDock.Core.OnboardingPolicy.ShouldShowFirstRunWelcome(_settings?.OnboardingDismissed ?? true);
     public void DismissFirstRunWelcome()
     {
@@ -1458,11 +1473,10 @@ public partial class MainViewModel : INotifyPropertyChanged
         _noticeIsWelcome = true;
         _hardwareNoticeText = "Welcome to MochiDock · Hover to explore";
         _hardwareNoticeUntil = DateTimeOffset.UtcNow.AddSeconds(12);
-        _hardwareNoticeTimer.Stop();
-        _hardwareNoticeTimer.Start();
+        StartHardwareNoticeTimer(12);
         NotifyHardwareNotice();
     }
-    public void OpenHardwareNotice(){bool ai=_noticeIsAi,agenda=_noticeIsAgenda,device=_noticeIsDevice,weather=_noticeIsWeather,update=_noticeIsUpdate,welcome=_noticeIsWelcome;string? heat=_noticeHeatModule;_noticeHeatModule=null;if(heat!=null){_hardwareNoticeUntil=default;NotifyHardwareNotice();StatsChartSpan="24h";SelectSystemModule(heat);ShowHardware(false);return;}_hardwareNoticeUntil=default;_noticeIsAi=false;_noticeIsAgenda=false;_noticeIsGame=false;_noticeIsDevice=false;_noticeIsWeather=false;_noticeIsUpdate=false;_noticeIsWelcome=false;NotifyHardwareNotice();if(welcome){PrepareHoverExpand();IsExpanded=true;}else if(update)ShowSettings(false);else if(agenda){AcknowledgeShownReminders();ShowToday(false);}else if(weather)ShowWeather(false);else if(ai)ShowAiUsage(false);else{if(device)SelectSystemModule("Battery");ShowHardware(false);}}
+    public void OpenHardwareNotice(){bool ai=_noticeIsAi,agenda=_noticeIsAgenda,device=_noticeIsDevice,weather=_noticeIsWeather,update=_noticeIsUpdate,welcome=_noticeIsWelcome;string? heat=_noticeHeatModule;_noticeHeatModule=null;if(heat!=null){_hardwareNoticeUntil=default;NotifyHardwareNotice();StatsChartSpan="24h";SelectSystemModule(heat);ShowHardware(false);return;}_hardwareNoticeUntil=default;_noticeIsAi=false;_noticeIsAgenda=false;_noticeIsGame=false;_noticeIsDevice=false;_noticeIsWeather=false;_noticeIsUpdate=false;_noticeIsWelcome=false;NotifyHardwareNotice();if(welcome){PrepareHoverExpand();IsExpanded=true;}else if(update){ShowSettings(false);if(CanInstallUpdate)_=InstallUpdateAsync();}else if(agenda){AcknowledgeShownReminders();ShowToday(false);}else if(weather)ShowWeather(false);else if(ai)ShowAiUsage(false);else{if(device)SelectSystemModule("Battery");ShowHardware(false);}}
     private void CheckHardwareAlerts()
     {
         var now=DateTimeOffset.UtcNow;
@@ -1473,7 +1487,7 @@ public partial class MainViewModel : INotifyPropertyChanged
         foreach(var metric in new[]{("CPU usage",s.CpuUsageReading,_settings.CpuAlertThreshold,"%"),("GPU usage",s.GpuUsageReading,_settings.GpuAlertThreshold,"%"),("CPU temperature",s.CpuTemperatureReading,_settings.TemperatureAlertThreshold,"°C"),("GPU temperature",s.GpuTemperatureReading,_settings.TemperatureAlertThreshold,"°C")}) {
             if(!_hardwareAlerts.Evaluate(metric.Item1,metric.Item2,metric.Item3,now))continue;
             if(_hardwarePresentationSuppressed||_wasGaming||IsNotificationInMainPill||IsPrayerReminderVisible||!ShouldShowNotification("Hardware"))continue;
-            _noticeIsAi=false;_noticeIsAgenda=false;_noticeIsGame=false;_noticeIsDevice=false;_noticeIsWeather=false;_noticeIsUpdate=false;_noticeIsWelcome=false;_hardwareNoticeText=$"{metric.Item1} {metric.Item2!.Value:0}{metric.Item4}";_hardwareNoticeUntil=now.AddSeconds(8);_hardwareNoticeTimer.Stop();_hardwareNoticeTimer.Start();
+            _noticeIsAi=false;_noticeIsAgenda=false;_noticeIsGame=false;_noticeIsDevice=false;_noticeIsWeather=false;_noticeIsUpdate=false;_noticeIsWelcome=false;_hardwareNoticeText=$"{metric.Item1} {metric.Item2!.Value:0}{metric.Item4}";_hardwareNoticeUntil=now.AddSeconds(8);StartHardwareNoticeTimer(8);
         }
         if(_hardwarePresentationSuppressed||IsNotificationInMainPill||IsPrayerReminderVisible||!ShouldShowNotification("Hardware"))_hardwareNoticeUntil=default;
         if(IsHardwareNoticeVisible!=wasVisible||!string.Equals(_hardwareNoticeText,wasText,StringComparison.Ordinal))NotifyHardwareNotice();

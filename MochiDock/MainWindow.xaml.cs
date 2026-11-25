@@ -152,7 +152,7 @@ public partial class MainWindow : Window
             }
         };
 
-        _viewModel.IsDockInteractionActive = ()=>ExpandedBorder.IsMouseOver || CompactContainer.IsMouseOver || IsMouseCaptureWithin || System.Windows.Input.Mouse.Captured!=null || (ContextMenu?.IsOpen??false);
+        _viewModel.IsDockInteractionActive = () => _viewModel.IsConfirmingUpdate || ExpandedBorder.IsMouseOver || CompactContainer.IsMouseOver || IsMouseCaptureWithin || System.Windows.Input.Mouse.Captured != null || (ContextMenu?.IsOpen ?? false);
         _mouseLeaveTimer = new DispatcherTimer
         {
             Interval = TimeSpan.FromMilliseconds(700)
@@ -228,9 +228,11 @@ public partial class MainWindow : Window
         };
 
         Loaded += MainWindow_Loaded;
-        // The welcome banner sits above the card: when it shows, hides or rewraps, the open dock re-sizes to what is really there.
-        FirstRunWelcomeBanner.IsVisibleChanged += (_, _) => ResizeForWelcomeBanner();
-        FirstRunWelcomeBanner.SizeChanged += (_, e) => { if (e.HeightChanged) ResizeForWelcomeBanner(); };
+        // Top banners sit above the card: when shown, hidden or rewrapped, the open dock re-sizes to what is really there.
+        FirstRunWelcomeBanner.IsVisibleChanged += (_, _) => ResizeForBanners();
+        FirstRunWelcomeBanner.SizeChanged += (_, e) => { if (e.HeightChanged) ResizeForBanners(); };
+        UpdateBanner.IsVisibleChanged += (_, _) => ResizeForBanners();
+        UpdateBanner.SizeChanged += (_, e) => { if (e.HeightChanged) ResizeForBanners(); };
         Loaded += (_,_)=>{if(_powerNotifications!=null)return;_powerNotifications=new(new WindowInteropHelper(this).Handle);_powerNotifications.DisplayChanged+=OnConsoleDisplayChanged;_powerNotifications.PowerChanged+=OnSystemPowerChanged;_viewModel.PowerNoticeRequested+=ShowPowerNotice;_viewModel.OnPowerState(MochiDock.Services.BatteryStatus.Read());_policyTimer.Tick+=PolicyTick;_policyTimer.Start();};
         Closed += (_,_)=>{_batteryWidget?.Dispose();_batteryWidget=null;_powerNoticeTimer?.Stop();_viewModel.PowerNoticeRequested-=ShowPowerNotice;_viewModel.AudioService.MasterVolumeChanged-=OnMasterVolumeChanged;_viewModel.AudioService.Dispose();HeaderPillOverlay.Cancel();_viewModel.StopPresentationTimers();_windowClosed=true;_expansionTransition.Invalidate();_hoverExpandTimer.Stop();_mouseLeaveTimer.Stop();_shrinkGraceTimer.Stop();_takeoverTimeoutTimer.Stop();_volumeOverlayTimer?.Stop();_topmostWatchdogTimer?.Stop();SystemEvents.SessionSwitch-=SystemEvents_SessionSwitch;SystemEvents.DisplaySettingsChanged-=SystemEvents_DisplaySettingsChanged;_resolutionNoticeTimer?.Stop();_viewModel.IsDockInteractionActive=null;_viewModel.StopHardwareCapture();_policyTimer.Stop();_policyTimer.Tick-=PolicyTick;if(_powerNotifications!=null){_powerNotifications.DisplayChanged-=OnConsoleDisplayChanged;_powerNotifications.PowerChanged-=OnSystemPowerChanged;_powerNotifications.Dispose();_powerNotifications=null;}};
 
@@ -608,7 +610,7 @@ public partial class MainWindow : Window
                 QueueHeaderSelectionReveal();
             }
         }
-        else if (e.PropertyName == nameof(MainViewModel.ActiveCardType) || e.PropertyName == nameof(MainViewModel.IsFirstRunWelcomeVisible))
+        else if (e.PropertyName == nameof(MainViewModel.ActiveCardType) || e.PropertyName == nameof(MainViewModel.IsFirstRunWelcomeVisible) || e.PropertyName == nameof(MainViewModel.IsUpdateBannerShown))
         {
             QueueHeaderSelectionReveal();
             if (_viewModel.IsExpanded || ExpandedBorder.Visibility == Visibility.Visible)
@@ -663,7 +665,9 @@ public partial class MainWindow : Window
                  e.PropertyName == nameof(MainViewModel.CurrentPrayerSchedule) ||
                  e.PropertyName == nameof(MainViewModel.IsPomodoroInMainPill) ||
                  e.PropertyName == nameof(MainViewModel.IsBothPomodoroAndWeatherInMainPill) ||
-                 e.PropertyName == nameof(MainViewModel.IsNotificationInMainPill))
+                 e.PropertyName == nameof(MainViewModel.IsNotificationInMainPill) ||
+                 e.PropertyName == nameof(MainViewModel.IsHardwareNoticeVisible) ||
+                 e.PropertyName == nameof(MainViewModel.IsUpdateNudgeVisible))
         {
             UpdateCompactPillWidth();
         }
@@ -1287,6 +1291,7 @@ public partial class MainWindow : Window
         _isHoverNudged = false;
         CompactPillBorder.BeginAnimation(HeightProperty, null);
         CompactPillBorder.Height = GetCurrentCompactTargetHeight();
+        if (_viewModel.IsHardwareNoticeVisible) { _viewModel.OpenHardwareNotice(); return; }
         if (!_viewModel.IsExpanded) _viewModel.PrepareHoverExpand();
         _viewModel.IsExpanded = true;
     }

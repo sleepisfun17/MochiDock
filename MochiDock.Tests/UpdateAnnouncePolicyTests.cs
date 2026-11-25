@@ -35,4 +35,30 @@ public class UpdateAnnouncePolicyTests
     [Fact]
     public void TheAnnouncedVersionStaysOnThisPc() =>
         Assert.Contains("LastAnnouncedUpdate", SettingsTransfer.LocalOnlyKeys);
+
+    [Fact]
+    public void CanShowCapsuleOnlyWhenCompactDockIsIdleAndUnblocked()
+    {
+        Assert.True(UpdateAnnouncePolicy.CanShowCapsule(
+            isExpanded: false,
+            presentationSuppressed: false,
+            gaming: false,
+            workstationLocked: false,
+            displayAwake: true,
+            notificationInPill: false,
+            prayerVisible: false,
+            noticeVisible: false,
+            notificationsAllowed: true));
+
+        // Expanded dock defers the capsule notice instead of firing unseen behind the open panel.
+        Assert.False(UpdateAnnouncePolicy.CanShowCapsule(true, false, false, false, true, false, false, false, true));
+        Assert.False(UpdateAnnouncePolicy.CanShowCapsule(false, true, false, false, true, false, false, false, true));
+        Assert.False(UpdateAnnouncePolicy.CanShowCapsule(false, false, true, false, true, false, false, false, true));
+        Assert.False(UpdateAnnouncePolicy.CanShowCapsule(false, false, false, true, true, false, false, false, true));
+        Assert.False(UpdateAnnouncePolicy.CanShowCapsule(false, false, false, false, false, false, false, false, true));
+        Assert.False(UpdateAnnouncePolicy.CanShowCapsule(false, false, false, false, true, true, false, false, true));
+        Assert.False(UpdateAnnouncePolicy.CanShowCapsule(false, false, false, false, true, false, true, false, true));
+        Assert.False(UpdateAnnouncePolicy.CanShowCapsule(false, false, false, false, true, false, false, true, true));
+        Assert.False(UpdateAnnouncePolicy.CanShowCapsule(false, false, false, false, true, false, false, false, false));
+    }
 }

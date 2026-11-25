@@ -404,6 +404,12 @@
 
                                             </DataTrigger>
 
+                                            <DataTrigger Binding="{Binding IsHardwareNoticeVisible}" Value="True">
+
+                                                <Setter Property="Width" Value="48" />
+
+                                            </DataTrigger>
+
                                         </Style.Triggers>
 
                                     </Style>
@@ -486,6 +492,10 @@
                                                 <Setter Property="Width" Value="102" />
                                             </DataTrigger>
 
+                                            <DataTrigger Binding="{Binding IsHardwareNoticeVisible}" Value="True">
+                                                <Setter Property="Width" Value="12" />
+                                            </DataTrigger>
+
                                         <DataTrigger Binding="{Binding IsPrayerReminderVisible}" Value="True"><Setter Property="Width" Value="0"/></DataTrigger></Style.Triggers>
 
                                     </Style>
@@ -511,6 +521,10 @@
                                         <DataTrigger Binding="{Binding IsWeatherInMainPill}" Value="True">
                                             <Setter Property="HorizontalAlignment" Value="Left" />
                                             <Setter Property="Margin" Value="13,0,0,0" />
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding IsHardwareNoticeVisible}" Value="True">
+                                            <Setter Property="HorizontalAlignment" Value="Center" />
+                                            <Setter Property="Margin" Value="0" />
                                         </DataTrigger>
                                     </Style.Triggers>
                                 </Style>
@@ -652,7 +666,7 @@
 
                             <!-- Smooth Marquee or 2-line Lyric in Col 1 (Fills remaining horizontal space dynamically) -->
                             <StackPanel Grid.Column="1" VerticalAlignment="Center" HorizontalAlignment="Stretch" Margin="0,0,0,0">
-<Button Content="{Binding HardwareNoticeText}" Click="HardwareNotice_Click" Visibility="{Binding IsHardwareNoticeVisible, Converter={StaticResource BoolToVisibility}}" Style="{StaticResource ActionButton}" ToolTip="Open Stats"/>
+<Button Content="{Binding HardwareNoticeText}" Click="HardwareNotice_Click" Visibility="{Binding IsHardwareNoticeVisible, Converter={StaticResource BoolToVisibility}}" Style="{StaticResource ActionButton}" Padding="10,4" HorizontalAlignment="Stretch" ToolTip="{Binding HardwareNoticeToolTip}"/>
 <controls:MarqueeTextBlock x:Name="CapsuleMarquee" CenterNumerals="{Binding IsPrimaryCapsuleReading}" Typography.NumeralAlignment="Tabular"
                                                            Text="{Binding CompactCapsuleText}"
                                                            ScrollSpeed="{Binding CapsuleScrollSpeed}"
@@ -699,7 +713,7 @@
 
                         <controls:PrayerReminderReadout x:Name="PrayerReminderContent" Grid.Column="1" Grid.ColumnSpan="2" Margin="0" HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="{Binding IsPrayerReminderVisible, Converter={StaticResource BoolToVisibility}}" ShowWeather="{Binding IsWeatherInPrayerReminder}" Acknowledged="PrayerReminderOK_Click"/>
                         <Grid x:Name="PillRightAnchors" Grid.Column="2" HorizontalAlignment="Center" VerticalAlignment="Center">
-                            <Grid.Style><Style TargetType="Grid"><Style.Triggers><DataTrigger Binding="{Binding IsPrayerReminderVisible}" Value="True"><Setter Property="Visibility" Value="Collapsed"/></DataTrigger></Style.Triggers></Style></Grid.Style>
+                            <Grid.Style><Style TargetType="Grid"><Style.Triggers><DataTrigger Binding="{Binding IsPrayerReminderVisible}" Value="True"><Setter Property="Visibility" Value="Collapsed"/></DataTrigger><DataTrigger Binding="{Binding IsHardwareNoticeVisible}" Value="True"><Setter Property="Visibility" Value="Collapsed"/></DataTrigger></Style.Triggers></Style></Grid.Style>
 
                             <!-- 4 Animated Waveform Bars (Active when music is playing and not gaming and not takeover) -->
 

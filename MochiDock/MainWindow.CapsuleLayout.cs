@@ -30,22 +30,28 @@ public partial class MainWindow
             IslandCardType.Clipboard => (620, 250),
             _ => (620, 200)
         };
-        h += WelcomeBannerAllowance();
+        h += BannerAllowance();
         return (w, h);
     }
 
-    // Room for the first-run welcome banner above the card. It follows the banner's own visibility (what is on screen) rather than
-    // the view model flag, so a stale flag can never leave the card cut off: 58 DIPs before the banner has been laid out, otherwise
-    // its measured height with margins (about 53 for its two lines), never less than 58.
-    private double WelcomeBannerAllowance()
+    // Room for top banners above the card (welcome banner and/or update banner). Each follows its own visibility so cards never clip.
+    private double BannerAllowance()
     {
-        var banner = FirstRunWelcomeBanner;
-        if (banner == null || banner.Visibility != Visibility.Visible) return 0;
-        double measured = banner.ActualHeight > 0 ? banner.ActualHeight + banner.Margin.Top + banner.Margin.Bottom : 0;
-        return Math.Max(58, Math.Ceiling(measured));
+        double extra = 0;
+        if (FirstRunWelcomeBanner is { Visibility: Visibility.Visible } welcome)
+        {
+            double measured = welcome.ActualHeight > 0 ? welcome.ActualHeight + welcome.Margin.Top + welcome.Margin.Bottom : 0;
+            extra += Math.Max(58, Math.Ceiling(measured));
+        }
+        if (UpdateBanner is { Visibility: Visibility.Visible } update)
+        {
+            double measured = update.ActualHeight > 0 ? update.ActualHeight + update.Margin.Top + update.Margin.Bottom : 0;
+            extra += Math.Max(44, Math.Ceiling(measured));
+        }
+        return extra;
     }
 
-    private void ResizeForWelcomeBanner()
+    private void ResizeForBanners()
     {
         if (_windowClosed || !_viewModel.IsExpanded || ExpandedBorder.Visibility != Visibility.Visible) return;
         var (w, h) = GetCardDimensions(_viewModel.ActiveCardType);
@@ -116,7 +122,7 @@ public partial class MainWindow
             return MeasurePrayerArrivalWidth();
         }
         if (_viewModel.IsPrayerReminderVisible) return PrayerReminderContent.MeasureCapsuleWidth();
-        if (_viewModel.IsHardwareNoticeVisible) return 300;
+        if (_viewModel.IsHardwareNoticeVisible) return MeasureHardwareNoticeWidth();
         if (_viewModel.IsStatsShownInCapsule)
         {
             // Gaming Mode displays FPS + CPU + GPU + optional right-aligned weather
@@ -147,13 +153,34 @@ public partial class MainWindow
         return 125; // Resting state: symmetrical pill showing [ Mascot  11:13 ]
     }
 
+    private double MeasureHardwareNoticeWidth()
+    {
+        string text = _viewModel?.HardwareNoticeText ?? "";
+        var fontFamily = (System.Windows.Media.FontFamily)(TryFindResource("IslandUiFont") ?? CapsuleResolutionText.FontFamily);
+        var weight = (FontWeight)(TryFindResource("IslandBodyWeight") ?? FontWeights.SemiBold);
+        double dpi = System.Windows.Media.VisualTreeHelper.GetDpi(this).PixelsPerDip;
+        if (dpi <= 0) dpi = 1.0;
+
+        var formatted = new System.Windows.Media.FormattedText(
+            text,
+            System.Globalization.CultureInfo.CurrentUICulture,
+            System.Windows.FlowDirection.LeftToRight,
+            new System.Windows.Media.Typeface(fontFamily, FontStyles.Normal, weight, FontStretches.Normal),
+            12.0,
+            System.Windows.Media.Brushes.Black,
+            dpi);
+
+        return Math.Clamp(Math.Ceiling(formatted.WidthIncludingTrailingWhitespace + 96), 240, 440);
+    }
+
     // The resting capsule with weather: [Mochi] clock [weather]. Either the clock is exactly centred with Mochi and the weather at the edges,
     // or the three items are evenly spaced (Settings > Appearance, CapsuleClockLayout). The widths are measured, so the clock is never
     // clipped and any temperature fits.
     private bool IsClockWeatherPill() =>
         _viewModel.IsWeatherInMainPill && !_viewModel.IsPomodoroInMainPill && !_viewModel.CurrentMedia.IsPlaying &&
-        !_viewModel.HasCompactLyricRomaji && !_viewModel.IsStatsShownInCapsule && !UseCompactGamingReadout() &&
-        !string.IsNullOrEmpty(_viewModel.CompactCapsuleText) && _viewModel.CompactCapsuleText == _viewModel.CurrentTimeText;
+        !_viewModel.HasCompactLyricRomaji && !_viewModel.IsStatsShownInCapsule && !_viewModel.IsHardwareNoticeVisible &&
+        !_viewModel.IsPrayerReminderVisible && !_viewModel.IsPrayerArrivalVisible && !_viewModel.IsNotificationInMainPill &&
+        !UseCompactGamingReadout() && !string.IsNullOrEmpty(_viewModel.CompactCapsuleText) && _viewModel.CompactCapsuleText == _viewModel.CurrentTimeText;
 
     private MochiDock.Core.CapsuleClockLayoutResult? MeasureClockWeatherLayout() =>
         _viewModel != null && IsClockWeatherPill()

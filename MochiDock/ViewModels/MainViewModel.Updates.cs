@@ -25,6 +25,10 @@ public partial class MainViewModel
     private string? _pendingUpdateNotice;
     private System.Windows.Threading.DispatcherTimer? _updateNoticeRetry;
     private int? _downloadPercent;
+    private bool _confirmingUpdate;
+
+    /// <summary>True while the update confirmation prompt is open so auto-collapse pauses.</summary>
+    public bool IsConfirmingUpdate => _confirmingUpdate;
 
     /// <summary>True when this copy runs from the setup's install folder (only that copy updates itself).</summary>
     public bool IsInstalledCopy => _installedCopy ??= UpdateInstaller.IsInstalledCopy();
@@ -127,7 +131,7 @@ public partial class MainViewModel
         OnPropertyChanged(nameof(HasUpdateInstallHint));
     }
 
-    /// <summary>First check 30 seconds after start (never delays startup), then every 12 hours while "Check for updates" is on.</summary>
+    /// <summary>First check 30 seconds after start (never delays startup), then every 4 hours while "Check for updates" is on.</summary>
     public void StartUpdateChecks()
     {
         if (_updateTimer != null) return;
@@ -136,7 +140,7 @@ public partial class MainViewModel
         _updateTimer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(30) };
         _updateTimer.Tick += (s, e) =>
         {
-            _updateTimer!.Interval = TimeSpan.FromHours(12);
+            _updateTimer!.Interval = TimeSpan.FromHours(4);
             _ = CheckForUpdatesAsync(manual: false);
         };
         _updateTimer.Start();
@@ -203,16 +207,24 @@ public partial class MainViewModel
     }
 
     /// <summary>
-    /// Shows the pending "update available" notice when nothing else holds the capsule (gaming, lock, screen off, a message,
-    /// prayer or reminder, snooze or quiet hours); otherwise tries again every five minutes. The version counts as announced only
-    /// once the notice was shown. Tapping it opens the quick settings, whose header button then reads "Update to x".
+    /// Shows the pending "update available" notice when the compact capsule is idle and nothing else holds it (expanded, gaming,
+    /// lock, screen off, a message, prayer or reminder, snooze or quiet hours); otherwise waits for collapse or retries every five minutes.
+    /// The version counts as announced only once the notice was actually shown in the compact pill.
     /// </summary>
     private void TryShowUpdateNotice()
     {
         if (_pendingUpdateNotice is not { } version || _availableUpdate?.Version != version) { _pendingUpdateNotice = null; _updateNoticeRetry?.Stop(); return; }
-        bool blocked = _hardwarePresentationSuppressed || _wasGaming || _isWorkstationLocked || !_displayAwake || IsNotificationInMainPill ||
-                       IsPrayerArrivalVisible || IsPrayerReminderVisible || IsHardwareNoticeVisible || !ShouldShowNotification("Updates");
-        if (blocked)
+        bool canShow = UpdateAnnouncePolicy.CanShowCapsule(
+            _isExpanded,
+            _hardwarePresentationSuppressed,
+            _wasGaming,
+            _isWorkstationLocked,
+            _displayAwake,
+            IsNotificationInMainPill,
+            IsPrayerArrivalVisible || IsPrayerReminderVisible,
+            IsHardwareNoticeVisible,
+            ShouldShowNotification("Updates"));
+        if (!canShow)
         {
             if (_updateNoticeRetry == null)
             {
@@ -226,12 +238,19 @@ public partial class MainViewModel
         _pendingUpdateNotice = null;
         UpdateSettings(x => x.LastAnnouncedUpdate = version, SettingsApply.None);
         AppLog.Warn("Update", $"Update notice: {version}.");
-        _noticeIsAi = false; _noticeIsAgenda = false; _noticeIsGame = false; _noticeIsDevice = false; _noticeIsWeather = false; _noticeHeatModule = null;
+        _noticeIsAi = false; _noticeIsAgenda = false; _noticeIsGame = false; _noticeIsDevice = false; _noticeIsWeather = false; _noticeIsWelcome = false; _noticeHeatModule = null;
         _noticeIsUpdate = true;
-        _hardwareNoticeText = CanInstallUpdate ? $"MochiDock {version} is available: tap to update" : $"MochiDock {version} is available: tap for details";
-        _hardwareNoticeUntil = DateTimeOffset.UtcNow.AddSeconds(8);
-        _hardwareNoticeTimer.Stop(); _hardwareNoticeTimer.Start();
+        _hardwareNoticeText = CanInstallUpdate ? $"Update {version} available · Tap to update" : $"Update {version} available · Tap for details";
+        _hardwareNoticeUntil = DateTimeOffset.UtcNow.AddSeconds(12);
+        StartHardwareNoticeTimer(12);
+        SoundService.PlayNotificationSound();
         NotifyHardwareNotice();
+    }
+
+    internal void OnDockCollapsedForUpdateNotice()
+    {
+        if (_pendingUpdateNotice != null && !_isExpanded)
+            TryShowUpdateNotice();
     }
 
     /// <summary>
@@ -246,9 +265,21 @@ public partial class MainViewModel
     public async Task InstallUpdateAsync()
     {
         var offer = _availableUpdate;
-        if (offer?.Installer is not { } asset || !IsInstalledCopy || _installing) return;
-        var answer = System.Windows.MessageBox.Show($"Install MochiDock {offer.Version} now?\n\nMochiDock closes for about 20 seconds while the update installs, then starts again. Your settings are kept.",
-            "Update MochiDock", System.Windows.MessageBoxButton.YesNo, System.Windows.MessageBoxImage.Question);
+        if (offer?.Installer is not { } asset || !IsInstalledCopy || _installing || _confirmingUpdate) return;
+        System.Windows.MessageBoxResult answer;
+        _confirmingUpdate = true;
+        try
+        {
+            string prompt = $"Install MochiDock {offer.Version} now?\n\nMochiDock closes for about 20 seconds while the update installs, then starts again. Your settings are kept.";
+            var owner = System.Windows.Application.Current?.MainWindow;
+            answer = owner is { IsVisible: true }
+                ? System.Windows.MessageBox.Show(owner, prompt, "Update MochiDock", System.Windows.MessageBoxButton.YesNo, System.Windows.MessageBoxImage.Question)
+                : System.Windows.MessageBox.Show(prompt, "Update MochiDock", System.Windows.MessageBoxButton.YesNo, System.Windows.MessageBoxImage.Question);
+        }
+        finally
+        {
+            _confirmingUpdate = false;
+        }
         if (answer != System.Windows.MessageBoxResult.Yes) return;
 
         _installing = true;
