@@ -1,86 +1,160 @@
 <p align="center">
-  <img src="docs/images/mochi-icon.png" alt="Mochi, the MochiDock mascot" width="160">
+  <img src="docs/images/mochi-icon.png" alt="Mochi, the MochiDock mascot" width="150">
 </p>
 
 <h1 align="center">MochiDock</h1>
 
-<p align="center"><b>A dynamic-island companion for Windows.</b><br>
-A native .NET 8 WPF overlay at the top of your screen for media, messages, hardware stats and more.</p>
-
-<p align="center"><a href="https://github.com/sleepisfun17/MochiDock/actions/workflows/ci.yml"><img src="https://github.com/sleepisfun17/MochiDock/actions/workflows/ci.yml/badge.svg" alt="Build and tests"></a> <a href="https://github.com/sleepisfun17/MochiDock/releases/latest"><img src="https://img.shields.io/github/v/release/sleepisfun17/MochiDock?include_prereleases&amp;label=release" alt="Latest release"></a></p>
-
-> **Beta.** Many features have been built and unit-tested but not yet verified on a wide range of machines. See the [known limitations](CHANGELOG.md).
+<p align="center">
+  <b>A dynamic-island companion for Windows.</b><br>
+  A native .NET 8 WPF overlay at the top of your screen for media &amp; lyrics, live PC &amp; gaming telemetry, quiet notifications, taskbar readouts, and an expressive mascot.
+</p>
 
 <p align="center">
-  <img src="docs/media/mochidock-dock.gif" alt="The idle MochiDock capsule expanding into the Media card when hovered" width="660">
+  <a href="https://github.com/sleepisfun17/MochiDock/actions/workflows/ci.yml"><img src="https://github.com/sleepisfun17/MochiDock/actions/workflows/ci.yml/badge.svg" alt="Build and tests"></a>
+  <a href="https://github.com/sleepisfun17/MochiDock/releases/latest"><img src="https://img.shields.io/github/v/release/sleepisfun17/MochiDock?include_prereleases&amp;label=release" alt="Latest release"></a>
+</p>
+
+<p align="center">
+  <a href="#feature-demos">Feature demos</a> ·
+  <a href="#themes-mascots-and-quick-settings">Themes &amp; mascots</a> ·
+  <a href="#all-features">All features</a> ·
+  <a href="#requirements">Requirements</a> ·
+  <a href="#install">Install</a> ·
+  <a href="#build-from-source">Build</a>
+</p>
+
+> **Beta.** Many features have been built and unit-tested cleanly, though not every integration has been verified across a wide range of machines. See the [changelog and known limitations](CHANGELOG.md).
+
+<p align="center">
+  <img src="docs/media/mochidock-dock.gif" alt="The idle MochiDock capsule expanding smoothly into the Media card when hovered" width="660"><br>
+  <sub><a href="docs/media/mochidock-dock.png">Still (PNG)</a> · <a href="docs/media/mochidock-dock.mp4">Video (MP4)</a></sub>
 </p>
 
 ## What it is
 
-MochiDock is a small capsule that lives at the top of your screen. Notifications appear as a compact pill and expand when you hover. Open it to see what is playing, new messages, your PC's stats, the weather, your day and more. Mochi, a small mascot, reacts to music, alerts, games, battery and the time of day.
+MochiDock sits quietly at the top of your monitor as a compact pill — notched or floating — and expands smoothly when hovered. Open it to control playback and synced lyrics, inspect live CPU/GPU/power telemetry, read messages without switching windows, check the weather or prayer schedule, and more.
 
-[Dock still (PNG)](docs/media/mochidock-dock.png) · [Dock demo (MP4)](docs/media/mochidock-dock.mp4)
+- **Compact first:** Resting clock and weather pills, paced one-line capsule lyrics, and non-intrusive notification banners that expand only when you hover.
+- **Built for desktop & gaming:** Real-time ETW FPS, GPU/CPU temps with colour limits, click-through overlay, taskbar system strips, and per-game resolution/window shortcuts.
+- **Quiet multi-source inbox:** WhatsApp, Email (IMAP, Outlook Classic, Mailspring), Discord, and watched Windows apps, with per-source Mute, Snooze, Quiet hours, and Gaming DND.
+- **4 themes & 5 mascots:** Switch between `Default`, `Hojicha`, `Kuro Night`, and `Matcha`, and pair them with grey Mochi, Matcha Mochi, Hojicha Mochi, Kuro, or Shiro.
 
-## Features
-
-A new install starts small: the **Media**, **Stats** and **Weather** tabs, plus the notifications and gaming mode. Everything else is one switch away. Tabs are switched in **Settings > Tabs & Modules** (or the switches on the dock's own Settings tab); the other features in the Settings section named below. Open Settings from the tray icon or the gear on the dock (use the sidebar search box to jump straight to any option).
-
-| Feature | What it does | New install | Where to switch it |
-| --- | --- | --- | --- |
-| **Media and lyrics** | Controls for Spotify, YouTube Music and browser playback, a seekable timeline and synced lyrics (LRCLIB) with readings for Japanese, Korean and Chinese. | On | Always shown; lyrics in Music & Lyrics |
-| **[Stats](#live-stats)** | CPU, GPU, memory, drives, network, top processes and a Battery page. | On | Tabs & Modules |
-| **[Weather](#weather)** | Current weather, hourly and three-day forecast, and the temperature in the capsule. | On | Tabs & Modules; city in Location & Prayer |
-| **Gaming mode** | Shows FPS, GPU and CPU with optional click-through and a session summary. In Floating mode the dock uses a configurable offset from the top. Ctrl+Alt+R switches between screen resolution presets. | On | Gaming & Display |
-| **Notifications** | WhatsApp, Email and Discord messages appear as a small capsule first and expand on hover; when several arrive, clicking one highlights the active message you are viewing or replying to. Notifications from other apps you choose (LINE, Telegram, Slack...) get their own Apps card. | Email and Discord on, WhatsApp off, other apps none | WhatsApp, Email, Notifications |
-| **WhatsApp** | Recent messages, quick replies and reactions through a local or shared GOWA engine. Starts nothing until you enable it. | Off | WhatsApp |
-| **Email** | New-mail notices from Gmail or other IMAP accounts (app password), Outlook Classic and Mailspring; verification codes can be copied. | Ready, add an account | Email |
-| **Prayer times** | Location-aware schedule, qibla bearing, reminders and a Tone or Silent chime. | Off | Tabs & Modules, or Location & Prayer |
-| **Today and calendar** | Month calendar, events from a Google Calendar link ([how to connect it](docs/USER_GUIDE.md#connecting-google-calendar)), tasks with reminders, optional Japan and Indonesia holidays. | Off | Tabs & Modules; link and holidays in Calendar |
-| **FX rates** | Three currency pairs of your choice from 25 currencies (default USD/JPY, USD/IDR and JPY/IDR) with a trajectory chart, no API key needed. | Off | Tabs & Modules |
-| **AI usage** | Remaining usage for Claude, Codex, Antigravity, Cursor, Gemini and GitHub Copilot, with an optional low-usage alert. | Off | Tabs & Modules; providers in AI Usage |
-| **[Taskbar readouts](#taskbar-readouts)** | Two-line blocks beside the system tray: CPU and GPU, memory and disk, network speed, the next prayer, the weather and device batteries; click one to open its card. | Off | Taskbar |
-| **Wireless device batteries** | Mouse, keyboard and headset levels on the Stats Battery page and an optional taskbar readout. | Off | Hardware & Power, Taskbar |
-| **Window-size shortcuts** | Resize the window you are using to a set size and centre it (Ctrl+Alt+1 to 4, Ctrl+Alt+F to swap width and height; editable). | Off | Gaming & Display |
-| **Pomodoro** | Focus timer. | Off | Tabs & Modules |
-| **File Shelf** | A temporary shelf for files, and phone drop over your Wi-Fi (you approve each file). | Off | Tabs & Modules |
-| **Clipboard** | Clipboard history. | Off | Tabs & Modules |
-| **Script** | A teleprompter-style script reader (Alt+Shift+S). | Off | Tabs & Modules |
-| **Downloads** | A media downloader (yt-dlp and ffmpeg). | Off | Tabs & Modules |
-| **Sounds** | Short notification and Mochi sounds. | On | Notifications |
-| **[Mascots](#mascots)** | The mascot's faces follow what is going on (music, messages, games, the weather, a hot GPU, overdue tasks…) and the card you open (Electric on the Battery page, Money on FX, the sky on Weather, Studying during a Pomodoro). He spins round in a little whirlwind when his face changes, and you can choose his corner status badge style (**3D Charm**, **Speech Bubble**, **3D Sticker** or **Off**) with a live preview. [Every face and its trigger](docs/USER_GUIDE.md#mochis-faces). | On | Mascot |
-| **Updates** | Checks GitHub for a new version and shows a one-time capsule notice when one is out; until you dismiss that version, a small accent ↑ dot stays on the compact capsule (it steps aside for gaming, notifications and notices) and the expanded dock shows a banner with **Update**, **Release notes** and **Dismiss**. The version button at the top of the dock's quick settings checks on click and turns into **Update to x** when an update is waiting; it downloads the update, verifies its checksum, installs it silently and restarts MochiDock. Nothing installs without your click. | Check on | Quick settings button; automatic checks in Updates & Data |
-
-Four themes, `Default` (dark), `Hojicha` (warm roasted-tea brown with a caramel accent), `Kuro Night` (storm-night indigo with an electric-yellow accent, where Mochi becomes Kuro, a black electric cat) and `Matcha` (warm oat and green), are in **Appearance & Dock** alongside the dock style, monitor and interface size. **Mascot** holds the character picker (Auto, grey Mochi, Matcha Mochi, Hojicha Mochi, Kuro the black cat or Shiro the white cat, with any theme; also in the dock's quick settings), status badge style with a live preview, Expressive Mochi and your birthday; **General** holds startup, fullscreen/capture behavior and date format. MochiDock is multi-monitor and high-DPI aware. The [user guide](docs/USER_GUIDE.md) explains every tab and setting.
+---
 
 ## Feature demos
 
-### Live Stats
+### Media & synced lyrics
 
-![The Stats card cycling through CPU, GPU and memory while the live charts update](docs/media/mochidock-live-stats.gif)
+Controls for Spotify, YouTube Music, and browser playback via Windows GSMTC, a seekable timeline, and synced LRCLIB lyrics — with automatic Japanese, Korean, and Chinese readings/furigana and paced compact capsule scrolling.
 
-[Stats still (PNG)](docs/media/mochidock-live-stats.png) · [Stats demo (MP4)](docs/media/mochidock-live-stats.mp4)
+<p align="center">
+  <img src="docs/media/mochidock-japanese-lyrics.gif" alt="Compact MochiDock capsule displaying synced Japanese lyrics with romaji reading" width="660"><br>
+  <sub><a href="docs/media/mochidock-japanese-lyrics.png">Still (PNG)</a> · <a href="docs/media/mochidock-japanese-lyrics.mp4">Video (MP4)</a></sub>
+</p>
 
-The Network page shows upload and download rates, usage history and ping. [Network GIF](docs/media/mochidock-network.gif) · [Network still (PNG)](docs/media/mochidock-network.png) · [Network demo (MP4)](docs/media/mochidock-network.mp4)
+### Live stats, network & power
 
-### Weather
+Real-time **Stats** views for CPU (per-core bars, clocks, temps), GPU, Memory, Drives, Network (upload/download speed, usage trajectory, ping), Top Processes, 24-hour history, **Power & Batteries** (stacked desktop CPU/GPU/other wattage or laptop draw), and wireless mouse/keyboard/headset battery levels.
 
-<img src="docs/media/mochidock-weather.png" alt="The Weather card showing current conditions and the hourly and three-day forecasts" width="660">
+<p align="center">
+  <img src="docs/media/mochidock-live-stats.gif" alt="The Stats card cycling through CPU, GPU, and memory while live charts and top processes update" width="660"><br>
+  <sub><b>Live Stats:</b> <a href="docs/media/mochidock-live-stats.png">Still (PNG)</a> · <a href="docs/media/mochidock-live-stats.mp4">Video (MP4)</a></sub>
+</p>
 
-[Weather GIF](docs/media/mochidock-weather.gif) · [Weather demo (MP4)](docs/media/mochidock-weather.mp4)
+<p align="center">
+  <img src="docs/media/mochidock-network.gif" alt="Network dashboard showing live upload and download rates, usage history, and latency ping" width="660"><br>
+  <sub><b>Network:</b> <a href="docs/media/mochidock-network.png">Still (PNG)</a> · <a href="docs/media/mochidock-network.mp4">Video (MP4)</a></sub>
+</p>
+
+<p align="center">
+  <img src="docs/media/mochidock-power.gif" alt="Power &amp; Batteries view showing stacked PC power consumption and connected wireless mouse battery" width="660"><br>
+  <sub><b>Power &amp; Wireless Batteries:</b> <a href="docs/media/mochidock-power.png">Still (PNG)</a> · <a href="docs/media/mochidock-power.mp4">Video (MP4)</a></sub>
+</p>
+
+### Gaming overlay & window shortcuts
+
+While a game runs (or when pinned from **Stats > Games**), the capsule switches to a low-profile **FPS | GPU | CPU** HUD:
+
+- **Live telemetry & thermal limits:** Captures ETW FPS without injecting into games, shows GPU/CPU usage and measured temperatures (CPU temp via optional PawnIO), and lets you configure separate **Orange** and **Red** limits per component — unified with hardware alerts and taskbar warnings.
+- **Session tools:** Optional click-through, configurable Floating top offset, end-of-session summary (avg, 1% / 0.1% lows, stutters, optional League of Legends / PUBG match stats), Today/Week playtime, break reminders, and compact weather.
+- **Display & window hotkeys:** Toggle between native and gaming resolutions (`Ctrl+Alt+R`), or resize/centre windows into preset sizes (`Ctrl+Alt+1–4`) and flip landscape/portrait (`Ctrl+Alt+F`).
+
+<p align="center">
+  <img src="docs/media/mochidock-gaming.gif" alt="Compact MochiDock gaming overlay showing live FPS, GPU usage and temperature, CPU usage, and weather over gameplay" width="660"><br>
+  <sub><a href="docs/media/mochidock-gaming.png">Still (PNG)</a> · <a href="docs/media/mochidock-gaming.mp4">Video (MP4)</a></sub>
+</p>
 
 ### Taskbar readouts
 
-Choose which blocks appear in **Settings > Taskbar**.
+Compact two-line blocks placed directly on the Windows taskbar (left edge, left of the tray, or after task buttons) across one or all displays:
 
-![Live taskbar readouts for CPU, GPU, memory, disk, prayer time, mouse battery, network speed and weather](docs/media/mochidock-taskbar.gif)
+- **Customizable blocks & layout:** Toggle CPU/GPU load and temp, Memory, Disk, Upload/Download, Prayer time, Weather, and wireless batteries; assign items to **Left** or **Right** zones; choose fonts, arrow styles, compact labels, and Windhawk tall-taskbar scaling.
+- **Interactive controls:** Hover any block for a themed 1-second MochiDock hover card, click to open its dock tab, or right-click to move/hide blocks cleanly.
 
-[View a still image (PNG)](docs/media/mochidock-taskbar.png) · [Open the video (MP4)](docs/media/mochidock-taskbar.mp4)
+<p align="center">
+  <img src="docs/media/mochidock-taskbar.gif" alt="Live Windows taskbar readout strips showing CPU, GPU, memory, disk, prayer countdown, mouse battery, network speeds, and weather" width="660"><br>
+  <sub><a href="docs/media/mochidock-taskbar.png">Still (PNG)</a> · <a href="docs/media/mochidock-taskbar.mp4">Video (MP4)</a></sub>
+</p>
 
-## Screenshots
+### Weather & daily companions
 
-![Switching from Default to Matcha and then Kuro Night in quick settings](docs/media/mochidock-themes.gif)
+Optional daily modules you can switch on anytime from **Settings > Tabs & Modules**: **Weather** (with day/night capsule badges and rain-soon notices), **Prayer times** (Aladhan schedule, schematic timeline, qibla bearing, offline moon phase, Tone/Silent reminders), **FX rates** (25 currencies with 7D/1M/1Y charts and no API key), **Today** (month calendar, `.ics` feeds, tasks & reminders), **Pomodoro**, **AI usage**, **File Shelf** (local Wi-Fi Phone Drop), **Clipboard**, **Script** teleprompter (`Alt+Shift+S`), and **Downloads** (`yt-dlp` + `ffmpeg`).
 
-[Theme still (PNG)](docs/media/mochidock-themes.png) · [Theme demo (MP4)](docs/media/mochidock-themes.mp4)
+<p align="center">
+  <img src="docs/media/mochidock-weather.gif" alt="Weather card showing current temperature, wind speed, hourly forecast, and three-day outlook" width="660"><br>
+  <sub><b>Weather:</b> <a href="docs/media/mochidock-weather.png">Still (PNG)</a> · <a href="docs/media/mochidock-weather.mp4">Video (MP4)</a></sub>
+</p>
+
+<p align="center">
+  <img src="docs/media/mochidock-prayer.gif" alt="Prayer card showing countdown, Imsak/Shuruq, Qibla bearing, schematic prayer curve, and moon phase" width="660"><br>
+  <sub><b>Prayer times &amp; moon phase:</b> <a href="docs/media/mochidock-prayer.png">Still (PNG)</a> · <a href="docs/media/mochidock-prayer.mp4">Video (MP4)</a></sub>
+</p>
+
+<p align="center">
+  <img src="docs/media/mochidock-fx-rates.gif" alt="FX Rates card showing USD/JPY, USD/IDR, and JPY/IDR quotes with a one-month trajectory chart" width="660"><br>
+  <sub><b>FX Rates:</b> <a href="docs/media/mochidock-fx-rates.png">Still (PNG)</a> · <a href="docs/media/mochidock-fx-rates.mp4">Video (MP4)</a></sub>
+</p>
+
+### Notifications & focus
+
+- **Multi-source inbox:** WhatsApp (multi-account with short aliases, quick replies & emoji reactions), Email (Gmail/IMAP app-password, Outlook Classic, Mailspring, one-click verification code copy), Discord, and any Windows app notifications you choose on the **Apps** card.
+- **Stay in control:** Colour emoji support in the compact capsule, clear selection ring when multiple messages are queued, **Mute** per source (silences popups/sounds while keeping incoming messages stored in their tabs so you can review them later), 1h/8h **Snooze**, **Quiet hours**, and **Quiet while gaming** with allow-listed contacts.
+
+---
+
+## Themes, mascots and quick settings
+
+Switch between `Default` (dark), `Hojicha` (warm roasted-tea brown), `Kuro Night` (storm-night indigo), and `Matcha` (warm oat and green) in the dock's **Quick Settings** or searchable 5-group **Settings** window. Pair any theme with **Auto**, grey **Mochi**, **Matcha Mochi**, **Hojicha Mochi**, **Kuro** (electric black cat), or **Shiro** (white cat), toggle the **Cat mouth** (`:3`) option for Kuro & Shiro, and pick your status badge style (**3D Charm**, **Speech Bubble**, **3D Sticker**, or **Off**).
+
+<p align="center">
+  <img src="docs/media/mochidock-themes.gif" alt="Switching between Default, Matcha, and Kuro Night themes in MochiDock Quick Settings" width="660"><br>
+  <sub><b>Theme switching in Quick Settings:</b> <a href="docs/media/mochidock-themes.png">Still (PNG)</a> · <a href="docs/media/mochidock-themes.mp4">Video (MP4)</a></sub>
+</p>
+
+<p align="center">
+  <img src="docs/media/mochidock-mascots.gif" alt="Switching from Kuro to Shiro in Quick Settings with spin transition" width="660"><br>
+  <sub><b>Mascot switching &amp; spin:</b> <a href="docs/media/mochidock-mascots.png">Still (PNG)</a> · <a href="docs/media/mochidock-mascots.mp4">Video (MP4)</a></sub>
+</p>
+
+![All five mascots (Mochi, Matcha Mochi, Hojicha Mochi, Kuro, and Shiro) rendered across all four themes with 3D Sticker status badges](docs/images/mascots-on-themes.png)
+
+[What triggers each mascot expression](docs/USER_GUIDE.md#mochis-faces)
+
+<details>
+<summary><strong>View all 35 mascot expressions (Default, Matcha, Kuro &amp; Shiro)</strong></summary>
+
+![Mochi's 35 moods on the Default dark theme](docs/images/mochi-moods-default.png)
+
+![Mochi's 35 moods on the Matcha theme](docs/images/mochi-moods-matcha.png)
+
+![Kuro's 35 moods on the Kuro Night theme](docs/images/mochi-moods-kuro.png)
+
+![Shiro's 35 moods on the Default dark theme](docs/images/mochi-moods-shiro.png)
+
+</details>
+
+<details>
+<summary><strong>More card &amp; theme screenshots (Default, Matcha &amp; Kuro Night)</strong></summary>
 
 | Default | Matcha | Kuro Night |
 | --- | --- | --- |
@@ -102,91 +176,97 @@ Choose which blocks appear in **Settings > Taskbar**.
   </tr>
 </table>
 
-The compact capsule in the Default, Matcha and Kuro Night themes, here showing the current song:
+The compact media capsule in `Default`, `Matcha`, and `Kuro Night`:
 
 ![Compact capsule, Default theme](docs/images/live/capsule-media-default.png)
 ![Compact capsule, Matcha theme](docs/images/live/capsule-media-matcha.png)
 ![Compact capsule, Kuro Night theme](docs/images/live/capsule-media-kuro-night-kuro.png)
 
-### Mascots
+</details>
 
-Choose a character in **Settings > Mascot**. **Auto** follows the selected theme.
+---
 
-![Mochi, Matcha Mochi, Hojicha Mochi, Kuro and Shiro across all four themes with 3D Sticker status badges](docs/images/mascots-on-themes.png)
+## All features
 
-[What triggers each expression](docs/USER_GUIDE.md#mochis-faces)
+A new install starts focused: **Media**, **Stats**, and **Weather** tabs, plus desktop notifications and gaming mode. Switch anything else on from the tray icon or the gear button (**Settings > Tabs & Modules**, or use the sidebar search box to jump straight to any setting).
 
-![Mochi's moods on the Default dark theme](docs/images/mochi-moods-default.png)
+| Feature | What it does | New install | Where to switch it |
+| --- | --- | --- | --- |
+| **Media & lyrics** | Playback controls (Spotify, YouTube Music, browsers), seekable timeline, and LRCLIB synced lyrics with Japanese, Korean, and Chinese readings. | On | Always shown; lyrics in Music & Lyrics |
+| **Stats** | CPU (per-core bars), GPU, memory, drives, network, top processes, 24 h history, and Battery & Power page. | On | Tabs & Modules |
+| **Weather** | Current conditions, hourly and 3-day outlook, capsule badge, and rain-soon notices. | On | Tabs & Modules; city in Location & Prayer |
+| **Gaming mode** | Compact FPS, GPU & CPU usage/temps with separate Orange/Red limits, optional click-through, Floating top offset, playtime/session summary, and `Ctrl+Alt+R` resolution toggle. | On | Gaming & Display; temp limits in Hardware & Power |
+| **Notifications** | Compact pill notices that expand on hover; selection ring when several wait; per-source Mute keeps messages quietly stored in tabs; Apps card for watched Windows apps. | Email & Discord on, WhatsApp off, other apps none | Notifications, Email, WhatsApp |
+| **WhatsApp** | Multi-account messages, aliases, quick replies, reactions, and read-sync via local or shared GOWA engine (starts nothing until enabled). | Off | WhatsApp |
+| **Email** | IMAP accounts (Gmail, Yahoo, iCloud with app password), Outlook Classic, Mailspring; verification code copy. | Ready, add an account | Email |
+| **Prayer times** | Location-aware Aladhan schedule, schematic timeline, qibla bearing, offline moon phase, Tone/Silent chime. | Off | Tabs & Modules, or Location & Prayer |
+| **Today & calendar** | Month calendar, events from a Google Calendar / `.ics` link ([setup guide](docs/USER_GUIDE.md#connecting-google-calendar)), tasks with reminders, optional Japan/Indonesia holidays. | Off | Tabs & Modules; link & holidays in Calendar |
+| **FX rates** | Three currency pairs from 25 currencies (defaults USD/JPY, USD/IDR, JPY/IDR) with trajectory chart, no API key required. | Off | Tabs & Modules |
+| **AI usage** | Remaining quota tracking for Claude, Codex, Antigravity, Cursor, Gemini, and GitHub Copilot, with optional low-usage alert. | Off | Tabs & Modules; providers in AI Usage |
+| **Taskbar readouts** | Custom Left/Right blocks beside the tray (CPU, GPU, memory, disk, network, prayer, weather, batteries) with themed hover cards & block menus. | Off | Taskbar |
+| **Wireless device batteries** | Mouse, keyboard, and headset levels on the Battery page and taskbar readout. | Off | Hardware & Power, Taskbar |
+| **Window-size shortcuts** | Global hotkeys to resize/centre the foreground window (`Ctrl+Alt+1–4`) or swap width/height (`Ctrl+Alt+F`). | Off | Gaming & Display |
+| **Pomodoro, File Shelf, Clipboard, Script, Downloads** | Focus timer; Wi-Fi Phone Drop shelf; clipboard history; teleprompter (`Alt+Shift+S`); media downloader (`yt-dlp` + `ffmpeg`). | Off | Tabs & Modules |
+| **Mascots & badges** | 5 characters, optional `:3` cat mouth for Kuro & Shiro, 4 status badge styles with live preview, and mood triggers ([mood guide](docs/USER_GUIDE.md#mochis-faces)). | On | Mascot |
+| **Updates** | Checks GitHub Releases (4-hour interval & manual check chip), persistent subtle `↑` dot + expandable banner until dismissed, and SHA-256 verified silent setup + relaunch. | Check on | Quick settings chip; Updates & Data |
 
-![Mochi's moods on the Matcha theme](docs/images/mochi-moods-matcha.png)
-
-![Kuro's moods on the Kuro Night theme](docs/images/mochi-moods-kuro.png)
-
-![Shiro's moods on the Default dark theme](docs/images/mochi-moods-shiro.png)
-
-The mascot spins as it changes from Kuro to Shiro in quick settings.
-
-![Kuro, the black cat, changing into Shiro, the white cat, on the Default theme](docs/media/mochidock-mascots.gif)
-
-[Mascot still (PNG)](docs/media/mochidock-mascots.png) · [Mascot demo (MP4)](docs/media/mochidock-mascots.mp4)
+Full per-tab and per-setting reference: [User guide](docs/USER_GUIDE.md).
 
 ## Requirements
 
 - Windows 10 version 2004 (build 19041) or later, or Windows 11, 64-bit.
-- Nothing else is required for the basics. Optional, each for its own feature:
-  - **GPU stats:** GPU name, driver and usage come from Windows itself (WMI and the GPU Engine counters), so they work with NVIDIA, AMD and Intel graphics. An NVIDIA driver adds more detail (temperature, memory, clock and power through NVML); on AMD and Intel those extra values are read from hardware sensors when available and show as `-` otherwise. Checked on real hardware with an NVIDIA laptop GPU, an AMD desktop GPU and an Intel CPU with integrated graphics (on the Intel iGPU no GPU temperature sensor is reported, so temperature stays as `-`).
-  - **PawnIO:** a real CPU temperature (a separate third-party driver; the setup can install it for you with winget if you tick the option, or see Settings > Hardware & Power > CPU sensors). Without it the CPU temperature is an estimate, marked with `~`. It is not needed for the power total on the Battery page: CPU power is read from Windows' own Energy Meter counters when PawnIO is missing (on Intel CPUs with integrated graphics that figure already includes the graphics). GPU power needs an NVIDIA card or a sensor that provides it; the total is always marked as an estimate.
-  - **Email:** a Gmail, Yahoo, iCloud or other IMAP account with an app password (Gmail only offers app passwords once 2-step verification is on; see [setting up email](docs/USER_GUIDE.md#setting-up-email-gmail-and-other-imap-accounts)), or classic Outlook or Mailspring.
-  - **Calendar:** a Google Calendar (or other `.ics`) link, see the [user guide](docs/USER_GUIDE.md#connecting-google-calendar).
-  - **`ffmpeg.exe`** (MP3 in Downloads).
+- Nothing extra is needed for the basics. Optional per feature:
+  - **GPU stats:** GPU name, driver, and usage read from Windows WMI and GPU Engine counters (NVIDIA, AMD, Intel). NVIDIA drivers expose extra detail via NVML; on AMD and Intel, temperature/clock/power read from hardware sensors where exposed or display `-` otherwise (verified across an NVIDIA laptop GPU, AMD desktop GPU, and Intel integrated graphics).
+  - **PawnIO:** Real CPU temperature (optional third-party kernel driver — can be ticked during setup via winget, or managed in **Settings > Hardware & Power > Sensors & history**). Without it, CPU temperature is an estimate marked with `~` and stays hidden in the gaming FPS pill. PC power estimation uses Windows' Energy Meter counters when PawnIO is unavailable.
+  - **Email:** Gmail, Yahoo, iCloud, or other IMAP account with an app password ([setup notes](docs/USER_GUIDE.md#setting-up-email-gmail-and-other-imap-accounts)), Outlook Classic, or Mailspring.
+  - **Calendar:** A Google Calendar or `.ics` link ([guide](docs/USER_GUIDE.md#connecting-google-calendar)).
+  - **`ffmpeg.exe`:** Required only for MP3 audio extraction/merging in **Downloads**.
 
 ## Install
 
-1. Download `MochiDock-Setup-<version>.exe` from the [GitHub Releases](https://github.com/sleepisfun17/MochiDock/releases) page and run it. The installer is self-contained and needs no .NET runtime.
-2. The installer is an **unsigned beta**, so Windows SmartScreen may warn. Choose "More info", then "Run anyway".
-3. MochiDock needs **Administrator rights** (FPS capture uses ETW), so Windows asks for approval each time it starts. The optional "Start with Windows" task launches it elevated without a prompt.
+1. Download `MochiDock-Setup-<version>.exe` from [GitHub Releases](https://github.com/sleepisfun17/MochiDock/releases) and run it (self-contained; no separate .NET runtime required).
+2. Because the installer is an **unsigned beta**, Windows SmartScreen may warn — choose **More info → Run anyway**.
+3. MochiDock requires **Administrator privileges** for ETW FPS capture, so UAC prompts on manual launch; enabling **Start with Windows** uses an elevated interactive logon task to launch without a prompt.
 
-**Updating:** you only download the setup once. Later versions install from inside MochiDock (the version button in the dock's quick settings, the tray menu, or Settings > Updates & Data), keeping your settings.
-
-**Uninstalling:** use Windows Settings > Apps. The uninstaller asks whether to keep your settings and data, always deletes saved passwords, and reminds you to revoke a mail app password at your provider. See [updating and uninstalling](docs/USER_GUIDE.md#updating-and-uninstalling).
+**Updating & uninstalling:** Installed copies update in-app via the version chip in Quick Settings, the tray menu, or **Settings > Updates & Data** (SHA-256 verified before running silently). Uninstalling via **Windows Settings > Apps** asks whether to keep settings/data, always deletes DPAPI-encrypted secrets, and reminds you to revoke any email app password at your provider. See [updating and uninstalling](docs/USER_GUIDE.md#updating-and-uninstalling).
 
 ## Build from source
 
-Requires the .NET 8 SDK. From the repository root:
+Requires the [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0). From the repository root:
 
 ```powershell
 dotnet build MochiDock/MochiDock.csproj -c Release
 dotnet test MochiDock.Tests/MochiDock.Tests.csproj -c Release
 ```
 
-To build the installer (Inno Setup 6 required, output `installer\Output\MochiDock-Setup-<version>.exe`):
+Build the installer (Inno Setup 6 required; outputs `installer\Output\MochiDock-Setup-<version>.exe`):
 
 ```powershell
 .\scripts\build_installer.bat
 ```
 
-`scripts\build_and_publish.bat` publishes a portable build to `Publish\` (requires the .NET 8 Windows Desktop Runtime). More commands and the render harnesses are in the [developer documentation](docs/README.md).
+`scripts\build_and_publish.bat` publishes a framework-dependent portable build into `Publish\` (requires the .NET 8 Windows Desktop Runtime). Additional commands and headless render harnesses live in the [developer documentation](docs/README.md).
 
 ## Data and privacy
 
-Settings and tasks live in `%AppData%\MochiDock`. Caches and the WhatsApp (GOWA) session live in `%LocalAppData%\MochiDock`. Phone drop and a shared GOWA server use plain HTTP on your local network, which is not encrypted. Update checks and **Update now** only contact this project's GitHub releases, and a downloaded update is checked against GitHub's SHA-256 checksum before it runs.
-
-**Saved passwords.** Mail app passwords, the shared WhatsApp server login and the calendar link are stored encrypted for your Windows user (Windows DPAPI) in `%LocalAppData%\MochiDock`, and never in settings, exports or logs. A program running as your Windows user could still read them, as with browser cookies. A mail app password can open the whole mailbox, because IMAP cannot be limited to read-only: MochiDock only reads the sender, subject and a short preview, stores no mail, and changes nothing unless you turn on "Mark as read on the server". Create an app password just for MochiDock. Removing an account deletes its password from this PC and reminds you to revoke it at your provider, since no provider lets an app revoke its own app password; uninstalling always deletes every saved password, even when you keep your settings.
+- **Storage:** Settings and tasks live in `%AppData%\MochiDock`. Caches, logs, and local WhatsApp (GOWA) session data live in `%LocalAppData%\MochiDock`. Phone drop and shared GOWA servers use unencrypted local-network HTTP.
+- **Updates:** Automatic/manual update checks only query this repository's GitHub Releases API and verify downloads against GitHub's SHA-256 digest before execution.
+- **Credentials:** Mail app passwords, shared GOWA server tokens, and Google Calendar links are encrypted for your Windows user with Windows DPAPI in `%LocalAppData%\MochiDock` — never in `settings.json`, exports, or logs. Removing an email account or uninstalling MochiDock deletes its saved credential immediately.
 
 ## Issues and ideas
 
-Bug reports, plans and feature ideas go to [GitHub Issues](https://github.com/sleepisfun17/MochiDock/issues).
+Bug reports, hardware feedback, and feature suggestions are welcome on [GitHub Issues](https://github.com/sleepisfun17/MochiDock/issues).
 
 ## Credits
 
-The idea for MochiDock came from [coucou](https://github.com/Louis-CFM/coucou), a notch companion for macOS: MochiDock is a light take on it for Windows. Some card layouts were also influenced by [Oyenza Studio](https://github.com/lucacadalora/oyenza-studio). All of MochiDock's code, including the lyric lookup, the Japanese, Korean and Chinese readings and the AI usage readers, is its own. Card icons are [Microsoft Fluent Emoji](https://github.com/microsoft/fluentui-emoji) (MIT). Other bundled code, fonts, icons and data, and the online services MochiDock reads, are listed in the [third-party notices](THIRD-PARTY-NOTICES.txt).
+The idea for MochiDock came from [coucou](https://github.com/Louis-CFM/coucou), a notch companion for macOS: MochiDock is a lightweight take on the concept for Windows. Some card layouts were influenced by [Oyenza Studio](https://github.com/lucacadalora/oyenza-studio). All application code — including lyric lookup, Japanese/Korean/Chinese pronunciation pipelines, and AI usage readers — is its own. Card icons use [Microsoft Fluent Emoji](https://github.com/microsoft/fluentui-emoji) (MIT). Full libraries, data sources, fonts, and hardware protocol notices are listed in [third-party notices](THIRD-PARTY-NOTICES.txt).
 
-MochiDock is an independent project. WhatsApp, Discord, Gmail, Outlook, Spotify, YouTube Music and the other product names are trademarks of their owners; MochiDock is not affiliated with or endorsed by them.
+MochiDock is an independent project and is not affiliated with or endorsed by any third-party service or product trademarked above.
 
 ## Documentation and licence
 
-- [User guide](docs/USER_GUIDE.md): what each tab and setting does, and how to set up WhatsApp.
-- [Developer documentation](docs/README.md): layout, commands, feature status and runtime checks.
+- [User guide](docs/USER_GUIDE.md): every tab, notification rule, and WhatsApp/Email/Calendar setup.
+- [Developer documentation](docs/README.md): project layout, render harnesses, feature verification status, and human checklist.
 - [Changelog](CHANGELOG.md) and known limitations.
 - [MIT licence](LICENSE).
 - [Third-party notices](THIRD-PARTY-NOTICES.txt).
