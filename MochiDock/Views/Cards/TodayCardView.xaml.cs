@@ -17,6 +17,9 @@ public sealed class AgendaRow
     public string TimeText { get; init; } = "";
     public string Title { get; init; } = "";
     public string Detail { get; init; } = "";
+    public string? RowToolTip { get; init; }
+    /// <summary>The calendar event behind this row, or null for a task.</summary>
+    public AgendaEvent? Event { get; init; }
     /// <summary>The task behind this row, or null for a calendar event.</summary>
     public Models.TodoTaskItem? Task { get; init; }
     public bool IsDone => Task?.IsCompleted == true;
@@ -395,17 +398,26 @@ public partial class TodayCardView : System.Windows.Controls.UserControl
         var focus = _selected.Date == DateTime.Today ? AgendaLogic.Focus(events, DateTime.Now) : null;
         System.Windows.Media.Brush Brush(string key) => (System.Windows.Media.Brush)FindResource(key);
         bool showCalendarLabels = (_feed?.Feeds.Count ?? 0) > 1;
+        var rules = _owner?.GetCalendarActivityRules();
 
         var timed = new List<(DateTime Sort, int Group, AgendaRow Row)>();
         foreach (var e in events)
         {
             bool isFocus = focus != null && ReferenceEquals(focus.Event, e);
             string detail = CalendarFeedPolicy.FormatDetail(e.CalendarName, showCalendarLabels, isFocus ? focus!.Text : null, e.Place);
+            string tip = e.Title;
+            if (!e.AllDay)
+            {
+                var activity = AgendaLogic.ClassifyActivity(e, rules);
+                tip = $"{e.Title}\nMascot badge: {ActivityLabel(activity)} · Right-click to change";
+            }
             var row = new AgendaRow
             {
                 TimeText = AgendaLogic.TimeText(e),
                 Title = e.Title,
                 Detail = detail,
+                RowToolTip = tip,
+                Event = e,
                 JoinUrl = e.JoinUrl,
                 CalendarDotBrush = showCalendarLabels ? Brush(CalendarFeedPolicy.BrushKey(e.CalendarColor)) : null,
                 TitleBrush = isFocus ? Brush("IslandAccentBrush") : Brush("IslandInkBrush"),
@@ -427,6 +439,7 @@ public partial class TodayCardView : System.Windows.Controls.UserControl
                 TimeText = timeText,
                 Title = t.Title,
                 Detail = string.IsNullOrEmpty(countdown) ? (group == AgendaTaskGroup.Floating && t.DueTime != null ? "Task · overdue" : "Task") : "Task · " + countdown,
+                RowToolTip = t.Title,
                 Task = t,
                 TitleBrush = Brush(t.IsCompleted ? "IslandMutedInkBrush" : "IslandInkBrush"),
                 DetailBrush = Brush((t.IsDueSoon || t.IsOverdue) && !t.IsCompleted ? "IslandRedBrush" : "IslandMutedInkBrush"),
@@ -451,6 +464,78 @@ public partial class TodayCardView : System.Windows.Controls.UserControl
             CalendarStatusText.Text = _feed.StatusText;
             CalendarStatusText.Cursor = _feed.State == CalendarFeedState.Invalid ? System.Windows.Input.Cursors.Hand : System.Windows.Input.Cursors.Arrow;
             CalendarStatusText.SetResourceReference(TextBlock.ForegroundProperty, _feed.State == CalendarFeedState.Invalid ? "IslandNegativeBrush" : "IslandMutedInkBrush");
+        }
+    }
+
+    private static string ActivityLabel(CalendarActivityKind kind) => kind switch
+    {
+        CalendarActivityKind.Working => "Working",
+        CalendarActivityKind.Meeting => "Meeting",
+        CalendarActivityKind.Eating => "Eating / Lunch",
+        CalendarActivityKind.Workout => "Gym / Workout",
+        _ => "None",
+    };
+
+    private void AgendaRow_RightClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        if (sender is not FrameworkElement { DataContext: AgendaRow { Event: { AllDay: false } ev } } element || _owner == null)
+            return;
+
+        e.Handled = true;
+        var itemStyle = (Style)FindResource("ModernTrayMenuItemStyle");
+        var sepStyle = (Style)FindResource("ModernTraySeparatorStyle");
+        var menu = new ContextMenu
+        {
+            Style = (Style)FindResource("ModernTrayMenuStyle"),
+            PlacementTarget = element,
+            Placement = System.Windows.Controls.Primitives.PlacementMode.MousePoint,
+        };
+
+        string titleText = (ev.Title ?? "").Trim();
+        string shortTitle = titleText.Length > 26 ? titleText[..25] + "…" : titleText;
+        menu.Items.Add(new MenuItem { Header = $"Badge for \"{shortTitle}\"", IsEnabled = false, Style = itemStyle });
+
+        var autoKind = AgendaLogic.ClassifyActivity(ev);
+        var currentTitleRule = _owner.GetCalendarTitleActivityOverride(ev.Title);
+        PopulateActivityMenu(menu.Items, itemStyle, $"Auto ({ActivityLabel(autoKind)})", currentTitleRule, kind =>
+        {
+            _owner.SetCalendarTitleActivity(ev.Title, kind);
+            Render();
+        });
+
+        if (!string.IsNullOrWhiteSpace(ev.CalendarName))
+        {
+            menu.Items.Add(new Separator { Style = sepStyle });
+            var calSubmenu = new MenuItem { Header = $"Default for \"{ev.CalendarName}\" calendar", Style = itemStyle };
+            var currentCalRule = _owner.GetCalendarFeedActivityOverride(ev.CalendarName);
+            PopulateActivityMenu(calSubmenu.Items, itemStyle, "Auto", currentCalRule, kind =>
+            {
+                _owner.SetCalendarFeedActivity(ev.CalendarName, kind);
+                Render();
+            });
+            menu.Items.Add(calSubmenu);
+        }
+
+        menu.IsOpen = true;
+    }
+
+    private static void PopulateActivityMenu(ItemCollection items, Style itemStyle, string autoLabel, CalendarActivityKind? current, Action<CalendarActivityKind?> onSelect)
+    {
+        var choices = new (string Label, CalendarActivityKind? Kind)[]
+        {
+            (autoLabel, null),
+            ("Working", CalendarActivityKind.Working),
+            ("Meeting", CalendarActivityKind.Meeting),
+            ("Eating / Lunch", CalendarActivityKind.Eating),
+            ("Gym / Workout", CalendarActivityKind.Workout),
+            ("None (no badge)", CalendarActivityKind.None),
+        };
+        foreach (var (label, kind) in choices)
+        {
+            var item = new MenuItem { Header = label, IsChecked = current == kind, Style = itemStyle };
+            var selected = kind;
+            item.Click += (_, _) => onSelect(selected);
+            items.Add(item);
         }
     }
 }

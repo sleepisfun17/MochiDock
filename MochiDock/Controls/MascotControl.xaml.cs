@@ -523,10 +523,10 @@ public partial class MascotControl : System.Windows.Controls.UserControl
             or MascotMood.Excited or MascotMood.Surprised or MascotMood.Cheering or MascotMood.Praying or MascotMood.Waking or MascotMood.Bored
             or MascotMood.Electric or MascotMood.Money or MascotMood.MoneyDown or MascotMood.Sunny or MascotMood.Rainy or MascotMood.Snowy
             or MascotMood.Cloudy or MascotMood.Studying or MascotMood.Coffee
-            or MascotMood.Yawning or MascotMood.Birthday or MascotMood.Meeting or MascotMood.Proud;
+            or MascotMood.Yawning or MascotMood.Birthday or MascotMood.Meeting or MascotMood.Workout or MascotMood.Eating or MascotMood.Working or MascotMood.Proud;
 
     // The gaming faces keep still: the eyes do not follow the pointer and do not blink.
-    private static bool IsStill(MascotMood mood) => mood is MascotMood.Focused or MascotMood.Worried or MascotMood.BreakTime or MascotMood.Waking or MascotMood.Bored or MascotMood.Studying or MascotMood.Meeting;
+    private static bool IsStill(MascotMood mood) => mood is MascotMood.Focused or MascotMood.Worried or MascotMood.BreakTime or MascotMood.Waking or MascotMood.Bored or MascotMood.Studying or MascotMood.Meeting or MascotMood.Working;
 
     // The render harness sets the override (by reflection) to test the turn on a PC or session with Windows animations off.
     private static bool? _animationsOverride = null;   // only the harness assigns it (by reflection)
@@ -1069,6 +1069,9 @@ public partial class MascotControl : System.Windows.Controls.UserControl
         ["note"] = Glyph("F1 M 0.6,-3.8 L 2.1,-3.8 L 2.1,2.4 L 0.6,2.4 Z M 2.1,-3.8 L 4.0,-2.5 L 4.0,-0.7 L 2.1,-2.0 Z M -0.8,0.9 A 2.1,1.6 0 1 1 -0.8,4.1 A 2.1,1.6 0 1 1 -0.8,0.9 Z"),
         ["controller"] = Glyph("F0 M -4.0,-0.8 C -4.0,-2.4 -2.9,-3.0 -1.8,-3.0 L 1.8,-3.0 C 2.9,-3.0 4.0,-2.4 4.0,-0.8 L 4.3,2.2 C 4.4,3.4 3.8,3.9 3.0,3.9 C 2.2,3.9 1.8,3.5 1.4,2.8 L 0.9,2.1 L -0.9,2.1 L -1.4,2.8 C -1.8,3.5 -2.2,3.9 -3.0,3.9 C -3.8,3.9 -4.4,3.4 -4.3,2.2 Z M -2.6,-0.45 L -1.7,-0.45 L -1.7,-1.35 L -0.95,-1.35 L -0.95,-0.45 L -0.05,-0.45 L -0.05,0.3 L -0.95,0.3 L -0.95,1.2 L -1.7,1.2 L -1.7,0.3 L -2.6,0.3 Z M 2.2,-0.9 A 0.7,0.7 0 1 1 0.8,-0.9 A 0.7,0.7 0 1 1 2.2,-0.9 Z M 3.3,0.45 A 0.7,0.7 0 1 1 1.9,0.45 A 0.7,0.7 0 1 1 3.3,0.45 Z"),
         ["mic"] = Glyph("F1 M -1.5,-2.4 A 1.5,1.5 0 0 1 1.5,-2.4 L 1.5,0.4 A 1.5,1.5 0 0 1 -1.5,0.4 Z M -3.1,-0.6 L -2.15,-0.6 A 2.15,2.15 0 0 0 2.15,-0.6 L 3.1,-0.6 A 3.1,3.1 0 0 1 -3.1,-0.6 Z M -0.55,2.3 L 0.55,2.3 L 0.55,3.3 L -0.55,3.3 Z M -2.1,3.2 L 2.1,3.2 L 2.1,4.0 L -2.1,4.0 Z"),
+        ["dumbbell"] = Glyph("M -4.0,-2.0 L -2.9,-2.0 L -2.9,2.0 L -4.0,2.0 Z M -2.6,-3.1 L -1.3,-3.1 L -1.3,3.1 L -2.6,3.1 Z M -1.3,-0.85 L 1.3,-0.85 L 1.3,0.85 L -1.3,0.85 Z M 1.3,-3.1 L 2.6,-3.1 L 2.6,3.1 L 1.3,3.1 Z M 2.9,-2.0 L 4.0,-2.0 L 4.0,2.0 L 2.9,2.0 Z"),
+        ["utensils"] = Glyph("M -3.4,-3.8 L -2.6,-3.8 L -2.6,-1.1 L -2.2,-1.1 L -2.2,-3.8 L -1.5,-3.8 L -1.5,-1.1 L -1.1,-1.1 L -1.1,-3.8 L -0.4,-3.8 L -0.4,-0.7 C -0.4,0.2 -0.9,0.7 -1.35,0.9 L -1.35,3.8 L -2.45,3.8 L -2.45,0.9 C -2.9,0.7 -3.4,0.2 -3.4,-0.7 Z M 1.1,-3.8 C 2.6,-3.8 3.3,-2.5 3.3,-0.6 L 3.3,0.7 L 2.2,0.7 L 2.2,3.8 L 1.1,3.8 Z"),
+        ["briefcase"] = Glyph("F0 M -3.9,-1.7 L 3.9,-1.7 C 4.1,-1.7 4.1,-1.5 4.1,-1.3 L 4.1,3.2 C 4.1,3.6 3.8,3.9 3.4,3.9 L -3.4,3.9 C -3.8,3.9 -4.1,3.6 -4.1,3.2 L -4.1,-1.3 C -4.1,-1.5 -4.1,-1.7 -3.9,-1.7 Z M -1.8,-1.7 L -1.8,-3.1 C -1.8,-3.6 -1.4,-3.9 -0.9,-3.9 L 0.9,-3.9 C 1.4,-3.9 1.8,-3.6 1.8,-3.1 L 1.8,-1.7 L 0.9,-1.7 L 0.9,-2.8 L -0.9,-2.8 L -0.9,-1.7 Z M -1.0,0.4 L 1.0,0.4 L 1.0,1.5 L -1.0,1.5 Z"),
     };
 
     private static Geometry Glyph(string data)
@@ -1388,6 +1391,19 @@ public partial class MascotControl : System.Windows.Controls.UserControl
             case MascotMood.Meeting:
                 // In a calendar meeting: a calm face and the matching headset with a microphone. Still, so it does not distract.
                 ShowHeadset(HeadsetMood.Meeting);
+                break;
+            case MascotMood.Workout:
+                // Calendar workout / gym session: determined eyes and the dumbbell badge.
+                ShowEyes(Eyes.Determ);
+                if (animate) BodyBounceTransform.BeginAnimation(TranslateTransform.YProperty, Loop(0, -1.2, 620, easing: new SineEase { EasingMode = EasingMode.EaseOut }));
+                break;
+            case MascotMood.Eating:
+                // Calendar meal / lunch: happy eyes and the fork & knife badge.
+                ShowEyes(Eyes.Happy);
+                if (animate) BodyBounceTransform.BeginAnimation(TranslateTransform.YProperty, Loop(0, -0.8, 1200, easing: new SineEase { EasingMode = EasingMode.EaseInOut }));
+                break;
+            case MascotMood.Working:
+                // Calendar work block: calm normal eyes and the briefcase badge.
                 break;
             case MascotMood.Proud:
                 // Every task due today is done: happy eyes and the green tick badge.

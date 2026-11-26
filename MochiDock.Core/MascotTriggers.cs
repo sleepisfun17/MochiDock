@@ -107,13 +107,19 @@ public static class MascotTriggers
     public static bool IsLateNight(DateTime now) => now.Hour is >= 23 or < 5;
 
     /// <summary>
-    /// The face for the day, or null: Meeting during a timed calendar event, Birthday on the user's birthday (<paramref name="birthdayMonthDay"/>
-    /// "MM-dd"), Proud once every task due today is done, Yawning late at night. That order wins.
+    /// The face for the day, or null: Meeting during a timed calendar meeting, Birthday on the user's birthday (<paramref name="birthdayMonthDay"/>
+    /// "MM-dd"), active calendar Eating/Workout/Working, Proud once every task due today is done, Yawning late at night. That order wins.
     /// </summary>
-    public static MascotMood? DayFace(DateTime now, string? birthdayMonthDay, bool allTasksDone, bool inMeeting)
+    public static MascotMood? DayFace(DateTime now, string? birthdayMonthDay, bool allTasksDone, bool inMeeting) =>
+        DayFace(now, birthdayMonthDay, allTasksDone, inMeeting ? CalendarActivityKind.Meeting : CalendarActivityKind.None);
+
+    public static MascotMood? DayFace(DateTime now, string? birthdayMonthDay, bool allTasksDone, CalendarActivityKind calendarActivity, bool onWorkBreak = false)
     {
-        if (inMeeting) return MascotMood.Meeting;
+        if (calendarActivity == CalendarActivityKind.Meeting) return MascotMood.Meeting;
         if (IsBirthday(now, birthdayMonthDay)) return MascotMood.Birthday;
+        if (calendarActivity == CalendarActivityKind.Eating) return MascotMood.Eating;
+        if (calendarActivity == CalendarActivityKind.Workout) return MascotMood.Workout;
+        if (calendarActivity == CalendarActivityKind.Working) return onWorkBreak ? MascotMood.Coffee : MascotMood.Working;
         if (allTasksDone) return MascotMood.Proud;
         if (IsLateNight(now)) return MascotMood.Yawning;
         return null;
@@ -182,4 +188,58 @@ public static class MascotTriggers
     /// <summary>True when an open task with a due time is overdue by 10 to 90 minutes and nobody acknowledged it.</summary>
     public static bool UnacknowledgedOverdue(IEnumerable<ReminderTask> tasks, DateTime now, ISet<string> acknowledged) =>
         tasks.Any(t => !t.Done && t.Due is { } due && now - due >= AngryFrom && now - due < AngryUntil && !acknowledged.Contains(AgendaReminderPolicy.TaskItemKey(t.Id, due)));
+}
+
+/// <summary>
+/// Tracks continuous active work during a calendar Working schedule and triggers a 5-minute Coffee break every 45 minutes.
+/// Stepping away from input for 3+ minutes (or locking / leaving the Working block) resets the work timer.
+/// </summary>
+public sealed class WorkBreakTracker
+{
+    public static readonly TimeSpan WorkBreakAfter = TimeSpan.FromMinutes(45);
+    public static readonly TimeSpan WorkBreakDuration = TimeSpan.FromMinutes(5);
+    public static readonly TimeSpan WorkBreakResetIdle = TimeSpan.FromMinutes(3);
+
+    private DateTime? _workStartedAt;
+    private DateTime? _breakStartedAt;
+
+    public bool OnBreak => _breakStartedAt.HasValue;
+
+    public void Reset()
+    {
+        _workStartedAt = null;
+        _breakStartedAt = null;
+    }
+
+    public bool Update(DateTime now, bool isWorking, TimeSpan inputIdle, bool awayOrLocked)
+    {
+        if (!isWorking || awayOrLocked)
+        {
+            Reset();
+            return false;
+        }
+        if (_breakStartedAt is { } breakStart)
+        {
+            if (now - breakStart >= WorkBreakDuration)
+            {
+                _breakStartedAt = null;
+                _workStartedAt = now;
+                return false;
+            }
+            return true;
+        }
+        if (inputIdle >= WorkBreakResetIdle)
+        {
+            _workStartedAt = null;
+            return false;
+        }
+        _workStartedAt ??= now;
+        if (now - _workStartedAt.Value >= WorkBreakAfter)
+        {
+            _breakStartedAt = now;
+            _workStartedAt = null;
+            return true;
+        }
+        return false;
+    }
 }

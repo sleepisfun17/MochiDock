@@ -36,4 +36,14 @@ public class UpdateChipPolicyTests
         Assert.False(UpdateChipPolicy.IsHighlighted(UpdateChipState.Downloading));
         Assert.False(UpdateChipPolicy.IsHighlighted(UpdateChipState.Installing));
     }
+
+    [Theory]
+    [InlineData(UpdateChipState.Current, true)]
+    [InlineData(UpdateChipState.Install, true)]
+    [InlineData(UpdateChipState.Available, true)]
+    [InlineData(UpdateChipState.Checking, false)]
+    [InlineData(UpdateChipState.Downloading, false)]
+    [InlineData(UpdateChipState.Installing, false)]
+    public void BusyAndDownloadStatesDisableTheHeaderChip(UpdateChipState state, bool expected) =>
+        Assert.Equal(expected, UpdateChipPolicy.IsInteractive(state));
 }

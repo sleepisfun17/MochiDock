@@ -31,6 +31,9 @@ public partial class MascotSectionView : SettingsSectionBase
             ("Studying (timer)", MascotMood.Studying),
             ("Gaming (Neko controller)", MascotMood.Focused),
             ("Meeting (Neko mic)", MascotMood.Meeting),
+            ("Gym / Workout (dumbbell)", MascotMood.Workout),
+            ("Eating / Lunch (utensils)", MascotMood.Eating),
+            ("Working (briefcase)", MascotMood.Working),
             ("Prayer (bell)", MascotMood.Praying),
         };
         foreach (var (label, mood) in items)

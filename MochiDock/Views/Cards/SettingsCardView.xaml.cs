@@ -189,7 +189,7 @@ public partial class SettingsCardView : UserControl
     private async void UpdateChip_Click(object sender, RoutedEventArgs e)
     {
         if (ViewModel is not { } vm) return;
-        // Checking gets the usual refresh feedback on the button; install, release page and cancel act directly.
+        // Checking gets the usual refresh feedback on the button; install and release page act directly.
         if (vm.UpdateChipState == MochiDock.Core.UpdateChipState.Current && sender is System.Windows.Controls.Button button)
             await MochiDock.Controls.RefreshFeedback.RunAsync(button, () => vm.CheckForUpdatesAsync(manual: true));
         else await vm.UpdateChipClickAsync();

@@ -11,7 +11,7 @@ public enum UpdateChipState
     Install,
     /// <summary>An update that has to be installed by hand: a click opens the release page.</summary>
     Available,
-    /// <summary>The setup is downloading: a click cancels.</summary>
+    /// <summary>The setup is downloading: shows progress; cancel from the update banner or Settings.</summary>
     Downloading,
     /// <summary>The setup is starting and MochiDock is about to restart: no click.</summary>
     Installing,
@@ -39,4 +39,8 @@ public static class UpdateChipPolicy
 
     /// <summary>True when the button should use the accent style: an update is waiting.</summary>
     public static bool IsHighlighted(UpdateChipState state) => state is UpdateChipState.Install or UpdateChipState.Available;
+
+    /// <summary>True when clicking the header chip should perform an action (check, install, or open the release page).</summary>
+    public static bool IsInteractive(UpdateChipState state) =>
+        state is UpdateChipState.Current or UpdateChipState.Install or UpdateChipState.Available;
 }

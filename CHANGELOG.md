@@ -2,6 +2,20 @@
 
 All notable changes to MochiDock are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.5.5-beta]
+
+### Added
+
+- **Calendar activity mascot badges & right-click tagging**: added **Gym / Workout** (dumbbell), **Eating / Lunch** (utensils), and **Working** (briefcase) status badges (with live previews in **Settings > Mascot**), smart EN/JP/ID keyword + conferencing-link classification with overlap priority (`Meeting` > `Eating` > `Workout` > `Working`), and a right-click menu on timed schedules in the **Today** tab to override badges by event title or set a default for an entire calendar feed.
+- **Working mode 45-minute Coffee micro-break**: during an active `Working` calendar schedule, Mochi suppresses bored sighs and 2-minute resting dozes and switches to a 5-minute `Coffee` break after 45 minutes of continuous active PC work (resetting after 3+ minutes away; real 10-minute away `Sleeping` and lock/screen-off sleep still work normally).
+
+### Fixed
+
+- **3D Charm & Speech Bubble badge centering**: disabled inner `<Viewbox>` layout rounding on `MascotControl.StatusBadge` and `MascotStatusBadge.BadgeRoot` so badge icons sit centered across compact, expanded, detail previews, and all DPI scales.
+- **Update version button during download**: preserved `Content`/`IsEnabled`/`ToolTip` data bindings in `RefreshFeedback` so checking for updates no longer freezes the header chip on the old version string during downloads, and disabled the chip while checking/downloading/installing so clicking it can never accidentally abort a download (explicit **Cancel** stays on the Update banner and **Settings > Updates & Data**).
+- **Calendar Meeting mood accuracy**: non-meeting timed events (such as errands or appointments) no longer trigger the Meeting headset/mic face unless they have a conferencing link, meeting keyword, or explicit user tag.
+- **Prayer countdown sync (taskbar vs. compact dock)**: aligned taskbar `FormatPrayerRemaining` and `PrayerSchedule.CountdownText` to round whole minutes up like the compact dock reminder (`PrayerCountdownState.Minutes`), eliminating the 1-minute difference and refreshing immediately across the `<1m` boundary.
+
 ## [0.5.4-beta]
 
 ### Added

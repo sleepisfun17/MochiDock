@@ -17,9 +17,9 @@ public static class KuroTailSway
 
     /// <summary>
     /// He sways while relaxed or happy. Not while sleeping, not with the still faces (Focused, Worried, BreakTime, Waking, Bored, Studying,
-    /// Meeting) and not when unwell or sad (Dizzy, Drained, Defeat, Freezing, Hot, Angry); the activity faces stay quiet too.
+    /// Meeting, Workout, Working) and not when unwell or sad (Dizzy, Drained, Defeat, Freezing, Hot, Angry); the activity faces stay quiet too.
     /// </summary>
     public static bool CanSway(MascotMood mood) =>
         mood is MascotMood.Idle or MascotMood.Waiting or MascotMood.Happy or MascotMood.Music or MascotMood.Coffee
-            or MascotMood.Proud or MascotMood.Birthday or MascotMood.Cheering or MascotMood.Excited;
+            or MascotMood.Eating or MascotMood.Proud or MascotMood.Birthday or MascotMood.Cheering or MascotMood.Excited;
 }

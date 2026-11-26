@@ -66,6 +66,7 @@
                     <!-- Update button: the running version (click checks now), or in accent "Update to x" when a new version waits.
                          Two buttons so each keeps its own style's hover; only one is visible. The full update options are in Settings > Updates & Data. -->
                     <Button x:Name="UpdateChip" Style="{StaticResource IslandSecondaryButtonStyle}" Content="{Binding UpdateChipText}" Click="UpdateChip_Click" Margin="0,0,8,0"
+                            IsEnabled="{Binding IsUpdateChipInteractive}" ToolTipService.ShowOnDisabled="True"
                             ToolTip="{Binding UpdateChipToolTip}" AutomationProperties.Name="{Binding UpdateChipToolTip}"
                             Visibility="{Binding IsUpdateChipHighlighted, Converter={StaticResource InverseBoolToVisibility}}"/>
                     <Button x:Name="UpdateChipAccent" Style="{StaticResource IslandPrimaryButtonStyle}" Content="{Binding UpdateChipText}" Click="UpdateChip_Click" Margin="0,0,8,0"

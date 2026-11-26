@@ -62,12 +62,12 @@ public partial class MainViewModel
         UpdateChipPolicy.State(_updateBusy, _availableUpdate != null, CanInstallUpdate, IsUpdateDownloading, _installing);
     public string UpdateChipText => UpdateChipPolicy.Text(UpdateChipState, CurrentVersionText, _availableUpdate?.Version, _downloadPercent);
     public bool IsUpdateChipHighlighted => UpdateChipPolicy.IsHighlighted(UpdateChipState);
+    public bool IsUpdateChipInteractive => UpdateChipPolicy.IsInteractive(UpdateChipState);
     public string UpdateChipToolTip => UpdateChipState switch
     {
         UpdateChipState.Current => UpdateStatusText + " Click to check now.",
         UpdateChipState.Install => UpdateStatusText + " Click to update.",
         UpdateChipState.Available => UpdateStatusText + " " + UpdateInstallHint + " Click to open the release page.",
-        UpdateChipState.Downloading => UpdateStatusText + " Click to cancel.",
         _ => UpdateStatusText,
     };
 
@@ -84,11 +84,12 @@ public partial class MainViewModel
         OnPropertyChanged(nameof(UpdateChipState));
         OnPropertyChanged(nameof(UpdateChipText));
         OnPropertyChanged(nameof(IsUpdateChipHighlighted));
+        OnPropertyChanged(nameof(IsUpdateChipInteractive));
         OnPropertyChanged(nameof(UpdateChipToolTip));
         OnPropertyChanged(nameof(UpdateBannerText));
     }
 
-    /// <summary>A click on the header's update button: check, install (after its confirmation), open the release page, or cancel.</summary>
+    /// <summary>A click on the header's update button: check, install (after its confirmation), or open the release page.</summary>
     public Task UpdateChipClickAsync()
     {
         switch (UpdateChipState)
@@ -96,7 +97,6 @@ public partial class MainViewModel
             case UpdateChipState.Current: return CheckForUpdatesAsync(manual: true);
             case UpdateChipState.Install: return InstallUpdateAsync();
             case UpdateChipState.Available: OpenUpdatePage(); break;
-            case UpdateChipState.Downloading: CancelUpdateDownload(); break;
         }
         return Task.CompletedTask;
     }

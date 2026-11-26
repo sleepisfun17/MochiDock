@@ -11,7 +11,8 @@ public class MascotBadgeTests
         [MascotMood.Victory] = "trophy", [MascotMood.Angry] = "clock", [MascotMood.Drained] = "battery",
         [MascotMood.Money] = "up", [MascotMood.MoneyDown] = "down",
         [MascotMood.Sunny] = "sun", [MascotMood.Rainy] = "umbrella", [MascotMood.Snowy] = "snow", [MascotMood.Cloudy] = "cloud",
-        [MascotMood.Studying] = "timer", [MascotMood.Proud] = "tick",
+        [MascotMood.Studying] = "timer", [MascotMood.Workout] = "dumbbell", [MascotMood.Eating] = "utensils",
+        [MascotMood.Working] = "briefcase", [MascotMood.Proud] = "tick",
     };
 
     [Fact]

@@ -492,13 +492,14 @@ public static class TaskbarReadouts
         };
     }
 
-    /// <summary>"in 1h 25m", "in 12m", "&lt;1m" or "now".</summary>
+    /// <summary>"in 1h 25m", "in 12m", "&lt;1m" or "now" (rounds up whole minutes to match the capsule reminder).</summary>
     public static string FormatPrayerRemaining(TimeSpan remaining)
     {
         if (remaining <= TimeSpan.Zero) return "now";
         if (remaining.TotalMinutes < 1) return "<1m";
-        int hours = (int)remaining.TotalHours;
-        int minutes = remaining.Minutes;
+        int totalMinutes = (int)Math.Ceiling(remaining.TotalMinutes);
+        int hours = totalMinutes / 60;
+        int minutes = totalMinutes % 60;
         return hours > 0 ? $"in {hours}h {minutes}m" : $"in {minutes}m";
     }
 

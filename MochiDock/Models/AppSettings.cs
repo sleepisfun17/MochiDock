@@ -232,6 +232,9 @@ public class AppSettings
     public bool ExpressiveMochi { get; set; } = true;
     /// <summary>The user's birthday as "MM-dd" (empty: none). Mochi wears a party hat all day.</summary>
     public string BirthdayMonthDay { get; set; } = "";
+    /// <summary>User-assigned mascot status badges keyed by calendar event title (trimmed, case-insensitive) or calendar name.</summary>
+    public Dictionary<string, string> CalendarTitleActivities { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+    public Dictionary<string, string> CalendarFeedActivities { get; set; } = new(StringComparer.OrdinalIgnoreCase);
     public bool ShowWeatherInCapsule { get; set; } = true;
     /// <summary>A short capsule notice when rain, snow or a thunderstorm is expected within the hour.</summary>
     public bool RainSoonNotice { get; set; } = true;

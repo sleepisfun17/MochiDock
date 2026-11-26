@@ -7,6 +7,40 @@ public enum AgendaFocusKind { Now, Next }
 /// <summary>Where a task belongs in the agenda of a selected day.</summary>
 public enum AgendaTaskGroup { None, OnDay, Floating }
 
+/// <summary>What an active timed calendar event represents for the mascot's ambient badge, ordered by priority.</summary>
+public enum CalendarActivityKind { None, Working, Workout, Eating, Meeting }
+
+/// <summary>User-defined overrides for calendar schedule badges: per event title and optional default per calendar name.</summary>
+public sealed class CalendarActivityRules
+{
+    public IReadOnlyDictionary<string, CalendarActivityKind> ByTitle { get; }
+    public IReadOnlyDictionary<string, CalendarActivityKind> ByCalendar { get; }
+
+    public CalendarActivityRules(IReadOnlyDictionary<string, CalendarActivityKind>? byTitle = null, IReadOnlyDictionary<string, CalendarActivityKind>? byCalendar = null)
+    {
+        ByTitle = byTitle ?? new Dictionary<string, CalendarActivityKind>(StringComparer.OrdinalIgnoreCase);
+        ByCalendar = byCalendar ?? new Dictionary<string, CalendarActivityKind>(StringComparer.OrdinalIgnoreCase);
+    }
+
+    public static CalendarActivityRules Parse(IDictionary<string, string>? byTitle, IDictionary<string, string>? byCalendar)
+    {
+        static Dictionary<string, CalendarActivityKind> Build(IDictionary<string, string>? source)
+        {
+            var map = new Dictionary<string, CalendarActivityKind>(StringComparer.OrdinalIgnoreCase);
+            if (source is null) return map;
+            foreach (var (k, v) in source)
+            {
+                var key = (k ?? "").Trim();
+                if (key.Length == 0) continue;
+                if (Enum.TryParse<CalendarActivityKind>(v?.Trim(), ignoreCase: true, out var kind))
+                    map[key] = kind;
+            }
+            return map;
+        }
+        return new CalendarActivityRules(Build(byTitle), Build(byCalendar));
+    }
+}
+
 /// <summary>The event the agenda should call out: the one happening now, or the next one starting within the hour.</summary>
 public sealed record AgendaFocus(AgendaEvent Event, AgendaFocusKind Kind, string Text);
 
@@ -14,6 +48,30 @@ public static class AgendaLogic
 {
     static readonly string[] JoinHosts = { "meet.google.com", "zoom.us", "teams.microsoft.com", "teams.live.com", "webex.com" };
     static readonly Regex UrlPattern = new(@"https?://[^\s<>""']+", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+    static readonly Regex MeetingTitleAsciiPattern = new(
+        @"(?<![A-Za-z0-9])(meetings?|mtg|sync|stand[\s-]?up|1:1|1-on-1|1on1|one-on-one|huddle|retro(?:spective)?|scrum|interview|webinar|town[\s-]?hall|all[\s-]?hands|kick[\s-]?off|briefing|sprint\s+(?:planning|review)|design\s+review|zoom|webex|google\s+meet|(?:ms|microsoft)\s+teams|rapat|diskusi|presentasi|wawancara|(?<!on[\s-])call)(?![A-Za-z0-9])",
+        RegexOptions.IgnoreCase | RegexOptions.Compiled);
+    static readonly string[] MeetingTitleCjkKeywords = { "会議", "ミーティング", "打ち合わせ", "打合せ", "打合わせ", "面談", "面接", "定例", "朝会", "夕会", "商談" };
+    static readonly Regex MeetingPlaceAsciiPattern = new(
+        @"(?<![A-Za-z0-9])(zoom|google\s+meet|(?:ms|microsoft)\s+teams|webex|huddle|meeting\s+room|conference\s+room|ruang\s+rapat)(?![A-Za-z0-9])",
+        RegexOptions.IgnoreCase | RegexOptions.Compiled);
+    static readonly string[] MeetingPlaceCjkKeywords = { "会議室" };
+    static readonly Regex EatingTitleAsciiPattern = new(
+        @"(?<![A-Za-z0-9])(lunch|dinner|breakfast|brunch|meal|eating|eat|supper|ramen|sushi|bento|makan(?:\s+(?:siang|malam))?|sarapan)(?![A-Za-z0-9])",
+        RegexOptions.IgnoreCase | RegexOptions.Compiled);
+    static readonly string[] EatingTitleCjkKeywords = { "ランチ", "昼食", "昼休み", "昼ご飯", "夕食", "晩ご飯", "朝食", "朝ご飯", "食事", "ご飯" };
+    static readonly Regex WorkoutTitleAsciiPattern = new(
+        @"(?<![A-Za-z0-9])(gym|work[\s-]?out|exercise|training|fitness|cardio|running|jogging|yoga|pilates|swim(?:ming)?|boxing|olahraga|latihan|lari)(?![A-Za-z0-9])",
+        RegexOptions.IgnoreCase | RegexOptions.Compiled);
+    static readonly string[] WorkoutTitleCjkKeywords = { "ジム", "筋トレ", "トレーニング", "運動", "ランニング", "ヨガ", "水泳" };
+    static readonly Regex WorkoutPlaceAsciiPattern = new(
+        @"(?<![A-Za-z0-9])(gym|fitness)(?![A-Za-z0-9])",
+        RegexOptions.IgnoreCase | RegexOptions.Compiled);
+    static readonly string[] WorkoutPlaceCjkKeywords = { "ジム" };
+    static readonly Regex WorkingTitleAsciiPattern = new(
+        @"(?<![A-Za-z0-9])(work|working|work\s+shift|shift|office|deep\s+work|focus\s+(?:block|time)|coding|kerja|kantor|lembur)(?![A-Za-z0-9])",
+        RegexOptions.IgnoreCase | RegexOptions.Compiled);
+    static readonly string[] WorkingTitleCjkKeywords = { "仕事", "勤務", "出社", "業務", "作業", "シフト", "出勤" };
 
     /// <summary>
     /// A meeting link is only ever opened if it is https, on a known conferencing host, with no user info and no custom port.
@@ -105,6 +163,83 @@ public static class AgendaLogic
         if (current is not null) return new AgendaFocus(current, AgendaFocusKind.Now, $"{Minutes((current.End - now).TotalMinutes)} left");
         var next = timed.Where(e => e.Start > now && e.Start - now <= TimeSpan.FromMinutes(60)).OrderBy(e => e.Start).FirstOrDefault();
         return next is null ? null : new AgendaFocus(next, AgendaFocusKind.Next, $"in {Minutes((next.Start - now).TotalMinutes)}");
+    }
+
+    /// <summary>
+    /// True when a timed calendar event looks like an actual call/meeting (has a conferencing link, or a meeting keyword in its title/place).
+    /// Non-meeting schedule blocks like Gym, Lunch, or Focus time return false so the mascot stays in its normal mood.
+    /// </summary>
+    public static bool IsMeeting(AgendaEvent ev)
+    {
+        if (ev.AllDay) return false;
+        if (!string.IsNullOrWhiteSpace(ev.JoinUrl)) return true;
+        return MatchesActivity(ev.Title, ev.Place, MeetingTitleAsciiPattern, MeetingTitleCjkKeywords, MeetingPlaceAsciiPattern, MeetingPlaceCjkKeywords);
+    }
+
+    /// <summary>True when at least one currently active timed event (<see cref="AgendaEvent.Start"/> &lt;= <paramref name="now"/> &lt; <see cref="AgendaEvent.End"/>) is a meeting.</summary>
+    public static bool HasActiveMeeting(IEnumerable<AgendaEvent> events, DateTime now) =>
+        events.Any(e => !e.AllDay && e.Start <= now && e.End > now && IsMeeting(e));
+
+    /// <summary>Classifies a single timed event into Meeting, Eating, Workout, Working, or None, applying optional title and calendar overrides.</summary>
+    public static CalendarActivityKind ClassifyActivity(AgendaEvent ev, CalendarActivityRules? rules = null)
+    {
+        if (ev.AllDay) return CalendarActivityKind.None;
+
+        string titleKey = (ev.Title ?? "").Trim();
+        if (rules is not null && titleKey.Length > 0 && rules.ByTitle.TryGetValue(titleKey, out var titleKind))
+            return titleKind;
+
+        string calKey = (ev.CalendarName ?? "").Trim();
+        CalendarActivityKind calKind = CalendarActivityKind.None;
+        bool hasCalRule = rules is not null && calKey.Length > 0 && rules.ByCalendar.TryGetValue(calKey, out calKind);
+        if (hasCalRule && calKind == CalendarActivityKind.None)
+            return CalendarActivityKind.None;
+
+        var auto = ClassifyActivityAuto(ev);
+        if (auto != CalendarActivityKind.None) return auto;
+
+        return hasCalRule ? calKind : CalendarActivityKind.None;
+    }
+
+    static CalendarActivityKind ClassifyActivityAuto(AgendaEvent ev)
+    {
+        if (IsMeeting(ev)) return CalendarActivityKind.Meeting;
+        if (MatchesActivity(ev.Title, null, EatingTitleAsciiPattern, EatingTitleCjkKeywords)) return CalendarActivityKind.Eating;
+        if (MatchesActivity(ev.Title, ev.Place, WorkoutTitleAsciiPattern, WorkoutTitleCjkKeywords, WorkoutPlaceAsciiPattern, WorkoutPlaceCjkKeywords)) return CalendarActivityKind.Workout;
+        if (MatchesActivity(ev.Title, null, WorkingTitleAsciiPattern, WorkingTitleCjkKeywords)) return CalendarActivityKind.Working;
+        return CalendarActivityKind.None;
+    }
+
+    /// <summary>Returns the highest-priority activity across all currently active timed events (Meeting &gt; Eating &gt; Workout &gt; Working).</summary>
+    public static CalendarActivityKind ActiveCalendarActivity(IEnumerable<AgendaEvent> events, DateTime now, CalendarActivityRules? rules = null)
+    {
+        var best = CalendarActivityKind.None;
+        foreach (var ev in events)
+        {
+            if (ev.AllDay || ev.Start > now || ev.End <= now) continue;
+            var kind = ClassifyActivity(ev, rules);
+            if (kind > best) best = kind;
+            if (best == CalendarActivityKind.Meeting) break;
+        }
+        return best;
+    }
+
+    static bool MatchesActivity(string? title, string? place, Regex titleAscii, string[] titleCjk, Regex? placeAscii = null, string[]? placeCjk = null)
+    {
+        if (!string.IsNullOrWhiteSpace(title))
+        {
+            if (titleAscii.IsMatch(title)) return true;
+            foreach (var kw in titleCjk)
+                if (title.Contains(kw, StringComparison.Ordinal)) return true;
+        }
+        if (!string.IsNullOrWhiteSpace(place))
+        {
+            if (placeAscii is not null && placeAscii.IsMatch(place)) return true;
+            if (placeCjk is not null)
+                foreach (var kw in placeCjk)
+                    if (place.Contains(kw, StringComparison.Ordinal)) return true;
+        }
+        return false;
     }
 
     /// <summary>

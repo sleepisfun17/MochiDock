@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using System.Windows.Threading;
 using MochiDock.Core;
+using MochiDock.Models;
 using MochiDock.Services;
 
 namespace MochiDock.ViewModels;
@@ -31,7 +32,10 @@ public partial class MainViewModel
         RefreshMascotMood();
     }
 
-    // The day face (MascotTriggers.DayFace): a meeting, the birthday, all of today's tasks done, up late. Checked every 30 seconds.
+    // The day face (MascotTriggers.DayFace): calendar schedule, birthday, all tasks done, up late. Checked every 30 seconds.
+    private readonly WorkBreakTracker _workBreak = new();
+    private CalendarActivityKind _activeCalendarActivity;
+    private bool _mascotWorkBreak;
     private MascotMood? _mascotDay;
     private DateTime _dayFaceCheckedAt;
     private DateTime _birthdayGreetedOn;
@@ -39,7 +43,42 @@ public partial class MainViewModel
     private bool TodaysTasksDone() =>
         MascotTriggers.AllTasksDone(_tasksService.Tasks.Select(t => (t.DueTime, t.IsCompleted)), DateTime.Now);
 
-    /// <summary>Re-checks the day face now (after the birthday setting changed).</summary>
+    public CalendarActivityRules GetCalendarActivityRules() =>
+        CalendarActivityRules.Parse(_settings?.CalendarTitleActivities, _settings?.CalendarFeedActivities);
+
+    public CalendarActivityKind? GetCalendarTitleActivityOverride(string? title)
+    {
+        var key = (title ?? "").Trim();
+        return key.Length > 0 && GetCalendarActivityRules().ByTitle.TryGetValue(key, out var kind) ? kind : null;
+    }
+
+    public CalendarActivityKind? GetCalendarFeedActivityOverride(string? calendarName)
+    {
+        var key = (calendarName ?? "").Trim();
+        return key.Length > 0 && GetCalendarActivityRules().ByCalendar.TryGetValue(key, out var kind) ? kind : null;
+    }
+
+    public void SetCalendarTitleActivity(string? title, CalendarActivityKind? kind) =>
+        UpdateCalendarActivityRule(title, kind, s => s.CalendarTitleActivities ??= new(StringComparer.OrdinalIgnoreCase));
+
+    public void SetCalendarFeedActivity(string? calendarName, CalendarActivityKind? kind) =>
+        UpdateCalendarActivityRule(calendarName, kind, s => s.CalendarFeedActivities ??= new(StringComparer.OrdinalIgnoreCase));
+
+    private void UpdateCalendarActivityRule(string? rawKey, CalendarActivityKind? kind, Func<AppSettings, Dictionary<string, string>> selectMap)
+    {
+        var key = (rawKey ?? "").Trim();
+        if (key.Length == 0) return;
+        UpdateSettings(s =>
+        {
+            var map = selectMap(s);
+            foreach (var existing in map.Keys.Where(k => string.Equals(k.Trim(), key, StringComparison.OrdinalIgnoreCase)).ToList())
+                map.Remove(existing);
+            if (kind is { } value) map[key] = value.ToString();
+        }, SettingsApply.None);
+        RefreshDayFace();
+    }
+
+    /// <summary>Re-checks the day face now (after the birthday or calendar badge settings changed).</summary>
     public void RefreshDayFace() => UpdateDayFace(force: true);
 
     private void UpdateDayFace(bool force = false)
@@ -47,9 +86,17 @@ public partial class MainViewModel
         var now = DateTime.Now;
         if (!force && now - _dayFaceCheckedAt < TimeSpan.FromSeconds(30)) return;
         _dayFaceCheckedAt = now;
-        bool inMeeting = CalendarFeed?.Events is { } events && AgendaLogic.Focus(events, now)?.Kind == AgendaFocusKind.Now;
+        var calendarActivity = CalendarFeed?.Events is { } events
+            ? AgendaLogic.ActiveCalendarActivity(events, now, GetCalendarActivityRules())
+            : CalendarActivityKind.None;
+        _activeCalendarActivity = calendarActivity;
+        if (calendarActivity != CalendarActivityKind.Working)
+        {
+            _workBreak.Reset();
+            _mascotWorkBreak = false;
+        }
         string birthday = _settings?.BirthdayMonthDay ?? "";
-        var face = MascotTriggers.DayFace(now, birthday, TodaysTasksDone(), inMeeting);
+        var face = MascotTriggers.DayFace(now, birthday, TodaysTasksDone(), calendarActivity, _mascotWorkBreak);
         if (face == MascotMood.Birthday && _birthdayGreetedOn != now.Date)
         {
             _birthdayGreetedOn = now.Date;
@@ -156,9 +203,50 @@ public partial class MainViewModel
         if (_baseMood is not (MascotMood.Idle or MascotMood.Waiting or MascotMood.Coffee or MascotMood.Bored or MascotMood.Sleeping)) return;
         if (IsNotificationInMainPill || IsPomodoroInMainPill || IsStatsShownInCapsule) return;
         var inputIdle = UserIdleService.IdleTime();
+        bool workingSchedule = _activeCalendarActivity == CalendarActivityKind.Working && (_settings?.ExpressiveMochi ?? true);
+        if (workingSchedule)
+        {
+            if (inputIdle >= MascotTriggers.AwayAfter)
+            {
+                _workBreak.Reset();
+                if (_mascotWorkBreak)
+                {
+                    _mascotWorkBreak = false;
+                    _mascotDay = MascotTriggers.DayFace(DateTime.Now, _settings?.BirthdayMonthDay ?? "", TodaysTasksDone(), _activeCalendarActivity, false);
+                }
+                if (_baseMood != MascotMood.Sleeping)
+                {
+                    MascotMood = MascotMood.Sleeping;
+                    CurrentIdleThought = "sleeping peacefully...";
+                }
+                return;
+            }
+
+            // Stay focused on the Working badge instead of random Bored / 2-minute doze cycles,
+            // and take a 5-minute Coffee break every 45 minutes of continuous active work.
+            if (_baseMood is MascotMood.Coffee or MascotMood.Bored or MascotMood.Sleeping)
+                MascotMood = MascotMood.Idle;
+
+            bool onBreak = _workBreak.Update(DateTime.Now, isWorking: true, inputIdle, awayOrLocked: isGaming || CurrentMedia.IsPlaying || _isWorkstationLocked || !_displayAwake);
+            if (onBreak != _mascotWorkBreak)
+            {
+                _mascotWorkBreak = onBreak;
+                if (onBreak) CurrentIdleThought = "time for a quick coffee break...";
+                _mascotDay = MascotTriggers.DayFace(DateTime.Now, _settings?.BirthdayMonthDay ?? "", TodaysTasksDone(), _activeCalendarActivity, _mascotWorkBreak);
+                RefreshMascotMood();
+            }
+            return;
+        }
+
+        if (_mascotWorkBreak)
+        {
+            _workBreak.Reset();
+            _mascotWorkBreak = false;
+        }
+
         var face = MascotTriggers.RestingFace(DateTime.Now - _lastActivityTime, inputIdle, CurrentMedia.IsPlaying, isGaming, _isWorkstationLocked, _displayAwake);
         // With "Expressive Mochi" off he still sleeps when nobody is there, but keeps the plain face while you work.
-        if (!_settings.ExpressiveMochi && face != MascotMood.Sleeping) face = null;
+        if (!(_settings?.ExpressiveMochi ?? true) && face != MascotMood.Sleeping) face = null;
         if (face is { } rest)
         {
             if (_baseMood == rest) return;

@@ -110,7 +110,7 @@
                             <ItemsControl x:Name="TaskList" FontFamily="{DynamicResource IslandUiFont}" FontSize="12" Focusable="False" Grid.IsSharedSizeScope="True">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
-                                        <Grid Margin="0,3,0,3">
+                                        <Grid Margin="0,3,0,3" Background="Transparent" ToolTip="{Binding RowToolTip}" MouseRightButtonUp="AgendaRow_RightClick">
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="Auto" SharedSizeGroup="AgendaTime"/>
                                                 <ColumnDefinition Width="*"/>
@@ -122,7 +122,7 @@
                                                 <TextBlock Text="{Binding TimeText}" FontSize="11" Foreground="{DynamicResource IslandMutedInkBrush}" VerticalAlignment="Top" Margin="0,1,8,0"/>
                                             </StackPanel>
                                             <StackPanel Grid.Column="1">
-                                                <TextBlock Text="{Binding Title}" ToolTip="{Binding Title}" FontSize="12" TextTrimming="CharacterEllipsis" Foreground="{Binding TitleBrush}" FontWeight="{Binding TitleWeight}" TextDecorations="{Binding TitleDecorations}"/>
+                                                <TextBlock Text="{Binding Title}" FontSize="12" TextTrimming="CharacterEllipsis" Foreground="{Binding TitleBrush}" FontWeight="{Binding TitleWeight}" TextDecorations="{Binding TitleDecorations}"/>
                                                 <TextBlock Text="{Binding Detail}" FontSize="11" TextTrimming="CharacterEllipsis" Foreground="{Binding DetailBrush}" Visibility="{Binding DetailVisibility}"/>
                                             </StackPanel>
                                             <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Top">

@@ -19,9 +19,9 @@ public enum MascotMood
     Electric, Money, MoneyDown, Sunny, Rainy, Snowy, Cloudy, Studying,
     // Resting while you work elsewhere: awake, sipping a coffee (part of the resting rotation with the idle thoughts, Bored and a doze).
     Coffee,
-    // The day: up late (a crescent moon and heavy eyes), the user's birthday (party hat), in a calendar meeting (a headset with a
-    // microphone), and all of today's tasks done (a green tick and sparkles). See MascotTriggers.DayFace.
-    Yawning, Birthday, Meeting, Proud,
+    // The day: up late (a crescent moon and heavy eyes), the user's birthday (party hat), active calendar events (meeting, workout, eating,
+    // working), and all of today's tasks done (a green tick and sparkles). See MascotTriggers.DayFace.
+    Yawning, Birthday, Meeting, Workout, Eating, Working, Proud,
 }
 
 /// <summary>What the weather says about Mochi's comfort.</summary>
@@ -38,7 +38,7 @@ public sealed record MascotInputs(
 /// maxed out for a while), Drained (battery low and unplugged); then Music; then the weather (hot or freezing) while Mochi is only
 /// idling; everything else keeps the requested mood (Happy, Idle, Waiting, Bored). The activity face (Electric, Money, a sky face, Studying) comes
 /// after the lasting faces and before Music and the weather: it is what the user is looking at, but a warning still matters more.
-/// The day face (Meeting, Birthday, Proud, Yawning) comes after Music and before the weather, and only over a resting face.
+/// The day face (Meeting, Birthday, Eating, Workout, Working, Proud, Yawning) comes after Music and before the weather, and only over a resting face.
 /// With "expressive" off the requested mood is used as is.
 /// </summary>
 public static class MascotMoodPolicy

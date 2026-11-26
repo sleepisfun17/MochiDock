@@ -382,7 +382,7 @@
                 <Path x:Name="MusicNoteGlyph" Fill="#B58CFF"
                       Data="M -1.2,0 A 1.9,1.5 -20 1 0 2.6,0 A 1.9,1.5 -20 1 0 -1.2,0 Z M 1.75,-0.4 L 1.75,-8 L 2.75,-8 C 4.6,-7.2 5.4,-5.6 4.4,-3.6 C 4.4,-5.2 3.8,-6.1 2.75,-6.4 L 2.75,-0.4 Z" />
             </Canvas>
-            <Canvas x:Name="StatusBadge" Visibility="Collapsed" Width="30" Height="26" IsHitTestVisible="False">
+            <Canvas x:Name="StatusBadge" Visibility="Collapsed" Width="30" Height="26" IsHitTestVisible="False" UseLayoutRounding="False">
                 <Canvas.RenderTransform>
                     <TransformGroup>
                         <ScaleTransform x:Name="BadgeSize" ScaleX="1" ScaleY="1" />

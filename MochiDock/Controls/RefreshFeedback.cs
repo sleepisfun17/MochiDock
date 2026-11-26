@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Data;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
 using MochiDock.Services;
@@ -32,8 +33,8 @@ public static class RefreshFeedback
     public static bool GetIsBusy(DependencyObject element) => (bool)element.GetValue(IsBusyProperty);
     public static void SetIsBusy(DependencyObject element, bool value) => element.SetValue(IsBusyProperty, value);
 
-    // What the button looked like before it became busy (content, tooltip and width), so it can be put back exactly.
-    private sealed record Saved(object? Content, object? ToolTip, double MinWidth, FrameworkElement? Spinner, bool OwnTransform, Transform? Transform, Point Origin);
+    // What the button looked like before it became busy (content, bindings, tooltip and width), so it can be put back exactly.
+    private sealed record Saved(object? Content, object? ToolTip, double MinWidth, FrameworkElement? Spinner, bool OwnTransform, Transform? Transform, Point Origin, BindingBase? ContentBinding, BindingBase? IsEnabledBinding, bool WasEnabled);
     private static readonly DependencyProperty SavedProperty = DependencyProperty.RegisterAttached("Saved", typeof(Saved), typeof(RefreshFeedback));
     private static readonly DependencyProperty BaseToolTipProperty = DependencyProperty.RegisterAttached("BaseToolTip", typeof(object), typeof(RefreshFeedback));
 
@@ -46,8 +47,11 @@ public static class RefreshFeedback
     private static void Begin(Button button)
     {
         var width = button.ActualWidth;
+        var contentBinding = BindingOperations.GetBindingBase(button, ContentControl.ContentProperty);
+        var isEnabledBinding = BindingOperations.GetBindingBase(button, UIElement.IsEnabledProperty);
+        var wasEnabled = button.IsEnabled;
         var (content, spinner, ownTransform) = Prepare(button);
-        button.SetValue(SavedProperty, new Saved(button.Content, button.ToolTip, button.MinWidth, spinner, ownTransform, spinner?.RenderTransform, spinner?.RenderTransformOrigin ?? default));
+        button.SetValue(SavedProperty, new Saved(button.Content, button.ToolTip, button.MinWidth, spinner, ownTransform, spinner?.RenderTransform, spinner?.RenderTransformOrigin ?? default, contentBinding, isEnabledBinding, wasEnabled));
         if (!ReferenceEquals(content, button.Content)) button.Content = content;
         if (width > 0) button.MinWidth = width; // the spinner and the text must not make the button jump
         button.IsEnabled = false;
@@ -69,10 +73,16 @@ public static class RefreshFeedback
             spinner.RenderTransform = saved.Transform ?? Transform.Identity;
             spinner.RenderTransformOrigin = saved.Origin;
         }
-        button.Content = saved.Content;
+        if (saved.ContentBinding is not null)
+            BindingOperations.SetBinding(button, ContentControl.ContentProperty, saved.ContentBinding);
+        else
+            button.Content = saved.Content;
         button.MinWidth = saved.MinWidth;
         button.ClearValue(SavedProperty);
-        button.IsEnabled = true;
+        if (saved.IsEnabledBinding is not null)
+            BindingOperations.SetBinding(button, UIElement.IsEnabledProperty, saved.IsEnabledBinding);
+        else
+            button.IsEnabled = saved.WasEnabled;
     }
 
     /// <summary>Picks the element that spins. Plain text content is wrapped (glyph + the text without its arrow); a glyph element inside the content spins as it is.</summary>
@@ -131,7 +141,7 @@ public static class RefreshFeedback
 
         var result = error is null ? $"Updated {DateTime.Now:HH:mm}" : "Could not refresh: " + error;
         if (status is not null) status.Text = result;
-        else
+        else if (BindingOperations.GetBindingBase(button, FrameworkElement.ToolTipProperty) is null)
         {
             var baseTip = button.GetValue(BaseToolTipProperty)?.ToString();
             button.ToolTip = string.IsNullOrEmpty(baseTip) ? result : baseTip + "\n" + result;

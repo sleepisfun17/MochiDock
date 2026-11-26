@@ -506,6 +506,10 @@ public class TaskbarReadoutsTests
         Assert.Equal(TaskbarPrayerDisplay.Time, TaskbarStyle.ParsePrayerDisplay("Time"));
         Assert.Equal("in 1h 25m", TaskbarReadouts.FormatPrayerRemaining(TimeSpan.FromMinutes(85)));
         Assert.Equal("in 10m", TaskbarReadouts.FormatPrayerRemaining(TimeSpan.FromMinutes(10)));
+        Assert.Equal("in 10m", TaskbarReadouts.FormatPrayerRemaining(TimeSpan.FromSeconds(570)));
+        Assert.Equal("in 10m", TaskbarReadouts.FormatPrayerRemaining(TimeSpan.FromSeconds(541)));
+        Assert.Equal("in 9m", TaskbarReadouts.FormatPrayerRemaining(TimeSpan.FromSeconds(540)));
+        Assert.Equal("in 2h 0m", TaskbarReadouts.FormatPrayerRemaining(TimeSpan.FromSeconds(7170)));
         Assert.Equal("<1m", TaskbarReadouts.FormatPrayerRemaining(TimeSpan.FromSeconds(25)));
         Assert.Equal("now", TaskbarReadouts.FormatPrayerRemaining(TimeSpan.Zero));
 

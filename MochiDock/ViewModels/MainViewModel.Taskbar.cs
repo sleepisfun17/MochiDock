@@ -490,13 +490,30 @@ public partial class MainViewModel
         if (_taskbarSchedule != null) _taskbarSchedule.PropertyChanged += OnTaskbarScheduleChanged;
     }
 
+    private bool _taskbarPrayerUnderOneMinute;
+
     private void OnTaskbarScheduleChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
         if (e.PropertyName is nameof(PrayerSchedule.NextPrayer)
             or nameof(PrayerSchedule.CountdownText)
             or nameof(PrayerSchedule.CurrentPrayerElapsedText)
             or nameof(PrayerSchedule.IsDaytime))
+        {
             RefreshTaskbarBlocks();
+            return;
+        }
+        if (e.PropertyName == nameof(PrayerSchedule.CountdownFullText))
+        {
+            bool underOne = CurrentPrayerSchedule?.NextPrayerInstant is not null
+                && CurrentPrayerSchedule.TimeUntilNextPrayer is var rem
+                && rem > TimeSpan.Zero
+                && rem < TimeSpan.FromMinutes(1);
+            if (underOne != _taskbarPrayerUnderOneMinute)
+            {
+                _taskbarPrayerUnderOneMinute = underOne;
+                RefreshTaskbarBlocks();
+            }
+        }
     }
 
     /// <summary>Starts or stops the sampler timer: it runs only while a sampled item is on and the PC is in use (not locked, display on).</summary>

@@ -186,7 +186,8 @@ public class PrayerSchedule : INotifyPropertyChanged
         IsDaytime=NowUtc>=MochiDock.Core.PrayerTime.At(Date.Date.Add(Sunrise.Time),zone)&&NowUtc<MochiDock.Core.PrayerTime.At(Date.Date.Add(Maghrib.Time),zone);
         SunProgress=MochiDock.Core.PrayerTimeline.Position(NowUtc,MochiDock.Core.PrayerTime.At(Date.Date,zone),MochiDock.Core.PrayerTime.At(Date.Date.AddDays(1),zone),items.Select(p=>MochiDock.Core.PrayerTime.At(Date.Date.Add(p.Time),zone)).ToArray()) ?? double.NaN;
         NextPrayer=nextItem;
-        CountdownText=$"{(int)remaining.TotalHours}h {remaining.Minutes}m";
+        int totalMinutes=remaining>TimeSpan.Zero?(int)Math.Ceiling(remaining.TotalMinutes):0;
+        CountdownText=$"{totalMinutes/60}h {totalMinutes%60}m";
         CountdownFullText=$"{(int)remaining.TotalHours:00}:{remaining.Minutes:00}:{remaining.Seconds:00}";
         CurrentPrayerElapsedText=sinceCurrent is { } el?MochiDock.Core.TaskbarReadouts.FormatPrayerElapsed(el):"";
         OnPropertyChanged(nameof(NowUtc));OnPropertyChanged(nameof(NextPrayerDayText));OnPropertyChanged(nameof(Source));
