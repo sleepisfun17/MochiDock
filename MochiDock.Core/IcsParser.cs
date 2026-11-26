@@ -4,7 +4,7 @@ using System.Text;
 namespace MochiDock.Core;
 
 /// <summary>One calendar entry on the Today agenda. Start/End are in the display time zone (all-day: End is exclusive, midnight-aligned).</summary>
-public sealed record AgendaEvent(string Uid, string Title, DateTime Start, DateTime End, bool AllDay, string Place, string? JoinUrl);
+public sealed record AgendaEvent(string Uid, string Title, DateTime Start, DateTime End, bool AllDay, string Place, string? JoinUrl, string CalendarName = "", string CalendarColor = "");
 
 /// <summary>A date or date-time as written in the feed, resolved later against a display time zone.</summary>
 public readonly record struct IcsTime(DateTime Wall, bool IsUtc, string? Tzid, bool DateOnly)

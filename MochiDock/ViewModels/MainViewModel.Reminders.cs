@@ -56,7 +56,8 @@ public partial class MainViewModel
         AgendaReminderPolicy.Due(
             CalendarFeed?.Events ?? Array.Empty<AgendaEvent>(),
             Tasks.Select(t => new ReminderTask(t.Id, t.Title, t.DueTime, t.IsCompleted)).ToList(),
-            DateTime.Now, _settings.AgendaReminderLeadMinutes, _shownReminders, _acknowledgedReminders, _settings.RemindOverdueTasks);
+            DateTime.Now, _settings.AgendaReminderLeadMinutes, _shownReminders, _acknowledgedReminders, _settings.RemindOverdueTasks,
+            includeCalendarName: (CalendarFeed?.Feeds.Count ?? 0) > 1);
 
     private void MarkCurrentRemindersShown()
     {

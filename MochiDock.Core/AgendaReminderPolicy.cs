@@ -32,7 +32,7 @@ public static class AgendaReminderPolicy
     /// missed (PC asleep, app closed, blocked until the next stage began) is never replayed.
     /// </summary>
     public static IReadOnlyList<AgendaReminder> Due(IEnumerable<AgendaEvent> events, IEnumerable<ReminderTask> tasks, DateTime now, int leadMinutes, ISet<string> shown,
-        ISet<string>? acknowledged = null, bool remindOverdue = true)
+        ISet<string>? acknowledged = null, bool remindOverdue = true, bool includeCalendarName = false)
     {
         int lead = NormalizeLead(leadMinutes);
         var due = new List<AgendaReminder>();
@@ -40,7 +40,10 @@ public static class AgendaReminderPolicy
         foreach (var e in events)
         {
             if (e.AllDay) continue;
-            Consider($"ev:{e.Uid}|{e.Start:O}", Shorten(e.Title), e.Start, isTask: false);
+            string rawTitle = includeCalendarName && !string.IsNullOrWhiteSpace(e.CalendarName)
+                ? $"{e.CalendarName.Trim()} · {e.Title}"
+                : e.Title;
+            Consider($"ev:{e.Uid}|{e.Start:O}", Shorten(rawTitle), e.Start, isTask: false);
         }
         foreach (var t in tasks)
         {

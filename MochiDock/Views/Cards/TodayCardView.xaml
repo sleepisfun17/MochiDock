@@ -117,6 +117,7 @@
                                                 <ColumnDefinition Width="Auto"/>
                                             </Grid.ColumnDefinitions>
                                             <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Top">
+                                                <Ellipse Width="6" Height="6" Fill="{Binding CalendarDotBrush}" Visibility="{Binding CalendarDotVisibility}" VerticalAlignment="Top" Margin="0,4,5,0"/>
                                                 <CheckBox IsChecked="{Binding IsDone, Mode=OneWay}" Click="TaskCheck_Click" Visibility="{Binding TaskVisibility}" Style="{StaticResource ModernDarkCheckBox}" VerticalAlignment="Top" Margin="0,0,5,0" ToolTip="Mark done"/>
                                                 <TextBlock Text="{Binding TimeText}" FontSize="11" Foreground="{DynamicResource IslandMutedInkBrush}" VerticalAlignment="Top" Margin="0,1,8,0"/>
                                             </StackPanel>

@@ -1,26 +1,29 @@
 <s:SettingsSectionBase x:Class="MochiDock.Views.Settings.Sections.CalendarSectionView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:s="clr-namespace:MochiDock.Views.Settings">
+             xmlns:s="clr-namespace:MochiDock.Views.Settings"
+             xmlns:controls="clr-namespace:MochiDock.Controls">
     <StackPanel>
-        <s:SettingRow x:Name="LinkRow" Label="Calendar link" Description="Your Google Calendar's secret iCal address. It is stored encrypted for this Windows user and is never shown again; the last downloaded events are kept on this PC for when you are offline.">
-            <StackPanel>
-                <!-- Shown while a link is saved -->
-                <StackPanel x:Name="LinkedPanel" Visibility="Collapsed">
-                    <TextBlock x:Name="LinkedText" Text="Linked ✓" Style="{StaticResource CardBodyText}" Foreground="{DynamicResource IslandPositiveBrush}" HorizontalAlignment="Right"/>
-                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,8,0,0">
-                        <Button x:Name="RefreshBtn" Style="{StaticResource ActionButton}" Content="Refresh now" Click="Refresh_Click" Margin="0"/>
-                        <Button Style="{StaticResource ActionButton}" Content="Change link" Click="ChangeLink_Click" Margin="8,0,0,0"/>
-                        <Button Style="{StaticResource ActionButton}" Content="Disconnect" Click="Disconnect_Click" Margin="8,0,0,0"/>
-                    </StackPanel>
-                </StackPanel>
-                <!-- Shown when no link is saved, or while changing it -->
-                <StackPanel x:Name="EntryPanel" Orientation="Horizontal" HorizontalAlignment="Right">
-                    <PasswordBox x:Name="LinkBox" Style="{StaticResource ModernDarkPasswordBox}" PasswordChar="•" Width="220" PasswordChanged="LinkBox_PasswordChanged"/>
-                    <Button x:Name="ConnectBtn" Style="{StaticResource ActionButton}" Content="Connect" Click="Connect_Click" Margin="8,0,0,0" IsEnabled="False"/>
-                    <Button x:Name="CancelBtn" Style="{StaticResource ActionButton}" Content="Cancel" Click="CancelChange_Click" Margin="8,0,0,0" Visibility="Collapsed"/>
+        <s:SettingRow x:Name="FeedsRow" Label="Connected calendars" Description="Link one or more calendars (for example Work and Personal). Secret addresses are encrypted for this Windows user and never shown again.">
+            <StackPanel MaxWidth="400">
+                <StackPanel x:Name="FeedsPanel"/>
+                <TextBlock x:Name="EmptyFeedsText" Text="No calendars connected yet." Style="{StaticResource CardCaptionText}" Foreground="{DynamicResource IslandMutedInkBrush}" HorizontalAlignment="Right" Visibility="Collapsed"/>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,8,0,0">
+                    <Button x:Name="RefreshBtn" Style="{StaticResource ActionButton}" Content="Refresh all" Click="Refresh_Click" Margin="0" Visibility="Collapsed"/>
                 </StackPanel>
                 <TextBlock x:Name="StatusText" Style="{StaticResource CardCaptionText}" HorizontalAlignment="Right" TextWrapping="Wrap" MaxWidth="380" Margin="0,6,0,0"/>
+            </StackPanel>
+        </s:SettingRow>
+        <s:SettingRow x:Name="AddRow" Label="Add a calendar" Description="Google Calendar: Settings › your calendar › Secret address in iCal format (https:// or webcal://).">
+            <StackPanel>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                    <TextBox x:Name="NameBox" Style="{StaticResource ModernDarkTextBox}" Width="165" controls:TextBoxHint.Text="Name (e.g. Work)" AutomationProperties.Name="Calendar name"/>
+                    <ComboBox x:Name="ColorCombo" Style="{StaticResource ModernDarkComboBox}" Width="96" Margin="8,0,0,0" AutomationProperties.Name="Calendar colour"/>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,6,0,0">
+                    <PasswordBox x:Name="LinkBox" Style="{StaticResource ModernDarkPasswordBox}" PasswordChar="•" Width="200" PasswordChanged="LinkBox_PasswordChanged" AutomationProperties.Name="Calendar secret link"/>
+                    <Button x:Name="AddBtn" Style="{StaticResource ActionButton}" Content="Add" Click="Add_Click" Margin="8,0,0,0" IsEnabled="False"/>
+                </StackPanel>
             </StackPanel>
         </s:SettingRow>
         <s:SettingRow Label="Reminders" Description="Get a notice shortly before an event or a task with a time starts. This is one switch for both; set it and the lead time in Notifications.">

@@ -76,6 +76,27 @@ public static class AgendaLogic
         return days;
     }
 
+    /// <summary>Up to <paramref name="maxDotsPerDay"/> distinct normalized calendar colour keys per local date, in event order.</summary>
+    public static Dictionary<DateTime, List<string>> DayEventColors(IEnumerable<AgendaEvent> events, DateTime from, DateTime to, int maxDotsPerDay = 3)
+    {
+        var map = new Dictionary<DateTime, List<string>>();
+        if (maxDotsPerDay <= 0) return map;
+        foreach (var e in events)
+        {
+            string color = CalendarFeedPolicy.NormalizeColor(e.CalendarColor);
+            var last = e.End > e.Start ? e.End.AddTicks(-1).Date : e.Start.Date;
+            for (var d = e.Start.Date; d <= last && d < to; d = d.AddDays(1))
+            {
+                if (d < from.Date) continue;
+                if (!map.TryGetValue(d, out var list))
+                    map[d] = list = new List<string>(maxDotsPerDay);
+                if (list.Count < maxDotsPerDay && !list.Contains(color, StringComparer.OrdinalIgnoreCase))
+                    list.Add(color);
+            }
+        }
+        return map;
+    }
+
     /// <summary>The event on now (the latest to start), else the next timed event starting within 60 minutes. All-day events are never the focus.</summary>
     public static AgendaFocus? Focus(IEnumerable<AgendaEvent> events, DateTime now)
     {

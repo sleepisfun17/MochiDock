@@ -226,4 +226,24 @@ public class AgendaReminderPolicyTests
         Assert.True(AgendaLogic.IsOverdue(Now.AddMinutes(-2), false, Now));
         Assert.False(AgendaLogic.IsOverdue(Now.AddMinutes(-2), true, Now));
     }
+
+    [Fact]
+    public void MultiCalendarRemindersPrefixCalendarNameWhenEnabledAndDeduplicateByUid()
+    {
+        var start = Now.AddMinutes(5);
+        var shared1 = new AgendaEvent("shared-1", "Design Sync", start, start.AddHours(1), false, "", null, "Work", "Blue");
+        var shared2 = new AgendaEvent("shared-1", "Design Sync", start, start.AddHours(1), false, "", null, "Personal", "Green");
+        var solo = new AgendaEvent("p-2", "Dentist", Now.AddMinutes(8), Now.AddMinutes(68), false, "", null, "Personal", "Green");
+
+        var singleCal = AgendaReminderPolicy.Due(new[] { solo }, Array.Empty<ReminderTask>(), Now, 10, new HashSet<string>(), includeCalendarName: false);
+        Assert.Equal("Dentist in 8 min", singleCal[0].Text);
+
+        var shown = new HashSet<string>();
+        var first = AgendaReminderPolicy.Due(new[] { shared1 }, Array.Empty<ReminderTask>(), Now, 10, shown, includeCalendarName: true);
+        Assert.Equal("Work · Design Sync in 5 min", first[0].Text);
+        shown.Add(first[0].Key);
+
+        // Same UID + start from another calendar doesn't double-remind.
+        Assert.Empty(AgendaReminderPolicy.Due(new[] { shared1, shared2 }, Array.Empty<ReminderTask>(), Now, 10, shown, includeCalendarName: true));
+    }
 }

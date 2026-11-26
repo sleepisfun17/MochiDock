@@ -233,4 +233,98 @@ public class CalendarFeedServiceTests : IDisposable
         await WaitFor(() => service.State == CalendarFeedState.Invalid && !service.IsRefreshing);
         Assert.Contains("too large", service.StatusText);
     }
+
+    [Fact]
+    public async Task MultipleCalendarsMergeEventsTagNamesAndKeepLinksSealed()
+    {
+        const string workUrl = "https://calendar.google.com/calendar/ical/work%40example.com/work-secret-1/basic.ics";
+        const string personalUrl = "https://calendar.google.com/calendar/ical/me%40example.com/personal-secret-2/basic.ics";
+
+        handler.Respond = req => req.RequestUri!.ToString().Contains("work-secret-1")
+            ? Ics("BEGIN:VCALENDAR\r\nVERSION:2.0\r\nBEGIN:VEVENT\r\nUID:w1\r\nSUMMARY:Sprint Planning\r\nDTSTART;TZID=Asia/Tokyo:20261111T160000\r\nDTEND;TZID=Asia/Tokyo:20261111T170000\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n")
+            : Ics("BEGIN:VCALENDAR\r\nVERSION:2.0\r\nBEGIN:VEVENT\r\nUID:p1\r\nSUMMARY:Dentist\r\nDTSTART;TZID=Asia/Tokyo:20261111T090000\r\nDTEND;TZID=Asia/Tokyo:20261111T100000\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n");
+
+        using var service = Create();
+        Assert.Equal("", service.AddFeed("Work", workUrl, "Blue"));
+        Assert.Equal("", service.AddFeed("Personal", personalUrl, "Green"));
+        Assert.NotEqual("", service.AddFeed("Duplicate", workUrl)); // duplicate URL rejected
+
+        await WaitFor(() => service.Feeds.Count == 2 && service.Events.Count == 2 && !service.IsRefreshing);
+
+        Assert.Equal(CalendarFeedState.Updated, service.State);
+        Assert.Equal(new[] { "Dentist", "Sprint Planning" }, service.Events.Select(e => e.Title).ToArray());
+        Assert.Equal("Personal", service.Events[0].CalendarName);
+        Assert.Equal("Green", service.Events[0].CalendarColor);
+        Assert.Equal("Work", service.Events[1].CalendarName);
+        Assert.Equal("Blue", service.Events[1].CalendarColor);
+        Assert.StartsWith("2 calendars updated", service.StatusText);
+
+        foreach (var file in Directory.GetFiles(folder, "*", SearchOption.AllDirectories))
+        {
+            var text = Encoding.UTF8.GetString(File.ReadAllBytes(file));
+            Assert.DoesNotContain("work-secret-1", text);
+            Assert.DoesNotContain("personal-secret-2", text);
+        }
+    }
+
+    [Fact]
+    public async Task PartialFailureKeepsHealthyCalendarEventsAndAllowsUpdateOrSingleRemoval()
+    {
+        const string workUrl = "https://calendar.google.com/calendar/ical/work/secret-ok/basic.ics";
+        const string personalUrl = "https://calendar.google.com/calendar/ical/personal/secret-bad/basic.ics";
+
+        handler.Respond = req => req.RequestUri!.ToString().Contains("secret-ok")
+            ? Ics(Feed("Client Call"))
+            : new HttpResponseMessage(HttpStatusCode.NotFound);
+
+        using var service = Create();
+        Assert.Equal("", service.AddFeed("Work", workUrl, "Blue"));
+        Assert.Equal("", service.AddFeed("Personal", personalUrl, "Green"));
+        await WaitFor(() => service.Feeds.Count == 2 && service.Feeds.All(f => f.State != CalendarFeedState.Loading) && !service.IsRefreshing);
+
+        Assert.Single(service.Events);
+        Assert.Equal("Client Call", service.Events[0].Title);
+        Assert.Equal(CalendarFeedState.Invalid, service.State);
+        Assert.Contains("1 of 2 calendars failed", service.StatusText);
+
+        // Recolouring & renaming Work updates existing events cleanly without losing them.
+        var workId = service.Feeds.First(f => f.Name == "Work").Id;
+        Assert.Equal("", service.UpdateFeed(workId, "Office", "Purple"));
+        Assert.Equal("Office", service.Events[0].CalendarName);
+        Assert.Equal("Purple", service.Events[0].CalendarColor);
+
+        // Removing the broken Personal calendar leaves only Office healthy.
+        var personalId = service.Feeds.First(f => f.Name == "Personal").Id;
+        service.RemoveFeed(personalId);
+        Assert.Single(service.Feeds);
+        Assert.Equal(CalendarFeedState.Updated, service.State);
+        Assert.Single(service.Events);
+
+        // Removing the last calendar clears gcal.dat and cache.
+        service.RemoveFeed(workId);
+        Assert.False(service.IsConnected);
+        Assert.Empty(service.Events);
+        Assert.False(File.Exists(Path.Combine(folder, "gcal.dat")));
+        Assert.False(File.Exists(Path.Combine(folder, "Calendar", "events.json")));
+    }
+
+    [Fact]
+    public async Task LegacySingleSecretFileLoadsIntoMultiFeedStore()
+    {
+        Directory.CreateDirectory(folder);
+        var protector = new PlainProtector();
+        var legacyJson = System.Text.Json.JsonSerializer.Serialize(new { Url });
+        File.WriteAllBytes(Path.Combine(folder, "gcal.dat"), protector.Protect(Encoding.UTF8.GetBytes(legacyJson)));
+
+        handler.Respond = _ => Ics(Feed("Legacy Event"));
+        using var service = Create();
+        Assert.True(service.IsConnected);
+        Assert.Single(service.Feeds);
+        Assert.Equal("Calendar", service.Feeds[0].Name);
+
+        await service.RefreshAsync(force: true);
+        Assert.Single(service.Events);
+        Assert.Equal("Legacy Event", service.Events[0].Title);
+        Assert.Equal("Calendar", service.Events[0].CalendarName);
+    }
 }

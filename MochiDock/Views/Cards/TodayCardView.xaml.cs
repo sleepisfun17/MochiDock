@@ -25,7 +25,9 @@ public sealed class AgendaRow
     public string? JoinUrl { get; init; }
     public System.Windows.Media.Brush TitleBrush { get; init; } = System.Windows.Media.Brushes.Gray;
     public System.Windows.Media.Brush DetailBrush { get; init; } = System.Windows.Media.Brushes.Gray;
+    public System.Windows.Media.Brush? CalendarDotBrush { get; init; }
     public FontWeight TitleWeight { get; init; } = FontWeights.SemiBold;
+    public Visibility CalendarDotVisibility => CalendarDotBrush == null ? Visibility.Collapsed : Visibility.Visible;
     public Visibility DetailVisibility => string.IsNullOrEmpty(Detail) ? Visibility.Collapsed : Visibility.Visible;
     public Visibility JoinVisibility => string.IsNullOrEmpty(JoinUrl) ? Visibility.Collapsed : Visibility.Visible;
 }
@@ -108,7 +110,8 @@ public partial class TodayCardView : System.Windows.Controls.UserControl
 
     private void CalendarStatus_Click(object sender, System.Windows.Input.MouseButtonEventArgs e)
     {
-        if (_feed is { IsConnected: false } || _feed == null) App.OpenSettings(MochiDock.Core.SettingsSections.Calendar);
+        if (_feed == null || !_feed.IsConnected || _feed.State == CalendarFeedState.Invalid)
+            App.OpenSettings(MochiDock.Core.SettingsSections.Calendar);
     }
     private void Changed(object? s, NotifyCollectionChangedEventArgs e) => Render();
     private void TaskChanged(object? s, PropertyChangedEventArgs e) => Render();
@@ -215,7 +218,7 @@ public partial class TodayCardView : System.Windows.Controls.UserControl
         var allEvents = _feed?.Events ?? Array.Empty<AgendaEvent>();
         var firstDay = _owner?.WeekStartsOnMonday == true ? DayOfWeek.Monday : DayOfWeek.Sunday;
         var monthDays = LocalCalendar.Days(_month, firstDay).ToList();
-        var eventDays = monthDays.Count > 0 ? AgendaLogic.DaysWithEvents(allEvents, monthDays[0], monthDays[^1].AddDays(1)) : new HashSet<DateTime>();
+        var dayColors = monthDays.Count > 0 ? AgendaLogic.DayEventColors(allEvents, monthDays[0], monthDays[^1].AddDays(1)) : new Dictionary<DateTime, List<string>>();
 
         // 1. Weekday Headers, starting on the configured first day
         var weekdayLabels = new[] { "Su", "Mo", "Tu", "We", "Th", "Fr", "Sa" }; // indexed by DayOfWeek
@@ -250,7 +253,8 @@ public partial class TodayCardView : System.Windows.Controls.UserControl
         // 2. 42 calendar days from the configured first day
         foreach (var day in monthDays)
         {
-            bool hasEvent = eventDays.Contains(day.Date);
+            dayColors.TryGetValue(day.Date, out var eventDotColors);
+            bool hasEvent = eventDotColors is { Count: > 0 };
             var holidays = HolidayEngine.GetHolidays(day, enableJp, enableId);
             bool isHoliday = holidays.Count > 0;
             bool isSunday = day.DayOfWeek == DayOfWeek.Sunday;
@@ -316,36 +320,45 @@ public partial class TodayCardView : System.Windows.Controls.UserControl
             }
             dayGrid.Children.Add(dayText);
 
-            // Holiday dot indicator (small colored dot below number)
-            if (isHoliday && isCurrentMonth)
+            if ((isHoliday && isCurrentMonth) || hasEvent)
             {
-                var dot = new System.Windows.Shapes.Ellipse
+                var dotsPanel = new StackPanel
                 {
-                    Width = 4,
-                    Height = 4,
+                    Orientation = System.Windows.Controls.Orientation.Horizontal,
                     HorizontalAlignment = System.Windows.HorizontalAlignment.Center,
                     VerticalAlignment = VerticalAlignment.Bottom,
-                    // With an event dot too, the holiday dot moves left of centre.
-                    Margin = new Thickness(0, 0, hasEvent ? 8 : 0, 3)
+                    Margin = new Thickness(0, 0, 0, 3)
                 };
-                dot.SetResourceReference(System.Windows.Shapes.Shape.FillProperty, "IslandNegativeBrush");
-                dayGrid.Children.Add(dot);
-            }
 
-            // Calendar-event dot (accent), under the number like the holiday dot.
-            if (hasEvent)
-            {
-                var eventDot = new System.Windows.Shapes.Ellipse
+                if (isHoliday && isCurrentMonth)
                 {
-                    Width = 4,
-                    Height = 4,
-                    HorizontalAlignment = System.Windows.HorizontalAlignment.Center,
-                    VerticalAlignment = VerticalAlignment.Bottom,
-                    Margin = new Thickness(isHoliday && isCurrentMonth ? 8 : 0, 0, 0, 3),
-                    Opacity = isCurrentMonth ? 1.0 : 0.5
-                };
-                eventDot.SetResourceReference(System.Windows.Shapes.Shape.FillProperty, "IslandAccentBrush");
-                dayGrid.Children.Add(eventDot);
+                    var dot = new System.Windows.Shapes.Ellipse
+                    {
+                        Width = 4,
+                        Height = 4,
+                        Margin = new Thickness(1.5, 0, 1.5, 0)
+                    };
+                    dot.SetResourceReference(System.Windows.Shapes.Shape.FillProperty, "IslandNegativeBrush");
+                    dotsPanel.Children.Add(dot);
+                }
+
+                if (eventDotColors != null)
+                {
+                    foreach (string colorKey in eventDotColors)
+                    {
+                        var eventDot = new System.Windows.Shapes.Ellipse
+                        {
+                            Width = 4,
+                            Height = 4,
+                            Margin = new Thickness(1.5, 0, 1.5, 0),
+                            Opacity = isCurrentMonth ? 1.0 : 0.5
+                        };
+                        eventDot.SetResourceReference(System.Windows.Shapes.Shape.FillProperty, CalendarFeedPolicy.BrushKey(colorKey));
+                        dotsPanel.Children.Add(eventDot);
+                    }
+                }
+
+                dayGrid.Children.Add(dotsPanel);
             }
 
             // Clickable Transparent Button Overlay
@@ -381,18 +394,20 @@ public partial class TodayCardView : System.Windows.Controls.UserControl
         var events = AgendaLogic.ForDay(allEvents, _selected);
         var focus = _selected.Date == DateTime.Today ? AgendaLogic.Focus(events, DateTime.Now) : null;
         System.Windows.Media.Brush Brush(string key) => (System.Windows.Media.Brush)FindResource(key);
+        bool showCalendarLabels = (_feed?.Feeds.Count ?? 0) > 1;
 
         var timed = new List<(DateTime Sort, int Group, AgendaRow Row)>();
         foreach (var e in events)
         {
             bool isFocus = focus != null && ReferenceEquals(focus.Event, e);
-            string detail = isFocus ? (string.IsNullOrWhiteSpace(e.Place) ? focus!.Text : $"{focus!.Text} · {e.Place}") : e.Place;
+            string detail = CalendarFeedPolicy.FormatDetail(e.CalendarName, showCalendarLabels, isFocus ? focus!.Text : null, e.Place);
             var row = new AgendaRow
             {
                 TimeText = AgendaLogic.TimeText(e),
                 Title = e.Title,
                 Detail = detail,
                 JoinUrl = e.JoinUrl,
+                CalendarDotBrush = showCalendarLabels ? Brush(CalendarFeedPolicy.BrushKey(e.CalendarColor)) : null,
                 TitleBrush = isFocus ? Brush("IslandAccentBrush") : Brush("IslandInkBrush"),
                 DetailBrush = isFocus ? Brush("IslandAccentBrush") : Brush("IslandMutedInkBrush"),
                 TitleWeight = isFocus ? (FontWeight)FindResource("IslandHeadingWeight") : (FontWeight)FindResource("IslandSmallLabelWeight")
@@ -434,7 +449,7 @@ public partial class TodayCardView : System.Windows.Controls.UserControl
         else
         {
             CalendarStatusText.Text = _feed.StatusText;
-            CalendarStatusText.Cursor = System.Windows.Input.Cursors.Arrow;
+            CalendarStatusText.Cursor = _feed.State == CalendarFeedState.Invalid ? System.Windows.Input.Cursors.Hand : System.Windows.Input.Cursors.Arrow;
             CalendarStatusText.SetResourceReference(TextBlock.ForegroundProperty, _feed.State == CalendarFeedState.Invalid ? "IslandNegativeBrush" : "IslandMutedInkBrush");
         }
     }

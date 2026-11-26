@@ -55,7 +55,7 @@ public static class SettingsSections
         new(Location, "Location & Prayer", "City, weather, rain alerts and prayer times.", GroupDaily,
             "city weather rain forecast prayer adhan sound calculation method"),
         new(Calendar, "Calendar", "Calendar link, week start and holidays.", GroupDaily,
-            "google calendar ical monday sunday japan indonesia holidays"),
+            "google calendar ical monday sunday japan indonesia holidays multiple work personal colour color"),
         new(Music, "Music & Lyrics", "Synced lyrics, pronunciation, furigana and timing.", GroupDaily,
             "lyrics spotify lrclib romaji furigana japanese korean chinese offset timing"),
         new(Gaming, "Gaming & Display", "Resolution presets, window-size shortcuts, click-through, gaming offset and session stats.", GroupPerformance,
