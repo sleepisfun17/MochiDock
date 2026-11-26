@@ -66,6 +66,9 @@ public static class AgendaReminderPolicy
     /// <summary>The key of a task as an item (what acknowledging stores), shared by the reminders and Mochi.</summary>
     public static string TaskItemKey(string id, DateTime due) => $"task:{id}|{due:O}";
 
+    /// <summary>True when clicking a reminder should acknowledge the item and suppress later stages/overdue Angry. Clicking an early "in X min" heads-up only opens Today.</summary>
+    public static bool ShouldAcknowledgeOnClick(ReminderStage stage) => stage != ReminderStage.Before;
+
     /// <summary>The stage whose window contains <paramref name="now"/>, or null between stages and after the last one.</summary>
     public static ReminderStage? CurrentStage(DateTime now, DateTime start, int leadMinutes, bool isTask, bool remindOverdue)
     {

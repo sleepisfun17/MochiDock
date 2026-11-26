@@ -89,7 +89,7 @@ public partial class MainWindow
             dpi);
 
         double textWidth = Math.Max(titleFormatted.WidthIncludingTrailingWhitespace, subFormatted.WidthIncludingTrailingWhitespace);
-        // Moon badge (30 DIPs) + badge right margin (10 DIPs) = 40 DIPs
+        // Mascot (26 DIPs) + overlay badge margin (14 DIPs) = 40 DIPs
         // CapsulePrayerArrivalOverlay left margin (14 DIPs) + right corner-safe margin (24 DIPs) = 38 DIPs
         // Total chrome padding = 78 DIPs
         return Math.Max(180, Math.Ceiling(textWidth + 78));

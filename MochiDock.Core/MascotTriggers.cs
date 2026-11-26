@@ -9,8 +9,8 @@ public static class MascotTriggers
 {
     public const int BatteryLowPercent = 15, BatteryRecoverPercent = 20;
     public const double GpuHotClearMargin = 3;
-    /// <summary>An unacknowledged task makes Mochi angry from 10 minutes past its due time until 90 minutes past it (30 minutes after the last nudge).</summary>
-    public static readonly TimeSpan AngryFrom = TimeSpan.FromMinutes(10), AngryUntil = TimeSpan.FromMinutes(90);
+    /// <summary>An unacknowledged task makes Mochi angry from 1 minute past its due time until 90 minutes past it.</summary>
+    public static readonly TimeSpan AngryFrom = TimeSpan.FromMinutes(1), AngryUntil = TimeSpan.FromMinutes(90);
 
     /// <summary>Low and unplugged: at or below 15%, until the charger is connected or the level is back at 20%. No battery means never.</summary>
     public static bool BatteryLow(PowerState state, bool currentlyLow)
@@ -185,7 +185,7 @@ public static class MascotTriggers
         return RestingCycle[step % RestingCycle.Length];
     }
 
-    /// <summary>True when an open task with a due time is overdue by 10 to 90 minutes and nobody acknowledged it.</summary>
+    /// <summary>True when an open task with a due time is overdue by 1 to 90 minutes and nobody acknowledged it.</summary>
     public static bool UnacknowledgedOverdue(IEnumerable<ReminderTask> tasks, DateTime now, ISet<string> acknowledged) =>
         tasks.Any(t => !t.Done && t.Due is { } due && now - due >= AngryFrom && now - due < AngryUntil && !acknowledged.Contains(AgendaReminderPolicy.TaskItemKey(t.Id, due)));
 }

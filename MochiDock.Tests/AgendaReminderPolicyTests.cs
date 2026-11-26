@@ -246,4 +246,12 @@ public class AgendaReminderPolicyTests
         // Same UID + start from another calendar doesn't double-remind.
         Assert.Empty(AgendaReminderPolicy.Due(new[] { shared1, shared2 }, Array.Empty<ReminderTask>(), Now, 10, shown, includeCalendarName: true));
     }
+
+    [Theory]
+    [InlineData(ReminderStage.Before, false)]
+    [InlineData(ReminderStage.Now, true)]
+    [InlineData(ReminderStage.Overdue10, true)]
+    [InlineData(ReminderStage.Overdue30, true)]
+    public void OnlyDueOrOverdueClicksAcknowledgeTheItem(ReminderStage stage, bool expected) =>
+        Assert.Equal(expected, AgendaReminderPolicy.ShouldAcknowledgeOnClick(stage));
 }

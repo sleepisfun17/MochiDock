@@ -72,7 +72,7 @@ public partial class MainViewModel
     /// <summary>Asks the dock window to show a Windows notification (title, text) for a reminder the hidden dock cannot show.</summary>
     public event Action<string, string>? ReminderFallbackRequested;
 
-    /// <summary>Clicking a reminder is the feedback: no later "due now" or "overdue" nudge for the items it showed.</summary>
+    /// <summary>Clicking a due-now or overdue reminder acknowledges it (early heads-ups only open Today).</summary>
     private void AcknowledgeShownReminders()
     {
         foreach (var item in _noticeAgendaItems) if (item.Length > 0) _acknowledgedReminders.Add(item);
@@ -128,7 +128,7 @@ public partial class MainViewModel
         _noticeIsAi = false;
         _noticeIsGame = false; _noticeIsDevice = false; _noticeIsWeather = false; _noticeIsUpdate = false;
         _noticeIsAgenda = true;
-        _noticeAgendaItems = due.Select(r => r.ItemKey).ToList();
+        _noticeAgendaItems = due.Where(r => AgendaReminderPolicy.ShouldAcknowledgeOnClick(r.Stage)).Select(r => r.ItemKey).ToList();
         _hardwareNoticeText = text;
         _hardwareNoticeUntil = DateTimeOffset.UtcNow.AddSeconds(8);
         _hardwareNoticeTimer.Stop();

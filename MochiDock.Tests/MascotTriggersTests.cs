@@ -50,13 +50,14 @@ public class MascotTriggersTests
     static readonly DateTime Due = new(2026, 11, 14, 14, 30, 0);
 
     [Theory]
-    [InlineData(5, false)]      // not yet 10 minutes late
+    [InlineData(0.5, false)]    // not yet 1 minute late
+    [InlineData(1, true)]
     [InlineData(10, true)]
     [InlineData(45, true)]
     [InlineData(89, true)]
     [InlineData(90, false)]     // Mochi gives up
     [InlineData(-5, false)]
-    public void AnOverdueTaskMakesMochiAngryBetweenTenAndNinetyMinutes(double minutesLate, bool expected) =>
+    public void AnOverdueTaskMakesMochiAngryBetweenOneAndNinetyMinutes(double minutesLate, bool expected) =>
         Assert.Equal(expected, MascotTriggers.UnacknowledgedOverdue(new[] { new ReminderTask("t", "Send report", Due, false) }, Due.AddMinutes(minutesLate), new HashSet<string>()));
 
     [Fact]

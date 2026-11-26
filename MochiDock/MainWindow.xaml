@@ -1033,24 +1033,11 @@
                             <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
 
-                        <!-- Warm circular badge with crescent moon -->
-                        <Border Grid.Column="0"
-                                Width="30" Height="30"
-                                CornerRadius="15"
-                                Background="{DynamicResource IslandPrayerBadgeBackgroundBrush}"
-                                VerticalAlignment="Center"
-                                Margin="0,0,10,0">
-                            <Viewbox Width="15" Height="15" HorizontalAlignment="Center" VerticalAlignment="Center">
-                                <Canvas Width="24" Height="24">
-                                    <Path Data="M19.77 13.9A8 8 0 1 1 10.1 4.23A7 7 0 0 0 19.77 13.9Z"
-                                          Stroke="{DynamicResource IslandPrayerBadgeStrokeBrush}"
-                                          StrokeThickness="2"
-                                          StrokeStartLineCap="Round"
-                                          StrokeEndLineCap="Round"
-                                          StrokeLineJoin="Round" />
-                                </Canvas>
-                            </Viewbox>
-                        </Border>
+                        <!-- Live mascot in Praying mood + overlay status badge -->
+                        <Grid Grid.Column="0" Width="26" Height="22" ClipToBounds="False" Margin="0,0,14,0" VerticalAlignment="Center">
+                            <controls:MascotControl Width="26" Height="22" Mood="{Binding MascotMood}" ShowCornerBadge="False" />
+                            <controls:MascotStatusBadge Width="14" Height="14" Mood="{Binding MascotMood}" IsOverlay="True" />
+                        </Grid>
 
                         <!-- Two-line stacked text: Title + Subtitle -->
                         <StackPanel Grid.Column="1" VerticalAlignment="Center">

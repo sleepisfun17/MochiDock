@@ -140,7 +140,7 @@ public partial class MainViewModel
         _prayerArrivalTimer?.Stop();
         _prayerArrivalTimer?.Start();
         NotifyPrayerArrival();
-        ShowMoment(MascotMood.Praying, TimeSpan.FromSeconds(20));
+        ShowMoment(MascotMood.Praying, TimeSpan.FromSeconds(60));
     }
 
     public void DismissPrayerArrival()

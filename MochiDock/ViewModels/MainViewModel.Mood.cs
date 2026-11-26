@@ -167,7 +167,7 @@ public partial class MainViewModel
         RefreshMascotMood();
     }
 
-    /// <summary>Mochi is angry while an open task is 10 to 90 minutes overdue and nobody acknowledged it (needs overdue reminders on).</summary>
+    /// <summary>Mochi is angry while an open task is 1 to 90 minutes overdue and nobody acknowledged it (needs overdue reminders on).</summary>
     private void UpdateOverdueMood()
     {
         bool angry = _settings.EnableAgendaReminders && _settings.RemindOverdueTasks &&
