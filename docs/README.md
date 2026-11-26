@@ -83,7 +83,7 @@ Captures and reports are written under `MochiDock/obj/`. Capturing the README sc
 | Apps card (other apps' toasts) | Not runtime-verified | Filter unit-tested and card rendered; shares the Discord listener, so the same access caveat applies |
 | Rain soon notice | Not runtime-verified | Policy unit-tested; the Open-Meteo 15-minute fields were checked against the live API |
 | Stats 24-hour history and sustained-heat alert | Not runtime-verified | History, chart series and heat policy unit-tested; the 24 h chart is rendered by `verify-card-design.ps1` with synthetic lines; the light sampler's cost is unmeasured |
-| Mochi day faces (meeting, birthday, all tasks done, up late) and hover glance | Not runtime-verified | Rules unit-tested; faces rendered by `verify-mascot.ps1` |
+| Mochi day faces (meeting, birthday, eating, workout, working, all tasks done, up late) and hover glance | Not runtime-verified | Rules unit-tested; faces rendered by `verify-mascot.ps1` |
 | Stats (CPU, GPU, memory, drives, network, processes) | Partial | CPU temperature is an estimate (real value needs PawnIO); some fallbacks remain |
 | Battery page and wireless device batteries | Not runtime-verified | One mouse verified on hardware; LAMZU small dongle (Areson 25A7:FA7C) read by a probe, not in the running app; Logitech HID++ untested |
 | Gaming readout, profiles, summaries, ping | Not runtime-verified | Needs admin for ETW FPS; PUBG API and League local API untested in real games |
@@ -91,7 +91,7 @@ Captures and reports are written under `MochiDock/obj/`. Capturing the README sc
 | Window-size shortcuts (Ctrl+Alt+1-4, flip Ctrl+Alt+F) | Not runtime-verified | Core rules unit-tested; Settings rows not rendered by a harness |
 | Prayer (Aladhan, timeline, reminders, Tone/Silent) | Implemented | Audio and lock/resume checks are manual |
 | Weather | Implemented | Open-Meteo |
-| Today, calendar (iCal), tasks, reminders | Not runtime-verified | Secret link is DPAPI-protected; Google feed lag is a known limit |
+| Today, calendar (iCal), tasks, reminders | Not runtime-verified | Secret links are DPAPI-protected; Google feed lag is a known limit |
 | FX rates | Implemented | Yahoo with keyless fallbacks; indicative prices only |
 | AI usage | Implemented | Parsers unit-tested; sign-in states need a human check |
 | Pomodoro, Clipboard, Script, Downloads | Implemented | Downloads need yt-dlp and ffmpeg |

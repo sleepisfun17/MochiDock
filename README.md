@@ -141,15 +141,15 @@ Switch between `Default` (dark), `Hojicha` (warm roasted-tea brown), `Kuro Night
 [What triggers each mascot expression](docs/USER_GUIDE.md#mochis-faces)
 
 <details>
-<summary><strong>View all 35 mascot expressions (Default, Matcha, Kuro &amp; Shiro)</strong></summary>
+<summary><strong>View all 38 mascot expressions (Default, Matcha, Kuro &amp; Shiro)</strong></summary>
 
-![Mochi's 35 moods on the Default dark theme](docs/images/mochi-moods-default.png)
+![Mochi's 38 moods on the Default dark theme](docs/images/mochi-moods-default.png)
 
-![Mochi's 35 moods on the Matcha theme](docs/images/mochi-moods-matcha.png)
+![Mochi's 38 moods on the Matcha theme](docs/images/mochi-moods-matcha.png)
 
-![Kuro's 35 moods on the Kuro Night theme](docs/images/mochi-moods-kuro.png)
+![Kuro's 38 moods on the Kuro Night theme](docs/images/mochi-moods-kuro.png)
 
-![Shiro's 35 moods on the Default dark theme](docs/images/mochi-moods-shiro.png)
+![Shiro's 38 moods on the Default dark theme](docs/images/mochi-moods-shiro.png)
 
 </details>
 
@@ -200,7 +200,7 @@ A new install starts focused: **Media**, **Stats**, and **Weather** tabs, plus d
 | **WhatsApp** | Multi-account messages, aliases, quick replies, reactions, and read-sync via local or shared GOWA engine (starts nothing until enabled). | Off | WhatsApp |
 | **Email** | IMAP accounts (Gmail, Yahoo, iCloud with app password), Outlook Classic, Mailspring; verification code copy. | Ready, add an account | Email |
 | **Prayer times** | Location-aware Aladhan schedule, schematic timeline, qibla bearing, offline moon phase, Tone/Silent chime. | Off | Tabs & Modules, or Location & Prayer |
-| **Today & calendar** | Month calendar, up to 10 named, colour-coded Google Calendar / `.ics` links (Work, Personal & more; [setup guide](docs/USER_GUIDE.md#connecting-google-calendar)), tasks with reminders, optional Japan/Indonesia holidays. | Off | Tabs & Modules; links & holidays in Calendar |
+| **Today & calendar** | Month calendar, up to 10 named, colour-coded Google Calendar / `.ics` links (Work, Personal & more; [setup guide](docs/USER_GUIDE.md#connecting-google-calendar)), automatic & right-click mascot schedule badges (`Meeting`, `Eating`, `Gym`, `Working` with 45 min Coffee breaks), tasks with reminders, optional Japan/Indonesia holidays. | Off | Tabs & Modules; links & holidays in Calendar |
 | **FX rates** | Three currency pairs from 25 currencies (defaults USD/JPY, USD/IDR, JPY/IDR) with trajectory chart, no API key required. | Off | Tabs & Modules |
 | **AI usage** | Remaining quota tracking for Claude, Codex, Antigravity, Cursor, Gemini, and GitHub Copilot, with optional low-usage alert. | Off | Tabs & Modules; providers in AI Usage |
 | **Taskbar readouts** | Custom Left/Right blocks beside the tray (CPU, GPU, memory, disk, network, prayer, weather, batteries) with themed hover cards & block menus. | Off | Taskbar |
