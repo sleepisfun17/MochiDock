@@ -5,19 +5,21 @@
 <h1 align="center">MochiDock</h1>
 
 <p align="center"><b>A dynamic-island companion for Windows.</b><br>
-A native .NET 8 WPF overlay that sits at the top of your screen (or at the bottom while you game) and shows media, messages, hardware stats and more.</p>
+A native .NET 8 WPF overlay at the top of your screen for media, messages, hardware stats and more.</p>
 
 <p align="center"><a href="https://github.com/sleepisfun17/MochiDock/actions/workflows/ci.yml"><img src="https://github.com/sleepisfun17/MochiDock/actions/workflows/ci.yml/badge.svg" alt="Build and tests"></a> <a href="https://github.com/sleepisfun17/MochiDock/releases/latest"><img src="https://img.shields.io/github/v/release/sleepisfun17/MochiDock?include_prereleases&amp;label=release" alt="Latest release"></a></p>
 
 > **Beta.** Many features have been built and unit-tested but not yet verified on a wide range of machines. See the [known limitations](CHANGELOG.md).
 
 <p align="center">
-  <img src="docs/media/hover-expand.gif" alt="The capsule expanding on hover and collapsing again" width="660">
+  <img src="docs/media/mochidock-dock.gif" alt="The idle MochiDock capsule expanding into the Media card when hovered" width="660">
 </p>
 
 ## What it is
 
 MochiDock is a small capsule that lives at the top of your screen. Notifications appear as a compact pill and expand when you hover. Open it to see what is playing, new messages, your PC's stats, the weather, your day and more. Mochi, a small mascot, reacts to music, alerts, games, battery and the time of day.
+
+[Dock still (PNG)](docs/media/mochidock-dock.png) · [Dock demo (MP4)](docs/media/mochidock-dock.mp4)
 
 ## Features
 
@@ -26,9 +28,9 @@ A new install starts small: the **Media**, **Stats** and **Weather** tabs, plus 
 | Feature | What it does | New install | Where to switch it |
 | --- | --- | --- | --- |
 | **Media and lyrics** | Controls for Spotify, YouTube Music and browser playback, a seekable timeline and synced lyrics (LRCLIB) with readings for Japanese, Korean and Chinese. | On | Always shown; lyrics in Music & Lyrics |
-| **Stats** | CPU, GPU, memory, drives, network, top processes and a Battery page. | On | Tabs & Modules |
-| **Weather** | Current weather, hourly and three-day forecast, and the temperature in the capsule. | On | Tabs & Modules; city in Location & Prayer |
-| **Gaming mode** | In games the dock moves to the bottom, becomes click-through and shows FPS, GPU and CPU, with a session summary afterwards. Ctrl+Alt+R switches between screen resolution presets. | On | Gaming & Display |
+| **[Stats](#live-stats)** | CPU, GPU, memory, drives, network, top processes and a Battery page. | On | Tabs & Modules |
+| **[Weather](#weather)** | Current weather, hourly and three-day forecast, and the temperature in the capsule. | On | Tabs & Modules; city in Location & Prayer |
+| **Gaming mode** | Shows FPS, GPU and CPU with optional click-through and a session summary. In Floating mode the dock uses a configurable offset from the top. Ctrl+Alt+R switches between screen resolution presets. | On | Gaming & Display |
 | **Notifications** | WhatsApp, Email and Discord messages appear as a small capsule first and expand on hover; when several arrive, clicking one highlights the active message you are viewing or replying to. Notifications from other apps you choose (LINE, Telegram, Slack...) get their own Apps card. | Email and Discord on, WhatsApp off, other apps none | WhatsApp, Email, Notifications |
 | **WhatsApp** | Recent messages, quick replies and reactions through a local or shared GOWA engine. Starts nothing until you enable it. | Off | WhatsApp |
 | **Email** | New-mail notices from Gmail or other IMAP accounts (app password), Outlook Classic and Mailspring; verification codes can be copied. | Ready, add an account | Email |
@@ -36,7 +38,7 @@ A new install starts small: the **Media**, **Stats** and **Weather** tabs, plus 
 | **Today and calendar** | Month calendar, events from a Google Calendar link ([how to connect it](docs/USER_GUIDE.md#connecting-google-calendar)), tasks with reminders, optional Japan and Indonesia holidays. | Off | Tabs & Modules; link and holidays in Calendar |
 | **FX rates** | Three currency pairs of your choice from 25 currencies (default USD/JPY, USD/IDR and JPY/IDR) with a trajectory chart, no API key needed. | Off | Tabs & Modules |
 | **AI usage** | Remaining usage for Claude, Codex, Antigravity, Cursor, Gemini and GitHub Copilot, with an optional low-usage alert. | Off | Tabs & Modules; providers in AI Usage |
-| **Taskbar readouts** | Two-line blocks beside the system tray: CPU and GPU, memory and disk, network speed, the next prayer, the weather and device batteries; click one to open its card. | Off | Taskbar |
+| **[Taskbar readouts](#taskbar-readouts)** | Two-line blocks beside the system tray: CPU and GPU, memory and disk, network speed, the next prayer, the weather and device batteries; click one to open its card. | Off | Taskbar |
 | **Wireless device batteries** | Mouse, keyboard and headset levels on the Stats Battery page and an optional taskbar readout. | Off | Hardware & Power, Taskbar |
 | **Window-size shortcuts** | Resize the window you are using to a set size and centre it (Ctrl+Alt+1 to 4, Ctrl+Alt+F to swap width and height; editable). | Off | Gaming & Display |
 | **Pomodoro** | Focus timer. | Off | Tabs & Modules |
@@ -45,21 +47,46 @@ A new install starts small: the **Media**, **Stats** and **Weather** tabs, plus 
 | **Script** | A teleprompter-style script reader (Alt+Shift+S). | Off | Tabs & Modules |
 | **Downloads** | A media downloader (yt-dlp and ffmpeg). | Off | Tabs & Modules |
 | **Sounds** | Short notification and Mochi sounds. | On | Notifications |
-| **Mochi** | The mascot's faces follow what is going on (music, messages, games, the weather, a hot GPU, overdue tasks…) and the card you open (Electric on the Battery page, Money on FX, the sky on Weather, Studying during a Pomodoro). He spins round in a little whirlwind when his face changes, and you can choose his corner status badge style (**3D Charm**, **Speech Bubble**, **3D Sticker** or **Off**) with a live preview. [Every face and its trigger](docs/USER_GUIDE.md#mochis-faces). | On | Mascot |
+| **[Mascots](#mascots)** | The mascot's faces follow what is going on (music, messages, games, the weather, a hot GPU, overdue tasks…) and the card you open (Electric on the Battery page, Money on FX, the sky on Weather, Studying during a Pomodoro). He spins round in a little whirlwind when his face changes, and you can choose his corner status badge style (**3D Charm**, **Speech Bubble**, **3D Sticker** or **Off**) with a live preview. [Every face and its trigger](docs/USER_GUIDE.md#mochis-faces). | On | Mascot |
 | **Updates** | Checks GitHub for a new version and shows a one-time capsule notice when one is out; until you dismiss that version, a small accent ↑ dot stays on the compact capsule (it steps aside for gaming, notifications and notices) and the expanded dock shows a banner with **Update**, **Release notes** and **Dismiss**. The version button at the top of the dock's quick settings checks on click and turns into **Update to x** when an update is waiting; it downloads the update, verifies its checksum, installs it silently and restarts MochiDock. Nothing installs without your click. | Check on | Quick settings button; automatic checks in Updates & Data |
 
 Four themes, `Default` (dark), `Hojicha` (warm roasted-tea brown with a caramel accent), `Kuro Night` (storm-night indigo with an electric-yellow accent, where Mochi becomes Kuro, a black electric cat) and `Matcha` (warm oat and green), are in **Appearance & Dock** alongside the dock style, monitor and interface size. **Mascot** holds the character picker (Auto, grey Mochi, Matcha Mochi, Hojicha Mochi, Kuro the black cat or Shiro the white cat, with any theme; also in the dock's quick settings), status badge style with a live preview, Expressive Mochi and your birthday; **General** holds startup, fullscreen/capture behavior and date format. MochiDock is multi-monitor and high-DPI aware. The [user guide](docs/USER_GUIDE.md) explains every tab and setting.
 
+## Feature demos
+
+### Live Stats
+
+![The Stats card cycling through CPU, GPU and memory while the live charts update](docs/media/mochidock-live-stats.gif)
+
+[Stats still (PNG)](docs/media/mochidock-live-stats.png) · [Stats demo (MP4)](docs/media/mochidock-live-stats.mp4)
+
+The Network page shows upload and download rates, usage history and ping. [Network GIF](docs/media/mochidock-network.gif) · [Network still (PNG)](docs/media/mochidock-network.png) · [Network demo (MP4)](docs/media/mochidock-network.mp4)
+
+### Weather
+
+<img src="docs/media/mochidock-weather.png" alt="The Weather card showing current conditions and the hourly and three-day forecasts" width="660">
+
+[Weather GIF](docs/media/mochidock-weather.gif) · [Weather demo (MP4)](docs/media/mochidock-weather.mp4)
+
+### Taskbar readouts
+
+Choose which blocks appear in **Settings > Taskbar**.
+
+![Live taskbar readouts for CPU, GPU, memory, disk, prayer time, mouse battery, network speed and weather](docs/media/mochidock-taskbar.gif)
+
+[View a still image (PNG)](docs/media/mochidock-taskbar.png) · [Open the video (MP4)](docs/media/mochidock-taskbar.mp4)
+
 ## Screenshots
 
-![Switching from Default to Matcha, then Kuro Night, and back to Default](docs/media/theme-switch.gif)
+![Switching from Default to Matcha and then Kuro Night in quick settings](docs/media/mochidock-themes.gif)
+
+[Theme still (PNG)](docs/media/mochidock-themes.png) · [Theme demo (MP4)](docs/media/mochidock-themes.mp4)
 
 | Default | Matcha | Kuro Night |
 | --- | --- | --- |
 | ![Stats card, Default theme](docs/images/live/stats-default.png) | ![Stats card, Matcha theme](docs/images/live/stats-matcha.png) | ![Stats card, Kuro Night theme with Kuro](docs/images/live/stats-kuro-night-kuro.png) |
 | ![Media card with lyrics, Default theme](docs/images/live/media-default.png) | ![Media card with lyrics, Matcha theme](docs/images/live/media-matcha.png) | ![Media card with lyrics, Kuro Night theme with Kuro](docs/images/live/media-kuro-night-kuro.png) |
 | ![FX Rates card, Default theme](docs/images/live/fx-default.png) | ![FX Rates card, Matcha theme](docs/images/live/fx-matcha.png) | ![FX Rates card, Kuro Night theme with Kuro](docs/images/live/fx-kuro-night-kuro.png) |
-| ![Weather card, Default theme](docs/images/live/weather-default.png) | ![Weather card, Matcha theme](docs/images/live/weather-matcha.png) | ![Weather card, Kuro Night theme with Kuro](docs/images/live/weather-kuro-night-kuro.png) |
 | ![Prayer times card, Default theme](docs/images/live/prayer-default.png) | ![Prayer times card, Matcha theme](docs/images/live/prayer-matcha.png) | ![Prayer times card, Kuro Night theme with Kuro](docs/images/live/prayer-kuro-night-kuro.png) |
 
 <table>
@@ -81,25 +108,27 @@ The compact capsule in the Default, Matcha and Kuro Night themes, here showing t
 ![Compact capsule, Matcha theme](docs/images/live/capsule-media-matcha.png)
 ![Compact capsule, Kuro Night theme](docs/images/live/capsule-media-kuro-night-kuro.png)
 
-Mochi's faces, in both themes ([what makes each one appear](docs/USER_GUIDE.md#mochis-faces)):
+### Mascots
+
+Choose a character in **Settings > Mascot**. **Auto** follows the selected theme.
+
+![Mochi, Matcha Mochi, Hojicha Mochi, Kuro and Shiro across all four themes with 3D Sticker status badges](docs/images/mascots-on-themes.png)
+
+[What triggers each expression](docs/USER_GUIDE.md#mochis-faces)
 
 ![Mochi's moods on the Default dark theme](docs/images/mochi-moods-default.png)
 
 ![Mochi's moods on the Matcha theme](docs/images/mochi-moods-matcha.png)
 
-Pick another mascot in Settings > Mascot: Kuro, a black electric cat (at home on the Kuro Night theme), or Shiro, a white cat:
-
 ![Kuro's moods on the Kuro Night theme](docs/images/mochi-moods-kuro.png)
 
 ![Shiro's moods on the Default dark theme](docs/images/mochi-moods-shiro.png)
 
-Changing the mascot in quick settings spins Mochi into Kuro, Shiro and back:
+The mascot spins as it changes from Kuro to Shiro in quick settings.
 
-![Mochi turning into Kuro and Shiro on the Kuro Night theme, then back to Mochi](docs/media/mascot-switch.gif)
+![Kuro, the black cat, changing into Shiro, the white cat, on the Default theme](docs/media/mochidock-mascots.gif)
 
-Every mascot works on every theme:
-
-![Mochi, Matcha Mochi, Hojicha Mochi, Kuro and Shiro on the Default, Hojicha, Kuro Night and Matcha themes](docs/images/mascots-on-themes.png)
+[Mascot still (PNG)](docs/media/mochidock-mascots.png) · [Mascot demo (MP4)](docs/media/mochidock-mascots.mp4)
 
 ## Requirements
 
