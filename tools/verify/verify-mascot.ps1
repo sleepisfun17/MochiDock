@@ -48,9 +48,12 @@ $expected=@{
  Yawning=@('LeftLidEye','RightLidEye');
  Birthday=@('PartyHat');
  Meeting=@('MicBoom');
+ Workout=@('LeftDetermEye','RightDetermEye');
+ Eating=@();
+ Working=@();
  Proud=@()
 }
-$pillEyes=@{Angry=$false;Hot=$false;Freezing=$true;Dizzy=$false;Drained=$false;Focused=$false;Victory=$false;Defeat=$false;Worried=$false;BreakTime=$true;Excited=$false;Surprised=$false;Cheering=$false;Praying=$false;Bored=$false;Waking=$false;Electric=$false;Money=$false;MoneyDown=$false;Sunny=$false;Rainy=$true;Snowy=$true;Cloudy=$true;Studying=$false;Coffee=$true;Yawning=$false;Birthday=$false;Meeting=$true;Proud=$false}
+$pillEyes=@{Angry=$false;Hot=$false;Freezing=$true;Dizzy=$false;Drained=$false;Focused=$false;Victory=$false;Defeat=$false;Worried=$false;BreakTime=$true;Excited=$false;Surprised=$false;Cheering=$false;Praying=$false;Bored=$false;Waking=$false;Electric=$false;Money=$false;MoneyDown=$false;Sunny=$false;Rainy=$true;Snowy=$true;Cloudy=$true;Studying=$false;Coffee=$true;Yawning=$false;Birthday=$false;Meeting=$true;Workout=$false;Eating=$false;Working=$true;Proud=$false}
 $sweat=@{Hot=$true;Worried=$true}
 $order=@('Idle','Angry','Hot','Freezing','Dizzy','Drained','Music','Hot','Idle','Dizzy','Alert','Drained','Sleeping','Angry','Happy','Freezing','Focused','Waiting','Angry','Bored','Victory','Defeat','Angry','Victory','Idle','Defeat','Focused','Worried','BreakTime','Worried','Angry','BreakTime','Focused','Music','Worried','Music','Excited','Surprised','Cheering','Praying','Angry','Surprised','Idle','Praying','Idle','Bored','Waking','Bored','Angry','Waking','Idle','Electric','Money','Electric','MoneyDown','Sunny','Rainy','Snowy','Cloudy','Studying','Electric','Idle','Rainy','Dizzy','Sunny','Music','Studying','Focused','Money','Idle','Coffee','Bored','Coffee','Sleeping','Coffee','Electric','Coffee','Idle','Yawning','Birthday','Idle','Meeting','Proud','Coffee','Meeting','Music','Yawning','Proud','Birthday','Angry','Idle')
 
@@ -255,7 +258,7 @@ function Ink-Metrics($mood){
 }
 # Where the eyes' vertical centre must lie (DIPs): the pill, wide, round, flat, droopy and spiral eyes are centred on 12.5, the half-lidded ones (Waking, Studying, Up late) lower; Bored looks aside on purpose, so it is not centred and is left out; the happy and sleepy
 # arcs sit a little lower by design.
-$band=@{Yawning=@(13.4,15.0);Birthday=@(12.6,14.6);Meeting=@(11.9,13.1);Proud=@(12.6,14.6);Idle=@(11.9,13.1);Music=@(12.6,14.6);Alert=@(11.9,13.1);Sleeping=@(12.4,14.2);Focused=@(12.0,13.4);Happy=@(12.6,14.6);Angry=@(11.9,13.1);Hot=@(11.9,13.1);Freezing=@(11.9,13.1);Dizzy=@(11.9,13.1);Drained=@(11.9,13.1);Victory=@(12.6,14.6);Defeat=@(11.9,13.1);Worried=@(11.9,13.1);BreakTime=@(11.9,13.1);Excited=@(11.9,13.1);Surprised=@(11.9,13.1);Cheering=@(12.6,14.6);Praying=@(12.4,14.2);Waking=@(13.4,15.0);Electric=@(11.9,13.1);Sunny=@(11.9,13.3);Rainy=@(11.9,13.1);Snowy=@(11.9,13.1);Cloudy=@(11.9,13.1);Studying=@(13.4,15.0);Coffee=@(11.9,13.1)}
+$band=@{Yawning=@(13.4,15.0);Birthday=@(12.6,14.6);Meeting=@(11.9,13.1);Workout=@(11.9,13.1);Eating=@(12.6,14.6);Working=@(11.9,13.1);Proud=@(12.6,14.6);Idle=@(11.9,13.1);Music=@(12.6,14.6);Alert=@(11.9,13.1);Sleeping=@(12.4,14.2);Focused=@(12.0,13.4);Happy=@(12.6,14.6);Angry=@(11.9,13.1);Hot=@(11.9,13.1);Freezing=@(11.9,13.1);Dizzy=@(11.9,13.1);Drained=@(11.9,13.1);Victory=@(12.6,14.6);Defeat=@(11.9,13.1);Worried=@(11.9,13.1);BreakTime=@(11.9,13.1);Excited=@(11.9,13.1);Surprised=@(11.9,13.1);Cheering=@(12.6,14.6);Praying=@(12.4,14.2);Waking=@(13.4,15.0);Electric=@(11.9,13.1);Sunny=@(11.9,13.3);Rainy=@(11.9,13.1);Snowy=@(11.9,13.1);Cloudy=@(11.9,13.1);Studying=@(13.4,15.0);Coffee=@(11.9,13.1)}
 foreach($mood in $band.Keys){
  $ink=Ink-Metrics $mood
  if($ink.L[2] -lt 20 -or $ink.R[2] -lt 20){throw "No eye ink found in mood $mood (left $($ink.L[2]) pixels, right $($ink.R[2]))"}
@@ -302,7 +305,7 @@ foreach($style in @(@('black',[Windows.Media.Brushes]::Black),@('cream',[Windows
 function Body-Top($m){$c=$m.FindName('BodyGradStopTop').Color;return ('#{0:X2}{1:X2}{2:X2}' -f $c.R,$c.G,$c.B)}
 $mascotClass=$assembly.GetType('MochiDock.Controls.MascotControl')
 $matcha=[Activator]::CreateInstance($mascotClass);$matcha.ApplyTheme($true)
-foreach($name in 'Idle','Waiting','Music','Alert','Sleeping','Happy','Money','Snowy','Cloudy','Studying','Coffee','Yawning','Birthday','Meeting','Proud'){
+foreach($name in 'Idle','Waiting','Music','Alert','Sleeping','Happy','Money','Snowy','Cloudy','Studying','Coffee','Yawning','Birthday','Meeting','Workout','Eating','Working','Proud'){
  $matcha.Mood=[Enum]::Parse($moodType,'Angry');$matcha.Mood=[Enum]::Parse($moodType,$name)
  if((Body-Top $matcha) -ne '#85B957'){throw "Matcha: $name should return to the green body but is $(Body-Top $matcha)"}
  $checks++
@@ -324,7 +327,7 @@ $mascotClass.GetProperty('CurrentIsMatcha').SetValue($null,$false)
 $themeType=$mascotClass.GetNestedType('MascotTheme')
 $hojichaTheme=[Enum]::Parse($themeType,'Hojicha')
 $hojicha=[Activator]::CreateInstance($mascotClass);$hojicha.ApplyTheme($hojichaTheme)
-foreach($name in 'Idle','Waiting','Music','Alert','Sleeping','Happy','Money','Snowy','Cloudy','Studying','Coffee','Yawning','Birthday','Meeting','Proud'){
+foreach($name in 'Idle','Waiting','Music','Alert','Sleeping','Happy','Money','Snowy','Cloudy','Studying','Coffee','Yawning','Birthday','Meeting','Workout','Eating','Working','Proud'){
  $hojicha.Mood=[Enum]::Parse($moodType,'Angry');$hojicha.Mood=[Enum]::Parse($moodType,$name)
  if((Body-Top $hojicha) -ne '#E9D3B4'){throw "Hojicha: $name should wear the tan body but is $(Body-Top $hojicha)"}
  $checks++
@@ -351,7 +354,7 @@ $stream=[IO.File]::Create((Join-Path $output 'moods-matcha.png'));$encoder.Save(
 $sheetFaces=[ordered]@{Idle='Idle';Waiting='Thinking';Music='Music';Alert='Notice';Excited='New message';Sleeping='Sleeping';Waking='Waking up';Bored='Bored';
  Coffee='Coffee';Happy='Happy';Cheering='Cheering';Surprised='Surprised';Praying='Prayer time';Focused='Gaming';Worried='Game going badly';BreakTime='Break reminder';
  Victory='Victory';Defeat='Defeat';Hot='Hot';Freezing='Freezing';Angry='Overdue task';Dizzy='Dizzy';Drained='Low battery';Electric='Electric';
- Money='Money';MoneyDown='Money (rate down)';Sunny='Sunny';Rainy='Rainy';Snowy='Snowy';Cloudy='Cloudy';Studying='Studying';Yawning='Up late';Birthday='Birthday';Meeting='In a meeting';Proud='All tasks done';Turning='Changing face'}
+ Money='Money';MoneyDown='Money (rate down)';Sunny='Sunny';Rainy='Rainy';Snowy='Snowy';Cloudy='Cloudy';Studying='Studying';Yawning='Up late';Birthday='Birthday';Meeting='In a meeting';Workout='Working out';Eating='Eating';Working='Working';Proud='All tasks done';Turning='Changing face'}
 foreach($sheet in @(@('default',$false,'#000000','#F2F2F5'),@('matcha',$true,'#EFE9D8','#283322'))){
  $grid=[Windows.Controls.Primitives.UniformGrid]::new();$grid.Columns=8;$grid.Background=[Windows.Media.BrushConverter]::new().ConvertFromString($sheet[2])
  foreach($key in $sheetFaces.Keys){
@@ -413,7 +416,7 @@ if($kuro.FindName('TailSwayRotate').HasAnimatedProperties){throw 'KuroNight: the
 $checks+=3
 foreach($ear in 'EarLeft','EarRight'){
  $p=$kuro.FindName($ear);$pen=[Windows.Media.Pen]::new([Windows.Media.Brushes]::Black,$p.StrokeThickness);$r=$p.Data.GetRenderBounds($pen)
- if($r.Y -lt -3.6 -or $r.X -lt 0 -or $r.Right -gt 30){throw "KuroNight: $ear pokes out too far ($r)"}
+ if($r.Y -lt -4.5 -or $r.X -lt 0 -or $r.Right -gt 30){throw "KuroNight: $ear pokes out too far ($r)"}
 }
 $checks+=2
 # Ears and tail, the light ink and the black shadow belong to KuroNight only.
@@ -505,7 +508,7 @@ foreach($groundName in $grounds.Keys){
     $px=$img.Pixels;$stride=$img.Stride
     $unit=22.0/30*$scale   # pixels per drawing unit
     $origin=10*$scale      # the host's padding, in pixels
-    $bodyX=[int][math]::Floor($origin+4.5*$unit);$bodyY=[int][math]::Floor($origin+15*$unit);$bi=$bodyY*$stride+$bodyX*4
+    $bodyX=[int][math]::Floor($origin+15*$unit);$bodyY=[int][math]::Floor($origin+22*$unit);$bi=$bodyY*$stride+$bodyX*4
     $bodyLum=Lum $px[$bi+2] $px[$bi+1] $px[$bi]
     # the eyes: the pixel in the eye band that differs most from the body next to it
     $eyeContrast=1.0
@@ -557,7 +560,7 @@ function Is-Yellow($hex){$c=[Windows.Media.ColorConverter]::ConvertFromString($h
  if($max -eq 0 -or $d -eq 0 -or ($d/$max) -lt 0.08){return $false}
  $h=if($max -eq $r){60*((($g-$b)/$d+6)%6)}elseif($max -eq $g){60*(($b-$r)/$d+2)}else{60*(($r-$g)/$d+4)}
  return ($h -ge 35 -and $h -le 70)}
-$shiroNeutral=@('Idle','Waiting','Music','Alert','Sleeping','Happy','Money','Snowy','Cloudy','Studying','Coffee','Yawning','Birthday','Meeting','Proud','Electric')
+$shiroNeutral=@('Idle','Waiting','Music','Alert','Sleeping','Happy','Money','Snowy','Cloudy','Studying','Coffee','Yawning','Birthday','Meeting','Workout','Eating','Working','Proud','Electric')
 foreach($themeName in 'Default','Hojicha','KuroNight','Matcha'){
  $s=New-Mascot $themeName 'Shiro'
  foreach($part in 'KuroEars','KuroTail'){if(!(Visible $s $part)){throw "Shiro on ${themeName}: $part should be visible"}}
@@ -580,7 +583,7 @@ foreach($themeName in 'Default','Hojicha','KuroNight','Matcha'){
   if((Brush-Hex $s.FindResource('MascotEyeBrush')) -ne '#1A1412'){throw "Shiro on ${themeName}: the eye ink is not dark in $name"}
   if($s.FindName('LeftCheek').Fill.Color.A -eq 0){throw "Shiro on ${themeName}: $name lost the pink cheeks"}
   if((Hex-Of $s.FindName('TailSpark').Fill.Color) -ne '#8FD3FF'){throw "Shiro on ${themeName}: the tail spark is not ice blue"}
-  if((Hex-Of $s.FindName('InnerEarLeft').Fill.Color) -ne '#F4B6C2'){throw "Shiro on ${themeName}: the inner ears are not pink"}
+  if((Hex-Of $s.FindName('InnerEarLeft').Fill.Color) -ne '#F58FA8'){throw "Shiro on ${themeName}: the inner ears are not pink"}
   $sh=$s.FindName('BodyShadow');if($sh.Color.ToString() -ne '#FF000000' -or $sh.ShadowDepth -ne 1 -or [math]::Abs($sh.Opacity-0.25) -gt 1e-9){throw "Shiro on ${themeName}: the black shadow is gone in $name"}
   $checks++
  }
@@ -729,7 +732,7 @@ foreach($combo in $headsetCombos){
     continue
    }
    $spec=Badge-For $mood $kindName
-   if($null -eq $spec -or !(Visible $m 'StatusBadge') -or (Visible $m 'BadgeDisc') -or (Hex-Of $m.FindName('BadgeGlyph').Fill.Color) -ne $spec.Fill -or ($spec.Glyph -ne $(@{Music='note';Focused='controller';Worried='controller';Meeting='mic'}[$mood]))){throw "${label}: a cat needs the $(@{Music='note';Focused='controller';Worried='controller';Meeting='mic'}[$mood]) badge instead of the headset"}
+   if($null -eq $spec -or !(Visible $m 'StatusBadge') -or !(Visible $m 'BadgeCharm') -or (Hex-Of $m.FindName('BadgeGradMid').Color) -ne $spec.Fill -or (Hex-Of $m.FindName('BadgeGlyph').Fill.Color) -ne $spec.Ink -or ($spec.Glyph -ne $(@{Music='note';Focused='controller';Worried='controller';Meeting='mic'}[$mood]))){throw "${label}: a cat needs the $(@{Music='note';Focused='controller';Worried='controller';Meeting='mic'}[$mood]) badge instead of the headset"}
    if($mood -eq 'Worried' -and !(Visible $m 'SweatDrop')){throw "${label}: Worried keeps its sweat drop"}
    $checks++
    continue
@@ -821,8 +824,8 @@ $checks++
 # of the box, 2.1 above it), stay clear of the eyes; and at the capsule size (22 x 19) on every ground at 100/125/150/200% it must be at least
 # 7 px across and stand out from what it covers by at least 3:1 (WCAG non-text contrast).
 $badgeMoods=@($allMoods|Where-Object{$null -ne (Badge-For $_)})
-if($badgeMoods.Count -ne 18){throw "Expected 18 faces with a badge for Mochi, found $($badgeMoods.Count): $($badgeMoods -join ', ')"}
-foreach($k in 'Kuro','Shiro'){$n=@($allMoods|Where-Object{$null -ne (Badge-For $_ $k)}).Count;if($n -ne 21){throw "Expected 21 faces with a badge for $k (gaming, worried and meetings get one; music is the floating note), found $n"}}
+if($badgeMoods.Count -ne 21){throw "Expected 21 faces with a badge for Mochi, found $($badgeMoods.Count): $($badgeMoods -join ', ')"}
+foreach($k in 'Kuro','Shiro'){$n=@($allMoods|Where-Object{$null -ne (Badge-For $_ $k)}).Count;if($n -ne 24){throw "Expected 24 faces with a badge for $k (gaming, worried and meetings get one; music is the floating note), found $n"}}
 $eyeNames='LeftPillEye','RightPillEye','LeftHappyEye','RightHappyEye','LeftSleepyEye','RightSleepyEye','LeftDetermEye','RightDetermEye','LeftFlatEye','RightFlatEye','LeftDroopEye','RightDroopEye','LeftSpiralEye','RightSpiralEye','LeftWideEye','RightWideEye','LeftRoundEye','RightRoundEye','LeftLidEye','RightLidEye','StarEyes','CoinEyes','Sunglasses'
 function Part-Bounds($element,$root){
  # shapes: the bounds of what they draw (a Path's ActualWidth reaches back to the origin); panels: their size
@@ -846,25 +849,26 @@ function Eye-Bounds($m,$root,$name){
   $spec=Badge-For $mood $kindName
   if((Visible $m 'StatusBadge') -ne ($null -ne $spec)){throw "${kindName}: the badge should be $(if($spec){'shown'}else{'hidden'}) in $mood"}
   if($null -eq $spec){continue}
+  if(!(Visible $m 'BadgeCharm')){throw "${kindName}: the $mood charm badge is hidden"}
   $pos=$m.FindName('BadgePos');$cx=$pos.X;$cy=$pos.Y;$cat=$kindName -eq 'Kuro' -or $kindName -eq 'Shiro'
-  $outer=if($cat){3.6*$m.FindName('BadgeSize').ScaleX}else{4.9}   # the cats: the glyph alone (its +-3.6 box, scaled); Mochi: the ringed disc
+  $outer=6.75   # 13.5 x 13.5 squircle charm
   if($cat){
-   # the cats: a side icon by the left ear (no disc): left of the body's middle (the clock is on the right), inside the capsule's room above (9.5)
-   if($cx+$outer -gt 3 -or $cx-$outer -lt -8 -or $cy-$outer -lt -9.5 -or $cy+$outer -gt 8 -or $m.FindName('BadgeSize').ScaleX -lt 1.3){throw ("{0}: the {1} icon is out of the side slot: centre {2},{3} half {4:N2}" -f $kindName,$mood,$cx,$cy,$outer)}
-   if((Visible $m 'BadgeDisc') -or (Visible $m 'BadgeRing')){throw "${kindName}: the $mood icon should have no disc"}
-   if((Hex-Of $m.FindName('BadgeGlyph').Fill.Color) -ne $spec.Fill -or (Brush-Hex $m.FindName('BadgeGlyph').Stroke) -ne $badgeType.GetMethod('RingFor',[type[]]@([string])).Invoke($null,@('Default'))){throw "${kindName}: the $mood icon should be $($spec.Fill) with the ring-coloured outline"}
-  }elseif($cx+$outer -gt 30.6 -or $cy-$outer -lt -2.1 -or $cx-$outer -lt 17){throw ("{0}: the {1} badge is out of its corner: centre {2},{3}" -f $kindName,$mood,$cx,$cy)}
-  if(!$cat -and ((Hex-Of $m.FindName('BadgeDisc').Fill.Color) -ne $spec.Fill -or (Hex-Of $m.FindName('BadgeGlyph').Fill.Color) -ne $spec.Ink)){throw "${kindName}: the $mood badge has the wrong colours"}
-  if(!$cat -and (Hex-Of $m.FindName('BadgeRing').Fill.Color) -ne $badgeType.GetMethod('RingFor',[type[]]@([string],[string])).Invoke($null,@('Default',$spec.Fill))){throw "${kindName}: the $mood badge ring is not the theme's ring"}
-  $glyph=$m.FindName('BadgeGlyph').Data
-  if($glyph.IsEmpty() -or $glyph.Bounds.Width -lt 1.5 -or $glyph.Bounds.Right -gt 3.6 -or $glyph.Bounds.Left -lt -3.6 -or $glyph.Bounds.Top -lt -3.6 -or $glyph.Bounds.Bottom -gt 3.6){throw "${kindName}: the $mood glyph is missing or does not fit the disc ($($glyph.Bounds))"}
-  # the badge must not cover an eye: its outer circle stays clear of every eye shape the face shows
+   if($cx -lt 26 -or $cx -gt 30 -or $cy -lt 19 -or $cy -gt 24){throw ("{0}: the {1} badge is out of the cheek slot: centre {2},{3}" -f $kindName,$mood,$cx,$cy)}
+  }elseif($cx -lt 26 -or $cx -gt 30 -or $cy -lt 0 -or $cy -gt 5){throw ("{0}: the {1} badge is out of its corner: centre {2},{3}" -f $kindName,$mood,$cx,$cy)}
+  if((Hex-Of $m.FindName('BadgeGradMid').Color) -ne $spec.Fill -or (Hex-Of $m.FindName('BadgeGlyph').Fill.Color) -ne $spec.Ink){throw "${kindName}: the $mood badge has the wrong colours"}
+  if((Hex-Of $m.FindName('BadgeBody').BorderBrush.Color) -ne $badgeType.GetMethod('RingFor',[type[]]@([string],[string])).Invoke($null,@('Default',$spec.Fill))){throw "${kindName}: the $mood badge ring is not the theme's ring"}
+  $glyphNode=$m.FindName('BadgeGlyph');$glyph=$glyphNode.Data;$bodyNode=$m.FindName('BadgeBody')
+  if($glyph.IsEmpty() -or $glyph.Bounds.Width -lt 1.5 -or $glyph.Bounds.Left -lt 0.2 -or $glyph.Bounds.Right -gt 9.8 -or $glyph.Bounds.Top -lt 0.2 -or $glyph.Bounds.Bottom -gt 9.8){throw "${kindName}: the $mood glyph is missing or does not fit the 10x10 box ($($glyph.Bounds))"}
+  $mappedGlyph=$glyphNode.TransformToAncestor($bodyNode).TransformBounds($glyph.Bounds)
+  $gdx=[Math]::Abs(($mappedGlyph.X+$mappedGlyph.Width/2.0)-($bodyNode.ActualWidth/2.0));$gdy=[Math]::Abs(($mappedGlyph.Y+$mappedGlyph.Height/2.0)-($bodyNode.ActualHeight/2.0))
+  if($gdx -gt 0.05 -or $gdy -gt 0.05){throw ("{0}: the {1} glyph is off-center in BadgeBody by ({2:N2},{3:N2})" -f $kindName,$mood,$gdx,$gdy)}
+  # the badge centre stays well clear of every eye shape the face shows
   foreach($eye in $eyeNames){
    if(!(Visible $m $eye)){continue}
    $b=Eye-Bounds $m $root $eye
    if($b.IsEmpty -or $b.Width -le 0){continue}
    $dx=[Math]::Max([Math]::Max($b.Left-$cx,0),$cx-$b.Right);$dy=[Math]::Max([Math]::Max($b.Top-$cy,0),$cy-$b.Bottom)
-   if([Math]::Sqrt($dx*$dx+$dy*$dy) -lt $outer-0.3){throw ("{0}: the {1} badge covers the {2} (distance {3:N2} < {4})" -f $kindName,$mood,$eye,[Math]::Sqrt($dx*$dx+$dy*$dy),($outer-0.3))}
+   if([Math]::Sqrt($dx*$dx+$dy*$dy) -lt 4.0){throw ("{0}: the {1} badge covers the {2} (distance {3:N2} < 4.0)" -f $kindName,$mood,$eye,[Math]::Sqrt($dx*$dx+$dy*$dy))}
   }
   $checks++
  }
