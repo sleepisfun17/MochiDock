@@ -92,7 +92,6 @@ body { margin: 0; font: 600 40px Quicksand, sans-serif; }
 }
 
 .window video { position: absolute; max-width: none; }
-.redaction { position: absolute; backdrop-filter: blur(12px); }
 
 .captions, .outro-copy {
   position: absolute;

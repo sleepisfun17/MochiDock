@@ -17,16 +17,6 @@ function setCrop(windowElement, video, crop, source) {
     width: `${sourceWidth * scale}px`,
     height: `${sourceHeight * scale}px`,
   });
-  const redaction = windowElement.querySelector('.redaction');
-  if (redaction) {
-    const [coverX, coverY, coverWidth, coverHeight] = readRect(windowElement.dataset.cover);
-    Object.assign(redaction.style, {
-      left: `${(coverX - x) * scale}px`,
-      top: `${(coverY - y) * scale}px`,
-      width: `${coverWidth * scale}px`,
-      height: `${coverHeight * scale}px`,
-    });
-  }
 }
 
 for (const windowElement of film.querySelectorAll('.window')) {
@@ -48,6 +38,12 @@ for (const caption of film.querySelectorAll('.caption')) {
       y: 24, clipPath: 'inset(12% 0 0 0)', opacity: 0,
       duration: 0.22, ease: 'power2.out', immediateRender: false,
     }, start);
+  }
+}
+
+for (const label of film.querySelectorAll('[data-label-cues]')) {
+  for (const [start, textContent] of JSON.parse(label.dataset.labelCues)) {
+    timeline.set(label, { textContent }, start);
   }
 }
 
