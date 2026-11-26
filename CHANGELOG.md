@@ -2,6 +2,25 @@
 
 All notable changes to MochiDock are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.5.4-beta]
+
+### Added
+
+- **Multiple calendars (Work, Personal & more)**: link up to 10 named, colour-coded Google Calendar or `.ics` feeds together in DPAPI-encrypted `gcal.dat`, with per-feed offline caching, parallel refresh, colour dots on the Today month grid and agenda rows, and `Calendar · Title` reminder prefixes when 2 or more calendars are connected (auto-migrates existing single-link setups).
+- **CPU temperature & unified Orange/Red thermal limits**: compact gaming / pinned FPS capsule now shows measured CPU temperature alongside GPU temperature, with separate CPU and GPU Orange/Red thresholds in **Settings > Hardware & Power** that also drive hardware alerts, Mochi's hot face, and taskbar warnings (one-time migration for legacy customized temperature alert limits).
+- **Optional cat mouth toggle**: toggle the `:3` mouth on Kuro and Shiro in **Settings > Mascot** (`ShowCatMouth`).
+
+### Changed
+
+- **Reorganized Hardware & Power settings**: consolidated into four sections (**Alerts & temperatures**, **Sensors & history**, **Wireless devices**, **Power use**), keeping CPU/GPU temperature colour sliders enabled even when popup alerts are off.
+- **Tighter gaming capsule weather spacing**: replaced the wide right-aligned weather slot in the compact gaming readout with a compact divider, icon, and left-aligned temperature.
+- **Refreshed README & demo media**: reworked the GitHub landing page with framed feature GIF/PNG/MP4 demos (including gaming, power, Japanese lyrics, masked prayer, and FX rates) and collapsible mascot/theme galleries.
+
+### Fixed
+
+- **Notification mute suppression**: muted, snoozed, and quiet-hours notifications no longer re-enter the capsule/takeover queue after WhatsApp read receipts or message switches, and toggling mute immediately clears already-queued items while still keeping incoming messages stored in their tabs.
+- **Stats > Games playtime clipping**: made the left column scrollable and moved **PLAYTIME** above **FPS** so Today, This week, and per-game playtime rows are not cropped.
+
 ## [0.5.3-beta]
 
 ### Changed

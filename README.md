@@ -200,7 +200,7 @@ A new install starts focused: **Media**, **Stats**, and **Weather** tabs, plus d
 | **WhatsApp** | Multi-account messages, aliases, quick replies, reactions, and read-sync via local or shared GOWA engine (starts nothing until enabled). | Off | WhatsApp |
 | **Email** | IMAP accounts (Gmail, Yahoo, iCloud with app password), Outlook Classic, Mailspring; verification code copy. | Ready, add an account | Email |
 | **Prayer times** | Location-aware Aladhan schedule, schematic timeline, qibla bearing, offline moon phase, Tone/Silent chime. | Off | Tabs & Modules, or Location & Prayer |
-| **Today & calendar** | Month calendar, events from a Google Calendar / `.ics` link ([setup guide](docs/USER_GUIDE.md#connecting-google-calendar)), tasks with reminders, optional Japan/Indonesia holidays. | Off | Tabs & Modules; link & holidays in Calendar |
+| **Today & calendar** | Month calendar, up to 10 named, colour-coded Google Calendar / `.ics` links (Work, Personal & more; [setup guide](docs/USER_GUIDE.md#connecting-google-calendar)), tasks with reminders, optional Japan/Indonesia holidays. | Off | Tabs & Modules; links & holidays in Calendar |
 | **FX rates** | Three currency pairs from 25 currencies (defaults USD/JPY, USD/IDR, JPY/IDR) with trajectory chart, no API key required. | Off | Tabs & Modules |
 | **AI usage** | Remaining quota tracking for Claude, Codex, Antigravity, Cursor, Gemini, and GitHub Copilot, with optional low-usage alert. | Off | Tabs & Modules; providers in AI Usage |
 | **Taskbar readouts** | Custom Left/Right blocks beside the tray (CPU, GPU, memory, disk, network, prayer, weather, batteries) with themed hover cards & block menus. | Off | Taskbar |
@@ -219,7 +219,7 @@ Full per-tab and per-setting reference: [User guide](docs/USER_GUIDE.md).
   - **GPU stats:** GPU name, driver, and usage read from Windows WMI and GPU Engine counters (NVIDIA, AMD, Intel). NVIDIA drivers expose extra detail via NVML; on AMD and Intel, temperature/clock/power read from hardware sensors where exposed or display `-` otherwise (verified across an NVIDIA laptop GPU, AMD desktop GPU, and Intel integrated graphics).
   - **PawnIO:** Real CPU temperature (optional third-party kernel driver — can be ticked during setup via winget, or managed in **Settings > Hardware & Power > Sensors & history**). Without it, CPU temperature is an estimate marked with `~` and stays hidden in the gaming FPS pill. PC power estimation uses Windows' Energy Meter counters when PawnIO is unavailable.
   - **Email:** Gmail, Yahoo, iCloud, or other IMAP account with an app password ([setup notes](docs/USER_GUIDE.md#setting-up-email-gmail-and-other-imap-accounts)), Outlook Classic, or Mailspring.
-  - **Calendar:** A Google Calendar or `.ics` link ([guide](docs/USER_GUIDE.md#connecting-google-calendar)).
+  - **Calendar:** One or more Google Calendar or `.ics` links (up to 10, named and colour-coded; [guide](docs/USER_GUIDE.md#connecting-google-calendar)).
   - **`ffmpeg.exe`:** Required only for MP3 audio extraction/merging in **Downloads**.
 
 ## Install

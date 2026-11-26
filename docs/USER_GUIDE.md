@@ -22,7 +22,7 @@ A new install shows three tabs: **Media**, **Stats** and **Weather**. Everything
 | Email | New-mail notifications with sender, subject and a short preview; verification codes can be copied. **Mark Read** appears for Outlook mail and for accounts with "Mark as read on the server"; Mailspring mail and read-only accounts are only dismissed. | A Gmail, Yahoo, iCloud or other IMAP account (app password), or Outlook Classic or Mailspring installed. |
 | Discord | Discord toast notifications. | Experimental for unpackaged installs. |
 | Apps | Notifications from other apps you choose (LINE, Telegram, Slack, Teams...), with the app's icon and an **Open** button. Appears when one arrives. | Settings > Notifications > Other apps: pick an app that recently notified you, or type its name. Windows must allow notification access. |
-| Today | Month calendar, the day's agenda and your tasks with reminders. | A Google Calendar iCal link for events ([how to get it](#connecting-google-calendar)). |
+| Today | Month calendar, the day's agenda and your tasks with reminders. | One or more Google Calendar iCal links for events ([how to get them](#connecting-google-calendar)). |
 | Pomodoro | Focus timer. | Nothing. |
 | File shelf | A temporary shelf for files, and phone drop over your Wi-Fi. | Phone and PC on the same network. |
 | Clipboard | Clipboard history. | Nothing. |
@@ -40,12 +40,12 @@ A new install shows three tabs: **Media**, **Stats** and **Weather**. Everything
 | Tabs | Which tabs the dock shows. |
 | WhatsApp | Enable WhatsApp, pairing, short names for linked accounts (for example JP and ID), engine (local or remote), ports, read sync, muted and listed chats. |
 | Email | Mail accounts (Gmail, Yahoo, iCloud, Fastmail or any IMAP server), which Outlook folders to watch (empty by default) and ad filtering. |
-| Calendar | Calendar link, week start and holidays. |
+| Calendar | Calendar links (Work, Personal & more), colours, week start and holidays. |
 | Location & Prayer | City for weather and prayer, calculation method, prayer sound. |
 | Notifications | Mutes, quiet hours, snooze, reminders and sounds. |
 | Gaming & Display | Resolution presets and hotkey (default Ctrl+Alt+R); window-size shortcuts, off until you turn them on, that resize the window you are using and centre it (defaults Ctrl+Alt+1 to 4 for 1920x1080, 2560x1440, 1080x1920 and 720x1280, Ctrl+Alt+F to flip width and height; editable); click-through, gaming offset, session summary. |
 | Taskbar | Readouts on the Windows taskbar with a live Dark/Light preview: pick which display(s) to show on (Primary, same as MochiDock, a specific display, or All displays), toggle individual items (CPU load/temp, GPU load/temp, memory, disk, upload, download, next prayer with time/remaining countdown, weather temp in `°C`/wind, wireless device batteries), place each block on the Left edge or Right side (left of the tray or after the task buttons) and reorder them, adjust Left/Right/Vertical offsets, choose font (defaults to Windows taskbar font), size (Auto scales to fit Windhawk-tall taskbars), bold, block spacing, stable non-jittering width, device battery layout (`Auto`, `Side by side`, `Always stacked`), next prayer display (`Time & remaining`, `Remaining only`, `Time only`), countdown window before prayer, current-prayer elapsed window (`+Xm` after start), weather icon (`Colour emoji` or `Monochrome`), compact labels (`C/G/M/D`), network arrow style (`↑ ↓`, `▲ ▼`, colour emoji `🔼 🔽`), speed units (Bytes/Bits), swapped up/down lines, refresh rate (1–3 s), and adaptive label/value colours. Kept per PC. Click a block to open its card; right-click for a menu; hover for details. |
-| Hardware & power | Alerts, the optional PawnIO driver (real CPU temperature; shows whether it is installed and how to get it), wireless device batteries, power estimate. |
+| Hardware & power | Alerts & temperatures (separate CPU and GPU Orange/Red colour limits unified with alerts and taskbar warnings), the optional PawnIO driver (real CPU temperature; shows whether it is installed and how to get it), wireless device batteries, power estimate. |
 | Music & lyrics | Lyrics, pronunciation and timing offset. |
 | AI usage | Which providers are tracked, and low-usage alerts. |
 | Data & diagnostics | Export, import, reload, open files and logs, integration status. Export saves your settings and tasks for another PC; passwords, keys and this PC's own values (monitor, positions, ports, startup) stay behind, and import keeps the other PC's own values. Enter mail passwords and the WhatsApp server login again after an import. |
@@ -61,24 +61,24 @@ Sharing one engine between PCs: pick **Remote server** and enter the address (fo
 
 ## Connecting Google Calendar
 
-The Today tab shows your events from a calendar *link*. MochiDock only reads it; it never changes your calendar and does not ask for your Google password.
+The Today tab shows your events from one or more calendar *links* (for example **Work** and **Personal**, up to 10 feeds). MochiDock only reads them; it never changes your calendars and does not ask for your Google password.
 
-**Get the link (Google Calendar in a browser, on a computer)**
+**Get each link (Google Calendar in a browser, on a computer)**
 1. Open [calendar.google.com](https://calendar.google.com) and click the gear icon > **Settings**.
-2. In the left list under **Settings for my calendars**, click the calendar you want (your own calendar has your name).
+2. In the left list under **Settings for my calendars**, click the calendar you want (for example your personal or work calendar).
 3. Open **Integrate calendar** and copy **Secret address in iCal format**. It starts with `https://calendar.google.com/calendar/ical/` and ends with `.ics`.
 
 **Set it in MochiDock**
-1. Open Settings > **Calendar** (or click "Connect calendar" on the Today tab).
-2. Paste the link into **Calendar link** and click **Connect**. The status shows "Linked" when it worked.
-3. Events from 35 days back to 70 days ahead appear in the Today tab and the calendar. Use **Refresh now** to fetch right away, **Change link** to replace it and **Disconnect** to remove it.
+1. Open Settings > **Calendar** (or click "Connect Google Calendar in Settings" on the Today tab).
+2. Under **Add a calendar**, enter a name (e.g. `Work`), pick a colour, paste the secret link, and click **Add**. Repeat for additional calendars (e.g. `Personal`).
+3. Events from 35 days back to 70 days ahead appear merged in the Today tab with colour dots on the calendar grid and agenda rows. Use **Connected calendars** to change colours, click **Refresh all** to fetch right away, or click `×` to remove an individual calendar.
 
 **Good to know**
-- The link works like a password: anyone who has it can read the calendar. MochiDock stores it encrypted for your Windows user, never in `settings.json`, exports or logs, never shows it again, and only sends it to its own host. If it leaks, open the same Google page and use **Reset secret address** (the old link stops working, so paste the new one).
-- One link per MochiDock. To see several Google calendars, use each calendar's own link one at a time, or share them into one calendar.
+- The links work like passwords: anyone who has one can read that calendar. MochiDock stores all links encrypted together in `gcal.dat` for your Windows user, never in `settings.json`, exports or logs, never shows them again, and only sends each link to its own host. If one leaks, open the same Google page and use **Reset secret address** (the old link stops working, so remove the old calendar and add the new link).
+- When 2 or more calendars are connected, the Today tab shows colour dots and calendar names next to each event, and capsule event reminders include the calendar name (e.g. `Work · Standup in 10 min`).
 - Google updates this feed with a delay, so a new or changed event can take a while (sometimes hours) to appear. MochiDock rechecks every 5 minutes while the Today tab is open and every 15 minutes in the background.
-- The last downloaded events are kept on your PC, so they still show when you are offline.
-- Not working? "Calendar link not accepted" means the link was reset or copied wrong. "That link isn't a calendar feed" means it is not an `.ics` link. Some company or school Google accounts do not allow the secret address; ask the admin.
+- The last downloaded events are kept on your PC per calendar, so they still show when you are offline.
+- Not working? "Calendar link not accepted" or a failed calendar notice means a link was reset or copied wrong. "That link isn't a calendar feed" means it is not an `.ics` link. Some company or school Google accounts do not allow the secret address; ask the admin.
 - Other calendars work too if they give an `https://` or `webcal://` `.ics` link (for example a published Outlook.com or iCloud calendar).
 - Reminders for events (and tasks with a time) are set in Settings > Notifications. Japan and Indonesia holidays are built in and can be switched on in Settings > Calendar.
 
