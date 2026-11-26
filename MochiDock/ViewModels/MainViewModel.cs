@@ -331,6 +331,7 @@ public partial class MainViewModel : INotifyPropertyChanged
         NotifySystemModuleSelection();
         PrayerAudio.Stop();
         _snoozedUntil = settings.SnoozeUntilTicks > DateTime.Now.Ticks ? new DateTime(settings.SnoozeUntilTicks) : DateTime.MinValue;
+        PruneSuppressedNotifications();
         ApplyCapsuleTheme(settings.CapsuleTheme);
         SetCapsuleScrollSpeed(settings.CapsuleScrollSpeed);
         OnPropertyChanged(nameof(CompactCapsuleText));
@@ -557,6 +558,7 @@ public partial class MainViewModel : INotifyPropertyChanged
         _settings = initialSettings ?? SettingsService.Load();
         MochiDock.Core.DateDisplay.Set(MochiDock.Core.DateDisplay.Parse(_settings.DateFormat));
         Controls.MascotControl.CurrentBadgeStyle = MochiDock.Core.MascotBadge.ParseStyle(_settings.MascotBadgeStyle);
+        Controls.MascotControl.CurrentShowCatMouth = _settings.ShowCatMouth;
         _aiUsageService = new AiUsageService { HiddenProviders = _settings.HiddenAiProviders ?? new() };
         _aiUsageService.AlertsEnabled = _settings.EnableAiUsageAlerts;
         _aiUsageService.LowUsageDetected += OnAiLowUsage;
@@ -1329,7 +1331,8 @@ public partial class MainViewModel : INotifyPropertyChanged
                 string pingPart = _settings.ShowPingInGameCapsule && _hardwareStats.NetworkPingMs >= 0 ? $"{_hardwareStats.NetworkPingMs} ms  |  " : "";
                 string fpsPart = (_hardwareStats.CurrentFps > 0 ? $"{_hardwareStats.CurrentFps} fps  |  " : "") + pingPart;
                 string gpuTempPart = _hardwareStats.GpuTemp > 0 && _hardwareStats.IsGpuTempMeasured ? $" · {_hardwareStats.GpuTemp:0}°" : "";
-                return $"{fpsPart}GPU {_hardwareStats.GpuUsage:0}%{gpuTempPart}  |  CPU {_hardwareStats.CpuUsage:0}%";
+                string cpuTempPart = _hardwareStats.CpuTemp > 0 && _hardwareStats.IsCpuTempMeasured ? $" · {_hardwareStats.CpuTemp:0}°" : "";
+                return $"{fpsPart}GPU {_hardwareStats.GpuUsage:0}%{gpuTempPart}  |  CPU {_hardwareStats.CpuUsage:0}%{cpuTempPart}";
             }
 
             if (_isStatsPinnedToCapsule)
@@ -1484,7 +1487,9 @@ public partial class MainViewModel : INotifyPropertyChanged
         string wasText = _hardwareNoticeText;
         if(!EnableHardwareAlerts||_isWorkstationLocked||!_displayAwake){if((!_noticeIsAi&&!_noticeIsAgenda&&!_noticeIsGame&&!_noticeIsDevice&&!_noticeIsWeather&&!_noticeIsUpdate&&!_noticeIsWelcome)||_isWorkstationLocked||!_displayAwake){_hardwareNoticeUntil=default;_noticeIsAi=false;_noticeIsAgenda=false;_noticeIsGame=false;_noticeIsDevice=false;_noticeIsWeather=false;_noticeIsUpdate=false;_noticeIsWelcome=false;}_hardwareAlerts.ResetContinuity();if(IsHardwareNoticeVisible!=wasVisible||!string.Equals(_hardwareNoticeText,wasText,StringComparison.Ordinal))NotifyHardwareNotice();return;}
         var s=HardwareStats;
-        foreach(var metric in new[]{("CPU usage",s.CpuUsageReading,_settings.CpuAlertThreshold,"%"),("GPU usage",s.GpuUsageReading,_settings.GpuAlertThreshold,"%"),("CPU temperature",s.CpuTemperatureReading,_settings.TemperatureAlertThreshold,"°C"),("GPU temperature",s.GpuTemperatureReading,_settings.TemperatureAlertThreshold,"°C")}) {
+        double cpuHot = MochiDock.Core.SettingsValidation.ClampTempColorThreshold(_settings.CpuTempHotThreshold, MochiDock.Core.SettingsValidation.DefaultCpuTempHot);
+        double gpuHot = MochiDock.Core.SettingsValidation.ClampTempColorThreshold(_settings.GpuTempHotThreshold, MochiDock.Core.SettingsValidation.DefaultGpuTempHot);
+        foreach(var metric in new[]{("CPU usage",s.CpuUsageReading,_settings.CpuAlertThreshold,"%"),("GPU usage",s.GpuUsageReading,_settings.GpuAlertThreshold,"%"),("CPU temperature",s.CpuTemperatureReading,cpuHot,"°C"),("GPU temperature",s.GpuTemperatureReading,gpuHot,"°C")}) {
             if(!_hardwareAlerts.Evaluate(metric.Item1,metric.Item2,metric.Item3,now))continue;
             if(_hardwarePresentationSuppressed||_wasGaming||IsNotificationInMainPill||IsPrayerReminderVisible||!ShouldShowNotification("Hardware"))continue;
             _noticeIsAi=false;_noticeIsAgenda=false;_noticeIsGame=false;_noticeIsDevice=false;_noticeIsWeather=false;_noticeIsUpdate=false;_noticeIsWelcome=false;_hardwareNoticeText=$"{metric.Item1} {metric.Item2!.Value:0}{metric.Item4}";_hardwareNoticeUntil=now.AddSeconds(8);StartHardwareNoticeTimer(8);
@@ -1514,11 +1519,20 @@ public partial class MainViewModel : INotifyPropertyChanged
         UpdateSettings(x => x.MascotBadgeStyle = style, SettingsApply.None);
     }
 
+    /// <summary>Shows or hides the tiny nose and :3 mouth on Kuro and Shiro, saving immediately.</summary>
+    public void ApplyShowCatMouth(bool show)
+    {
+        Controls.MascotControl.CurrentShowCatMouth = show;
+        UpdateSettings(x => x.ShowCatMouth = show, SettingsApply.None);
+    }
+
     public void ApplyCapsuleTheme(string theme)
     {
         theme = MochiDock.Core.ThemePolicy.Normalize(theme);
         Controls.MascotControl.CurrentChoice = _settings.Mascot;   // the mascot picker; ThemeService resolves Auto against the theme
         Controls.MascotControl.CurrentBadgeStyle = MochiDock.Core.MascotBadge.ParseStyle(_settings.MascotBadgeStyle);
+        Controls.MascotControl.CurrentShowCatMouth = _settings.ShowCatMouth;
+        Controls.MascotControl.CurrentShowCatMouth = _settings.ShowCatMouth;
         bool changed = !string.Equals(_settings.CapsuleTheme, theme, StringComparison.Ordinal);
         CapsuleTheme = theme;
         if (changed)

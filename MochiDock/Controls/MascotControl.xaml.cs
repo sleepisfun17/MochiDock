@@ -191,6 +191,8 @@ public partial class MascotControl : System.Windows.Controls.UserControl
 
         {
             BadgeStyleChanged += OnBadgeStyleChanged;
+            CatMouthChanged += OnCatMouthChanged;
+            ApplyCatParts();
             ApplyBadge(Mood);
             UpdateActivityTimers();
 
@@ -202,6 +204,7 @@ public partial class MascotControl : System.Windows.Controls.UserControl
 
         {
             BadgeStyleChanged -= OnBadgeStyleChanged;
+            CatMouthChanged -= OnCatMouthChanged;
             StopRenderingHook();
 
             _cursorWatchTimer.Stop();
@@ -1568,6 +1571,23 @@ public partial class MascotControl : System.Windows.Controls.UserControl
 
     private void OnBadgeStyleChanged() => ApplyBadge(Mood);
 
+    private static bool _currentShowCatMouth = true;
+    internal static event Action? CatMouthChanged;
+
+    /// <summary>Whether the cat mascots (Kuro and Shiro) draw the tiny nose and :3 mouth; changing it updates every mascot immediately.</summary>
+    public static bool CurrentShowCatMouth
+    {
+        get => _currentShowCatMouth;
+        set
+        {
+            if (_currentShowCatMouth == value) return;
+            _currentShowCatMouth = value;
+            CatMouthChanged?.Invoke();
+        }
+    }
+
+    private void OnCatMouthChanged() => ApplyCatParts();
+
     /// <summary>Whether this MascotControl draws the small corner badge itself (false when paired with a side MascotStatusBadge).</summary>
     public bool ShowCornerBadge { get; set; } = true;
 
@@ -1633,6 +1653,8 @@ public partial class MascotControl : System.Windows.Controls.UserControl
         if (KuroEars == null || KuroTail == null) return;
         bool kuro = _isKuro, cat = _isCat;
         KuroEars.Visibility = KuroTail.Visibility = CatEarBlend.Visibility = CatFaceFeatures.Visibility = cat ? Visibility.Visible : Visibility.Collapsed;
+        var mouthVis = cat && _currentShowCatMouth ? Visibility.Visible : Visibility.Collapsed;
+        CatMouth.Visibility = CatNose.Visibility = mouthVis;
         BodyGlow.Visibility = _kuroGlows ? Visibility.Visible : Visibility.Collapsed;
         InnerEarLeft.Fill = InnerEarRight.Fill = Ink(kuro ? "#FFD43B" : "#F58FA8");
         InnerEarLeft.Opacity = InnerEarRight.Opacity = kuro ? 0.55 : 0.92;

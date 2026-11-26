@@ -62,6 +62,7 @@ public partial class MascotSectionView : SettingsSectionBase
         BadgeStickerRadio.IsChecked = badgeStyle == MascotBadgeStyle.Sticker;
         BadgeOffRadio.IsChecked = badgeStyle == MascotBadgeStyle.Off;
 
+        CatMouthCheck.IsChecked = settings.ShowCatMouth;
         ExpressiveCheck.IsChecked = settings.ExpressiveMochi;
         LoadBirthday(settings.BirthdayMonthDay);
         RefreshPreview();
@@ -112,6 +113,14 @@ public partial class MascotSectionView : SettingsSectionBase
             ViewModel?.ApplyMascotBadgeStyle(style);
             RefreshPreview();
         }
+    }
+
+    private void CatMouth_Changed(object sender, RoutedEventArgs e)
+    {
+        if (!IsLoaded || Loading) return;
+        bool on = CatMouthCheck.IsChecked == true;
+        ViewModel?.ApplyShowCatMouth(on);
+        RefreshPreview();
     }
 
     private void Expressive_Changed(object sender, RoutedEventArgs e)

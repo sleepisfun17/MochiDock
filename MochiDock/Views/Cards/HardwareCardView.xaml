@@ -1125,10 +1125,11 @@
                 <ColumnDefinition Width="172" />
             </Grid.ColumnDefinitions>
 
-            <!-- COL 0: readout pin, FPS status and playtime -->
-            <StackPanel Grid.Column="0">
-                <!-- Hairline Centered Header: OVER GAMES -->
-                <Grid Margin="0,0,0,6">
+            <!-- COL 0: readout pin, playtime and FPS status -->
+            <ScrollViewer Grid.Column="0" Style="{DynamicResource ModernCardScrollViewer}" VerticalScrollBarVisibility="Auto">
+            <StackPanel>
+                <!-- Hairline Centered Header: GAME READOUT -->
+                <Grid Margin="0,0,0,5">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
@@ -1140,30 +1141,16 @@
                 </Grid>
 
                 <!-- Show over games row -->
-                <Grid Margin="0,3,0,6">
+                <Grid Margin="0,2,0,4">
                     <TextBlock Style="{StaticResource HardwareBody}" Text="Pin readout" Foreground="{DynamicResource IslandInkBrush}" VerticalAlignment="Center" />
                     <CheckBox HorizontalAlignment="Right" IsChecked="{Binding IsStatsPinnedToCapsule}" Style="{StaticResource ModernDarkCheckBox}" Margin="0" VerticalAlignment="Center" />
                 </Grid>
                 <!-- Automatic gaming display and manual pin help -->
-                <TextBlock Style="{StaticResource HardwareBody}" Text="FPS mode appears automatically when a game is detected. Pin keeps the readout visible outside games." Foreground="{DynamicResource IslandMutedInkBrush}" TextWrapping="Wrap" Margin="0,0,0,8" LineHeight="13" />
-
-                <!-- Hairline Centered Header: FPS -->
-                <Grid Margin="0,4,0,6">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                        <ColumnDefinition Width="*" />
-                    </Grid.ColumnDefinitions>
-                    <Rectangle Grid.Column="0" Height="1" Fill="{DynamicResource IslandSubCardBorderBrush}" VerticalAlignment="Center" Margin="0,0,6,0" />
-                    <TextBlock Style="{StaticResource HardwareSection}" Grid.Column="1" Text="FPS" Foreground="{DynamicResource IslandMutedInkBrush}" />
-                    <Rectangle Grid.Column="2" Height="1" Fill="{DynamicResource IslandSubCardBorderBrush}" VerticalAlignment="Center" Margin="6,0,0,0" />
-                </Grid>
-
-                <TextBlock Style="{StaticResource HardwareBody}" Text="Ready. Counted from Windows' own log of each frame; nothing loads into the game." Foreground="{DynamicResource IslandMutedInkBrush}" TextWrapping="Wrap" LineHeight="13" />
+                <TextBlock Style="{StaticResource HardwareBody}" Text="Auto in games; pin to keep visible." ToolTip="FPS mode appears automatically when a game is detected. Pin keeps the readout visible outside games." Foreground="{DynamicResource IslandMutedInkBrush}" TextWrapping="Wrap" Margin="0,0,0,6" LineHeight="13" />
 
                 <!-- Hairline Centered Header: PLAYTIME (label and value on rows of their own, so the two totals never collide) -->
                 <StackPanel Visibility="{Binding HasPlaytime, Converter={StaticResource BoolToVisibility}}" ToolTip="{Binding PlaytimeTooltip}" Background="Transparent">
-                    <Grid Margin="0,10,0,4">
+                    <Grid Margin="0,6,0,4">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="Auto" />
@@ -1182,7 +1169,22 @@
                         <TextBlock Style="{StaticResource HardwareBody}" HorizontalAlignment="Right" Text="{Binding PlaytimeWeekText}" Foreground="{DynamicResource IslandInkBrush}" Typography.NumeralAlignment="Tabular" />
                     </Grid>
                 </StackPanel>
+
+                <!-- Hairline Centered Header: FPS -->
+                <Grid Margin="0,8,0,4">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Rectangle Grid.Column="0" Height="1" Fill="{DynamicResource IslandSubCardBorderBrush}" VerticalAlignment="Center" Margin="0,0,6,0" />
+                    <TextBlock Style="{StaticResource HardwareSection}" Grid.Column="1" Text="FPS" Foreground="{DynamicResource IslandMutedInkBrush}" />
+                    <Rectangle Grid.Column="2" Height="1" Fill="{DynamicResource IslandSubCardBorderBrush}" VerticalAlignment="Center" Margin="6,0,0,0" />
+                </Grid>
+
+                <TextBlock Style="{StaticResource HardwareBody}" Text="Ready · Windows ETW capture (no game injection)." ToolTip="Counted from Windows' own log of each frame; nothing loads into the game." Foreground="{DynamicResource IslandMutedInkBrush}" TextWrapping="Wrap" LineHeight="13" />
             </StackPanel>
+            </ScrollViewer>
 
             <!-- COL 1: FRAMES PER SECOND & FRAME TIME -->
             <StackPanel Grid.Column="2">
@@ -1264,7 +1266,7 @@
                 <!-- Active Game Title -->
                 <TextBlock Style="{StaticResource HardwareBody}" Text="{Binding HardwareStats.DisplayGameTitle}" Foreground="{DynamicResource IslandInkBrush}" Margin="0,0,0,8" TextTrimming="CharacterEllipsis" />
 
-                <!-- 5 Telemetry Rows -->
+                <!-- 6 Telemetry Rows -->
                 <Grid Margin="0,2">
                     <TextBlock Style="{StaticResource HardwareSection}" Text="FPS" Foreground="{DynamicResource IslandSecondaryInkBrush}" />
                     <TextBlock Style="{StaticResource HardwareBody}" HorizontalAlignment="Right" Text="{Binding HardwareStats.CurrentFps}" Foreground="{DynamicResource IslandInkBrush}" Typography.NumeralAlignment="Tabular" />
@@ -1288,6 +1290,11 @@
                 <Grid Margin="0,2">
                     <TextBlock Style="{StaticResource HardwareSection}" Text="CPU" Foreground="{DynamicResource IslandSecondaryInkBrush}" />
                     <TextBlock Style="{StaticResource HardwareBody}" HorizontalAlignment="Right" Text="{Binding HardwareStats.CpuUsage, StringFormat={}{0:0}%}" Foreground="{DynamicResource IslandInkBrush}" Typography.NumeralAlignment="Tabular" />
+                </Grid>
+
+                <Grid Margin="0,2">
+                    <TextBlock Style="{StaticResource HardwareBody}" Text="CPU temperature" Foreground="{DynamicResource IslandSecondaryInkBrush}" />
+                    <TextBlock Style="{StaticResource HardwareBody}" HorizontalAlignment="Right" Text="{Binding HardwareStats.CpuTempText}" ToolTip="{Binding HardwareStats.CpuTempTooltip}" Foreground="{DynamicResource IslandInkBrush}" Typography.NumeralAlignment="Tabular" />
                 </Grid>
 
                 <!-- Hairline Centered Header: RECENT SESSIONS -->

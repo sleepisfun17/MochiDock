@@ -216,7 +216,7 @@ public partial class SettingsCardView : UserControl
             x.MuteEmail = muteEmail;
             x.MuteDiscord = muteDiscord;
             x.MuteWhatsApp = muteWhatsApp;
-        });
+        }, SettingsApply.CapsuleRefresh);
     }
 
     private void QuickSetting_Changed(object sender, RoutedEventArgs e)

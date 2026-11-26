@@ -66,8 +66,23 @@ public partial class MainViewModel
         finally { _recordSilently = false; }
     }
 
+    private static string? NotificationAppName(IslandCardType type) => type switch
+    {
+        IslandCardType.Email => "Email",
+        IslandCardType.WhatsApp => "WhatsApp",
+        IslandCardType.Discord => "Discord",
+        IslandCardType.Apps => "Apps",
+        _ => null,
+    };
+
     public void EnqueueNotification(IslandCardType type)
     {
+        if (NotificationAppName(type) is { } app && !ShouldShowNotification(app))
+        {
+            RemoveFromNotificationQueue(type);
+            return;
+        }
+
         _notificationQueue.Remove(type);
         _notificationQueue.Insert(0, type); // Priority: newest incoming is front
         _rotationIndex = 0;
@@ -81,6 +96,20 @@ public partial class MainViewModel
         {
             RaiseCapsuleStateChanged();
         }
+    }
+
+    private void PruneSuppressedNotifications()
+    {
+        if (!MochiDock.Core.NotificationMutePolicy.Prune(_notificationQueue, NotificationAppName, ShouldShowNotification)) return;
+        if (_rotationIndex >= _notificationQueue.Count)
+        {
+            _rotationIndex = Math.Max(0, _notificationQueue.Count - 1);
+        }
+        if (_notificationQueue.Count == 0)
+        {
+            _isNotificationTakeover = false;
+        }
+        RaiseCapsuleStateChanged();
     }
 
     public void RemoveFromNotificationQueue(IslandCardType type)
@@ -290,20 +319,18 @@ public partial class MainViewModel
     public void ApplyOutlookFolders(IReadOnlyList<string> names) =>
         (_mailService as CompositeMailService)?.Find<OutlookMailService>()?.UpdateTrackedFolders(names, _settings.OutlookOnlyListedFolders);
 
-    private bool ShouldShowNotification(string app)
-    {
-        var now = DateTime.Now;
-        if (now < _snoozedUntil) return false;
-        if (app == "Email" && _settings.MuteEmail) return false;
-        if (app == "Discord" && _settings.MuteDiscord) return false;
-        if (app == "Apps" && _settings.MuteApps) return false;
-        if (app == "WhatsApp" && _settings.MuteWhatsApp) return false;
-
-        if (_settings.QuietHoursEnabled &&
-            MochiDock.Core.SettingsValidation.IsQuietTime(now.TimeOfDay, _settings.QuietHoursStart, _settings.QuietHoursEnd))
-            return false;
-        return true;
-    }
+    private bool ShouldShowNotification(string app) =>
+        MochiDock.Core.NotificationMutePolicy.IsAllowed(
+            app,
+            DateTime.Now,
+            _snoozedUntil,
+            _settings.MuteEmail,
+            _settings.MuteDiscord,
+            _settings.MuteApps,
+            _settings.MuteWhatsApp,
+            _settings.QuietHoursEnabled,
+            _settings.QuietHoursStart,
+            _settings.QuietHoursEnd);
 
     /// <summary>When the active snooze ends; null when notifications are not snoozed (the tray menu shows it).</summary>
     public DateTime? NotificationsSnoozedUntil => _snoozedUntil > DateTime.Now ? _snoozedUntil : null;
@@ -498,16 +525,19 @@ public partial class MainViewModel
                 }
             }
 
-            if (SelectedWhatsAppConversation != null && !ActiveWhatsAppConversations.Contains(SelectedWhatsAppConversation))
+            SetCurrentSilently(!ShouldShowNotification("WhatsApp"), () =>
             {
-                SelectedWhatsAppConversation = ActiveWhatsAppConversations.FirstOrDefault();
-            }
+                if (SelectedWhatsAppConversation != null && !ActiveWhatsAppConversations.Contains(SelectedWhatsAppConversation))
+                {
+                    SelectedWhatsAppConversation = ActiveWhatsAppConversations.FirstOrDefault();
+                }
 
-            if (RecentWhatsAppMessages.Count > 0)
-            {
-                CurrentWhatsApp = RecentWhatsAppMessages[0];
-            }
-            else
+                if (RecentWhatsAppMessages.Count > 0)
+                {
+                    CurrentWhatsApp = RecentWhatsAppMessages[0];
+                }
+            });
+            if (RecentWhatsAppMessages.Count == 0)
             {
                 // When all messages are cleared/read, dismiss the card automatically
                 DismissWhatsApp();

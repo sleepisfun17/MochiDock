@@ -201,7 +201,11 @@ public partial class MainWindow
     private void UpdateCompactPillDimensions()
     {
         bool gaming = UseCompactGamingReadout();
-        CompactGamingReadout.Update(_viewModel.HardwareStats, _viewModel.IsWeatherInMainPill ? _viewModel.WeatherInfo : null);
+        var s = _viewModel.Settings;
+        CompactGamingReadout.Update(
+            _viewModel.HardwareStats,
+            _viewModel.IsWeatherInMainPill ? _viewModel.WeatherInfo : null,
+            new MochiDock.Core.TemperatureThresholds(s.CpuTempWarmThreshold, s.CpuTempHotThreshold, s.GpuTempWarmThreshold, s.GpuTempHotThreshold));
 
         if (_isAdjustingVolume)
         {

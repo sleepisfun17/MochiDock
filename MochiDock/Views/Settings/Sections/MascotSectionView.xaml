@@ -67,6 +67,9 @@
                 <RadioButton x:Name="BadgeOffRadio" Style="{StaticResource ModernDarkRadioButton}" Content="Off" Tag="Off" GroupName="MascotBadgeStyleGroup" Checked="BadgeStyle_Checked"/>
             </WrapPanel>
         </s:SettingRow>
+        <s:SettingRow Label="Cat mouth" Description="Show the tiny nose and :3 mouth on Kuro and Shiro. Turn off for the classic mouthless face while keeping the ears, tail and whiskers.">
+            <CheckBox x:Name="CatMouthCheck" Style="{StaticResource ModernDarkCheckBox}" Checked="CatMouth_Changed" Unchecked="CatMouth_Changed" AutomationProperties.Name="Show cat mouth"/>
+        </s:SettingRow>
 
         <TextBlock Style="{StaticResource SettingsGroupHeader}" Text="Expressions" Margin="0,18,0,2"/>
         <s:SettingRow Label="Expressive Mochi" Description="Mochi shows more faces: angry for an overdue task you ignored, hot or freezing with the weather and a hot GPU, dizzy when the CPU or RAM is maxed out, drained on a low battery. Turn off to keep the simple faces.">

@@ -78,6 +78,7 @@ public partial class MainViewModel
         ArgumentNullException.ThrowIfNull(change);
         change(_settings);
         SettingsService.Save(_settings);
+        PruneSuppressedNotifications();
         RefreshMascotMood();
         _hardwareService.PingHost = MochiDock.Core.SettingsValidation.TryNormalizePingHost(_settings.PingHost, out var pingHost) ? pingHost : "1.1.1.1";
 

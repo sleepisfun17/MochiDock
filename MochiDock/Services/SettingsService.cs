@@ -23,7 +23,7 @@ public static class SettingsService
         }
         // A fresh install has no Tasks tab to migrate, so Today stays off like the other optional tabs.
         bool fresh = !File.Exists(SettingsPath);
-        var result=AtomicJsonStore.Load(SettingsPath, () => new AppSettings { TasksTabMerged = fresh, WhatsAppOptInMigrated = fresh, TaskbarItemsMigrated = fresh });
+        var result=AtomicJsonStore.Load(SettingsPath, () => new AppSettings { TasksTabMerged = fresh, WhatsAppOptInMigrated = fresh, TaskbarItemsMigrated = fresh, TempThresholdsMigrated = fresh });
         if(result.Status==JsonLoadStatus.Loaded) BackUpDaily();
         var loaded=result.Value;
         if(loaded.PrayerAudioVersion==0)
@@ -33,6 +33,7 @@ public static class SettingsService
         loaded.MigrateTasksTab();
         loaded.MigrateWhatsAppOptIn(HasGowaSession());
         loaded.MigrateTaskbarItems();
+        loaded.MigrateTempThresholds();
         // The WhatsApp webhook token is created once and kept, so a shared GOWA server's webhook URL stays valid across restarts.
         // Also persist immediately when recovered from .bak so a subsequent Load() does not see a missing file and reset to defaults.
         bool needsSave = result.Status == JsonLoadStatus.Recovered;
@@ -112,6 +113,7 @@ public static class SettingsService
         settings.MigrateTasksTab();
         settings.MigrateWhatsAppOptIn(HasGowaSession());
         settings.MigrateTaskbarItems();
+        settings.MigrateTempThresholds();
         // The webhook token is never exported; a PC without one gets a fresh token, as on a normal start.
         if (string.IsNullOrWhiteSpace(settings.RemoteWebhookToken)) settings.RemoteWebhookToken = GowaService.NewWebhookToken();
         return new ImportedSettings(settings, tasks);

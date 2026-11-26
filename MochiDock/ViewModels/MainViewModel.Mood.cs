@@ -111,7 +111,8 @@ public partial class MainViewModel
     private void UpdateMascotFromHardware(HardwareStats stats)
     {
         var now = DateTimeOffset.UtcNow;
-        _mascotGpuHot = MascotTriggers.GpuHot(stats.GpuTemperatureReading, _settings.TemperatureAlertThreshold, _mascotGpuHot, now);
+        double gpuHot = SettingsValidation.ClampTempColorThreshold(_settings.GpuTempHotThreshold, SettingsValidation.DefaultGpuTempHot);
+        _mascotGpuHot = MascotTriggers.GpuHot(stats.GpuTemperatureReading, gpuHot, _mascotGpuHot, now);
         _mascotOverloaded = _mascotLoadTracker.Update(DateTime.Now, MascotTriggers.MeasuredLoad(stats.CpuUsageReading, now), stats.RamUsagePercent);
         _mascotGameTrouble = _wasGaming && _gameTrouble.Update(DateTime.Now, stats.CurrentFps, stats.NetworkPingMs);
         if (!_wasGaming) _gameTrouble.Reset();

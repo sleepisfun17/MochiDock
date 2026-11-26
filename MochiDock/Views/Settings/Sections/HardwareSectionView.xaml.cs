@@ -9,6 +9,8 @@ namespace MochiDock.Views.Settings.Sections;
 /// <summary>Hardware alert thresholds. Alerts and the battery module bind to the view model; thresholds write through <see cref="MainViewModel.UpdateSettings"/>.</summary>
 public partial class HardwareSectionView : SettingsSectionBase
 {
+    private bool _syncingTempColors;
+
     public HardwareSectionView()
     {
         InitializeComponent();
@@ -22,11 +24,25 @@ public partial class HardwareSectionView : SettingsSectionBase
         {
             if (!CpuSlider.IsMouseCaptureWithin) CpuSlider.Value = vm.Settings.CpuAlertThreshold;
             if (!GpuSlider.IsMouseCaptureWithin) GpuSlider.Value = vm.Settings.GpuAlertThreshold;
-            if (!TempSlider.IsMouseCaptureWithin) TempSlider.Value = vm.Settings.TemperatureAlertThreshold;
             if (!HeatSlider.IsMouseCaptureWithin) HeatSlider.Value = Math.Clamp(vm.Settings.SustainedHeatThreshold, 60, 95);
             int minutes = vm.Settings.SustainedHeatMinutes;
             HeatMinutesCombo.SelectedItem = HeatMinutesCombo.Items.OfType<ComboBoxItem>().FirstOrDefault(i => (string)i.Tag == minutes.ToString(System.Globalization.CultureInfo.InvariantCulture))
                                             ?? HeatMinutesCombo.Items[1];
+            var (cpuWarm, cpuHot) = SettingsValidation.NormalizeTempColorPair(
+                vm.Settings.CpuTempWarmThreshold, vm.Settings.CpuTempHotThreshold,
+                SettingsValidation.DefaultCpuTempWarm, SettingsValidation.DefaultCpuTempHot);
+            var (gpuWarm, gpuHot) = SettingsValidation.NormalizeTempColorPair(
+                vm.Settings.GpuTempWarmThreshold, vm.Settings.GpuTempHotThreshold,
+                SettingsValidation.DefaultGpuTempWarm, SettingsValidation.DefaultGpuTempHot);
+            _syncingTempColors = true;
+            try
+            {
+                if (!CpuWarmSlider.IsMouseCaptureWithin) CpuWarmSlider.Value = cpuWarm;
+                if (!CpuHotSlider.IsMouseCaptureWithin) CpuHotSlider.Value = cpuHot;
+                if (!GpuWarmSlider.IsMouseCaptureWithin) GpuWarmSlider.Value = gpuWarm;
+                if (!GpuHotSlider.IsMouseCaptureWithin) GpuHotSlider.Value = gpuHot;
+            }
+            finally { _syncingTempColors = false; }
             UpdatePawnIoStatus();
         }
     }
@@ -118,7 +134,32 @@ public partial class HardwareSectionView : SettingsSectionBase
         if (!IsLoaded || Loading) return;
         double cpu = SettingsValidation.ClampCpuGpuThreshold(CpuSlider.Value);
         double gpu = SettingsValidation.ClampCpuGpuThreshold(GpuSlider.Value);
-        double temp = SettingsValidation.ClampTemperatureThreshold(TempSlider.Value);
-        ViewModel?.UpdateSettings(x => { x.CpuAlertThreshold = cpu; x.GpuAlertThreshold = gpu; x.TemperatureAlertThreshold = temp; }, SettingsApply.HardwareAlerts);
+        ViewModel?.UpdateSettings(x => { x.CpuAlertThreshold = cpu; x.GpuAlertThreshold = gpu; }, SettingsApply.HardwareAlerts);
+    }
+
+    private void TempColor_Changed(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
+        if (!IsLoaded || Loading || _syncingTempColors) return;
+        double cpuWarm = Math.Round(SettingsValidation.ClampTempColorThreshold(CpuWarmSlider.Value, SettingsValidation.DefaultCpuTempWarm));
+        double cpuHot = Math.Round(SettingsValidation.ClampTempColorThreshold(CpuHotSlider.Value, SettingsValidation.DefaultCpuTempHot));
+        double gpuWarm = Math.Round(SettingsValidation.ClampTempColorThreshold(GpuWarmSlider.Value, SettingsValidation.DefaultGpuTempWarm));
+        double gpuHot = Math.Round(SettingsValidation.ClampTempColorThreshold(GpuHotSlider.Value, SettingsValidation.DefaultGpuTempHot));
+        _syncingTempColors = true;
+        try
+        {
+            if (ReferenceEquals(sender, CpuWarmSlider) && cpuWarm > cpuHot) { cpuHot = cpuWarm; CpuHotSlider.Value = cpuHot; }
+            else if (ReferenceEquals(sender, CpuHotSlider) && cpuHot < cpuWarm) { cpuWarm = cpuHot; CpuWarmSlider.Value = cpuWarm; }
+            if (ReferenceEquals(sender, GpuWarmSlider) && gpuWarm > gpuHot) { gpuHot = gpuWarm; GpuHotSlider.Value = gpuHot; }
+            else if (ReferenceEquals(sender, GpuHotSlider) && gpuHot < gpuWarm) { gpuWarm = gpuHot; GpuWarmSlider.Value = gpuWarm; }
+        }
+        finally { _syncingTempColors = false; }
+        ViewModel?.UpdateSettings(x =>
+        {
+            x.TempThresholdsMigrated = true;
+            x.CpuTempWarmThreshold = cpuWarm;
+            x.CpuTempHotThreshold = cpuHot;
+            x.GpuTempWarmThreshold = gpuWarm;
+            x.GpuTempHotThreshold = gpuHot;
+        }, SettingsApply.CapsuleRefresh | SettingsApply.HardwareAlerts);
     }
 }

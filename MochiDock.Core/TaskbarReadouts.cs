@@ -96,6 +96,9 @@ public sealed record TaskbarOptions
     public double GpuAlert { get; init; } = 90;
     /// <summary>A measured temperature at or over this is a warning (an estimate never is).</summary>
     public double TempAlert { get; init; } = 85;
+    /// <summary>Optional per-sensor warning overrides; fall back to <see cref="TempAlert"/> when null.</summary>
+    public double? CpuTempAlert { get; init; }
+    public double? GpuTempAlert { get; init; }
     /// <summary>Memory at or over this is a warning.</summary>
     public double MemoryWarn { get; init; } = 90;
     /// <summary>The most devices shown (two per block).</summary>
@@ -359,7 +362,7 @@ public static class TaskbarReadouts
             if (cpu is { } c) parts.Add(Percent(c));
             if (cpuTemp is { } ct) parts.Add(Temperature(ct, estimate: !s.CpuTempMeasured));
             cpuLine = cpuLabel + string.Join(" ", parts);
-            cpuWarn = (cpu is { } cw && cw >= o.CpuAlert) || (cpuTemp is { } ctw && s.CpuTempMeasured && ctw >= o.TempAlert);
+            cpuWarn = (cpu is { } cw && cw >= o.CpuAlert) || (cpuTemp is { } ctw && s.CpuTempMeasured && ctw >= (o.CpuTempAlert ?? o.TempAlert));
         }
 
         string gpuLine = "", gpuLabel = "";
@@ -371,7 +374,7 @@ public static class TaskbarReadouts
             if (gpu is { } g) parts.Add(Percent(g));
             if (gpuTemp is { } gt) parts.Add(Temperature(gt));
             gpuLine = gpuLabel + string.Join(" ", parts);
-            gpuWarn = (gpu is { } gw && gw >= o.GpuAlert) || (gpuTemp is { } gtw && gtw >= o.TempAlert);
+            gpuWarn = (gpu is { } gw && gw >= o.GpuAlert) || (gpuTemp is { } gtw && gtw >= (o.GpuTempAlert ?? o.TempAlert));
         }
 
         if (cpuLine.Length == 0 && gpuLine.Length == 0) return null;

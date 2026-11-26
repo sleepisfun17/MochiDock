@@ -181,6 +181,21 @@ public class TaskbarReadoutsTests
         Assert.False(relaxed.BottomWarn);
     }
 
+    [Fact]
+    public void CpuAndGpuCanUseSeparateTemperatureAlertThresholds()
+    {
+        var snapshot = new TaskbarSnapshot { CpuTempMeasured = true, CpuTempC = 78, GpuTempC = 78 };
+        var block = TaskbarReadouts.Build(snapshot, new TaskbarOptions
+        {
+            CpuTemp = true,
+            GpuTemp = true,
+            CpuTempAlert = 85,
+            GpuTempAlert = 75,
+        })[0];
+        Assert.False(block.TopWarn);
+        Assert.True(block.BottomWarn);
+    }
+
     [Theory]
     [InlineData(89, false)]
     [InlineData(90, true)]

@@ -4,10 +4,38 @@
              xmlns:s="clr-namespace:MochiDock.Views.Settings"
              xmlns:controls="clr-namespace:MochiDock.Controls">
     <StackPanel>
-        <!-- Alerts -->
-        <TextBlock Style="{StaticResource SettingsGroupHeader}" Text="Alerts" Margin="0,0,0,2"/>
-        <s:SettingRow Label="Hardware alerts" Description="Show a notice when CPU, GPU or temperature stay above the thresholds below. Alerts use measured readings only.">
+        <!-- Alerts & temperatures -->
+        <TextBlock Style="{StaticResource SettingsGroupHeader}" Text="Alerts &amp; temperatures" Margin="0,0,0,2"/>
+        <s:SettingRow Label="Hardware alerts" Description="Show a notice when CPU or GPU usage stays above its limit, or when a measured temperature reaches its Red limit. Alerts use measured readings only.">
             <CheckBox IsChecked="{Binding EnableHardwareAlerts, Mode=TwoWay}" Style="{StaticResource ModernDarkCheckBox}"/>
+        </s:SettingRow>
+        <s:SettingRow Label="CPU temperature" Description="Orange colours the gaming readout. Red colours it red and triggers CPU temperature alerts and taskbar warnings (measured readings only; needs PawnIO).">
+            <StackPanel>
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="Orange" Width="50" Style="{StaticResource CardCaptionText}" Foreground="{DynamicResource IslandOrangeBrush}" VerticalAlignment="Center"/>
+                    <Slider x:Name="CpuWarmSlider" Style="{StaticResource ModernDarkSlider}" Width="160" Minimum="40" Maximum="100" IsSnapToTickEnabled="True" TickFrequency="1" ValueChanged="TempColor_Changed" AutomationProperties.Name="CPU orange temperature limit"/>
+                    <TextBlock Text="{Binding Value, ElementName=CpuWarmSlider, StringFormat='{}{0:0} °C'}" Style="{StaticResource CardCaptionText}" Width="44" TextAlignment="Right" VerticalAlignment="Center"/>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                    <TextBlock Text="Red" Width="50" Style="{StaticResource CardCaptionText}" Foreground="{DynamicResource IslandRedBrush}" VerticalAlignment="Center"/>
+                    <Slider x:Name="CpuHotSlider" Style="{StaticResource ModernDarkSlider}" Width="160" Minimum="40" Maximum="100" IsSnapToTickEnabled="True" TickFrequency="1" ValueChanged="TempColor_Changed" AutomationProperties.Name="CPU red temperature limit"/>
+                    <TextBlock Text="{Binding Value, ElementName=CpuHotSlider, StringFormat='{}{0:0} °C'}" Style="{StaticResource CardCaptionText}" Width="44" TextAlignment="Right" VerticalAlignment="Center"/>
+                </StackPanel>
+            </StackPanel>
+        </s:SettingRow>
+        <s:SettingRow Label="GPU temperature" Description="Orange colours the gaming readout. Red colours it red and triggers GPU temperature alerts, Mochi's hot face, and taskbar warnings (measured readings only).">
+            <StackPanel>
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="Orange" Width="50" Style="{StaticResource CardCaptionText}" Foreground="{DynamicResource IslandOrangeBrush}" VerticalAlignment="Center"/>
+                    <Slider x:Name="GpuWarmSlider" Style="{StaticResource ModernDarkSlider}" Width="160" Minimum="40" Maximum="100" IsSnapToTickEnabled="True" TickFrequency="1" ValueChanged="TempColor_Changed" AutomationProperties.Name="GPU orange temperature limit"/>
+                    <TextBlock Text="{Binding Value, ElementName=GpuWarmSlider, StringFormat='{}{0:0} °C'}" Style="{StaticResource CardCaptionText}" Width="44" TextAlignment="Right" VerticalAlignment="Center"/>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                    <TextBlock Text="Red" Width="50" Style="{StaticResource CardCaptionText}" Foreground="{DynamicResource IslandRedBrush}" VerticalAlignment="Center"/>
+                    <Slider x:Name="GpuHotSlider" Style="{StaticResource ModernDarkSlider}" Width="160" Minimum="40" Maximum="100" IsSnapToTickEnabled="True" TickFrequency="1" ValueChanged="TempColor_Changed" AutomationProperties.Name="GPU red temperature limit"/>
+                    <TextBlock Text="{Binding Value, ElementName=GpuHotSlider, StringFormat='{}{0:0} °C'}" Style="{StaticResource CardCaptionText}" Width="44" TextAlignment="Right" VerticalAlignment="Center"/>
+                </StackPanel>
+            </StackPanel>
         </s:SettingRow>
         <s:SettingRow Label="CPU usage threshold" Description="Alert when CPU usage stays above this level." IsEnabled="{Binding EnableHardwareAlerts}">
             <StackPanel Orientation="Horizontal">
@@ -19,12 +47,6 @@
             <StackPanel Orientation="Horizontal">
                 <Slider x:Name="GpuSlider" Style="{StaticResource ModernDarkSlider}" Width="200" Minimum="50" Maximum="100" ValueChanged="Threshold_Changed"/>
                 <TextBlock Text="{Binding Value, ElementName=GpuSlider, StringFormat='{}{0:0}%'}" Style="{StaticResource CardCaptionText}" Width="44" TextAlignment="Right" VerticalAlignment="Center"/>
-            </StackPanel>
-        </s:SettingRow>
-        <s:SettingRow Label="Temperature threshold" Description="Alert when a measured CPU or GPU temperature stays above this level for a few seconds. The CPU temperature is only measured with the PawnIO driver; an estimate never alerts." IsEnabled="{Binding EnableHardwareAlerts}">
-            <StackPanel Orientation="Horizontal">
-                <Slider x:Name="TempSlider" Style="{StaticResource ModernDarkSlider}" Width="200" Minimum="60" Maximum="100" ValueChanged="Threshold_Changed"/>
-                <TextBlock Text="{Binding Value, ElementName=TempSlider, StringFormat='{}{0:0} °C'}" Style="{StaticResource CardCaptionText}" Width="44" TextAlignment="Right" VerticalAlignment="Center"/>
             </StackPanel>
         </s:SettingRow>
         <s:SettingRow Label="Sustained heat" Description="Also alert once when a measured CPU or GPU temperature stays at or above this level for the whole time chosen, for example during a long game. Mochi looks hot while it lasts." IsEnabled="{Binding EnableHardwareAlerts}">
@@ -39,16 +61,8 @@
             </StackPanel>
         </s:SettingRow>
 
-        <TextBlock Style="{StaticResource SettingsGroupHeader}" Text="History" Margin="0,18,0,2"/>
-        <s:SettingRow x:Name="HistoryRow" Label="Keep a 24-hour history" Description="Records CPU and GPU load and temperature and memory once every 15 seconds (one point a minute) for the Stats charts' 24 h view. Paused while the PC is locked or the screen is off. Kept on this PC only, in StatsHistory.json.">
-            <StackPanel Orientation="Horizontal">
-                <CheckBox IsChecked="{Binding RecordStatsHistory, Mode=TwoWay}" Style="{StaticResource ModernDarkCheckBox}" VerticalAlignment="Center"/>
-                <Button Style="{StaticResource ActionButton}" Content="Clear history" Click="ClearHistory_Click" Margin="12,0,0,0"/>
-            </StackPanel>
-        </s:SettingRow>
-
-        <!-- Wireless devices -->
-        <TextBlock Style="{StaticResource SettingsGroupHeader}" Text="CPU sensors" Margin="0,18,0,2"/>
+        <!-- Sensors & history -->
+        <TextBlock Style="{StaticResource SettingsGroupHeader}" Text="Sensors &amp; history" Margin="0,18,0,2"/>
         <s:SettingRow Label="PawnIO driver (optional)" Description="Lets MochiDock read a real CPU temperature and more CPU sensors. Without it the CPU temperature is an estimate (marked ~) and the power total uses Windows' own counters. PawnIO is a separate third-party kernel driver (freeware, its own licence) that you install yourself; MochiDock never installs it.">
             <StackPanel>
                 <TextBlock x:Name="PawnIoStatusText" Style="{StaticResource CardCaptionText}" TextWrapping="Wrap" MaxWidth="300" Margin="0,0,0,6"/>
@@ -57,6 +71,12 @@
                     <Button x:Name="PawnIoCopyButton" Style="{StaticResource ActionButton}" Content="Copy winget command" Click="PawnIoCopy_Click" Margin="8,0,0,0"/>
                     <Button Style="{StaticResource ActionButton}" Content="Check again" Click="PawnIoCheck_Click" Margin="8,0,0,0"/>
                 </StackPanel>
+            </StackPanel>
+        </s:SettingRow>
+        <s:SettingRow x:Name="HistoryRow" Label="Keep a 24-hour history" Description="Records CPU and GPU load and temperature and memory once every 15 seconds (one point a minute) for the Stats charts' 24 h view. Paused while the PC is locked or the screen is off. Kept on this PC only, in StatsHistory.json.">
+            <StackPanel Orientation="Horizontal">
+                <CheckBox IsChecked="{Binding RecordStatsHistory, Mode=TwoWay}" Style="{StaticResource ModernDarkCheckBox}" VerticalAlignment="Center"/>
+                <Button Style="{StaticResource ActionButton}" Content="Clear history" Click="ClearHistory_Click" Margin="12,0,0,0"/>
             </StackPanel>
         </s:SettingRow>
 

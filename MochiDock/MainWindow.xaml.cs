@@ -822,6 +822,7 @@ public partial class MainWindow : Window
         }
         // A new interface size resizes the window around its centre-top; the dock keeps its state (expanded stays expanded on the same card).
         if (effects.HasFlag(SettingsApply.Scale)) PositionWindow();
+        if (effects.HasFlag(SettingsApply.CapsuleRefresh)) UpdateCompactPillDimensions();
     }
 
     private void ApplyResolutionPreset(int width, int height, string label)

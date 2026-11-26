@@ -84,4 +84,16 @@ public class MascotChoiceTests
         Assert.Equal(expected, settings.Mascot);
         Assert.Equal(expected, JsonSerializer.Deserialize<AppSettings>(JsonSerializer.Serialize(settings))!.Mascot);
     }
+
+    [Fact]
+    public void CatMouthDefaultsToOnRoundTripsAndMatchesMascotSearch()
+    {
+        var old = JsonSerializer.Deserialize<AppSettings>("{\"CapsuleTheme\":\"Default\"}")!;
+        Assert.True(old.ShowCatMouth);
+
+        var off = JsonSerializer.Deserialize<AppSettings>(JsonSerializer.Serialize(new AppSettings { ShowCatMouth = false }))!;
+        Assert.False(off.ShowCatMouth);
+
+        Assert.True(SettingsSections.Matches(SettingsSections.Find(SettingsSections.Mascot)!, "mouth"));
+    }
 }

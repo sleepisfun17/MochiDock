@@ -205,6 +205,8 @@ public class AppSettings
     private string mascotBadgeStyle = nameof(MochiDock.Core.MascotBadgeStyle.Charm);
     /// <summary>How the mascot status badge is drawn: "Charm" (3D squircle), "Bubble" (3D speech bubble), "Sticker" (3D die-cut silhouette) or "Off".</summary>
     public string MascotBadgeStyle { get => mascotBadgeStyle; set => mascotBadgeStyle = MochiDock.Core.MascotBadge.NormalizeStyle(value); }
+    /// <summary>Draw the tiny nose and :3 mouth on the cat mascots (Kuro and Shiro). Off keeps the classic mouthless face with ears, tail and whiskers.</summary>
+    public bool ShowCatMouth { get; set; } = true;
     public double CapsuleScrollSpeed { get; set; } = 35;
     public double CpuAlertThreshold { get; set; } = 90;
     public double GpuAlertThreshold { get; set; } = 90;
@@ -216,6 +218,13 @@ public class AppSettings
     public double SustainedHeatThreshold { get; set; } = 80;
     public int SustainedHeatMinutes { get; set; } = 10;
     public double TemperatureAlertThreshold { get; set; } = 85;
+    /// <summary>Set once <see cref="TemperatureAlertThreshold"/> has been migrated to separate CPU/GPU limits.</summary>
+    public bool TempThresholdsMigrated { get; set; }
+    /// <summary>Gaming capsule &amp; alert temperature thresholds (°C): orange from Warm, red/alert from Hot (measured readings only).</summary>
+    public double CpuTempWarmThreshold { get; set; } = MochiDock.Core.SettingsValidation.DefaultCpuTempWarm;
+    public double CpuTempHotThreshold { get; set; } = MochiDock.Core.SettingsValidation.DefaultCpuTempHot;
+    public double GpuTempWarmThreshold { get; set; } = MochiDock.Core.SettingsValidation.DefaultGpuTempWarm;
+    public double GpuTempHotThreshold { get; set; } = MochiDock.Core.SettingsValidation.DefaultGpuTempHot;
 
     // Weather
     public string WeatherCity { get; set; } = "Tokyo";
@@ -319,5 +328,21 @@ public class AppSettings
             TaskbarShowUpload = TaskbarShowDownload = true;
         if (TakeFlag("TaskbarShowWeather"))
             TaskbarShowWeatherTemp = TaskbarShowWeatherWind = true;
+    }
+
+    /// <summary>
+    /// One-time migration from the old single <see cref="TemperatureAlertThreshold"/> to per-component CPU/GPU limits.
+    /// Legacy files with a non-default threshold apply it as both Red limits while fresh installs keep the separate defaults.
+    /// </summary>
+    public void MigrateTempThresholds()
+    {
+        if (TempThresholdsMigrated) return;
+        TempThresholdsMigrated = true;
+        var migrated = MochiDock.Core.SettingsValidation.MigrateLegacyTempThresholds(
+            TemperatureAlertThreshold, CpuTempWarmThreshold, CpuTempHotThreshold, GpuTempWarmThreshold, GpuTempHotThreshold);
+        CpuTempWarmThreshold = migrated.CpuWarm;
+        CpuTempHotThreshold = migrated.CpuHot;
+        GpuTempWarmThreshold = migrated.GpuWarm;
+        GpuTempHotThreshold = migrated.GpuHot;
     }
 }

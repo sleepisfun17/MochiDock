@@ -13,6 +13,9 @@ public static class SettingsValidation
 
     public const double CpuGpuThresholdMin = 50, CpuGpuThresholdMax = 100;
     public const double TemperatureThresholdMin = 60, TemperatureThresholdMax = 100;
+    public const double TempColorMin = 40, TempColorMax = 100;
+    public const double DefaultCpuTempWarm = 75, DefaultCpuTempHot = 85;
+    public const double DefaultGpuTempWarm = 70, DefaultGpuTempHot = 80;
     public const double GamingOffsetMin = 60, GamingOffsetMax = 260;
     public const double TopMarginMin = 0, TopMarginMax = 100;
 
@@ -80,6 +83,33 @@ public static class SettingsValidation
 
     public static double ClampCpuGpuThreshold(double value) => ClampFinite(value, CpuGpuThresholdMin, CpuGpuThresholdMax, 90);
     public static double ClampTemperatureThreshold(double value) => ClampFinite(value, TemperatureThresholdMin, TemperatureThresholdMax, 85);
+    public static double ClampTempColorThreshold(double value, double fallback) => ClampFinite(value, TempColorMin, TempColorMax, fallback);
+    public static (double Warm, double Hot) NormalizeTempColorPair(double warm, double hot, double defaultWarm, double defaultHot)
+    {
+        double w = ClampTempColorThreshold(warm, defaultWarm);
+        double h = ClampTempColorThreshold(hot, defaultHot);
+        if (w > h) h = w;
+        return (w, h);
+    }
+    /// <summary>One-time migration from the old single TemperatureAlertThreshold (default 85 °C) to separate CPU/GPU warm/hot limits.</summary>
+    public static (double CpuWarm, double CpuHot, double GpuWarm, double GpuHot) MigrateLegacyTempThresholds(
+        double legacyAlertThreshold, double cpuWarm, double cpuHot, double gpuWarm, double gpuHot)
+    {
+        if (double.IsFinite(legacyAlertThreshold)
+            && Math.Abs(legacyAlertThreshold - 85) > 0.01
+            && Math.Abs(cpuHot - DefaultCpuTempHot) < 0.01
+            && Math.Abs(gpuHot - DefaultGpuTempHot) < 0.01)
+        {
+            double migratedHot = ClampTempColorThreshold(legacyAlertThreshold, DefaultCpuTempHot);
+            double cw = Math.Min(ClampTempColorThreshold(cpuWarm, DefaultCpuTempWarm), migratedHot);
+            double gw = Math.Min(ClampTempColorThreshold(gpuWarm, DefaultGpuTempWarm), migratedHot);
+            return (cw, migratedHot, gw, migratedHot);
+        }
+
+        var cpu = NormalizeTempColorPair(cpuWarm, cpuHot, DefaultCpuTempWarm, DefaultCpuTempHot);
+        var gpu = NormalizeTempColorPair(gpuWarm, gpuHot, DefaultGpuTempWarm, DefaultGpuTempHot);
+        return (cpu.Warm, cpu.Hot, gpu.Warm, gpu.Hot);
+    }
     public static double ClampGamingOffset(double value) => ClampFinite(value, GamingOffsetMin, GamingOffsetMax, 150);
 
     /// <summary>Accepts an IPv4/IPv6 address or a DNS host name for the ping target; returns it trimmed.</summary>

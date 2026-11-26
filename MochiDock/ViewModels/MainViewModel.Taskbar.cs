@@ -425,7 +425,9 @@ public partial class MainViewModel
         PrayerElapsedMinutes = TaskbarStyle.ClampPrayerWindowMinutes(_settings.TaskbarPrayerElapsedMinutes),
         CpuAlert = _settings.CpuAlertThreshold,
         GpuAlert = _settings.GpuAlertThreshold,
-        TempAlert = _settings.TemperatureAlertThreshold,
+        TempAlert = _settings.GpuTempHotThreshold,
+        CpuTempAlert = _settings.CpuTempHotThreshold,
+        GpuTempAlert = _settings.GpuTempHotThreshold,
     };
 
     /// <summary>Builds Left and Right preview blocks using live data when present and sample values for unavailable items.</summary>
