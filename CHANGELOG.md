@@ -2,6 +2,24 @@
 
 All notable changes to MochiDock are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.5.7-beta]
+
+### Added
+
+- **Task inline edit & snooze/reschedule**: edit any registered task's title, time, or date directly in the **Today** card (via the Edit button, double-click, or right-click), and snooze/reschedule open tasks (`+10m`, `+30m`, `+1h`, `+3h`, `Tomorrow`, `Next week`, `Remove due time`) via the inline Snooze button or right-click menu.
+- **Visual Dhuha & active prayer period glow**: added the visual-only **Dhuha** period (`Sunrise + 15 min` to `Dhuhr − 10 min`) and unified live `"<Prayer> now · HH:mm–HH:mm (… left)"` status pill and glowing arc span across all 5 Fard prayers and Dhuha on the **Prayer** card.
+- **All Windows apps notifications mode**: added **All Windows apps** (`WatchAllApps`) under **Settings > Notifications > Other apps** to forward all non-Discord/non-MochiDock Windows toast notifications, seeded **Recent apps** from existing Action Center toasts on startup, refreshed the picker live, and logged listener errors.
+
+### Changed
+
+- **Cleaner Today card**: removed duplicate `JP 祝日` / `ID Libur` toggles from the calendar header (keeping them in Settings) and removed the unused `+5m/+15m/+30m/+1h/No time` quick-add chip row to give the Agenda & Tasks list more vertical room.
+- **Detailed AI remaining-quota display**: show up to 2 decimal places when providers report fractional remaining quotas (`<0.01%`, `0.35%`, `37.65%`) with exact hover tooltips, and draw an empty bar at true `0%`.
+
+### Fixed
+
+- **Selected-date task registration**: adding a task while viewing another calendar date now attaches clock times to that selected date and creates date-only all-day tasks (`TodoTaskItem.AllDay`) instead of defaulting to today.
+- **CheckBox, RadioButton, and Prayer arc concentric dot centering**: fixed `ModernDarkCheckBox` and `ModernDarkRadioButton` (`8 × 8` inner dot on pixel-snapped `16 × 16` container) and disabled layout rounding on `PrayerCardView.ArcCanvas` so concentric dots stay centered across DPIs, and tied the ongoing Fard ring strictly to the active Fard period.
+
 ## [0.5.6-beta]
 
 ### Fixed
