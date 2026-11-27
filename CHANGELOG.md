@@ -2,6 +2,17 @@
 
 All notable changes to MochiDock are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.5.6-beta]
+
+### Fixed
+
+- **Prayer arrival mascot expression**: replaced the static crescent moon in the 60-second prayer arrival pill (`CapsulePrayerArrivalOverlay`) with the live mascot and status badge, and extended `MascotMood.Praying` from 20 seconds to 60 seconds so the peaceful praying expression is actually visible when prayer time arrives.
+- **Task reminder acknowledgement & overdue `Angry` timing**: clicking an early `"Task: … in X min"` reminder now opens the **Today** tab without silencing the `"is due now"` / overdue reminders or Mochi's `Angry` mood (only clicking due-now/overdue notices or checking off the task acknowledges it), and Mochi now turns `Angry` 1 minute past due (`1–90 min`, matching Today's `Overdue` status) instead of waiting 10 minutes.
+
+### Changed
+
+- **Refreshed documentation & visual assets**: regenerated all four 38-mood mascot sheets, refreshed the live Visual Tour card screenshots, and updated `README.md` and `tools/verify/verify-mascot.ps1`.
+
 ## [0.5.5-beta]
 
 ### Added
