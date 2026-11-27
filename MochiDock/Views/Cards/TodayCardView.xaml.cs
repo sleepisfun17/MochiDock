@@ -24,8 +24,10 @@ public sealed class AgendaRow
     public Models.TodoTaskItem? Task { get; init; }
     public bool IsDone => Task?.IsCompleted == true;
     public Visibility TaskVisibility => Task == null ? Visibility.Collapsed : Visibility.Visible;
+    public Visibility SnoozeVisibility => Task != null && !IsDone ? Visibility.Visible : Visibility.Collapsed;
     public TextDecorationCollection? TitleDecorations => IsDone ? TextDecorations.Strikethrough : null;
     public string? JoinUrl { get; init; }
+    public System.Windows.Media.Brush RowBackground { get; init; } = System.Windows.Media.Brushes.Transparent;
     public System.Windows.Media.Brush TitleBrush { get; init; } = System.Windows.Media.Brushes.Gray;
     public System.Windows.Media.Brush DetailBrush { get; init; } = System.Windows.Media.Brushes.Gray;
     public System.Windows.Media.Brush? CalendarDotBrush { get; init; }
@@ -42,6 +44,7 @@ public partial class TodayCardView : System.Windows.Controls.UserControl
     private DateTime _selected = DateTime.Today;
     private readonly HashSet<INotifyPropertyChanged> _subscriptions = new();
     private MainViewModel? _owner;
+    private Models.TodoTaskItem? _editingTask;
     private readonly DispatcherTimer _timer = new() { Interval = TimeSpan.FromMinutes(1) };
 
     public TodayCardView()
@@ -68,6 +71,7 @@ public partial class TodayCardView : System.Windows.Controls.UserControl
         if (_owner != null)
         {
             _owner.Tasks.CollectionChanged += Changed;
+            _owner.PropertyChanged += OwnerPropertyChanged;
             _feed = _owner.CalendarFeed;
             if (_feed != null)
             {
@@ -91,9 +95,11 @@ public partial class TodayCardView : System.Windows.Controls.UserControl
         if (_owner != null)
         {
             _owner.Tasks.CollectionChanged -= Changed;
+            _owner.PropertyChanged -= OwnerPropertyChanged;
         }
         foreach (var t in _subscriptions) t.PropertyChanged -= TaskChanged;
         _subscriptions.Clear();
+        CancelEdit(rerender: false);
         _owner = null;
     }
 
@@ -138,9 +144,10 @@ public partial class TodayCardView : System.Windows.Controls.UserControl
         Render();
     }
 
-    private void OnFilterChanged(object sender, RoutedEventArgs e)
+    private void OwnerPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
-        Render();
+        if (e.PropertyName is nameof(MainViewModel.ShowJapanHolidays) or nameof(MainViewModel.ShowIndonesiaHolidays) or nameof(MainViewModel.WeekStartsOnMonday))
+            Dispatcher.BeginInvoke(() => { if (IsVisible) Render(); });
     }
 
     // ---- Tasks (merged from the former Tasks tab) -------------------------------------------------------------------
@@ -150,35 +157,105 @@ public partial class TodayCardView : System.Windows.Controls.UserControl
     private void TaskInputBox_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
     {
         if (e.Key == System.Windows.Input.Key.Enter) { SubmitTask(); e.Handled = true; }
+        else if (e.Key == System.Windows.Input.Key.Escape && _editingTask != null) { CancelEdit(); e.Handled = true; }
     }
 
-    // Natural language such as "Review in 30m" is parsed by the view model; the chips pass explicit minutes (0 = no time).
-    private void SubmitTask(int? explicitMinutes = null)
+    // Natural language such as "Review in 30m" is parsed by the view model.
+    private void SubmitTask()
     {
         string text = TaskInputBox.Text.Trim();
         if (text.Length == 0 || _owner == null) return;
-        _owner.AddTask(text, explicitMinutes);
+        if (_editingTask != null)
+        {
+            _owner.EditTask(_editingTask, text, null, _selected);
+            CancelEdit();
+            return;
+        }
+        _owner.AddTask(text, null, _selected);
         TaskInputBox.Text = "";
     }
-
-    private void Chip5m_Click(object sender, RoutedEventArgs e) => SubmitTask(5);
-    private void Chip15m_Click(object sender, RoutedEventArgs e) => SubmitTask(15);
-    private void Chip30m_Click(object sender, RoutedEventArgs e) => SubmitTask(30);
-    private void Chip1h_Click(object sender, RoutedEventArgs e) => SubmitTask(60);
-    private void ChipNoTime_Click(object sender, RoutedEventArgs e) => SubmitTask(0);
 
     private void TaskCheck_Click(object sender, RoutedEventArgs e)
     {
         if (sender is FrameworkElement { DataContext: AgendaRow { Task: { } task } }) _owner?.ToggleTask(task);
     }
 
+    private void EditTask_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement { DataContext: AgendaRow { Task: { } task } }) BeginEditTask(task);
+    }
+
+    private void CancelEdit_Click(object sender, RoutedEventArgs e) => CancelEdit();
+
+    private void SnoozeTask_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not FrameworkElement { DataContext: AgendaRow { Task: { } task } } element || _owner == null) return;
+        var itemStyle = (Style)FindResource("ModernTrayMenuItemStyle");
+        var sepStyle = (Style)FindResource("ModernTraySeparatorStyle");
+        var menu = new ContextMenu
+        {
+            Style = (Style)FindResource("ModernTrayMenuStyle"),
+            PlacementTarget = element,
+            Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom,
+        };
+        PopulateSnoozeMenu(menu.Items, itemStyle, sepStyle, task);
+        menu.IsOpen = true;
+    }
+
     private void DeleteTask_Click(object sender, RoutedEventArgs e)
     {
-        if (sender is FrameworkElement { DataContext: AgendaRow { Task: { } task } }) _owner?.DeleteTask(task);
+        if (sender is FrameworkElement { DataContext: AgendaRow { Task: { } task } })
+        {
+            if (ReferenceEquals(task, _editingTask)) CancelEdit(rerender: false);
+            _owner?.DeleteTask(task);
+        }
+    }
+
+    private void AgendaRow_LeftClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        if (e.ClickCount != 2 || sender is not FrameworkElement { DataContext: AgendaRow { Task: { } task } } row) return;
+        for (DependencyObject? cur = e.OriginalSource as DependencyObject; cur != null && !ReferenceEquals(cur, row); cur = VisualTreeHelper.GetParent(cur))
+            if (cur is System.Windows.Controls.Primitives.ButtonBase) return;
+        BeginEditTask(task);
+        e.Handled = true;
+    }
+
+    private void BeginEditTask(Models.TodoTaskItem task)
+    {
+        _editingTask = task;
+        TaskInputBox.Text = AgendaLogic.FormatTaskForEdit(task.Title, task.DueTime, task.AllDay);
+        TaskSubmitButton.Content = "Save";
+        EditBanner.Visibility = Visibility.Visible;
+        UpdateEditBanner();
+        Render();
+        TaskInputBox.Focus();
+        TaskInputBox.SelectAll();
+    }
+
+    private void UpdateEditBanner()
+    {
+        if (_editingTask == null) return;
+        string target = MochiDock.Core.DateDisplay.Short(_selected);
+        EditBannerText.Text = _editingTask.DueTime is { } due && due.Date != _selected.Date
+            ? $"Editing · moving to {target}"
+            : $"Editing · {target} (click a day to move)";
+    }
+
+    private void CancelEdit(bool rerender = true)
+    {
+        if (_editingTask == null && EditBanner.Visibility != Visibility.Visible) return;
+        _editingTask = null;
+        TaskSubmitButton.Content = "+ Add";
+        EditBanner.Visibility = Visibility.Collapsed;
+        TaskInputBox.Text = "";
+        if (rerender) Render();
     }
 
     private void Render()
     {
+        if (_editingTask != null && (_owner == null || !_owner.Tasks.Contains(_editingTask)))
+            CancelEdit(rerender: false);
+        UpdateEditBanner();
         if (_owner != null)
         {
             var current = _owner.Tasks.Cast<INotifyPropertyChanged>().ToHashSet();
@@ -432,21 +509,26 @@ public partial class TodayCardView : System.Windows.Controls.UserControl
             if (group == AgendaTaskGroup.None) continue;
             string countdown = t.CountdownText;
             string timeText = t.DueTime is { } due
-                ? (group == AgendaTaskGroup.OnDay ? due.ToString("HH:mm") : MochiDock.Core.DateDisplay.Short(due) + due.ToString(" HH:mm"))
+                ? (t.AllDay
+                    ? (group == AgendaTaskGroup.OnDay ? "All day" : MochiDock.Core.DateDisplay.Short(due))
+                    : (group == AgendaTaskGroup.OnDay ? due.ToString("HH:mm") : MochiDock.Core.DateDisplay.Short(due) + due.ToString(" HH:mm")))
                 : "—";
+            bool floatingOverdue = group == AgendaTaskGroup.Floating && t.DueTime != null && (!t.AllDay || t.DueTime.Value.Date < DateTime.Today);
             var row = new AgendaRow
             {
                 TimeText = timeText,
                 Title = t.Title,
-                Detail = string.IsNullOrEmpty(countdown) ? (group == AgendaTaskGroup.Floating && t.DueTime != null ? "Task · overdue" : "Task") : "Task · " + countdown,
-                RowToolTip = t.Title,
+                Detail = string.IsNullOrEmpty(countdown) ? (floatingOverdue ? "Task · overdue" : "Task") : "Task · " + countdown,
+                RowToolTip = $"{t.Title}\nDouble-click to edit · Right-click for snooze & actions",
                 Task = t,
+                RowBackground = ReferenceEquals(t, _editingTask) ? Brush("IslandChipActiveBrush") : System.Windows.Media.Brushes.Transparent,
                 TitleBrush = Brush(t.IsCompleted ? "IslandMutedInkBrush" : "IslandInkBrush"),
                 DetailBrush = Brush((t.IsDueSoon || t.IsOverdue) && !t.IsCompleted ? "IslandRedBrush" : "IslandMutedInkBrush"),
                 TitleWeight = (FontWeight)FindResource("IslandSmallLabelWeight")
             };
-            // Open tasks without a time come after everything that has one.
-            timed.Add((t.DueTime ?? DateTime.MaxValue, group == AgendaTaskGroup.Floating ? 2 : 1, row));
+            // All-day tasks on the selected day sit at the top with all-day events; open tasks without a time come last.
+            int rowGroup = group == AgendaTaskGroup.Floating ? 2 : (t.AllDay ? 0 : 1);
+            timed.Add((t.DueTime ?? DateTime.MaxValue, rowGroup, row));
         }
 
         var rows = timed.OrderBy(x => x.Group).ThenBy(x => x.Sort).Select(x => x.Row).ToList();
@@ -478,7 +560,16 @@ public partial class TodayCardView : System.Windows.Controls.UserControl
 
     private void AgendaRow_RightClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
     {
-        if (sender is not FrameworkElement { DataContext: AgendaRow { Event: { AllDay: false } ev } } element || _owner == null)
+        if (sender is not FrameworkElement element || _owner == null) return;
+
+        if (element.DataContext is AgendaRow { Task: { } task })
+        {
+            e.Handled = true;
+            OpenTaskContextMenu(element, task);
+            return;
+        }
+
+        if (element.DataContext is not AgendaRow { Event: { AllDay: false } ev })
             return;
 
         e.Handled = true;
@@ -537,5 +628,92 @@ public partial class TodayCardView : System.Windows.Controls.UserControl
             item.Click += (_, _) => onSelect(selected);
             items.Add(item);
         }
+    }
+
+    private void OpenTaskContextMenu(FrameworkElement element, Models.TodoTaskItem task)
+    {
+        var itemStyle = (Style)FindResource("ModernTrayMenuItemStyle");
+        var sepStyle = (Style)FindResource("ModernTraySeparatorStyle");
+        var menu = new ContextMenu
+        {
+            Style = (Style)FindResource("ModernTrayMenuStyle"),
+            PlacementTarget = element,
+            Placement = System.Windows.Controls.Primitives.PlacementMode.MousePoint,
+        };
+
+        var editItem = new MenuItem { Header = "Edit task", Style = itemStyle };
+        editItem.Click += (_, _) => BeginEditTask(task);
+        menu.Items.Add(editItem);
+
+        if (!task.IsCompleted)
+        {
+            var snoozeSub = new MenuItem { Header = "Snooze", Style = itemStyle };
+            PopulateSnoozeMenu(snoozeSub.Items, itemStyle, sepStyle, task);
+            menu.Items.Add(snoozeSub);
+        }
+
+        var toggleItem = new MenuItem { Header = task.IsCompleted ? "Mark undone" : "Mark done", Style = itemStyle };
+        toggleItem.Click += (_, _) => _owner?.ToggleTask(task);
+        menu.Items.Add(toggleItem);
+
+        if (task.IsCompleted && task.DueTime != null)
+        {
+            var clearDueItem = new MenuItem { Header = "Remove due time", Style = itemStyle };
+            clearDueItem.Click += (_, _) => ApplySnooze(task, TaskSnoozePreset.ClearDue);
+            menu.Items.Add(clearDueItem);
+        }
+
+        menu.Items.Add(new Separator { Style = sepStyle });
+        var deleteItem = new MenuItem { Header = "Delete task", Style = itemStyle };
+        deleteItem.Click += (_, _) =>
+        {
+            if (ReferenceEquals(task, _editingTask)) CancelEdit(rerender: false);
+            _owner?.DeleteTask(task);
+        };
+        menu.Items.Add(deleteItem);
+
+        menu.IsOpen = true;
+    }
+
+    private void PopulateSnoozeMenu(ItemCollection items, Style itemStyle, Style sepStyle, Models.TodoTaskItem task)
+    {
+        DateTime now = DateTime.Now;
+        var tomorrow = AgendaLogic.ComputeSnoozeTarget(task.DueTime, task.AllDay, TaskSnoozePreset.Tomorrow, now);
+        var nextWeek = AgendaLogic.ComputeSnoozeTarget(task.DueTime, task.AllDay, TaskSnoozePreset.NextWeek, now);
+        string tomorrowHint = tomorrow.AllDay ? "All day" : tomorrow.DueTime!.Value.ToString("HH:mm");
+        string nextWeekHint = nextWeek.AllDay
+            ? MochiDock.Core.DateDisplay.Short(nextWeek.DueTime!.Value)
+            : MochiDock.Core.DateDisplay.Short(nextWeek.DueTime!.Value) + nextWeek.DueTime.Value.ToString(" HH:mm");
+
+        var choices = new (string Label, TaskSnoozePreset Preset)[]
+        {
+            ("+10 min", TaskSnoozePreset.Minutes10),
+            ("+30 min", TaskSnoozePreset.Minutes30),
+            ("+1 hour", TaskSnoozePreset.Hour1),
+            ("+3 hours", TaskSnoozePreset.Hours3),
+            ($"Tomorrow ({tomorrowHint})", TaskSnoozePreset.Tomorrow),
+            ($"Next week ({nextWeekHint})", TaskSnoozePreset.NextWeek),
+        };
+        foreach (var (label, preset) in choices)
+        {
+            var item = new MenuItem { Header = label, Style = itemStyle };
+            var chosen = preset;
+            item.Click += (_, _) => ApplySnooze(task, chosen);
+            items.Add(item);
+        }
+
+        if (task.DueTime != null)
+        {
+            items.Add(new Separator { Style = sepStyle });
+            var clearItem = new MenuItem { Header = "Remove due time", Style = itemStyle };
+            clearItem.Click += (_, _) => ApplySnooze(task, TaskSnoozePreset.ClearDue);
+            items.Add(clearItem);
+        }
+    }
+
+    private void ApplySnooze(Models.TodoTaskItem task, TaskSnoozePreset preset)
+    {
+        if (ReferenceEquals(task, _editingTask)) CancelEdit(rerender: false);
+        _owner?.SnoozeTask(task, preset);
     }
 }

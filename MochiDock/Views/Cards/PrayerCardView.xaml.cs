@@ -85,7 +85,10 @@ public partial class PrayerCardView : UserControl
     {
         if (e.PropertyName == nameof(PrayerSchedule.SunProgress) ||
             e.PropertyName == nameof(PrayerSchedule.IsDaytime) ||
-            e.PropertyName == nameof(PrayerSchedule.NextPrayer))
+            e.PropertyName == nameof(PrayerSchedule.NextPrayer) ||
+            e.PropertyName == nameof(PrayerSchedule.IsDhuhaActive) ||
+            e.PropertyName == nameof(PrayerSchedule.IsAnyPeriodActive) ||
+            e.PropertyName == nameof(PrayerSchedule.ActivePeriodName))
         {
             Dispatcher.Invoke(RedrawArc);
         }
@@ -125,6 +128,19 @@ public partial class PrayerCardView : UserControl
         var muted=(System.Windows.Media.Brush)FindResource("IslandMutedInkBrush");
         var accent=(System.Windows.Media.Brush)FindResource("IslandAccentBrush");
         var halo=(System.Windows.Media.Brush)FindResource("IslandAccentSubtleBrush");
+        var sunGoldBrush = (System.Windows.Media.Brush)FindResource("IslandWarningBrush"); // solar gold
+        double? dhuhaStartPos = schedule.DhuhaStart is { } ds ? MochiDock.Core.PrayerTimeline.Position(ds, start, end, instants) : null;
+        double? dhuhaEndPos = schedule.DhuhaEnd is { } de ? MochiDock.Core.PrayerTimeline.Position(de, start, end, instants) : null;
+        double? activeStartPos = null, activeEndPos = null;
+        if (schedule.IsAnyPeriodActive && !schedule.IsActivePeriodDhuha)
+        {
+            activeStartPos = schedule.ActivePeriodStart is { } asInstant
+                ? (MochiDock.Core.PrayerTimeline.Position(asInstant, start, end, instants) ?? 0.0)
+                : 0.0;
+            activeEndPos = schedule.ActivePeriodEnd is { } aeInstant && aeInstant < end
+                ? (MochiDock.Core.PrayerTimeline.Position(aeInstant, start, end, instants) ?? 1.0)
+                : 1.0;
+        }
         void Circle(Point point,double diameter,System.Windows.Media.Brush fill,System.Windows.Media.Brush? stroke=null)
         {
             var dot = new System.Windows.Shapes.Path
@@ -132,7 +148,9 @@ public partial class PrayerCardView : UserControl
                 Data = new EllipseGeometry(point, diameter / 2.0, diameter / 2.0),
                 Fill = fill,
                 Stroke = stroke,
-                StrokeThickness = stroke != null ? 1.5 : 0
+                StrokeThickness = stroke != null ? 1.5 : 0,
+                UseLayoutRounding = false,
+                SnapsToDevicePixels = false
             };
             ArcCanvas.Children.Add(dot);
         }
@@ -143,14 +161,30 @@ public partial class PrayerCardView : UserControl
         {
             double p=(double)i/count;Point point=ArcPoint(p,width);
             if((point-marker).Length<12||MochiDock.Core.PrayerTimeline.Slots.Any(slot=>Math.Abs(slot-p)*width<10))continue;
-            Circle(point,2.4,muted);ArcCanvas.Children[ArcCanvas.Children.Count-1].Opacity=p<=here?.8:.25;
+            bool inActiveFard = activeStartPos is { } aStart && activeEndPos is { } aEnd && p >= aStart && p <= aEnd;
+            bool inDhuha = dhuhaStartPos is { } sPos && dhuhaEndPos is { } ePos && p >= sPos && p <= ePos;
+            if (inActiveFard)
+            {
+                Circle(point, 2.8, accent);
+                ArcCanvas.Children[ArcCanvas.Children.Count - 1].Opacity = 0.95;
+            }
+            else if (inDhuha)
+            {
+                Circle(point, schedule.IsDhuhaActive ? 2.8 : 2.4, sunGoldBrush);
+                ArcCanvas.Children[ArcCanvas.Children.Count - 1].Opacity = schedule.IsDhuhaActive ? 0.95 : (p <= here ? 0.75 : 0.45);
+            }
+            else
+            {
+                Circle(point, 2.4, muted);
+                ArcCanvas.Children[ArcCanvas.Children.Count - 1].Opacity = p <= here ? .8 : .25;
+            }
         }
-        int ongoingSlot = MochiDock.Core.PrayerTimeline.GetCurrentSlotIndex(schedule.NowUtc, instants);
         for(int i=0;i<5;i++)
         {
             double slot=MochiDock.Core.PrayerTimeline.Slots[i];Point point=ArcPoint(slot,width);
             bool next=MochiDock.Core.PrayerTimeline.IsNextSlot(i,schedule.NextPrayerInstant,schedule.NowUtc,instants);
-            bool ongoing = (i == ongoingSlot);
+            bool ongoing = schedule.IsAnyPeriodActive && !schedule.IsActivePeriodDhuha &&
+                string.Equals(prayers[i].Name, schedule.ActivePeriodName, StringComparison.OrdinalIgnoreCase);
             int size=MochiDock.Core.PrayerTimeline.TargetSize((point-marker).Length);
 
             if (ongoing)
@@ -188,7 +222,6 @@ public partial class PrayerCardView : UserControl
         }
         // Sun vs Moon distinction: above horizon line (Y <= 38) vs below horizon line (Y > 38)
         bool isAboveHorizon = marker.Y <= 38.0;
-        var sunGoldBrush = (System.Windows.Media.Brush)FindResource("IslandWarningBrush"); // solar gold
         var sunHaloBrush = (System.Windows.Media.Brush)FindResource("IslandWarningSubtleBrush");
         var moonBrush = (System.Windows.Media.Brush)(TryFindResource("IslandHighlightBrush") ?? FindResource("IslandPurpleBrush"));
         var moonHaloBrush = (System.Windows.Media.Brush)FindResource("IslandHighlightSubtleBrush");
@@ -218,7 +251,9 @@ public partial class PrayerCardView : UserControl
             Canvas.SetTop(moonPath, marker.Y - 5);
             ArcCanvas.Children.Add(moonPath);
         }
-        ArcCanvas.ToolTip=$"Prayer timeline — {TimeZoneInfo.ConvertTime(schedule.NowUtc,zone):HH:mm:ss} {schedule.TimeZoneId}\nNext: {schedule.NextPrayer?.Name} {schedule.NextPrayer?.FormattedTime} {schedule.NextPrayerDayText}";
+        string activeTip = string.IsNullOrEmpty(schedule.ActivePeriodStatusText) ? "" : $"\n{schedule.ActivePeriodStatusText}";
+        string dhuhaExtra = !schedule.IsActivePeriodDhuha && !string.IsNullOrEmpty(schedule.DhuhaRangeText) ? $"\nDhuha: {schedule.DhuhaRangeText}" : "";
+        ArcCanvas.ToolTip=$"Prayer timeline — {TimeZoneInfo.ConvertTime(schedule.NowUtc,zone):HH:mm:ss} {schedule.TimeZoneId}\nNext: {schedule.NextPrayer?.Name} {schedule.NextPrayer?.FormattedTime} {schedule.NextPrayerDayText}{activeTip}{dhuhaExtra}";
     }    private MainViewModel? ViewModel => DataContext as MainViewModel;
 
     private void ChangePlace_Click(object sender, RoutedEventArgs e)

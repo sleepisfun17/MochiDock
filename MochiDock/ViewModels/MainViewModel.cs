@@ -663,7 +663,8 @@ public partial class MainViewModel : INotifyPropertyChanged
         _discordService.MessageReceived += OnDiscordMessageReceived;
         _discordService.AppMessageReceived += OnAppMessageReceived;
         _discordService.RecentAppsChanged += () => App.Current.Dispatcher.BeginInvoke(() => OnPropertyChanged(nameof(UnwatchedRecentApps)));
-        _discordService.SetWatchedApps(WatchedApps);
+        _discordService.AccessChanged += () => App.Current.Dispatcher.BeginInvoke(() => OnPropertyChanged(nameof(NotificationAccessAllowed)));
+        _discordService.SetWatchedApps(WatchedApps, _settings.WatchAllApps);
         InitGameSessions();
         InitPlaytime();
         // Started in the morning: a few sleepy seconds, once the startup work is done.
@@ -1023,7 +1024,7 @@ public partial class MainViewModel : INotifyPropertyChanged
             _noticeIsAgenda = false;
             _noticeIsGame = false;
             _noticeIsDevice = false; _noticeIsWeather = false; _noticeIsUpdate = false;
-            _hardwareNoticeText = $"{reading.ProviderName} {reading.LeftPercent:0}% left";
+            _hardwareNoticeText = $"{reading.ProviderName} {MochiDock.Core.AiUsageParsing.FormatLeftPercent(reading.LeftPercent)} left";
             _hardwareNoticeUntil = DateTimeOffset.UtcNow.AddSeconds(8);
             _hardwareNoticeTimer.Stop(); _hardwareNoticeTimer.Start();
             NotifyHardwareNotice();
@@ -1740,7 +1741,21 @@ public partial class MainViewModel : INotifyPropertyChanged
     public void ShowScript(bool rememberSelection = true) { if (rememberSelection) NavigateManually(IslandCardType.Script); else ActiveCardType = IslandCardType.Script; IsExpanded = true; }
     public void ShowDownloads(bool rememberSelection = true) { if (rememberSelection) NavigateManually(IslandCardType.Downloads); else ActiveCardType = IslandCardType.Downloads; IsExpanded = true; }
 
-    public void AddTask(string input, int? explicitMinutes = null) => _tasksService.AddTaskWithNaturalLanguage(input, explicitMinutes);
+    public void AddTask(string input, int? explicitMinutes = null, DateTime? selectedDate = null) => _tasksService.AddTaskWithNaturalLanguage(input, explicitMinutes, selectedDate);
+    public void EditTask(TodoTaskItem task, string input, int? explicitMinutes = null, DateTime? selectedDate = null)
+    {
+        if (_tasksService.UpdateTask(task, input, explicitMinutes, selectedDate))
+        {
+            UpdateOverdueMood();
+            UpdateDayFace(force: true);
+        }
+    }
+    public void SnoozeTask(TodoTaskItem task, MochiDock.Core.TaskSnoozePreset preset)
+    {
+        _tasksService.RescheduleTask(task, preset);
+        UpdateOverdueMood();
+        UpdateDayFace(force: true);
+    }
     public void ToggleTask(TodoTaskItem task)
     {
         _tasksService.ToggleTaskCompleted(task);
@@ -1752,7 +1767,12 @@ public partial class MainViewModel : INotifyPropertyChanged
         }
         UpdateDayFace(force: true);
     }
-    public void DeleteTask(TodoTaskItem task) => _tasksService.DeleteTask(task);
+    public void DeleteTask(TodoTaskItem task)
+    {
+        _tasksService.DeleteTask(task);
+        UpdateOverdueMood();
+        UpdateDayFace(force: true);
+    }
 
     public void AddShelfFile(string path) => _fileShelfService.AddFile(path);
     public void RemoveShelfFile(ShelfFileItem item) => _fileShelfService.RemoveFile(item);

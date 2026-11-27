@@ -171,7 +171,7 @@ public partial class MainViewModel
     private void UpdateOverdueMood()
     {
         bool angry = _settings.EnableAgendaReminders && _settings.RemindOverdueTasks &&
-            MascotTriggers.UnacknowledgedOverdue(Tasks.Select(t => new ReminderTask(t.Id, t.Title, t.DueTime, t.IsCompleted)).ToList(), DateTime.Now, _acknowledgedReminders);
+            MascotTriggers.UnacknowledgedOverdue(Tasks.Select(t => new ReminderTask(t.Id, t.Title, t.AllDay ? null : t.DueTime, t.IsCompleted)).ToList(), DateTime.Now, _acknowledgedReminders);
         if (angry == _mascotOverdue) return;
         _mascotOverdue = angry;
         RefreshMascotMood();

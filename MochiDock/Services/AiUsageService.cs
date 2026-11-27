@@ -263,7 +263,7 @@ public class AiUsageService : IDisposable
         {
             if (s.State != AiProviderState.Ok || s.Windows.Count == 0 || s.ProviderId == "antigravity") continue;
             var mostSpent = s.Windows.MaxBy(w => w.UsedRatio)!;
-            double left = Math.Round(100.0 - Math.Clamp(mostSpent.UsedRatio * 100.0, 0, 100), 1);
+            double left = Math.Round(100.0 - Math.Clamp(mostSpent.UsedRatio * 100.0, 0, 100), 2);
             readings.Add(new AiUsageAlertReading(s.ProviderId, s.ProviderName, mostSpent.Label, left));
         }
         foreach (var alert in _alertPolicy.Evaluate(readings))

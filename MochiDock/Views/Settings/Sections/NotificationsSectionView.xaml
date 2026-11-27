@@ -108,6 +108,9 @@
         </s:SettingRow>
 
         <TextBlock Style="{StaticResource SettingsGroupHeader}" Text="Other apps" Margin="0,18,0,2"/>
+        <s:SettingRow Label="All Windows apps" Description="Show notifications from every Windows app (except Discord, which has its own card, and MochiDock). Turn off to pick specific apps below.">
+            <CheckBox x:Name="WatchAllAppsCheck" Style="{StaticResource ModernDarkCheckBox}" Checked="WatchAllApps_Changed" Unchecked="WatchAllApps_Changed"/>
+        </s:SettingRow>
         <s:SettingRow x:Name="AppsAddRow" Label="Show notifications from" Description="Apps such as LINE, Telegram, Slack or Teams whose Windows notifications appear on the Apps card. Apps that notified you since MochiDock started are listed; you can also type the name Windows shows for the app. Discord has its own card.">
             <StackPanel>
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,0,0,6">

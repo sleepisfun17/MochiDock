@@ -10,6 +10,12 @@ public enum AgendaTaskGroup { None, OnDay, Floating }
 /// <summary>What an active timed calendar event represents for the mascot's ambient badge, ordered by priority.</summary>
 public enum CalendarActivityKind { None, Working, Workout, Eating, Meeting }
 
+/// <summary>Presets for snoozing or rescheduling a task from the Today card.</summary>
+public enum TaskSnoozePreset { Minutes10, Minutes30, Hour1, Hours3, Tomorrow, NextWeek, ClearDue }
+
+/// <summary>Parsed result of quick-add task input: cleaned title, optional due instant, and whether it is a date-only (all-day) task.</summary>
+public readonly record struct ParsedTaskInput(string Title, DateTime? DueTime, bool AllDay);
+
 /// <summary>User-defined overrides for calendar schedule badges: per event title and optional default per calendar name.</summary>
 public sealed class CalendarActivityRules
 {
@@ -261,6 +267,158 @@ public static class AgendaLogic
 
     /// <summary>True when an open task is more than a minute past its due time.</summary>
     public static bool IsOverdue(DateTime? due, bool done, DateTime now) => due is { } at && !done && (now - at).TotalMinutes >= 1;
+
+    static readonly Regex TaskRelativePattern = new(@"\b(?:in|dalam)?\s*(\d+)\s*(m|min|mins|menit|h|hr|hours|jam)\b", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+    static readonly Regex Task12HourPattern = new(@"\b(?:at|jam|pukul)?\s*(\d{1,2})(?::(\d{2}))?\s*(am|pm)\b", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+    static readonly Regex Task24HourPattern = new(@"\b(?:at|jam|pukul)?\s*(\d{1,2}):(\d{2})\b", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+    static readonly Regex TaskKeywordDigitsPattern = new(@"\b(?:at|jam|pukul)\s+(\d{1,4})\b", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+    /// <summary>
+    /// Parses quick-add task text and chip minutes against <paramref name="now"/> and an optional <paramref name="selectedDate"/>.
+    /// Relative durations stay relative to <paramref name="now"/>; clock times anchor on <paramref name="selectedDate"/>;
+    /// untimed entries on a date other than today become all-day tasks for that date.
+    /// </summary>
+    public static ParsedTaskInput ParseTaskInput(string input, DateTime now, int? explicitDueMinutes = null, DateTime? selectedDate = null)
+    {
+        if (string.IsNullOrWhiteSpace(input)) return new ParsedTaskInput("", null, false);
+
+        string cleanTitle = input.Trim();
+        DateTime? due = null;
+        bool allDay = false;
+        DateTime baseDate = (selectedDate ?? now.Date).Date;
+        bool isOtherDate = baseDate != now.Date;
+
+        DateTime AnchorClock(TimeSpan time)
+        {
+            var target = baseDate.Add(time);
+            if (!isOtherDate && target < now) target = target.AddDays(1);
+            return target;
+        }
+
+        if (explicitDueMinutes is > 0)
+        {
+            due = now.AddMinutes(explicitDueMinutes.Value);
+        }
+        else if (explicitDueMinutes == 0)
+        {
+            if (isOtherDate)
+            {
+                due = baseDate;
+                allDay = true;
+            }
+        }
+        else
+        {
+            var inMatch = TaskRelativePattern.Match(cleanTitle);
+            if (inMatch.Success)
+            {
+                int val = int.Parse(inMatch.Groups[1].Value);
+                string unit = inMatch.Groups[2].Value.ToLowerInvariant();
+                due = (unit.StartsWith("h") || unit == "jam") ? now.AddHours(val) : now.AddMinutes(val);
+                cleanTitle = cleanTitle.Remove(inMatch.Index, inMatch.Length).Trim();
+            }
+            else if (Task12HourPattern.Match(cleanTitle) is { Success: true } ampmMatch)
+            {
+                int h = int.Parse(ampmMatch.Groups[1].Value);
+                int m = ampmMatch.Groups[2].Success ? int.Parse(ampmMatch.Groups[2].Value) : 0;
+                string meridiem = ampmMatch.Groups[3].Value.ToLowerInvariant();
+                if (meridiem == "pm" && h < 12) h += 12;
+                if (meridiem == "am" && h == 12) h = 0;
+                if (h is >= 0 and <= 23 && m is >= 0 and <= 59)
+                {
+                    due = AnchorClock(new TimeSpan(h, m, 0));
+                    cleanTitle = cleanTitle.Remove(ampmMatch.Index, ampmMatch.Length).Trim();
+                }
+            }
+            else if (Task24HourPattern.Match(cleanTitle) is { Success: true } atMatch)
+            {
+                int h = int.Parse(atMatch.Groups[1].Value);
+                int m = int.Parse(atMatch.Groups[2].Value);
+                if (h is >= 0 and <= 23 && m is >= 0 and <= 59)
+                {
+                    due = AnchorClock(new TimeSpan(h, m, 0));
+                    cleanTitle = cleanTitle.Remove(atMatch.Index, atMatch.Length).Trim();
+                }
+            }
+            else if (TaskKeywordDigitsPattern.Match(cleanTitle) is { Success: true } wordMatch && TimeInput.TryParse(wordMatch.Groups[1].Value, out var wordTime))
+            {
+                due = AnchorClock(wordTime);
+                cleanTitle = cleanTitle.Remove(wordMatch.Index, wordMatch.Length).Trim();
+            }
+
+            if (due is null && isOtherDate)
+            {
+                due = baseDate;
+                allDay = true;
+            }
+        }
+
+        string title = string.IsNullOrWhiteSpace(cleanTitle)
+            ? input.Trim()
+            : Regex.Replace(cleanTitle, @"\s{2,}", " ");
+        return new ParsedTaskInput(title, due, allDay);
+    }
+
+    /// <summary>Formats an existing task back into composer text for inline editing.</summary>
+    public static string FormatTaskForEdit(string title, DateTime? dueTime, bool allDay)
+    {
+        string t = (title ?? "").Trim();
+        if (dueTime is { } due && !allDay)
+            return t.Length == 0 ? due.ToString("HH:mm") : $"{t} {due:HH:mm}";
+        return t;
+    }
+
+    /// <summary>
+    /// Parses an edited task submission. If an overdue task from earlier today keeps its unchanged clock time,
+    /// preserves the original due instant instead of rolling it to tomorrow.
+    /// </summary>
+    public static ParsedTaskInput ParseTaskEdit(string input, DateTime now, int? explicitDueMinutes, DateTime selectedDate, DateTime? originalDue, bool originalAllDay)
+    {
+        var parsed = ParseTaskInput(input, now, explicitDueMinutes, selectedDate);
+        if (explicitDueMinutes is null &&
+            originalDue is { } orig &&
+            !originalAllDay &&
+            selectedDate.Date == now.Date &&
+            orig.Date == now.Date &&
+            orig < now &&
+            parsed.DueTime is { } newDue &&
+            !parsed.AllDay &&
+            newDue == orig.AddDays(1))
+        {
+            return parsed with { DueTime = orig };
+        }
+        return parsed;
+    }
+
+    /// <summary>Computes the updated due time and all-day flag for a task snooze or reschedule action.</summary>
+    public static (DateTime? DueTime, bool AllDay) ComputeSnoozeTarget(DateTime? currentDue, bool currentAllDay, TaskSnoozePreset preset, DateTime now)
+    {
+        switch (preset)
+        {
+            case TaskSnoozePreset.Minutes10:
+                return (now.AddMinutes(10), false);
+            case TaskSnoozePreset.Minutes30:
+                return (now.AddMinutes(30), false);
+            case TaskSnoozePreset.Hour1:
+                return (now.AddHours(1), false);
+            case TaskSnoozePreset.Hours3:
+                return (now.AddHours(3), false);
+            case TaskSnoozePreset.Tomorrow:
+                if (currentDue is { } tDue && !currentAllDay)
+                    return (now.Date.AddDays(1).Add(tDue.TimeOfDay), false);
+                return (now.Date.AddDays(1), true);
+            case TaskSnoozePreset.NextWeek:
+            {
+                DateTime anchor = currentDue is { } d && d.Date > now.Date ? d.Date : now.Date;
+                if (currentDue is { } wDue && !currentAllDay)
+                    return (anchor.AddDays(7).Add(wDue.TimeOfDay), false);
+                return (anchor.AddDays(7), true);
+            }
+            case TaskSnoozePreset.ClearDue:
+            default:
+                return (null, false);
+        }
+    }
 
     static string Minutes(double total)
     {

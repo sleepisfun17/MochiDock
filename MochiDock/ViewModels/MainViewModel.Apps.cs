@@ -60,9 +60,15 @@ public partial class MainViewModel
         SyncWatchedApps();
     }
 
+    public void SetWatchAllApps(bool watchAll)
+    {
+        UpdateSettings(s => s.WatchAllApps = watchAll, SettingsApply.None);
+        SyncWatchedApps();
+    }
+
     private void SyncWatchedApps()
     {
-        _discordService.SetWatchedApps(WatchedApps);
+        _discordService.SetWatchedApps(WatchedApps, _settings.WatchAllApps);
         OnPropertyChanged(nameof(WatchedApps));
         OnPropertyChanged(nameof(UnwatchedRecentApps));
     }

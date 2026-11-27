@@ -3,7 +3,6 @@ using System.Collections.ObjectModel;
 using System.IO;
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using System.Text.RegularExpressions;
 using System.Windows.Threading;
 using MochiDock.Models;
 
@@ -88,81 +87,16 @@ public class TasksService
         foreach (var task in merged) Tasks.Add(task);
         SaveTasks();
     }
-    public TodoTaskItem AddTaskWithNaturalLanguage(string input, int? explicitDueMinutes = null)
+    public TodoTaskItem AddTaskWithNaturalLanguage(string input, int? explicitDueMinutes = null, DateTime? selectedDate = null)
     {
         if (string.IsNullOrWhiteSpace(input)) return new TodoTaskItem();
 
-        string cleanTitle = input.Trim();
-        DateTime? due = null;
-
-        if (explicitDueMinutes.HasValue && explicitDueMinutes.Value > 0)
-        {
-            due = DateTime.Now.AddMinutes(explicitDueMinutes.Value);
-        }
-        else
-        {
-            // Pattern 1: Relative duration: "in 5m", "5m", "15 min", "2h", "1h 30m"
-            var inMatch = Regex.Match(cleanTitle, @"\b(?:in|dalam)?\s*(\d+)\s*(m|min|mins|menit|h|hr|hours|jam)\b", RegexOptions.IgnoreCase);
-            if (inMatch.Success)
-            {
-                int val = int.Parse(inMatch.Groups[1].Value);
-                string unit = inMatch.Groups[2].Value.ToLowerInvariant();
-                due = (unit.StartsWith("h") || unit == "jam") ? DateTime.Now.AddHours(val) : DateTime.Now.AddMinutes(val);
-                cleanTitle = cleanTitle.Remove(inMatch.Index, inMatch.Length).Trim();
-            }
-            else
-            {
-                // Pattern 2: 12-hour format e.g. "at 2pm", "2:30 pm", "5pm"
-                var ampmMatch = Regex.Match(cleanTitle, @"\b(?:at|jam|pukul)?\s*(\d{1,2})(?::(\d{2}))?\s*(am|pm)\b", RegexOptions.IgnoreCase);
-                if (ampmMatch.Success)
-                {
-                    int h = int.Parse(ampmMatch.Groups[1].Value);
-                    int m = ampmMatch.Groups[2].Success ? int.Parse(ampmMatch.Groups[2].Value) : 0;
-                    string meridiem = ampmMatch.Groups[3].Value.ToLowerInvariant();
-                    if (meridiem == "pm" && h < 12) h += 12;
-                    if (meridiem == "am" && h == 12) h = 0;
-
-                    var target = DateTime.Today.AddHours(h).AddMinutes(m);
-                    if (target < DateTime.Now) target = target.AddDays(1);
-                    due = target;
-                    cleanTitle = cleanTitle.Remove(ampmMatch.Index, ampmMatch.Length).Trim();
-                }
-                else
-                {
-                    // Pattern 3: 24-hour format e.g. "at 14:30", "14:30", "jam 19"
-                    var atMatch = Regex.Match(cleanTitle, @"\b(?:at|jam|pukul)?\s*(\d{1,2}):(\d{2})\b", RegexOptions.IgnoreCase);
-                    if (atMatch.Success)
-                    {
-                        int h = int.Parse(atMatch.Groups[1].Value);
-                        int m = int.Parse(atMatch.Groups[2].Value);
-                        if (h >= 0 && h <= 23 && m >= 0 && m <= 59)
-                        {
-                            var target = DateTime.Today.AddHours(h).AddMinutes(m);
-                            if (target < DateTime.Now) target = target.AddDays(1);
-                            due = target;
-                            cleanTitle = cleanTitle.Remove(atMatch.Index, atMatch.Length).Trim();
-                        }
-                    }
-                    else
-                    {
-                        // Pattern 4: a keyword and bare digits, e.g. "at 0900", "at 9", "jam 19". The keyword is required, so numbers in a title ("buy 2") stay untouched.
-                        var wordMatch = Regex.Match(cleanTitle, @"\b(?:at|jam|pukul)\s+(\d{1,4})\b", RegexOptions.IgnoreCase);
-                        if (wordMatch.Success && MochiDock.Core.TimeInput.TryParse(wordMatch.Groups[1].Value, out var wordTime))
-                        {
-                            var target = DateTime.Today.Add(wordTime);
-                            if (target < DateTime.Now) target = target.AddDays(1);
-                            due = target;
-                            cleanTitle = cleanTitle.Remove(wordMatch.Index, wordMatch.Length).Trim();
-                        }
-                    }
-                }
-            }
-        }
-
+        var parsed = MochiDock.Core.AgendaLogic.ParseTaskInput(input, DateTime.Now, explicitDueMinutes, selectedDate);
         var task = new TodoTaskItem
         {
-            Title = string.IsNullOrWhiteSpace(cleanTitle) ? input.Trim() : cleanTitle,
-            DueTime = due,
+            Title = parsed.Title,
+            DueTime = parsed.DueTime,
+            AllDay = parsed.AllDay,
             IsCompleted = false
         };
 
@@ -177,10 +111,40 @@ public class TasksService
         SaveTasks();
     }
 
+    public bool UpdateTask(TodoTaskItem task, string input, int? explicitDueMinutes = null, DateTime? selectedDate = null)
+    {
+        if (string.IsNullOrWhiteSpace(input)) return false;
+
+        var parsed = MochiDock.Core.AgendaLogic.ParseTaskEdit(
+            input,
+            DateTime.Now,
+            explicitDueMinutes,
+            (selectedDate ?? DateTime.Today).Date,
+            task.DueTime,
+            task.AllDay);
+        if (string.IsNullOrWhiteSpace(parsed.Title)) return false;
+
+        task.Title = parsed.Title;
+        task.DueTime = parsed.DueTime;
+        task.AllDay = parsed.AllDay;
+        SaveTasks();
+        return true;
+    }
+
     public void SnoozeTask(TodoTaskItem task, int minutes = 10)
     {
         task.DueTime = DateTime.Now.AddMinutes(minutes);
+        task.AllDay = false;
         task.IsCompleted = false;
+        SaveTasks();
+    }
+
+    public void RescheduleTask(TodoTaskItem task, MochiDock.Core.TaskSnoozePreset preset)
+    {
+        var (due, allDay) = MochiDock.Core.AgendaLogic.ComputeSnoozeTarget(task.DueTime, task.AllDay, preset, DateTime.Now);
+        task.DueTime = due;
+        task.AllDay = allDay;
+        if (preset != MochiDock.Core.TaskSnoozePreset.ClearDue) task.IsCompleted = false;
         SaveTasks();
     }
 

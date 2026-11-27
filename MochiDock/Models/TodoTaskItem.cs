@@ -9,6 +9,7 @@ public class TodoTaskItem : INotifyPropertyChanged
     private string _id = Guid.NewGuid().ToString("N");
     private string _title = "";
     private DateTime? _dueTime;
+    private bool _allDay;
     private bool _isCompleted;
     private DateTime _createdAt = DateTime.Now;
 
@@ -42,6 +43,24 @@ public class TodoTaskItem : INotifyPropertyChanged
                 OnPropertyChanged();
                 OnPropertyChanged(nameof(FormattedDueTime));
                 OnPropertyChanged(nameof(IsDueSoon));
+                OnPropertyChanged(nameof(IsOverdue));
+                OnPropertyChanged(nameof(CountdownText));
+            }
+        }
+    }
+
+    public bool AllDay
+    {
+        get => _allDay;
+        set
+        {
+            if (_allDay != value)
+            {
+                _allDay = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(FormattedDueTime));
+                OnPropertyChanged(nameof(IsDueSoon));
+                OnPropertyChanged(nameof(IsOverdue));
                 OnPropertyChanged(nameof(CountdownText));
             }
         }
@@ -57,6 +76,7 @@ public class TodoTaskItem : INotifyPropertyChanged
                 _isCompleted = value;
                 OnPropertyChanged();
                 OnPropertyChanged(nameof(IsDueSoon));
+                OnPropertyChanged(nameof(IsOverdue));
                 OnPropertyChanged(nameof(CountdownText));
             }
         }
@@ -68,13 +88,15 @@ public class TodoTaskItem : INotifyPropertyChanged
         set { if (_createdAt != value) { _createdAt = value; OnPropertyChanged(); } }
     }
 
-    public string FormattedDueTime => DueTime.HasValue ? DueTime.Value.ToString("HH:mm") : "";
-    public bool IsDueSoon => DueTime.HasValue && !IsCompleted && (DueTime.Value - DateTime.Now).TotalMinutes <= 15 && (DueTime.Value - DateTime.Now).TotalSeconds > -60;
+    public string FormattedDueTime => AllDay ? "All day" : (DueTime.HasValue ? DueTime.Value.ToString("HH:mm") : "");
+    public bool IsDueSoon => !AllDay && DueTime.HasValue && !IsCompleted && (DueTime.Value - DateTime.Now).TotalMinutes <= 15 && (DueTime.Value - DateTime.Now).TotalSeconds > -60;
 
-    public string CountdownText => MochiDock.Core.AgendaLogic.TaskStatus(DueTime, IsCompleted, DateTime.Now);
+    public string CountdownText => AllDay ? "" : MochiDock.Core.AgendaLogic.TaskStatus(DueTime, IsCompleted, DateTime.Now);
 
-    /// <summary>True when the task is open and more than a minute past its due time.</summary>
-    public bool IsOverdue => MochiDock.Core.AgendaLogic.IsOverdue(DueTime, IsCompleted, DateTime.Now);
+    /// <summary>True when the task is open and past its due time (or past its date for all-day tasks).</summary>
+    public bool IsOverdue => AllDay
+        ? (DueTime.HasValue && !IsCompleted && DueTime.Value.Date < DateTime.Today)
+        : MochiDock.Core.AgendaLogic.IsOverdue(DueTime, IsCompleted, DateTime.Now);
 
     public void RefreshTimeState()
     {

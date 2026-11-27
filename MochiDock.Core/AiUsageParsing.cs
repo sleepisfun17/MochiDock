@@ -95,6 +95,30 @@ public static class AiUsageParsing
         return Math.Round((1.0 - worst) * 100.0, 1);
     }
 
+    /// <summary>
+    /// Formats a remaining-quota percentage with up to 2 decimal places when fractional, keeping whole numbers clean (e.g. 100%, 37.6%, 0.35%, &lt;0.01%, 0%).
+    /// </summary>
+    public static string FormatLeftPercent(double leftPercent)
+    {
+        double left = double.IsFinite(leftPercent) ? Math.Clamp(leftPercent, 0.0, 100.0) : 0.0;
+        if (left <= 0) return "0%";
+        if (left < 0.01) return "<0.01%";
+        return left.ToString("0.##", CultureInfo.InvariantCulture) + "%";
+    }
+
+    /// <summary>Formats a hover tooltip with up to 2 decimals of remaining and used percentages plus renewal text.</summary>
+    public static string FormatQuotaTooltip(string label, double usedRatio, string? resetsInText)
+    {
+        double used = double.IsFinite(usedRatio) ? Math.Clamp(usedRatio * 100.0, 0.0, 100.0) : 0.0;
+        double left = Math.Clamp(100.0 - used, 0.0, 100.0);
+        string leftText = left > 0 && left < 0.01 ? "<0.01%" : left.ToString("0.##", CultureInfo.InvariantCulture) + "%";
+        string usedText = used.ToString("0.##", CultureInfo.InvariantCulture) + "%";
+        string text = $"{label}: {leftText} left ({usedText} used)";
+        if (!string.IsNullOrWhiteSpace(resetsInText) && !string.Equals(resetsInText, "Ready", StringComparison.OrdinalIgnoreCase))
+            text += $" · {resetsInText}";
+        return text;
+    }
+
     private static readonly string[] TieBreak = { "claude", "antigravity", "codex" };
 
     /// <summary>

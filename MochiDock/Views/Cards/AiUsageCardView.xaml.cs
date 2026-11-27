@@ -1,6 +1,7 @@
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using MochiDock.Core;
 using MochiDock.Services;
 using MochiDock.ViewModels;
 
@@ -212,7 +213,12 @@ public partial class AiUsageCardView : System.Windows.Controls.UserControl
             // Row 3: Windows (e.g. Quota progress bars)
             foreach (var win in p.Windows)
             {
-                var winGrid = new Grid { Margin = new Thickness(0, 3, 0, 3) };
+                var winGrid = new Grid
+                {
+                    Margin = new Thickness(0, 3, 0, 3),
+                    Background = System.Windows.Media.Brushes.Transparent,
+                    ToolTip = AiUsageParsing.FormatQuotaTooltip(win.Label, win.UsedRatio, win.ResetsInText)
+                };
                 // Wide enough for the longest limit label ("Gemini, 5 hours") in the card font at 11 px.
                 winGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(82) });
                 winGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
@@ -246,19 +252,22 @@ public partial class AiUsageCardView : System.Windows.Controls.UserControl
                 double leftPct = Math.Clamp(100.0 - usedPct, 0, 100);
 
                 // The fill is a proportion of the track (star columns), so it always spans the bar it sits in.
-                var barTrack = new Grid();
-                barTrack.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(Math.Max(leftPct, 2), GridUnitType.Star) });
-                barTrack.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(Math.Max(100 - leftPct, 0.001), GridUnitType.Star) });
-                var barFill = new Border
+                if (leftPct > 0)
                 {
-                    Height = 7,
-                    CornerRadius = new CornerRadius(3.5),
-                    Background = leftPct <= 15 ? (System.Windows.Media.Brush)FindResource("IslandNegativeBrush")
-                        : leftPct <= 35 ? (System.Windows.Media.Brush)FindResource("IslandWarningBrush")
-                        : (System.Windows.Media.Brush)FindResource("IslandPositiveBrush")
-                };
-                barTrack.Children.Add(barFill);
-                progressBarBorder.Child = barTrack;
+                    var barTrack = new Grid();
+                    barTrack.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(Math.Max(leftPct, 2), GridUnitType.Star) });
+                    barTrack.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(Math.Max(100 - leftPct, 0.001), GridUnitType.Star) });
+                    var barFill = new Border
+                    {
+                        Height = 7,
+                        CornerRadius = new CornerRadius(3.5),
+                        Background = leftPct <= 15 ? (System.Windows.Media.Brush)FindResource("IslandNegativeBrush")
+                            : leftPct <= 35 ? (System.Windows.Media.Brush)FindResource("IslandWarningBrush")
+                            : (System.Windows.Media.Brush)FindResource("IslandPositiveBrush")
+                    };
+                    barTrack.Children.Add(barFill);
+                    progressBarBorder.Child = barTrack;
+                }
                 Grid.SetColumn(progressBarBorder, 1);
                 winGrid.Children.Add(progressBarBorder);
 
@@ -271,7 +280,7 @@ public partial class AiUsageCardView : System.Windows.Controls.UserControl
 
                 var pctText = new TextBlock
                 {
-                    Text = $"{leftPct:F0}% left",
+                    Text = $"{AiUsageParsing.FormatLeftPercent(leftPct)} left",
                     FontSize = 11,
                     FontWeight = (FontWeight)FindResource("IslandSmallLabelWeight"),
                     Foreground = leftPct <= 15 ? (System.Windows.Media.Brush)FindResource("IslandNegativeBrush") : (System.Windows.Media.Brush)FindResource("IslandInkBrush"),

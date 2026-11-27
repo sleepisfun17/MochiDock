@@ -25,12 +25,15 @@ public class DiscordNotificationService
     private CancellationTokenSource? _cts;
     private readonly object _gate = new();
     private IReadOnlyList<WatchedApp> _watched = Array.Empty<WatchedApp>();
+    private bool _watchAll;
     private List<WatchedApp> _recentApps = new();
 
     public event Action<DiscordNotification>? MessageReceived;
     public event Action<AppNotification>? AppMessageReceived;
     /// <summary>Raised (on the polling thread) when an app not seen before sends a notification.</summary>
     public event Action? RecentAppsChanged;
+    /// <summary>Raised when <see cref="AccessAllowed"/> is determined or changes.</summary>
+    public event Action? AccessChanged;
 
     /// <summary>Null until the listener starts; false when Windows denied notification access.</summary>
     public bool? AccessAllowed { get; private set; }
@@ -38,9 +41,13 @@ public class DiscordNotificationService
     /// <summary>Apps whose notifications were seen since MochiDock started, newest first (Discord excluded).</summary>
     public IReadOnlyList<WatchedApp> RecentApps { get { lock (_gate) return _recentApps.ToList(); } }
 
-    public void SetWatchedApps(IEnumerable<WatchedApp>? apps)
+    public void SetWatchedApps(IEnumerable<WatchedApp>? apps, bool watchAll = false)
     {
-        lock (_gate) _watched = (apps ?? Array.Empty<WatchedApp>()).ToList();
+        lock (_gate)
+        {
+            _watched = (apps ?? Array.Empty<WatchedApp>()).ToList();
+            _watchAll = watchAll;
+        }
     }
 
     public async Task StartAsync()
@@ -52,25 +59,42 @@ public class DiscordNotificationService
 
             var status = await _listener.RequestAccessAsync();
             AccessAllowed = status == UserNotificationListenerAccessStatus.Allowed;
+            AccessChanged?.Invoke();
             if (AccessAllowed != true)
             {
                 AppLog.Warn("Notifications", $"Windows notification access was not allowed ({status}); Discord and other apps cannot be shown.");
                 return;
             }
 
-            // Seed existing notifications so we don't alert on past toasts
+            // Seed existing notifications so we don't alert on past toasts, while remembering non-Discord apps for the picker.
             var existing = await _listener.GetNotificationsAsync(NotificationKinds.Toast);
+            bool seededRecent = false;
             foreach (var n in existing)
             {
                 _seenIds.Add(n.Id);
+                string appName = n.AppInfo?.DisplayInfo?.DisplayName ?? "";
+                string aumid = n.AppInfo?.AppUserModelId ?? "";
+                if ((appName.Length > 0 || aumid.Length > 0) &&
+                    !AppNotificationFilter.IsDiscord(appName, aumid) &&
+                    !AppNotificationFilter.IsSelf(appName, aumid))
+                {
+                    lock (_gate)
+                    {
+                        _recentApps = AppNotificationFilter.Remember(_recentApps, new WatchedApp(appName, aumid));
+                        seededRecent = true;
+                    }
+                }
             }
+            if (seededRecent) RecentAppsChanged?.Invoke();
 
             _cts = new CancellationTokenSource();
             _ = Task.Run(() => PollLoopAsync(_cts.Token));
         }
         catch (Exception ex)
         {
-            Debug.WriteLine($"Failed to start Discord notification listener: {ex.Message}");
+            AccessAllowed = false;
+            AccessChanged?.Invoke();
+            AppLog.Warn("Notifications", ex);
         }
     }
 
@@ -149,7 +173,7 @@ public class DiscordNotificationService
 
     private async Task HandleOtherAppAsync(UserNotification n, string appName, string aumid)
     {
-        if (appName.Length == 0 && aumid.Length == 0) return;
+        if ((appName.Length == 0 && aumid.Length == 0) || AppNotificationFilter.IsSelf(appName, aumid)) return;
         WatchedApp? match;
         bool newApp;
         lock (_gate)
@@ -157,7 +181,7 @@ public class DiscordNotificationService
             var seen = new WatchedApp(appName, aumid);
             newApp = !_recentApps.Any(r => AppNotificationFilter.Same(r, seen));
             _recentApps = AppNotificationFilter.Remember(_recentApps, seen);
-            match = AppNotificationFilter.Match(appName, aumid, _watched);
+            match = AppNotificationFilter.Match(appName, aumid, _watched, _watchAll);
         }
         if (newApp) RecentAppsChanged?.Invoke();
         if (match == null) return;

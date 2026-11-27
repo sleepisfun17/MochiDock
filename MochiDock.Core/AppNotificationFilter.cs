@@ -13,11 +13,20 @@ public static class AppNotificationFilter
     public static bool IsDiscord(string? name, string? aumid) =>
         (name ?? "").Contains("Discord", StringComparison.OrdinalIgnoreCase) || (aumid ?? "").Contains("Discord", StringComparison.OrdinalIgnoreCase);
 
-    /// <summary>The watched entry this toast belongs to, or null. An entry with an AUMID matches only that AUMID; one without matches the display name.</summary>
-    public static WatchedApp? Match(string? name, string? aumid, IReadOnlyList<WatchedApp>? watched)
+    public static bool IsSelf(string? name, string? aumid) =>
+        (name ?? "").Contains("MochiDock", StringComparison.OrdinalIgnoreCase) || (aumid ?? "").Contains("MochiDock", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>The watched entry this toast belongs to, or null. When <paramref name="watchAll"/> is true, any non-Discord, non-MochiDock toast matches. Otherwise an entry with an AUMID matches only that AUMID; one without matches the display name.</summary>
+    public static WatchedApp? Match(string? name, string? aumid, IReadOnlyList<WatchedApp>? watched, bool watchAll = false)
     {
-        if (watched is null || watched.Count == 0 || IsDiscord(name, aumid)) return null;
+        if (IsDiscord(name, aumid) || IsSelf(name, aumid)) return null;
         string n = (name ?? "").Trim(), a = (aumid ?? "").Trim();
+        if (watchAll)
+        {
+            if (n.Length == 0 && a.Length == 0) return null;
+            return new WatchedApp(n.Length > 0 ? n : a, a);
+        }
+        if (watched is null || watched.Count == 0) return null;
         foreach (var app in watched)
         {
             if (app is null) continue;
@@ -51,7 +60,7 @@ public static class AppNotificationFilter
     {
         var list = (watched ?? []).ToList();
         if (string.IsNullOrWhiteSpace(app.Name) && string.IsNullOrWhiteSpace(app.Aumid)) return list;
-        if (IsDiscord(app.Name, app.Aumid) || list.Any(w => Same(w, app))) return list;
+        if (IsDiscord(app.Name, app.Aumid) || IsSelf(app.Name, app.Aumid) || list.Any(w => Same(w, app))) return list;
         list.Add(new WatchedApp((app.Name ?? "").Trim(), (app.Aumid ?? "").Trim()));
         return list;
     }

@@ -142,6 +142,65 @@ public class PrayerSchedule : INotifyPropertyChanged
         get => _currentPrayerElapsedText;
         private set { if (_currentPrayerElapsedText != value) { _currentPrayerElapsedText = value; OnPropertyChanged(); } }
     }
+
+    public DateTimeOffset? DhuhaStart { get; private set; }
+    public DateTimeOffset? DhuhaEnd { get; private set; }
+    public bool HasDhuha => DhuhaStart.HasValue && DhuhaEnd.HasValue;
+
+    private bool _isDhuhaActive;
+    public bool IsDhuhaActive
+    {
+        get => _isDhuhaActive;
+        private set { if (_isDhuhaActive != value) { _isDhuhaActive = value; OnPropertyChanged(); } }
+    }
+
+    private string _dhuhaRangeText = "";
+    public string DhuhaRangeText
+    {
+        get => _dhuhaRangeText;
+        private set { if (_dhuhaRangeText != value) { _dhuhaRangeText = value; OnPropertyChanged(); } }
+    }
+
+    private string _dhuhaStatusText = "";
+    public string DhuhaStatusText
+    {
+        get => _dhuhaStatusText;
+        private set { if (_dhuhaStatusText != value) { _dhuhaStatusText = value; OnPropertyChanged(); } }
+    }
+
+    public DateTimeOffset? ActivePeriodStart { get; private set; }
+    public DateTimeOffset? ActivePeriodEnd { get; private set; }
+
+    private string _activePeriodName = "";
+    public string ActivePeriodName
+    {
+        get => _activePeriodName;
+        private set { if (_activePeriodName != value) { _activePeriodName = value; OnPropertyChanged(); } }
+    }
+
+    private bool _isAnyPeriodActive;
+    public bool IsAnyPeriodActive
+    {
+        get => _isAnyPeriodActive;
+        private set { if (_isAnyPeriodActive != value) { _isAnyPeriodActive = value; OnPropertyChanged(); } }
+    }
+
+    private bool _isActivePeriodDhuha;
+    public bool IsActivePeriodDhuha
+    {
+        get => _isActivePeriodDhuha;
+        private set { if (_isActivePeriodDhuha != value) { _isActivePeriodDhuha = value; OnPropertyChanged(); } }
+    }
+
+    private string _activePeriodStatusText = "";
+    public string ActivePeriodStatusText
+    {
+        get => _activePeriodStatusText;
+        private set { if (_activePeriodStatusText != value) { _activePeriodStatusText = value; OnPropertyChanged(); } }
+    }
+
+    public bool HasPeriodBanner => !string.IsNullOrEmpty(ActivePeriodStatusText);
+
     public string Source { get; set; } = "";
     public IEnumerable<(string Name,DateTimeOffset At)> Instants()
     {
@@ -152,7 +211,7 @@ public class PrayerSchedule : INotifyPropertyChanged
     public void UpdateCountdown()
     {
         NowUtc=Clock();
-        if(string.IsNullOrWhiteSpace(TimeZoneId)){CurrentPrayer=null;CurrentPrayerInstant=null;TimeSinceCurrentPrayer=null;CurrentPrayerElapsedText="";NextPrayerInstant=null;TimeUntilNextPrayer=TimeSpan.Zero;NextPrayer=null;return;}
+        if(string.IsNullOrWhiteSpace(TimeZoneId)){CurrentPrayer=null;CurrentPrayerInstant=null;TimeSinceCurrentPrayer=null;CurrentPrayerElapsedText="";NextPrayerInstant=null;TimeUntilNextPrayer=TimeSpan.Zero;NextPrayer=null;DhuhaStart=null;DhuhaEnd=null;IsDhuhaActive=false;DhuhaRangeText="";DhuhaStatusText="";OnPropertyChanged(nameof(HasDhuha));ActivePeriodStart=null;ActivePeriodEnd=null;ActivePeriodName="";IsAnyPeriodActive=false;IsActivePeriodDhuha=false;ActivePeriodStatusText="";OnPropertyChanged(nameof(HasPeriodBanner));return;}
         var zone=TimeZoneInfo.FindSystemTimeZoneById(TimeZoneId);
         var local=TimeZoneInfo.ConvertTime(NowUtc,zone);
         PrayerTimeItem[] items=[Fajr,Dhuhr,Asr,Maghrib,Isha];
@@ -190,6 +249,64 @@ public class PrayerSchedule : INotifyPropertyChanged
         CountdownText=$"{totalMinutes/60}h {totalMinutes%60}m";
         CountdownFullText=$"{(int)remaining.TotalHours:00}:{remaining.Minutes:00}:{remaining.Seconds:00}";
         CurrentPrayerElapsedText=sinceCurrent is { } el?MochiDock.Core.TaskbarReadouts.FormatPrayerElapsed(el):"";
+        var sunriseInstant = MochiDock.Core.PrayerTime.At(Date.Date.Add(Sunrise.Time), zone);
+        var dhuhrInstant = MochiDock.Core.PrayerTime.At(Date.Date.Add(Dhuhr.Time), zone);
+        if (MochiDock.Core.PrayerTime.DhuhaWindow(sunriseInstant, dhuhrInstant, NowUtc) is { } dhuha)
+        {
+            DhuhaStart = dhuha.Start;
+            DhuhaEnd = dhuha.End;
+            var startLocal = TimeZoneInfo.ConvertTime(dhuha.Start, zone);
+            var endLocal = TimeZoneInfo.ConvertTime(dhuha.End, zone);
+            string range = $"{startLocal:HH:mm}–{endLocal:HH:mm}";
+            DhuhaRangeText = range;
+            IsDhuhaActive = dhuha.IsActive;
+            DhuhaStatusText = dhuha.IsActive
+                ? $"Dhuha now · {range} ({MochiDock.Core.PrayerTime.FormatDhuhaRemaining(dhuha.Remaining)})"
+                : $"Dhuha {range}";
+        }
+        else
+        {
+            DhuhaStart = null;
+            DhuhaEnd = null;
+            IsDhuhaActive = false;
+            DhuhaRangeText = "";
+            DhuhaStatusText = "";
+        }
+        OnPropertyChanged(nameof(HasDhuha));
+
+        var fajrInstant = MochiDock.Core.PrayerTime.At(Date.Date.Add(Fajr.Time), zone);
+        var asrInstant = MochiDock.Core.PrayerTime.At(Date.Date.Add(Asr.Time), zone);
+        var maghribInstant = MochiDock.Core.PrayerTime.At(Date.Date.Add(Maghrib.Time), zone);
+        var ishaInstant = MochiDock.Core.PrayerTime.At(Date.Date.Add(Isha.Time), zone);
+        if (MochiDock.Core.PrayerTime.ActivePeriod(fajrInstant, sunriseInstant, dhuhrInstant, asrInstant, maghribInstant, ishaInstant, TomorrowFajr, NowUtc) is { } ap)
+        {
+            ActivePeriodName = ap.Name;
+            ActivePeriodStart = ap.Start;
+            ActivePeriodEnd = ap.End;
+            IsAnyPeriodActive = true;
+            IsActivePeriodDhuha = ap.IsDhuha;
+            string rangeText = (ap.Start, ap.End) switch
+            {
+                ({ } s, { } e) => $"{TimeZoneInfo.ConvertTime(s, zone):HH:mm}–{TimeZoneInfo.ConvertTime(e, zone):HH:mm}",
+                (null, { } e) => $"until {TimeZoneInfo.ConvertTime(e, zone):HH:mm}",
+                ({ } s, null) => $"from {TimeZoneInfo.ConvertTime(s, zone):HH:mm}",
+                _ => ""
+            };
+            string remText = MochiDock.Core.PrayerTime.FormatDhuhaRemaining(ap.Remaining);
+            ActivePeriodStatusText = remText.Length > 0
+                ? $"{ap.Name} now · {rangeText} ({remText})"
+                : $"{ap.Name} now · {rangeText}";
+        }
+        else
+        {
+            ActivePeriodName = "";
+            ActivePeriodStart = null;
+            ActivePeriodEnd = null;
+            IsAnyPeriodActive = false;
+            IsActivePeriodDhuha = false;
+            ActivePeriodStatusText = HasDhuha ? $"Dhuha {DhuhaRangeText}" : "";
+        }
+        OnPropertyChanged(nameof(HasPeriodBanner));
         OnPropertyChanged(nameof(NowUtc));OnPropertyChanged(nameof(NextPrayerDayText));OnPropertyChanged(nameof(Source));
         var moon = Moon;
         if (!string.Equals(moon.Summary, _lastMoonSummary, StringComparison.Ordinal) || moon.IlluminationPercent != _lastMoonPercent)

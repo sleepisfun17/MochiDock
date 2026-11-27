@@ -52,6 +52,25 @@ public class AppNotificationFilterTests
         var list = AppNotificationFilter.Add(new[] { Line }, new WatchedApp("LINE again", Line.Aumid.ToUpperInvariant()));
         Assert.Single(list);
         Assert.Single(AppNotificationFilter.Add(list, new WatchedApp(" ", "")));
+        Assert.Single(AppNotificationFilter.Add(list, new WatchedApp("MochiDock", "MochiDock.App")));
         Assert.Equal(2, AppNotificationFilter.Add(list, Telegram).Count);
+    }
+
+    [Fact]
+    public void WatchAllMatchesOtherAppsExceptDiscordAndSelf()
+    {
+        var chatGpt = AppNotificationFilter.Match("ChatGPT", "OpenAI.Codex_2p2nqsd0c76g0!App", Array.Empty<WatchedApp>(), watchAll: true);
+        Assert.NotNull(chatGpt);
+        Assert.Equal("ChatGPT", chatGpt!.Name);
+        Assert.Equal("OpenAI.Codex_2p2nqsd0c76g0!App", chatGpt.Aumid);
+
+        var aumidOnly = AppNotificationFilter.Match("", "Slack.App", null, watchAll: true);
+        Assert.NotNull(aumidOnly);
+        Assert.Equal("Slack.App", aumidOnly!.Name);
+
+        Assert.Null(AppNotificationFilter.Match("Discord", "com.squirrel.Discord.Discord", null, watchAll: true));
+        Assert.Null(AppNotificationFilter.Match("MochiDock", "sleepisfun17.MochiDock", null, watchAll: true));
+        Assert.Null(AppNotificationFilter.Match("MochiDock", "", new[] { new WatchedApp("MochiDock", "") }, watchAll: false));
+        Assert.Null(AppNotificationFilter.Match(" ", " ", null, watchAll: true));
     }
 }

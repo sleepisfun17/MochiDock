@@ -148,5 +148,77 @@ public class PrayerTests : IDisposable
         Assert.Equal(schedule.TomorrowFajr,seen[0].Instant);
         Assert.True(seen[0].Remaining>TimeSpan.FromHours(9));
     }
+
+    [Fact]
+    public void DhuhaWindowComputesOffsetsActiveStateRemainingAndGuardsShortDays()
+    {
+        var offset = TimeSpan.FromHours(9);
+        var sunrise = new DateTimeOffset(2026, 11, 28, 6, 28, 0, offset);
+        var dhuhr = new DateTimeOffset(2026, 11, 28, 11, 40, 0, offset);
+
+        var before = PrayerTime.DhuhaWindow(sunrise, dhuhr, sunrise.AddMinutes(10));
+        Assert.NotNull(before);
+        Assert.Equal(new DateTimeOffset(2026, 11, 28, 6, 43, 0, offset), before!.Value.Start);
+        Assert.Equal(new DateTimeOffset(2026, 11, 28, 11, 30, 0, offset), before.Value.End);
+        Assert.False(before.Value.IsActive);
+        Assert.Equal(TimeSpan.Zero, before.Value.Remaining);
+
+        var during = PrayerTime.DhuhaWindow(sunrise, dhuhr, new DateTimeOffset(2026, 11, 28, 9, 15, 0, offset));
+        Assert.True(during!.Value.IsActive);
+        Assert.Equal(TimeSpan.FromMinutes(135), during.Value.Remaining);
+        Assert.Equal("2h 15m left", PrayerTime.FormatDhuhaRemaining(during.Value.Remaining));
+        Assert.Equal("1m left", PrayerTime.FormatDhuhaRemaining(TimeSpan.FromSeconds(12)));
+        Assert.Equal("", PrayerTime.FormatDhuhaRemaining(TimeSpan.Zero));
+
+        var atEnd = PrayerTime.DhuhaWindow(sunrise, dhuhr, new DateTimeOffset(2026, 11, 28, 11, 30, 0, offset));
+        Assert.False(atEnd!.Value.IsActive);
+
+        // Extreme latitude where Dhuhr - 10m <= Sunrise + 15m
+        Assert.Null(PrayerTime.DhuhaWindow(sunrise, sunrise.AddMinutes(20), sunrise));
+    }
+
+    [Fact]
+    public void ActivePeriodCoversEveryFardPrayerDhuhaAndProhibitedGaps()
+    {
+        var offset = TimeSpan.FromHours(9);
+        var fajr = new DateTimeOffset(2026, 11, 28, 4, 50, 0, offset);
+        var sunrise = new DateTimeOffset(2026, 11, 28, 6, 28, 0, offset);
+        var dhuhr = new DateTimeOffset(2026, 11, 28, 11, 40, 0, offset);
+        var asr = new DateTimeOffset(2026, 11, 28, 14, 30, 0, offset);
+        var maghrib = new DateTimeOffset(2026, 11, 28, 16, 45, 0, offset);
+        var isha = new DateTimeOffset(2026, 11, 28, 18, 10, 0, offset);
+        var tomorrowFajr = new DateTimeOffset(2026, 11, 29, 4, 51, 0, offset);
+
+        // Pre-Fajr overnight Isha
+        var preFajr = PrayerTime.ActivePeriod(fajr, sunrise, dhuhr, asr, maghrib, isha, tomorrowFajr, fajr.AddMinutes(-30));
+        Assert.Equal(("Isha", (DateTimeOffset?)null, (DateTimeOffset?)fajr, TimeSpan.FromMinutes(30), false),
+            (preFajr!.Value.Name, preFajr.Value.Start, preFajr.Value.End, preFajr.Value.Remaining, preFajr.Value.IsDhuha));
+
+        // Fajr ends at Sunrise (Shuruq)
+        var inFajr = PrayerTime.ActivePeriod(fajr, sunrise, dhuhr, asr, maghrib, isha, tomorrowFajr, fajr.AddMinutes(20));
+        Assert.Equal(("Fajr", (DateTimeOffset?)fajr, (DateTimeOffset?)sunrise, sunrise - fajr.AddMinutes(20), false),
+            (inFajr!.Value.Name, inFajr.Value.Start, inFajr.Value.End, inFajr.Value.Remaining, inFajr.Value.IsDhuha));
+
+        // Prohibited Shuruq gap (Sunrise .. Sunrise + 15m)
+        Assert.Null(PrayerTime.ActivePeriod(fajr, sunrise, dhuhr, asr, maghrib, isha, tomorrowFajr, sunrise.AddMinutes(5)));
+
+        // Dhuha (Sunrise + 15m .. Dhuhr - 10m)
+        var inDhuha = PrayerTime.ActivePeriod(fajr, sunrise, dhuhr, asr, maghrib, isha, tomorrowFajr, sunrise.AddMinutes(30));
+        Assert.Equal(("Dhuha", (DateTimeOffset?)sunrise.AddMinutes(15), (DateTimeOffset?)dhuhr.AddMinutes(-10), true),
+            (inDhuha!.Value.Name, inDhuha.Value.Start, inDhuha.Value.End, inDhuha.Value.IsDhuha));
+
+        // Prohibited zenith gap (Dhuhr - 10m .. Dhuhr)
+        Assert.Null(PrayerTime.ActivePeriod(fajr, sunrise, dhuhr, asr, maghrib, isha, tomorrowFajr, dhuhr.AddMinutes(-5)));
+
+        // Dhuhr, Asr, Maghrib, Isha
+        Assert.Equal("Dhuhr", PrayerTime.ActivePeriod(fajr, sunrise, dhuhr, asr, maghrib, isha, tomorrowFajr, dhuhr.AddMinutes(15))!.Value.Name);
+        Assert.Equal("Asr", PrayerTime.ActivePeriod(fajr, sunrise, dhuhr, asr, maghrib, isha, tomorrowFajr, asr.AddMinutes(15))!.Value.Name);
+        Assert.Equal("Maghrib", PrayerTime.ActivePeriod(fajr, sunrise, dhuhr, asr, maghrib, isha, tomorrowFajr, maghrib.AddMinutes(15))!.Value.Name);
+
+        var postIsha = PrayerTime.ActivePeriod(fajr, sunrise, dhuhr, asr, maghrib, isha, tomorrowFajr, isha.AddMinutes(30));
+        Assert.Equal(("Isha", (DateTimeOffset?)isha, (DateTimeOffset?)tomorrowFajr, tomorrowFajr - isha.AddMinutes(30), false),
+            (postIsha!.Value.Name, postIsha.Value.Start, postIsha.Value.End, postIsha.Value.Remaining, postIsha.Value.IsDhuha));
+    }
+
     public void Dispose(){if(Directory.Exists(_directory))Directory.Delete(_directory,true);}
 }

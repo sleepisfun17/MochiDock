@@ -1,4 +1,5 @@
 using System;
+using System.ComponentModel;
 using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
@@ -16,13 +17,58 @@ namespace MochiDock.Views.Settings.Sections;
 public partial class NotificationsSectionView : SettingsSectionBase
 {
     private readonly DispatcherTimer _snoozeTimer = new() { Interval = TimeSpan.FromSeconds(5) };
+    private MainViewModel? _subscribedVm;
 
     public NotificationsSectionView()
     {
         InitializeComponent();
         _snoozeTimer.Tick += (s, e) => UpdateSnoozeText();
-        Loaded += (s, e) => _snoozeTimer.Start();
-        Unloaded += (s, e) => _snoozeTimer.Stop();
+        Loaded += (s, e) => { _snoozeTimer.Start(); SubscribeVm(); };
+        Unloaded += (s, e) => { _snoozeTimer.Stop(); UnsubscribeVm(); };
+    }
+
+    private void SubscribeVm()
+    {
+        if (ReferenceEquals(_subscribedVm, ViewModel)) return;
+        UnsubscribeVm();
+        _subscribedVm = ViewModel;
+        if (_subscribedVm != null) _subscribedVm.PropertyChanged += ViewModel_PropertyChanged;
+    }
+
+    private void UnsubscribeVm()
+    {
+        if (_subscribedVm != null) _subscribedVm.PropertyChanged -= ViewModel_PropertyChanged;
+        _subscribedVm = null;
+    }
+
+    private void ViewModel_PropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(MainViewModel.UnwatchedRecentApps))
+            RefreshRecentAppsCombo();
+        else if (e.PropertyName == nameof(MainViewModel.NotificationAccessAllowed))
+            NotificationAccessText.Visibility = ViewModel?.NotificationAccessAllowed == false ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    private void RefreshRecentAppsCombo()
+    {
+        if (ViewModel == null) return;
+        var selected = RecentAppsCombo.SelectedItem as WatchedApp;
+        var items = ViewModel.UnwatchedRecentApps;
+        RecentAppsCombo.ItemsSource = items;
+        if (selected != null)
+        {
+            var match = items.FirstOrDefault(r => AppNotificationFilter.Same(r, selected));
+            if (match != null) { RecentAppsCombo.SelectedItem = match; return; }
+        }
+        if (RecentAppsCombo.SelectedIndex < 0 && items.Count > 0) RecentAppsCombo.SelectedIndex = 0;
+    }
+
+    private void UpdateWatchAllUi(bool watchAll)
+    {
+        AppsAddRow.IsEnabled = !watchAll;
+        AppsAddRow.Opacity = watchAll ? 0.5 : 1.0;
+        WatchedAppsList.IsEnabled = !watchAll;
+        WatchedAppsList.Opacity = watchAll ? 0.5 : 1.0;
     }
 
     private static void SetText(TextBox box, string text) { if (!box.IsKeyboardFocused) box.Text = text; }
@@ -36,9 +82,10 @@ public partial class NotificationsSectionView : SettingsSectionBase
             MuteEmailCheck.IsChecked = settings.MuteEmail;
             MuteDiscordCheck.IsChecked = settings.MuteDiscord;
             MuteAppsCheck.IsChecked = settings.MuteApps;
+            WatchAllAppsCheck.IsChecked = settings.WatchAllApps;
+            UpdateWatchAllUi(settings.WatchAllApps);
             WatchedAppsList.ItemsSource = vm.WatchedApps.ToList();
-            RecentAppsCombo.ItemsSource = vm.UnwatchedRecentApps;
-            if (RecentAppsCombo.SelectedIndex < 0 && RecentAppsCombo.Items.Count > 0) RecentAppsCombo.SelectedIndex = 0;
+            RefreshRecentAppsCombo();
             NotificationAccessText.Visibility = vm.NotificationAccessAllowed == false ? Visibility.Visible : Visibility.Collapsed;
             MuteWhatsAppCheck.IsChecked = settings.MuteWhatsApp;
             QuietHoursCheck.IsChecked = settings.QuietHoursEnabled;
@@ -138,6 +185,14 @@ public partial class NotificationsSectionView : SettingsSectionBase
         if (e.Key != System.Windows.Input.Key.Enter) return;
         AllowDiscord_Click(sender, e);
         e.Handled = true;
+    }
+
+    private void WatchAllApps_Changed(object sender, RoutedEventArgs e)
+    {
+        if (!IsLoaded || Loading) return;
+        bool on = WatchAllAppsCheck.IsChecked == true;
+        ViewModel?.SetWatchAllApps(on);
+        UpdateWatchAllUi(on);
     }
 
     private void AddRecentApp_Click(object sender, RoutedEventArgs e)

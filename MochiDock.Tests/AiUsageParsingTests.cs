@@ -349,4 +349,30 @@ public class AiUsageParsingTests
 
     [Fact]
     public void ResetTextIsEmptyWhenUnknown() => Assert.Equal("", AiUsageParsing.RenewalText(null, Now));
+
+    [Theory]
+    [InlineData(0.0, "0%")]
+    [InlineData(-1.0, "0%")]
+    [InlineData(0.004, "<0.01%")]
+    [InlineData(0.35, "0.35%")]
+    [InlineData(0.99, "0.99%")]
+    [InlineData(4.64, "4.64%")]
+    [InlineData(5.0, "5%")]
+    [InlineData(9.96, "9.96%")]
+    [InlineData(37.65, "37.65%")]
+    [InlineData(42.4, "42.4%")]
+    [InlineData(100.0, "100%")]
+    public void FormatLeftPercentKeepsFractionalPrecisionAcrossRange(double leftPct, string expected) =>
+        Assert.Equal(expected, AiUsageParsing.FormatLeftPercent(leftPct));
+
+    [Fact]
+    public void FormatQuotaTooltipShowsExactLeftUsedAndOptionalRenewal()
+    {
+        Assert.Equal("5 hours: 0.35% left (99.65% used) · Renews in 2h",
+            AiUsageParsing.FormatQuotaTooltip("5 hours", 0.9965, "Renews in 2h"));
+        Assert.Equal("7 days: <0.01% left (99.99% used)",
+            AiUsageParsing.FormatQuotaTooltip("7 days", 0.99994, "Ready"));
+        Assert.Equal("5 hours: 100% left (0% used)",
+            AiUsageParsing.FormatQuotaTooltip("5 hours", 0.0, ""));
+    }
 }
