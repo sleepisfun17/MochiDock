@@ -11,7 +11,7 @@
 
 <p align="center">
   <a href="https://github.com/sleepisfun17/MochiDock/actions/workflows/ci.yml"><img src="https://github.com/sleepisfun17/MochiDock/actions/workflows/ci.yml/badge.svg" alt="Build and tests"></a>
-  <a href="https://github.com/sleepisfun17/MochiDock/releases/latest"><img src="https://img.shields.io/github/v/release/sleepisfun17/MochiDock?include_prereleases&amp;label=release" alt="Latest release"></a>
+  <a href="https://github.com/sleepisfun17/MochiDock/releases"><img src="https://img.shields.io/github/v/release/sleepisfun17/MochiDock?include_prereleases&amp;label=release" alt="GitHub releases"></a>
 </p>
 
 <p align="center">
@@ -26,8 +26,7 @@
 > **Beta.** Many features have been built and unit-tested cleanly, though not every integration has been verified across a wide range of machines. See the [changelog and known limitations](CHANGELOG.md).
 
 <p align="center">
-  <img src="docs/media/mochidock-dock.webp" alt="The idle MochiDock capsule expanding smoothly into the Media card when hovered" width="660"><br>
-  <sub><a href="docs/media/mochidock-dock.png">Still (PNG)</a> · <a href="docs/media/mochidock-dock.mp4">Video (MP4)</a></sub>
+  <img src="docs/media/mochidock-dock.webp" alt="The idle MochiDock capsule expanding smoothly into the Media card when hovered" width="660">
 </p>
 
 ## What it is
@@ -48,8 +47,7 @@ MochiDock sits quietly at the top of your monitor as a compact pill — notched 
 Controls for Spotify, YouTube Music, and browser playback via Windows GSMTC, a seekable timeline, and synced LRCLIB lyrics — with automatic Japanese, Korean, and Chinese readings/furigana and paced compact capsule scrolling.
 
 <p align="center">
-  <img src="docs/media/mochidock-japanese-lyrics.webp" alt="Compact MochiDock capsule displaying synced Japanese lyrics with romaji reading" width="660"><br>
-  <sub><a href="docs/media/mochidock-japanese-lyrics.png">Still (PNG)</a> · <a href="docs/media/mochidock-japanese-lyrics.mp4">Video (MP4)</a></sub>
+  <img src="docs/media/mochidock-japanese-lyrics.webp" alt="Compact MochiDock capsule displaying synced Japanese lyrics with romaji reading" width="660">
 </p>
 
 ### Live stats, network & power
@@ -58,17 +56,17 @@ Real-time **Stats** views for CPU (per-core bars, clocks, temps), GPU, Memory, D
 
 <p align="center">
   <img src="docs/media/mochidock-live-stats.webp" alt="The Stats card cycling through CPU, GPU, and memory while live charts and top processes update" width="660"><br>
-  <sub><b>Live Stats:</b> <a href="docs/media/mochidock-live-stats.png">Still (PNG)</a> · <a href="docs/media/mochidock-live-stats.mp4">Video (MP4)</a></sub>
+  <sub><b>Live Stats</b></sub>
 </p>
 
 <p align="center">
   <img src="docs/media/mochidock-network.webp" alt="Network dashboard showing live upload and download rates, usage history, and latency ping" width="660"><br>
-  <sub><b>Network:</b> <a href="docs/media/mochidock-network.png">Still (PNG)</a> · <a href="docs/media/mochidock-network.mp4">Video (MP4)</a></sub>
+  <sub><b>Network</b></sub>
 </p>
 
 <p align="center">
   <img src="docs/media/mochidock-power.webp" alt="Power &amp; Batteries view showing stacked PC power consumption and connected wireless mouse battery" width="660"><br>
-  <sub><b>Power &amp; Wireless Batteries:</b> <a href="docs/media/mochidock-power.png">Still (PNG)</a> · <a href="docs/media/mochidock-power.mp4">Video (MP4)</a></sub>
+  <sub><b>Power &amp; Wireless Batteries</b></sub>
 </p>
 
 ### Gaming overlay & window shortcuts
@@ -80,8 +78,7 @@ While a game runs (or when pinned from **Stats > Games**), the capsule switches 
 - **Display & window hotkeys:** Toggle between native and gaming resolutions (`Ctrl+Alt+R`), or resize/centre windows into preset sizes (`Ctrl+Alt+1–4`) and flip landscape/portrait (`Ctrl+Alt+F`).
 
 <p align="center">
-  <img src="docs/media/mochidock-gaming.webp" alt="Compact MochiDock gaming overlay showing live FPS, GPU usage and temperature, CPU usage, and weather over gameplay" width="660"><br>
-  <sub><a href="docs/media/mochidock-gaming.png">Still (PNG)</a> · <a href="docs/media/mochidock-gaming.mp4">Video (MP4)</a></sub>
+  <img src="docs/media/mochidock-gaming.webp" alt="Compact MochiDock gaming overlay showing live FPS, GPU usage and temperature, CPU usage, and weather over gameplay" width="660">
 </p>
 
 ### Taskbar readouts
@@ -92,8 +89,7 @@ Compact two-line blocks placed directly on the Windows taskbar (left edge, left 
 - **Interactive controls:** Hover any block for a themed 1-second MochiDock hover card, click to open its dock tab, or right-click to move/hide blocks cleanly.
 
 <p align="center">
-  <img src="docs/media/mochidock-taskbar.webp" alt="Live Windows taskbar readout strips showing CPU, GPU, memory, disk, prayer countdown, mouse battery, network speeds, and weather" width="660"><br>
-  <sub><a href="docs/media/mochidock-taskbar.png">Still (PNG)</a> · <a href="docs/media/mochidock-taskbar.mp4">Video (MP4)</a></sub>
+  <img src="docs/media/mochidock-taskbar.webp" alt="Live Windows taskbar readout strips showing CPU, GPU, memory, disk, prayer countdown, mouse battery, network speeds, and weather" width="660">
 </p>
 
 ### Weather & daily companions
@@ -102,17 +98,17 @@ Optional daily modules you can switch on anytime from **Settings > Tabs & Module
 
 <p align="center">
   <img src="docs/media/mochidock-weather.webp" alt="Weather card showing current temperature, wind speed, hourly forecast, and three-day outlook" width="660"><br>
-  <sub><b>Weather:</b> <a href="docs/media/mochidock-weather.png">Still (PNG)</a> · <a href="docs/media/mochidock-weather.mp4">Video (MP4)</a></sub>
+  <sub><b>Weather</b></sub>
 </p>
 
 <p align="center">
   <img src="docs/media/mochidock-prayer.webp" alt="Prayer card showing countdown, Imsak/Shuruq, active Dhuha window, Qibla bearing, schematic prayer curve, and moon phase" width="660"><br>
-  <sub><b>Prayer times &amp; moon phase:</b> <a href="docs/media/mochidock-prayer.png">Still (PNG)</a> · <a href="docs/media/mochidock-prayer.mp4">Video (MP4)</a></sub>
+  <sub><b>Prayer times &amp; moon phase</b></sub>
 </p>
 
 <p align="center">
   <img src="docs/media/mochidock-fx-rates.webp" alt="FX Rates card showing USD/JPY, USD/IDR, and JPY/IDR quotes with a one-month trajectory chart" width="660"><br>
-  <sub><b>FX Rates:</b> <a href="docs/media/mochidock-fx-rates.png">Still (PNG)</a> · <a href="docs/media/mochidock-fx-rates.mp4">Video (MP4)</a></sub>
+  <sub><b>FX Rates</b></sub>
 </p>
 
 ### Notifications & focus
@@ -128,12 +124,12 @@ Switch between `Default` (dark), `Hojicha` (warm roasted-tea brown), `Kuro Night
 
 <p align="center">
   <img src="docs/media/mochidock-themes.webp" alt="Switching between Default, Matcha, and Kuro Night themes in MochiDock Quick Settings" width="660"><br>
-  <sub><b>Theme switching in Quick Settings:</b> <a href="docs/media/mochidock-themes.png">Still (PNG)</a> · <a href="docs/media/mochidock-themes.mp4">Video (MP4)</a></sub>
+  <sub><b>Theme switching in Quick Settings</b></sub>
 </p>
 
 <p align="center">
   <img src="docs/media/mochidock-mascots.webp" alt="Switching from Kuro to Shiro in Quick Settings with spin transition" width="660"><br>
-  <sub><b>Mascot switching &amp; spin:</b> <a href="docs/media/mochidock-mascots.png">Still (PNG)</a> · <a href="docs/media/mochidock-mascots.mp4">Video (MP4)</a></sub>
+  <sub><b>Mascot switching &amp; spin</b></sub>
 </p>
 
 ![All five mascots (Mochi, Matcha Mochi, Hojicha Mochi, Kuro, and Shiro) rendered across all four themes with 3D Sticker status badges](docs/images/mascots-on-themes.png)
@@ -159,20 +155,16 @@ Switch between `Default` (dark), `Hojicha` (warm roasted-tea brown), `Kuro Night
 | Default | Matcha | Kuro Night |
 | --- | --- | --- |
 | ![Stats card, Default theme](docs/images/live/stats-default.png) | ![Stats card, Matcha theme](docs/images/live/stats-matcha.png) | ![Stats card, Kuro Night theme with Kuro](docs/images/live/stats-kuro-night-kuro.png) |
-| ![Media card with lyrics, Default theme](docs/images/live/media-default.png) | ![Media card with lyrics, Matcha theme](docs/images/live/media-matcha.png) | ![Media card with lyrics, Kuro Night theme with Kuro](docs/images/live/media-kuro-night-kuro.png) |
+| ![Media card, Default theme](docs/images/live/media-default.png) | ![Media card, Matcha theme](docs/images/live/media-matcha.png) | ![Media card, Kuro Night theme with Kuro](docs/images/live/media-kuro-night-kuro.png) |
 | ![FX Rates card, Default theme](docs/images/live/fx-default.png) | ![FX Rates card, Matcha theme](docs/images/live/fx-matcha.png) | ![FX Rates card, Kuro Night theme with Kuro](docs/images/live/fx-kuro-night-kuro.png) |
 | ![Prayer times card, Default theme](docs/images/live/prayer-default.png) | ![Prayer times card, Matcha theme](docs/images/live/prayer-matcha.png) | ![Prayer times card, Kuro Night theme with Kuro](docs/images/live/prayer-kuro-night-kuro.png) |
 
 <table>
   <tr>
-    <td><img src="docs/images/live/today-default.png" alt="Today card, Default theme"></td>
-    <td><img src="docs/images/live/today-matcha.png" alt="Today card, Matcha theme"></td>
+    <td><img src="docs/images/live/pomodoro-matcha.png" alt="Pomodoro card, Matcha theme"></td>
   </tr>
   <tr>
-    <td colspan="2"><img src="docs/images/live/pomodoro-matcha.png" alt="Pomodoro card, Matcha theme"></td>
-  </tr>
-  <tr>
-    <td colspan="2"><img src="docs/images/live/ai-usage-default.png" alt="AI usage card, Default theme"></td>
+    <td><img src="docs/images/live/ai-usage-default.png" alt="AI usage card, Default theme"></td>
   </tr>
 </table>
 
