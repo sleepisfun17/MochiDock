@@ -26,7 +26,7 @@
 > **Beta.** Many features have been built and unit-tested cleanly, though not every integration has been verified across a wide range of machines. See the [changelog and known limitations](CHANGELOG.md).
 
 <p align="center">
-  <img src="docs/media/mochidock-dock.gif" alt="The idle MochiDock capsule expanding smoothly into the Media card when hovered" width="660"><br>
+  <img src="docs/media/mochidock-dock.webp" alt="The idle MochiDock capsule expanding smoothly into the Media card when hovered" width="660"><br>
   <sub><a href="docs/media/mochidock-dock.png">Still (PNG)</a> · <a href="docs/media/mochidock-dock.mp4">Video (MP4)</a></sub>
 </p>
 
@@ -48,7 +48,7 @@ MochiDock sits quietly at the top of your monitor as a compact pill — notched 
 Controls for Spotify, YouTube Music, and browser playback via Windows GSMTC, a seekable timeline, and synced LRCLIB lyrics — with automatic Japanese, Korean, and Chinese readings/furigana and paced compact capsule scrolling.
 
 <p align="center">
-  <img src="docs/media/mochidock-japanese-lyrics.gif" alt="Compact MochiDock capsule displaying synced Japanese lyrics with romaji reading" width="660"><br>
+  <img src="docs/media/mochidock-japanese-lyrics.webp" alt="Compact MochiDock capsule displaying synced Japanese lyrics with romaji reading" width="660"><br>
   <sub><a href="docs/media/mochidock-japanese-lyrics.png">Still (PNG)</a> · <a href="docs/media/mochidock-japanese-lyrics.mp4">Video (MP4)</a></sub>
 </p>
 
@@ -57,17 +57,17 @@ Controls for Spotify, YouTube Music, and browser playback via Windows GSMTC, a s
 Real-time **Stats** views for CPU (per-core bars, clocks, temps), GPU, Memory, Drives, Network (upload/download speed, usage trajectory, ping), Top Processes, 24-hour history, **Power & Batteries** (stacked desktop CPU/GPU/other wattage or laptop draw), and wireless mouse/keyboard/headset battery levels.
 
 <p align="center">
-  <img src="docs/media/mochidock-live-stats.gif" alt="The Stats card cycling through CPU, GPU, and memory while live charts and top processes update" width="660"><br>
+  <img src="docs/media/mochidock-live-stats.webp" alt="The Stats card cycling through CPU, GPU, and memory while live charts and top processes update" width="660"><br>
   <sub><b>Live Stats:</b> <a href="docs/media/mochidock-live-stats.png">Still (PNG)</a> · <a href="docs/media/mochidock-live-stats.mp4">Video (MP4)</a></sub>
 </p>
 
 <p align="center">
-  <img src="docs/media/mochidock-network.gif" alt="Network dashboard showing live upload and download rates, usage history, and latency ping" width="660"><br>
+  <img src="docs/media/mochidock-network.webp" alt="Network dashboard showing live upload and download rates, usage history, and latency ping" width="660"><br>
   <sub><b>Network:</b> <a href="docs/media/mochidock-network.png">Still (PNG)</a> · <a href="docs/media/mochidock-network.mp4">Video (MP4)</a></sub>
 </p>
 
 <p align="center">
-  <img src="docs/media/mochidock-power.gif" alt="Power &amp; Batteries view showing stacked PC power consumption and connected wireless mouse battery" width="660"><br>
+  <img src="docs/media/mochidock-power.webp" alt="Power &amp; Batteries view showing stacked PC power consumption and connected wireless mouse battery" width="660"><br>
   <sub><b>Power &amp; Wireless Batteries:</b> <a href="docs/media/mochidock-power.png">Still (PNG)</a> · <a href="docs/media/mochidock-power.mp4">Video (MP4)</a></sub>
 </p>
 
@@ -80,7 +80,7 @@ While a game runs (or when pinned from **Stats > Games**), the capsule switches 
 - **Display & window hotkeys:** Toggle between native and gaming resolutions (`Ctrl+Alt+R`), or resize/centre windows into preset sizes (`Ctrl+Alt+1–4`) and flip landscape/portrait (`Ctrl+Alt+F`).
 
 <p align="center">
-  <img src="docs/media/mochidock-gaming.gif" alt="Compact MochiDock gaming overlay showing live FPS, GPU usage and temperature, CPU usage, and weather over gameplay" width="660"><br>
+  <img src="docs/media/mochidock-gaming.webp" alt="Compact MochiDock gaming overlay showing live FPS, GPU usage and temperature, CPU usage, and weather over gameplay" width="660"><br>
   <sub><a href="docs/media/mochidock-gaming.png">Still (PNG)</a> · <a href="docs/media/mochidock-gaming.mp4">Video (MP4)</a></sub>
 </p>
 
@@ -92,7 +92,7 @@ Compact two-line blocks placed directly on the Windows taskbar (left edge, left 
 - **Interactive controls:** Hover any block for a themed 1-second MochiDock hover card, click to open its dock tab, or right-click to move/hide blocks cleanly.
 
 <p align="center">
-  <img src="docs/media/mochidock-taskbar.gif" alt="Live Windows taskbar readout strips showing CPU, GPU, memory, disk, prayer countdown, mouse battery, network speeds, and weather" width="660"><br>
+  <img src="docs/media/mochidock-taskbar.webp" alt="Live Windows taskbar readout strips showing CPU, GPU, memory, disk, prayer countdown, mouse battery, network speeds, and weather" width="660"><br>
   <sub><a href="docs/media/mochidock-taskbar.png">Still (PNG)</a> · <a href="docs/media/mochidock-taskbar.mp4">Video (MP4)</a></sub>
 </p>
 
@@ -101,17 +101,17 @@ Compact two-line blocks placed directly on the Windows taskbar (left edge, left 
 Optional daily modules you can switch on anytime from **Settings > Tabs & Modules**: **Weather** (with day/night capsule badges and rain-soon notices), **Prayer times** (Aladhan schedule, schematic timeline with active prayer & Dhuha period glow, qibla bearing, offline moon phase, Tone/Silent reminders), **FX rates** (25 currencies with 7D/1M/1Y charts and no API key), **Today** (month calendar, `.ics` feeds, inline-editable & snoozable tasks & reminders), **Pomodoro**, **AI usage**, **File Shelf** (local Wi-Fi Phone Drop), **Clipboard**, **Script** teleprompter (`Alt+Shift+S`), and **Downloads** (`yt-dlp` + `ffmpeg`).
 
 <p align="center">
-  <img src="docs/media/mochidock-weather.gif" alt="Weather card showing current temperature, wind speed, hourly forecast, and three-day outlook" width="660"><br>
+  <img src="docs/media/mochidock-weather.webp" alt="Weather card showing current temperature, wind speed, hourly forecast, and three-day outlook" width="660"><br>
   <sub><b>Weather:</b> <a href="docs/media/mochidock-weather.png">Still (PNG)</a> · <a href="docs/media/mochidock-weather.mp4">Video (MP4)</a></sub>
 </p>
 
 <p align="center">
-  <img src="docs/media/mochidock-prayer.gif" alt="Prayer card showing countdown, Imsak/Shuruq, active Dhuha window, Qibla bearing, schematic prayer curve, and moon phase" width="660"><br>
+  <img src="docs/media/mochidock-prayer.webp" alt="Prayer card showing countdown, Imsak/Shuruq, active Dhuha window, Qibla bearing, schematic prayer curve, and moon phase" width="660"><br>
   <sub><b>Prayer times &amp; moon phase:</b> <a href="docs/media/mochidock-prayer.png">Still (PNG)</a> · <a href="docs/media/mochidock-prayer.mp4">Video (MP4)</a></sub>
 </p>
 
 <p align="center">
-  <img src="docs/media/mochidock-fx-rates.gif" alt="FX Rates card showing USD/JPY, USD/IDR, and JPY/IDR quotes with a one-month trajectory chart" width="660"><br>
+  <img src="docs/media/mochidock-fx-rates.webp" alt="FX Rates card showing USD/JPY, USD/IDR, and JPY/IDR quotes with a one-month trajectory chart" width="660"><br>
   <sub><b>FX Rates:</b> <a href="docs/media/mochidock-fx-rates.png">Still (PNG)</a> · <a href="docs/media/mochidock-fx-rates.mp4">Video (MP4)</a></sub>
 </p>
 
@@ -127,12 +127,12 @@ Optional daily modules you can switch on anytime from **Settings > Tabs & Module
 Switch between `Default` (dark), `Hojicha` (warm roasted-tea brown), `Kuro Night` (storm-night indigo), and `Matcha` (warm oat and green) in the dock's **Quick Settings** or searchable 5-group **Settings** window. Pair any theme with **Auto**, grey **Mochi**, **Matcha Mochi**, **Hojicha Mochi**, **Kuro** (electric black cat), or **Shiro** (white cat), toggle the **Cat mouth** (`:3`) option for Kuro & Shiro, and pick your status badge style (**3D Charm**, **Speech Bubble**, **3D Sticker**, or **Off**).
 
 <p align="center">
-  <img src="docs/media/mochidock-themes.gif" alt="Switching between Default, Matcha, and Kuro Night themes in MochiDock Quick Settings" width="660"><br>
+  <img src="docs/media/mochidock-themes.webp" alt="Switching between Default, Matcha, and Kuro Night themes in MochiDock Quick Settings" width="660"><br>
   <sub><b>Theme switching in Quick Settings:</b> <a href="docs/media/mochidock-themes.png">Still (PNG)</a> · <a href="docs/media/mochidock-themes.mp4">Video (MP4)</a></sub>
 </p>
 
 <p align="center">
-  <img src="docs/media/mochidock-mascots.gif" alt="Switching from Kuro to Shiro in Quick Settings with spin transition" width="660"><br>
+  <img src="docs/media/mochidock-mascots.webp" alt="Switching from Kuro to Shiro in Quick Settings with spin transition" width="660"><br>
   <sub><b>Mascot switching &amp; spin:</b> <a href="docs/media/mochidock-mascots.png">Still (PNG)</a> · <a href="docs/media/mochidock-mascots.mp4">Video (MP4)</a></sub>
 </p>
 

@@ -50,9 +50,11 @@ if (!scene || scene === '--list') {
   ffmpeg(['-ss', String(start), '-i', source, '-t', duration, '-vf', crop,
     '-an', '-c:v', 'libx264', '-crf', '19', '-pix_fmt', 'yuv420p', '-movflags', '+faststart', output('mp4')]);
   ffmpeg(['-ss', String(still), '-i', source, '-vf', crop, '-frames:v', '1', output('png')]);
+  ffmpeg(['-i', output('mp4'), '-an', '-c:v', 'libwebp_anim',
+    '-quality', '88', '-compression_level', '5', '-loop', '0', output('webp')]);
   ffmpeg(['-i', output('mp4'), '-vf',
     `fps=12,scale=${portrait ? 486 : 660}:-2:flags=lanczos,split[a][b];[a]palettegen=stats_mode=diff:max_colors=128[p];[b][p]paletteuse=dither=bayer:bayer_scale=4:diff_mode=rectangle`,
     '-loop', '0', output('gif')]);
 
-  console.log(`Exported ${base}.mp4, .png, and .gif to ${fileURLToPath(media)}`);
+  console.log(`Exported ${base}.mp4, .png, .webp, and .gif to ${fileURLToPath(media)}`);
 }

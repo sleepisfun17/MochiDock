@@ -62,4 +62,4 @@ node mochidock-v1-retake/extract-media.mjs taskbar
 node mochidock-v1-retake/extract-media.mjs japanese-lyrics --portrait
 ```
 
-Each command writes a silent H.264 MP4, a PNG poster, and a 12 fps GIF to `out/docs-media/`. The default crop isolates the app inside the promo’s frame. `--portrait` keeps the full portrait composition and its captions. Extraction uses the rendered promo so the Weather and Network masks carry over.
+Each command writes a silent H.264 MP4, a PNG poster, a 30 fps animated WebP for the README, and a 12 fps GIF to `out/docs-media/`. The default crop isolates the app inside the promo’s frame. `--portrait` keeps the full portrait composition and its captions. Extraction uses the rendered promo so the Weather and Network masks carry over.
