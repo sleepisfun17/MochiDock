@@ -36,7 +36,7 @@ MochiDock sits quietly at the top of your monitor as a compact pill — notched 
 
 - **Compact first:** Resting clock and weather pills, paced one-line capsule lyrics, and non-intrusive notification banners that expand only when you hover.
 - **Built for desktop & gaming:** Real-time ETW FPS, GPU/CPU temps with colour limits, click-through overlay, taskbar system strips, and per-game resolution/window shortcuts.
-- **Quiet multi-source inbox:** WhatsApp, Email (IMAP, Outlook Classic, Mailspring), Discord, and watched Windows apps, with per-source Mute, Snooze, Quiet hours, and Gaming DND.
+- **Quiet multi-source inbox:** WhatsApp, Email (IMAP, Outlook Classic, Mailspring), Discord, and Windows apps (all apps or selected), with per-source Mute, Snooze, Quiet hours, and Gaming DND.
 - **4 themes & 5 mascots:** Switch between `Default`, `Hojicha`, `Kuro Night`, and `Matcha`, and pair them with grey Mochi, Matcha Mochi, Hojicha Mochi, Kuro, or Shiro.
 
 ---
@@ -98,7 +98,7 @@ Compact two-line blocks placed directly on the Windows taskbar (left edge, left 
 
 ### Weather & daily companions
 
-Optional daily modules you can switch on anytime from **Settings > Tabs & Modules**: **Weather** (with day/night capsule badges and rain-soon notices), **Prayer times** (Aladhan schedule, schematic timeline, qibla bearing, offline moon phase, Tone/Silent reminders), **FX rates** (25 currencies with 7D/1M/1Y charts and no API key), **Today** (month calendar, `.ics` feeds, tasks & reminders), **Pomodoro**, **AI usage**, **File Shelf** (local Wi-Fi Phone Drop), **Clipboard**, **Script** teleprompter (`Alt+Shift+S`), and **Downloads** (`yt-dlp` + `ffmpeg`).
+Optional daily modules you can switch on anytime from **Settings > Tabs & Modules**: **Weather** (with day/night capsule badges and rain-soon notices), **Prayer times** (Aladhan schedule, schematic timeline with active prayer & Dhuha period glow, qibla bearing, offline moon phase, Tone/Silent reminders), **FX rates** (25 currencies with 7D/1M/1Y charts and no API key), **Today** (month calendar, `.ics` feeds, inline-editable & snoozable tasks & reminders), **Pomodoro**, **AI usage**, **File Shelf** (local Wi-Fi Phone Drop), **Clipboard**, **Script** teleprompter (`Alt+Shift+S`), and **Downloads** (`yt-dlp` + `ffmpeg`).
 
 <p align="center">
   <img src="docs/media/mochidock-weather.gif" alt="Weather card showing current temperature, wind speed, hourly forecast, and three-day outlook" width="660"><br>
@@ -106,7 +106,7 @@ Optional daily modules you can switch on anytime from **Settings > Tabs & Module
 </p>
 
 <p align="center">
-  <img src="docs/media/mochidock-prayer.gif" alt="Prayer card showing countdown, Imsak/Shuruq, Qibla bearing, schematic prayer curve, and moon phase" width="660"><br>
+  <img src="docs/media/mochidock-prayer.gif" alt="Prayer card showing countdown, Imsak/Shuruq, active Dhuha window, Qibla bearing, schematic prayer curve, and moon phase" width="660"><br>
   <sub><b>Prayer times &amp; moon phase:</b> <a href="docs/media/mochidock-prayer.png">Still (PNG)</a> · <a href="docs/media/mochidock-prayer.mp4">Video (MP4)</a></sub>
 </p>
 
@@ -117,7 +117,7 @@ Optional daily modules you can switch on anytime from **Settings > Tabs & Module
 
 ### Notifications & focus
 
-- **Multi-source inbox:** WhatsApp (multi-account with short aliases, quick replies & emoji reactions), Email (Gmail/IMAP app-password, Outlook Classic, Mailspring, one-click verification code copy), Discord, and any Windows app notifications you choose on the **Apps** card.
+- **Multi-source inbox:** WhatsApp (multi-account with short aliases, quick replies & emoji reactions), Email (Gmail/IMAP app-password, Outlook Classic, Mailspring, one-click verification code copy), Discord, and all or selected Windows app notifications on the **Apps** card.
 - **Stay in control:** Colour emoji support in the compact capsule, clear selection ring when multiple messages are queued, **Mute** per source (silences popups/sounds while keeping incoming messages stored in their tabs so you can review them later), 1h/8h **Snooze**, **Quiet hours**, and **Quiet while gaming** with allow-listed contacts.
 
 ---
@@ -196,13 +196,13 @@ A new install starts focused: **Media**, **Stats**, and **Weather** tabs, plus d
 | **Stats** | CPU (per-core bars), GPU, memory, drives, network, top processes, 24 h history, and Battery & Power page. | On | Tabs & Modules |
 | **Weather** | Current conditions, hourly and 3-day outlook, capsule badge, and rain-soon notices. | On | Tabs & Modules; city in Location & Prayer |
 | **Gaming mode** | Compact FPS, GPU & CPU usage/temps with separate Orange/Red limits, optional click-through, Floating top offset, playtime/session summary, and `Ctrl+Alt+R` resolution toggle. | On | Gaming & Display; temp limits in Hardware & Power |
-| **Notifications** | Compact pill notices that expand on hover; selection ring when several wait; per-source Mute keeps messages quietly stored in tabs; Apps card for watched Windows apps. | Email & Discord on, WhatsApp off, other apps none | Notifications, Email, WhatsApp |
+| **Notifications** | Compact pill notices that expand on hover; selection ring when several wait; per-source Mute keeps messages quietly stored in tabs; Apps card for all or selected Windows apps. | Email & Discord on, WhatsApp off, other apps none | Notifications, Email, WhatsApp |
 | **WhatsApp** | Multi-account messages, aliases, quick replies, reactions, and read-sync via local or shared GOWA engine (starts nothing until enabled). | Off | WhatsApp |
 | **Email** | IMAP accounts (Gmail, Yahoo, iCloud with app password), Outlook Classic, Mailspring; verification code copy. | Ready, add an account | Email |
-| **Prayer times** | Location-aware Aladhan schedule, schematic timeline, qibla bearing, offline moon phase, Tone/Silent chime. | Off | Tabs & Modules, or Location & Prayer |
-| **Today & calendar** | Month calendar, up to 10 named, colour-coded Google Calendar / `.ics` links (Work, Personal & more; [setup guide](docs/USER_GUIDE.md#connecting-google-calendar)), automatic & right-click mascot schedule badges (`Meeting`, `Eating`, `Gym`, `Working` with 45 min Coffee breaks), tasks with reminders, optional Japan/Indonesia holidays. | Off | Tabs & Modules; links & holidays in Calendar |
+| **Prayer times** | Location-aware Aladhan schedule, schematic timeline with active prayer & Dhuha period glow, qibla bearing, offline moon phase, Tone/Silent reminders. | Off | Tabs & Modules, or Location & Prayer |
+| **Today & calendar** | Month calendar, up to 10 named, colour-coded Google Calendar / `.ics` links (Work, Personal & more; [setup guide](docs/USER_GUIDE.md#connecting-google-calendar)), automatic & right-click mascot schedule badges (`Meeting`, `Eating`, `Gym`, `Working` with 45 min Coffee breaks), tasks with inline edit, snooze/reschedule & reminders, optional Japan/Indonesia holidays. | Off | Tabs & Modules; links & holidays in Calendar |
 | **FX rates** | Three currency pairs from 25 currencies (defaults USD/JPY, USD/IDR, JPY/IDR) with trajectory chart, no API key required. | Off | Tabs & Modules |
-| **AI usage** | Remaining quota tracking for Claude, Codex, Antigravity, Cursor, Gemini, and GitHub Copilot, with optional low-usage alert. | Off | Tabs & Modules; providers in AI Usage |
+| **AI usage** | Remaining quota tracking (with fractional % precision) for Claude, Codex, Antigravity, Cursor, Gemini, and GitHub Copilot, with optional low-usage alert. | Off | Tabs & Modules; providers in AI Usage |
 | **Taskbar readouts** | Custom Left/Right blocks beside the tray (CPU, GPU, memory, disk, network, prayer, weather, batteries) with themed hover cards & block menus. | Off | Taskbar |
 | **Wireless device batteries** | Mouse, keyboard, and headset levels on the Battery page and taskbar readout. | Off | Hardware & Power, Taskbar |
 | **Window-size shortcuts** | Global hotkeys to resize/centre the foreground window (`Ctrl+Alt+1–4`) or swap width/height (`Ctrl+Alt+F`). | Off | Gaming & Display |
